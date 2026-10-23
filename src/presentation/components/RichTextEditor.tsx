@@ -11,10 +11,6 @@ import Table from '@tiptap/extension-table';
 import TableRow from '@tiptap/extension-table-row';
 import FontFamily from '@tiptap/extension-font-family';
 
-// Gapcursor входит в StarterKit (v2.6.6) — явная регистрация даёт
-// warning "Duplicate extension names found: ['gapCursor']".
-// Поэтому импорт и регистрация убраны.
-
 import { FontSize, CustomTableCell, CustomTableHeader, Indent } from './richText/extensions';
 import { ColorPickerPopover } from './richText/ColorPickerPopover';
 import { TableOperationsToolbar } from './richText/TableOperationsToolbar';
@@ -36,11 +32,6 @@ interface BtnProps {
   children: React.ReactNode;
 }
 
-/**
- * Кнопка тулбара вынесена из тела компонента — иначе React
- * видит новый компонент на каждый рендер и пересоздаёт DOM
- * (теряется фокус у соседних кнопок).
- */
 const Btn: React.FC<BtnProps> = ({ onClick, active, title, children }) => (
   <button
     type="button"
@@ -59,6 +50,7 @@ export const RichTextEditor: React.FC<Props> = ({ isOpen, initialHtml, onClose, 
   const isPlaceholder = initialHtml.includes('Введите текст') || !initialHtml.trim();
   let cleanHtml = isPlaceholder ? '<p></p>' : initialHtml;
 
+  // Оборачиваем таблицу в параграфы для ProseMirror
   if (cleanHtml.includes('<table')) {
     if (!cleanHtml.startsWith('<p>') && !cleanHtml.startsWith('<div>')) {
       cleanHtml = '<p><br></p>' + cleanHtml;
@@ -95,7 +87,7 @@ export const RichTextEditor: React.FC<Props> = ({ isOpen, initialHtml, onClose, 
         try {
           editor.commands.focus('end');
         } catch {
-          /* noop: фокус не критичен, если editor размонтирован */
+          /* noop */
         }
       }, 50);
     }
@@ -113,11 +105,39 @@ export const RichTextEditor: React.FC<Props> = ({ isOpen, initialHtml, onClose, 
 
   const handleSave = useCallback(() => {
     if (!editor) return;
-    const html = editor.getHTML();
-    const isEmpty = html === '<p></p>' || html === '<p><br></p>';
+    
+    let html = '';
+    try {
+      html = editor.getHTML();
+    } catch (err) {
+      console.error('[RichTextEditor] getHTML failed:', err);
+      html = initialHtml;
+    }
+
+    // ЗАЩИТА: ProseMirror не позволяет таблице быть последним элементом.
+    // Если пользователь удаляет параграф под таблицей, ProseMirror 
+    // может удалить и саму таблицу. Если это произошло — восстанавливаем.
+    const hadTable = initialHtml.includes('<table');
+    const hasTable = html.includes('<table');
+    
+    if (hadTable && !hasTable) {
+      const stripped = html.replace(/<[^>]+>/g, '').replace(/[\s\u00A0\u200B]/g, '');
+      // Восстанавливаем только если пользователь не ввёл никакого нового текста
+      if (!stripped) {
+        html = initialHtml;
+      }
+    }
+
+    // Гарантируем, что после таблицы всегда есть пустой параграф
+    // (иначе при следующем открытии ProseMirror снова её сломает)
+    if (html.includes('<table') && /<\/table>\s*$/.test(html)) {
+      html += '<p><br></p>';
+    }
+
+    const isEmpty = !html || html === '<p></p>' || html === '<p><br></p>';
     onSave(isEmpty ? '' : html);
     onClose();
-  }, [editor, onSave, onClose]);
+  }, [editor, onSave, onClose, initialHtml]);
 
   if (!isOpen || !editor) return null;
 
@@ -177,36 +197,16 @@ export const RichTextEditor: React.FC<Props> = ({ isOpen, initialHtml, onClose, 
 
           <div className="rt-sep" />
           <div className="rt-group">
-            <Btn
-              onClick={() => editor.chain().focus().toggleBold().run()}
-              active={editor.isActive('bold')}
-              title="Жирный"
-            ><b>B</b></Btn>
-            <Btn
-              onClick={() => editor.chain().focus().toggleItalic().run()}
-              active={editor.isActive('italic')}
-              title="Курсив"
-            ><i>I</i></Btn>
-            <Btn
-              onClick={() => editor.chain().focus().toggleUnderline().run()}
-              active={editor.isActive('underline')}
-              title="Подчёркнутый"
-            ><u>U</u></Btn>
-            <Btn
-              onClick={() => editor.chain().focus().toggleStrike().run()}
-              active={editor.isActive('strike')}
-              title="Зачёркнутый"
-            ><s>S</s></Btn>
+            <Btn onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive('bold')} title="Жирный"><b>B</b></Btn>
+            <Btn onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive('italic')} title="Курсив"><i>I</i></Btn>
+            <Btn onClick={() => editor.chain().focus().toggleUnderline().run()} active={editor.isActive('underline')} title="Подчёркнутый"><u>U</u></Btn>
+            <Btn onClick={() => editor.chain().focus().toggleStrike().run()} active={editor.isActive('strike')} title="Зачёркнутый"><s>S</s></Btn>
           </div>
 
           <div className="rt-sep" />
           <div className="rt-popover-wrap">
-            <button
-              type="button"
-              className="rt-btn"
-              title="Цвет текста"
-              onMouseDown={(e) => { e.preventDefault(); setPop((p) => (p === 'color' ? null : 'color')); }}
-            >
+            <button type="button" className="rt-btn" title="Цвет текста"
+              onMouseDown={(e) => { e.preventDefault(); setPop((p) => (p === 'color' ? null : 'color')); }}>
               <span className="rt-letter" style={{ borderBottomColor: currentColor }}>A</span>
             </button>
             {pop === 'color' && (
@@ -219,19 +219,9 @@ export const RichTextEditor: React.FC<Props> = ({ isOpen, initialHtml, onClose, 
             )}
           </div>
           <div className="rt-popover-wrap">
-            <button
-              type="button"
-              className="rt-btn"
-              title="Фон текста"
-              onMouseDown={(e) => { e.preventDefault(); setPop((p) => (p === 'bg' ? null : 'bg')); }}
-            >
-              <span
-                className="rt-letter rt-bg-letter"
-                style={{
-                  background: currentHighlight || 'transparent',
-                  borderBottomColor: currentHighlight || '#9ca3af',
-                }}
-              >A</span>
+            <button type="button" className="rt-btn" title="Фон текста"
+              onMouseDown={(e) => { e.preventDefault(); setPop((p) => (p === 'bg' ? null : 'bg')); }}>
+              <span className="rt-letter rt-bg-letter" style={{ background: currentHighlight || 'transparent', borderBottomColor: currentHighlight || '#9ca3af' }}>A</span>
             </button>
             {pop === 'bg' && (
               <ColorPickerPopover
@@ -245,52 +235,22 @@ export const RichTextEditor: React.FC<Props> = ({ isOpen, initialHtml, onClose, 
 
           <div className="rt-sep" />
           <div className="rt-group">
-            <Btn
-              onClick={() => editor.chain().focus().setTextAlign('left').run()}
-              active={editor.isActive({ textAlign: 'left' })}
-              title="По левому краю"
-            >◧</Btn>
-            <Btn
-              onClick={() => editor.chain().focus().setTextAlign('center').run()}
-              active={editor.isActive({ textAlign: 'center' })}
-              title="По центру"
-            >◫</Btn>
-            <Btn
-              onClick={() => editor.chain().focus().setTextAlign('right').run()}
-              active={editor.isActive({ textAlign: 'right' })}
-              title="По правому краю"
-            >◨</Btn>
-            <Btn
-              onClick={() => editor.chain().focus().setTextAlign('justify').run()}
-              active={editor.isActive({ textAlign: 'justify' })}
-              title="По ширине"
-            >☰</Btn>
+            <Btn onClick={() => editor.chain().focus().setTextAlign('left').run()} active={editor.isActive({ textAlign: 'left' })} title="По левому краю">◧</Btn>
+            <Btn onClick={() => editor.chain().focus().setTextAlign('center').run()} active={editor.isActive({ textAlign: 'center' })} title="По центру">◫</Btn>
+            <Btn onClick={() => editor.chain().focus().setTextAlign('right').run()} active={editor.isActive({ textAlign: 'right' })} title="По правому краю">◨</Btn>
+            <Btn onClick={() => editor.chain().focus().setTextAlign('justify').run()} active={editor.isActive({ textAlign: 'justify' })} title="По ширине">☰</Btn>
           </div>
 
           <div className="rt-sep" />
           <div className="rt-group">
-            <Btn
-              onClick={() => editor.chain().focus().toggleBulletList().run()}
-              active={editor.isActive('bulletList')}
-              title="Маркированный список"
-            >• Список</Btn>
-            <Btn
-              onClick={() => editor.chain().focus().toggleOrderedList().run()}
-              active={editor.isActive('orderedList')}
-              title="Нумерованный список"
-            >1. Список</Btn>
+            <Btn onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive('bulletList')} title="Маркированный список">• Список</Btn>
+            <Btn onClick={() => editor.chain().focus().toggleOrderedList().run()} active={editor.isActive('orderedList')} title="Нумерованный список">1. Список</Btn>
           </div>
 
           <div className="rt-sep" />
           <div className="rt-group">
-            <Btn
-              onClick={() => editor.chain().focus().outdent().run()}
-              title="Уменьшить отступ"
-            >← Отступ</Btn>
-            <Btn
-              onClick={() => editor.chain().focus().indent().run()}
-              title="Увеличить отступ"
-            >→ Отступ</Btn>
+            <Btn onClick={() => editor.chain().focus().outdent().run()} title="Уменьшить отступ">← Отступ</Btn>
+            <Btn onClick={() => editor.chain().focus().indent().run()} title="Увеличить отступ">→ Отступ</Btn>
           </div>
 
           <TableOperationsToolbar editor={editor} />

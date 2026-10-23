@@ -15,6 +15,11 @@ const ROOT = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   plugins: [react()],
+  
+  // ВАЖНО: указываем имя репозитория, так как сайт будет доступен по адресу
+  // https://<ваш-ник>.github.io/ticket-editor/
+  base: '/ticket-editor/', 
+
   resolve: {
     alias: {
       '@/shared': path.resolve(ROOT, 'src/shared'),

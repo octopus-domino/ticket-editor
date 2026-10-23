@@ -29,7 +29,6 @@ export function parseHtmlToRuns(html: string, base: BaseStyle): TextRun[] {
   };
 
   const makeListMarker = (depth: number, ordered: boolean, index: number): string => {
-    // Убрали indent из строки. Глубину вложенности будет обрабатывать layout.ts
     const bullet = ordered ? `${index + 1}. ` : '• ';
     return bullet;
   };
@@ -130,9 +129,11 @@ export function parseHtmlToRuns(html: string, base: BaseStyle): TextRun[] {
 
   walk(doc.body, {});
 
-  if (runs.length) {
-    const last = runs[runs.length - 1];
-    if (last.text === '\n\n' || last.text === '\n') runs.pop();
+  // Очищаем хвост из пустых строк и невидимых символов (\u00A0, \u200B)
+  const isBlankRun = (text: string) => /^[\s\u00A0\u200B\uFEFF]*$/.test(text);
+  
+  while (runs.length > 0 && isBlankRun(runs[runs.length - 1].text)) {
+    runs.pop();
   }
 
   return runs;

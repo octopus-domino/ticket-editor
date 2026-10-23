@@ -1,75 +1,42 @@
-# React + TypeScript + Vite
+# ticket-editor
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+[![CI](https://github.com/octopus-domino/ticket-editor/actions/workflows/ci.yml/badge.svg)](https://github.com/octopus-domino/ticket-editor/actions)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue?logo=typescript)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-18-blue?logo=react)](https://react.dev/)
+[![Vite](https://img.shields.io/badge/Vite-5-purple?logo=vite)](https://vitejs.dev/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-Currently, two official plugins are available:
+Визуальный редактор для проектирования билетов, бланков и документов. Canvas на Konva, rich-text на TipTap, экспорт в SVG, PDF и PDF/A через серверный рендерер [`ticket-pdf`](../ticket-pdf).
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+---
 
-## React Compiler
+## Возможности
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Canvas-редактор** (Konva) с drag & drop, трансформером, снапами, группами, слоями.
+- **Rich Text** (TipTap) — форматирование, таблицы с per-side границами, вложенные списки.
+- **Штампы и печати** — векторные фигуры, текст по дуге, заливка областей (anchor-fill).
+- **Pathfinder** — union / subtract / intersect / xor через `polyclip-ts`.
+- **Undo / Redo** (immer + лимиты по количеству и по байтам), автосохранение в localStorage.
+- **Экспорт**:
+  - JSON (импорт/экспорт документа целиком).
+  - SVG (локально, `lib/svg/serialize.ts`).
+  - SVG, PDF, PDF/A через `ticket-pdf` (встраивание картинок, встроенные шрифты).
+- **Шаблоны** — типовые макеты и готовые бандлы (билет, заявление, каталог и т.д.).
+- **Feature flags** — `src/shared/flags.ts`, включаются через `VITE_FEATURE_*`.
 
-## Expanding the ESLint configuration
+---
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Quick start
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+**Требования:** Node.js ≥ 20, npm ≥ 10.
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+```bash
+# 1. Установить зависимости
+npm install
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# 2. (Опционально) настроить .env
+cp .env.example .env
+# По умолчанию: VITE_EXPORT_API=http://localhost:8080/api/export
 
-```
-
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
-```
+# 3. Запустить dev-сервер
+npm run dev

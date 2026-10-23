@@ -1,0 +1,659 @@
+
+> ticket-editor@3.0.0 lint
+> eslint .
+
+
+C:\sandpr\ticket-editor\src\domain\slide\operations.ts
+  17:8  warning  Function 'createSlide' has too many parameters (5). Maximum allowed is 4  max-params
+
+C:\sandpr\ticket-editor\src\lib\connectors.ts
+   56:1  warning  Function 'segmentCrossesRect' has too many parameters (6). Maximum allowed is 4      max-params
+   76:1  warning  Function 'routeOrthogonal' has too many parameters (5). Maximum allowed is 4         max-params
+   76:1  warning  Function 'routeOrthogonal' has a complexity of 19. Maximum allowed is 15             complexity
+  153:8  warning  Function 'routeConnector' has too many parameters (6). Maximum allowed is 4          max-params
+  184:8  warning  Function 'findElementWithPadding' has too many parameters (5). Maximum allowed is 4  max-params
+
+C:\sandpr\ticket-editor\src\lib\factories.ts
+  129:8  warning  Function 'makePlaceholder' has too many parameters (5). Maximum allowed is 4  max-params
+
+C:\sandpr\ticket-editor\src\lib\imageTools.ts
+  109:8  warning  Function 'fitImageSize' has too many parameters (5). Maximum allowed is 4  max-params
+
+C:\sandpr\ticket-editor\src\lib\polyline.ts
+  93:8  warning  Function 'scalePoints' has too many parameters (5). Maximum allowed is 4  max-params
+
+C:\sandpr\ticket-editor\src\lib\resolveSample.ts
+  13:16  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any
+  17:5   warning  Unsafe assignment of an `any` value               @typescript-eslint/no-unsafe-assignment
+  17:22  warning  Unsafe member access .children on an `any` value  @typescript-eslint/no-unsafe-member-access
+  19:3   warning  Unsafe return of a value of type `any`            @typescript-eslint/no-unsafe-return
+  19:28  warning  Unsafe member access .sample on an `any` value    @typescript-eslint/no-unsafe-member-access
+
+C:\sandpr\ticket-editor\src\lib\richText\layout.ts
+  8:8  warning  Function 'layoutRuns' has a complexity of 28. Maximum allowed is 15  complexity
+
+C:\sandpr\ticket-editor\src\lib\richText\measure.ts
+  52:11  warning  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  53:47  warning  Unsafe argument of type `any` assigned to a parameter of type `string`  @typescript-eslint/no-unsafe-argument
+
+C:\sandpr\ticket-editor\src\lib\richText\parser\blocks.ts
+  62:30  warning  Arrow function has a complexity of 19. Maximum allowed is 15  complexity
+
+C:\sandpr\ticket-editor\src\lib\richText\parser\runs.ts
+  53:3  warning  Function 'walk' has a complexity of 49. Maximum allowed is 15  complexity
+
+C:\sandpr\ticket-editor\src\lib\richText\parser\table.ts
+  158:9  warning  Unsafe assignment of type `any[]` to a variable of type `number[]`  @typescript-eslint/no-unsafe-assignment
+  170:9  warning  Unsafe assignment of type `any[]` to a variable of type `number[]`  @typescript-eslint/no-unsafe-assignment
+
+C:\sandpr\ticket-editor\src\lib\richText\tableLayout.ts
+   90:5   warning  Unsafe return of a value of type `any[]`                                   @typescript-eslint/no-unsafe-return
+   96:28  warning  Unsafe return of a value of type `any[]`                                   @typescript-eslint/no-unsafe-return
+  109:1   warning  Function 'measureCells' has too many parameters (5). Maximum allowed is 4  max-params
+  162:9   warning  Unsafe assignment of type `any[]` to a variable of type `number[]`         @typescript-eslint/no-unsafe-assignment
+
+C:\sandpr\ticket-editor\src\lib\stamps\bankingStampsFilled.ts
+  65:1  warning  Function 'anchorFill' has too many parameters (6). Maximum allowed is 4  max-params
+
+C:\sandpr\ticket-editor\src\lib\stamps\bankingStampsWithImages.ts
+   72:1   warning  Function 'qrSvg' has a complexity of 22. Maximum allowed is 15    complexity
+  197:19  warning  Arrow function has too many parameters (6). Maximum allowed is 4  max-params
+
+C:\sandpr\ticket-editor\src\lib\stamps\factories.ts
+   34:5  warning  Unsafe assignment of an `any` value                                       @typescript-eslint/no-unsafe-assignment
+   35:5  warning  Unsafe assignment of an `any` value                                       @typescript-eslint/no-unsafe-assignment
+   36:5  warning  Unsafe assignment of an `any` value                                       @typescript-eslint/no-unsafe-assignment
+  146:8  warning  Function 'createImage' has too many parameters (5). Maximum allowed is 4  max-params
+
+C:\sandpr\ticket-editor\src\lib\stamps\fillRasterizer.ts
+  170:13  warning  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  171:51  warning  Unsafe argument of type `any` assigned to a parameter of type `string`  @typescript-eslint/no-unsafe-argument
+
+C:\sandpr\ticket-editor\src\lib\stamps\geometry\arc.ts
+  47:8  warning  Function 'computeArcParams' has too many parameters (7). Maximum allowed is 4          max-params
+  79:8  warning  Function 'computeArcParamsForAngle' has too many parameters (6). Maximum allowed is 4  max-params
+
+C:\sandpr\ticket-editor\src\lib\stamps\geometry\findShape.ts
+  61:8  warning  Function 'findSnapTarget' has too many parameters (5). Maximum allowed is 4  max-params
+
+C:\sandpr\ticket-editor\src\lib\stamps\geometry\math.ts
+   5:8  warning  Function 'isPointInTriangle' has too many parameters (5). Maximum allowed is 4       max-params
+  26:8  warning  Function 'pointToSegmentDistance' has too many parameters (6). Maximum allowed is 4  max-params
+
+C:\sandpr\ticket-editor\src\lib\stamps\geometry\snap.ts
+   7:8  warning  Function 'snapPosition' has too many parameters (9). Maximum allowed is 4             max-params
+  53:8  warning  Function 'snapToHostCenter' has too many parameters (6). Maximum allowed is 4         max-params
+  78:8  warning  Function 'computeNewShapeGeometry' has too many parameters (7). Maximum allowed is 4  max-params
+
+C:\sandpr\ticket-editor\src\lib\stamps\library.ts
+  122:11  warning  Unsafe assignment of an `any` value       @typescript-eslint/no-unsafe-assignment
+  123:5   warning  Unsafe return of a value of type `any[]`  @typescript-eslint/no-unsafe-return
+  193:9   warning  Unsafe assignment of an `any` value       @typescript-eslint/no-unsafe-assignment
+
+C:\sandpr\ticket-editor\src\lib\stamps\rasterFill.ts
+  204:1  warning  Function 'floodFillLightFromSeed' has too many parameters (7). Maximum allowed is 4     max-params
+  204:1  warning  Function 'floodFillLightFromSeed' has a complexity of 16. Maximum allowed is 15         complexity
+  242:1  warning  Function 'floodFillLightFromMany' has too many parameters (6). Maximum allowed is 4     max-params
+  330:1  warning  Function 'findNearbyLightPixel' has too many parameters (7). Maximum allowed is 4       max-params
+  363:1  warning  Function 'computeMaskForFill' has too many parameters (6). Maximum allowed is 4         max-params
+  363:1  warning  Function 'computeMaskForFill' has a complexity of 24. Maximum allowed is 15             complexity
+  429:8  warning  Async function 'rasterizeCompositeFills' has a complexity of 18. Maximum allowed is 15  complexity
+
+C:\sandpr\ticket-editor\src\lib\stamps\render.ts
+  71:1  warning  Function 'angleAtArcFraction' has too many parameters (5). Maximum allowed is 4  max-params
+
+C:\sandpr\ticket-editor\src\lib\stamps\serviceStamps.ts
+  61:1  warning  Function 'anchorFill' has too many parameters (6). Maximum allowed is 4  max-params
+
+C:\sandpr\ticket-editor\src\lib\stamps\specialStamps.ts
+  70:1  warning  Function 'anchorFill' has too many parameters (6). Maximum allowed is 4  max-params
+
+C:\sandpr\ticket-editor\src\lib\svg\exporters.ts
+  115:8  warning  Function 'toSvgShape' has a complexity of 16. Maximum allowed is 15  complexity
+
+C:\sandpr\ticket-editor\src\presentation\components\Canvas.tsx
+  116:39  warning  Unexpected any. Specify a different type                    @typescript-eslint/no-explicit-any
+  117:58  warning  Unsafe member access .evt on an `any` value                 @typescript-eslint/no-unsafe-member-access
+  118:11  warning  Unsafe assignment of an `any` value                         @typescript-eslint/no-unsafe-assignment
+  118:19  warning  Unsafe call of an `any` typed value                         @typescript-eslint/no-unsafe-call
+  118:21  warning  Unsafe member access .target on an `any` value              @typescript-eslint/no-unsafe-member-access
+  119:23  warning  Unsafe member access .target on an `any` value              @typescript-eslint/no-unsafe-member-access
+  120:11  warning  Unsafe assignment of an `any` value                         @typescript-eslint/no-unsafe-assignment
+  120:15  warning  Unsafe call of an `any` typed value                         @typescript-eslint/no-unsafe-call
+  120:22  warning  Unsafe member access .getPointerPosition on an `any` value  @typescript-eslint/no-unsafe-member-access
+  123:18  warning  Unsafe member access .x on an `any` value                   @typescript-eslint/no-unsafe-member-access
+  124:18  warning  Unsafe member access .y on an `any` value                   @typescript-eslint/no-unsafe-member-access
+  138:39  warning  Unexpected any. Specify a different type                    @typescript-eslint/no-explicit-any
+  142:11  warning  Unsafe assignment of an `any` value                         @typescript-eslint/no-unsafe-assignment
+  142:19  warning  Unsafe call of an `any` typed value                         @typescript-eslint/no-unsafe-call
+  142:21  warning  Unsafe member access .target on an `any` value              @typescript-eslint/no-unsafe-member-access
+  143:11  warning  Unsafe assignment of an `any` value                         @typescript-eslint/no-unsafe-assignment
+  143:15  warning  Unsafe call of an `any` typed value                         @typescript-eslint/no-unsafe-call
+  143:22  warning  Unsafe member access .getPointerPosition on an `any` value  @typescript-eslint/no-unsafe-member-access
+  145:18  warning  Unsafe member access .x on an `any` value                   @typescript-eslint/no-unsafe-member-access
+  146:18  warning  Unsafe member access .y on an `any` value                   @typescript-eslint/no-unsafe-member-access
+  153:37  warning  Unexpected any. Specify a different type                    @typescript-eslint/no-explicit-any
+  157:13  warning  Unsafe assignment of an `any` value                         @typescript-eslint/no-unsafe-assignment
+  157:21  warning  Unsafe call of an `any` typed value                         @typescript-eslint/no-unsafe-call
+  157:23  warning  Unsafe member access .target on an `any` value              @typescript-eslint/no-unsafe-member-access
+  158:13  warning  Unsafe assignment of an `any` value                         @typescript-eslint/no-unsafe-assignment
+  158:17  warning  Unsafe call of an `any` typed value                         @typescript-eslint/no-unsafe-call
+  158:24  warning  Unsafe member access .getPointerPosition on an `any` value  @typescript-eslint/no-unsafe-member-access
+  159:29  warning  Unsafe member access .x on an `any` value                   @typescript-eslint/no-unsafe-member-access
+  159:41  warning  Unsafe member access .y on an `any` value                   @typescript-eslint/no-unsafe-member-access
+  211:23  warning  Unsafe assignment of an `any` value                         @typescript-eslint/no-unsafe-assignment
+  211:32  warning  Unsafe member access .evt on an `any` value                 @typescript-eslint/no-unsafe-member-access
+  212:39  warning  Unsafe member access .shiftKey on an `any` value            @typescript-eslint/no-unsafe-member-access
+  212:56  warning  Unsafe member access .metaKey on an `any` value             @typescript-eslint/no-unsafe-member-access
+  212:72  warning  Unsafe member access .ctrlKey on an `any` value             @typescript-eslint/no-unsafe-member-access
+  226:65  warning  Unsafe call of an `any` typed value                         @typescript-eslint/no-unsafe-call
+  226:67  warning  Unsafe member access .target on an `any` value              @typescript-eslint/no-unsafe-member-access
+  235:35  warning  Unexpected any. Specify a different type                    @typescript-eslint/no-explicit-any
+  236:17  warning  Unsafe call of an `any` typed value                         @typescript-eslint/no-unsafe-call
+  236:20  warning  Unsafe member access .evt on an `any` value                 @typescript-eslint/no-unsafe-member-access
+  238:46  warning  Unsafe assignment of an `any` value                         @typescript-eslint/no-unsafe-assignment
+  238:52  warning  Unsafe member access .evt on an `any` value                 @typescript-eslint/no-unsafe-member-access
+  238:65  warning  Unsafe assignment of an `any` value                         @typescript-eslint/no-unsafe-assignment
+  238:71  warning  Unsafe member access .evt on an `any` value                 @typescript-eslint/no-unsafe-member-access
+
+C:\sandpr\ticket-editor\src\presentation\components\DiagramEditor.tsx
+  36:49  warning  Arrow function has a complexity of 19. Maximum allowed is 15            complexity
+  43:16  warning  Unexpected any. Specify a different type                                @typescript-eslint/no-explicit-any
+  45:9   warning  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  51:15  warning  Unsafe member access .event on an `any` value                           @typescript-eslint/no-unsafe-member-access
+  57:22  warning  Unsafe member access .event on an `any` value                           @typescript-eslint/no-unsafe-member-access
+  57:50  warning  Unsafe member access .event on an `any` value                           @typescript-eslint/no-unsafe-member-access
+  58:24  warning  Unsafe member access .xml on an `any` value                             @typescript-eslint/no-unsafe-member-access
+  58:42  warning  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  58:67  warning  Unsafe member access .xml on an `any` value                             @typescript-eslint/no-unsafe-member-access
+  63:22  warning  Unsafe member access .event on an `any` value                           @typescript-eslint/no-unsafe-member-access
+  64:43  warning  Unsafe argument of type `any` assigned to a parameter of type `string`  @typescript-eslint/no-unsafe-argument
+  64:47  warning  Unsafe member access .data on an `any` value                            @typescript-eslint/no-unsafe-member-access
+  64:59  warning  Unsafe member access .xml on an `any` value                             @typescript-eslint/no-unsafe-member-access
+  66:22  warning  Unsafe member access .event on an `any` value                           @typescript-eslint/no-unsafe-member-access
+
+C:\sandpr\ticket-editor\src\presentation\components\Editor.tsx
+  31:35  warning  Arrow function has a complexity of 16. Maximum allowed is 15  complexity
+
+C:\sandpr\ticket-editor\src\presentation\components\ElementRenderer.tsx
+  11:18  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  13:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  14:23  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  15:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  16:20  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  17:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\sandpr\ticket-editor\src\presentation\components\InlineEditor.tsx
+  39:6  warning  React Hook useEffect has missing dependencies: 'html' and 'value'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\sandpr\ticket-editor\src\presentation\components\PropertiesPanel.tsx
+  39:46  warning  Unsafe assignment of an `any` value       @typescript-eslint/no-unsafe-assignment
+  39:52  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  39:65  warning  Unsafe assignment of an `any` value       @typescript-eslint/no-unsafe-assignment
+  39:75  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\sandpr\ticket-editor\src\presentation\components\RichTextEditor.tsx
+   30:91   warning  Arrow function has a complexity of 21. Maximum allowed is 15  complexity
+   98:9    warning  Unsafe assignment of an `any` value                           @typescript-eslint/no-unsafe-assignment
+   98:27   warning  Unsafe call of an `any` typed value                           @typescript-eslint/no-unsafe-call
+   98:82   warning  Unsafe member access .replace on an `any` value               @typescript-eslint/no-unsafe-member-access
+   99:9    warning  Unsafe assignment of an `any` value                           @typescript-eslint/no-unsafe-assignment
+  100:9    warning  Unsafe assignment of an `any` value                           @typescript-eslint/no-unsafe-assignment
+  102:54   warning  Unexpected any. Specify a different type                      @typescript-eslint/no-explicit-any
+  103:83   warning  Unsafe assignment of an `any` value                           @typescript-eslint/no-unsafe-assignment
+  103:99   warning  Unsafe assignment of an `any` value                           @typescript-eslint/no-unsafe-assignment
+  118:354  warning  Unsafe assignment of an `any` value                           @typescript-eslint/no-unsafe-assignment
+  118:370  warning  Unexpected any. Specify a different type                      @typescript-eslint/no-explicit-any
+  124:50   warning  Unsafe assignment of an `any` value                           @typescript-eslint/no-unsafe-assignment
+  127:72   warning  Unsafe assignment of an `any` value                           @typescript-eslint/no-unsafe-assignment
+  127:106  warning  Unsafe return of a value of type `any`                        @typescript-eslint/no-unsafe-return
+  127:106  warning  Unsafe call of an `any` typed value                           @typescript-eslint/no-unsafe-call
+  127:106  warning  Unsafe call of an `any` typed value                           @typescript-eslint/no-unsafe-call
+  127:133  warning  Unexpected any. Specify a different type                      @typescript-eslint/no-explicit-any
+  127:138  warning  Unsafe member access .setFontSize on an `any` value           @typescript-eslint/no-unsafe-member-access
+  127:173  warning  Unsafe member access .run on an `any` value                   @typescript-eslint/no-unsafe-member-access
+  143:52   warning  Unsafe assignment of an `any` value                           @typescript-eslint/no-unsafe-assignment
+  149:65   warning  Unsafe assignment of an `any` value                           @typescript-eslint/no-unsafe-assignment
+  149:112  warning  Unsafe assignment of an `any` value                           @typescript-eslint/no-unsafe-assignment
+  171:33   warning  Unsafe return of a value of type `any`                        @typescript-eslint/no-unsafe-return
+  171:33   warning  Unsafe call of an `any` typed value                           @typescript-eslint/no-unsafe-call
+  171:33   warning  Unsafe call of an `any` typed value                           @typescript-eslint/no-unsafe-call
+  171:60   warning  Unexpected any. Specify a different type                      @typescript-eslint/no-explicit-any
+  171:65   warning  Unsafe member access .outdent on an `any` value               @typescript-eslint/no-unsafe-member-access
+  171:75   warning  Unsafe member access .run on an `any` value                   @typescript-eslint/no-unsafe-member-access
+  172:33   warning  Unsafe return of a value of type `any`                        @typescript-eslint/no-unsafe-return
+  172:33   warning  Unsafe call of an `any` typed value                           @typescript-eslint/no-unsafe-call
+  172:33   warning  Unsafe call of an `any` typed value                           @typescript-eslint/no-unsafe-call
+  172:60   warning  Unexpected any. Specify a different type                      @typescript-eslint/no-explicit-any
+  172:65   warning  Unsafe member access .indent on an `any` value                @typescript-eslint/no-unsafe-member-access
+  172:74   warning  Unsafe member access .run on an `any` value                   @typescript-eslint/no-unsafe-member-access
+
+C:\sandpr\ticket-editor\src\presentation\components\StampEditor.tsx
+   28:93  warning  Arrow function has a complexity of 23. Maximum allowed is 15                                                                                                                                                                                                           complexity
+   95:27  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                               @typescript-eslint/no-explicit-any
+   96:5   warning  Unsafe call of an `any` typed value                                                                                                                                                                                                                                    @typescript-eslint/no-unsafe-call
+   96:7   warning  Unsafe member access .evt on an `any` value                                                                                                                                                                                                                            @typescript-eslint/no-unsafe-member-access
+   97:19  warning  Unsafe member access .evt on an `any` value                                                                                                                                                                                                                            @typescript-eslint/no-unsafe-member-access
+  182:6   warning  React Hook useEffect has missing dependencies: 'deleteSelected', 'onClose', 'redo', and 'undo'. Either include them or remove the dependency array. If 'onClose' changes too often, find the parent component that defines it and wrap that definition in useCallback  react-hooks/exhaustive-deps
+  281:41  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                               @typescript-eslint/no-explicit-any
+  281:46  warning  Unsafe member access ._context on an `any` value                                                                                                                                                                                                                       @typescript-eslint/no-unsafe-member-access
+  447:20  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                               @typescript-eslint/no-explicit-any
+  448:16  warning  Unsafe call of an `any` typed value                                                                                                                                                                                                                                    @typescript-eslint/no-unsafe-call
+  448:18  warning  Unsafe member access .target on an `any` value                                                                                                                                                                                                                         @typescript-eslint/no-unsafe-member-access
+  449:16  warning  Unsafe call of an `any` typed value                                                                                                                                                                                                                                    @typescript-eslint/no-unsafe-call
+  449:18  warning  Unsafe member access .target on an `any` value                                                                                                                                                                                                                         @typescript-eslint/no-unsafe-member-access
+  450:29  warning  Unsafe member access .evt on an `any` value                                                                                                                                                                                                                            @typescript-eslint/no-unsafe-member-access
+  450:48  warning  Unsafe member access .evt on an `any` value                                                                                                                                                                                                                            @typescript-eslint/no-unsafe-member-access
+  544:27  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                               @typescript-eslint/no-explicit-any
+  544:32  warning  Unsafe member access ._context on an `any` value                                                                                                                                                                                                                       @typescript-eslint/no-unsafe-member-access
+
+C:\sandpr\ticket-editor\src\presentation\components\StampLibraryPanel.tsx
+  30:48  warning  React Hook useMemo has an unnecessary dependency: 'version'. Either exclude it or remove the dependency array  react-hooks/exhaustive-deps
+  36:13  warning  Unexpected any. Specify a different type                                                                       @typescript-eslint/no-explicit-any
+  36:18  warning  Unsafe member access .elements on an `any` value                                                               @typescript-eslint/no-unsafe-member-access
+  36:30  warning  Unsafe spread of an `any` value in an array                                                                    @typescript-eslint/no-unsafe-assignment
+  36:48  warning  Unexpected any. Specify a different type                                                                       @typescript-eslint/no-explicit-any
+  76:9   warning  Unsafe assignment of an `any` value                                                                            @typescript-eslint/no-unsafe-assignment
+  77:9   warning  Unsafe assignment of an `any` value                                                                            @typescript-eslint/no-unsafe-assignment
+  78:9   warning  Unsafe assignment of an `any` value                                                                            @typescript-eslint/no-unsafe-assignment
+
+C:\sandpr\ticket-editor\src\presentation\components\canvas\CanvasPreviewLayer.tsx
+  40:4  warning  Arrow function has a complexity of 19. Maximum allowed is 15  complexity
+
+C:\sandpr\ticket-editor\src\presentation\components\elements\ConnectorEl.tsx
+   24:5   warning  React Hook useMemo has a missing dependency: 'el'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+   83:55  warning  Unexpected any. Specify a different type                                                             @typescript-eslint/no-explicit-any
+   84:30  warning  Unsafe assignment of an `any` value                                                                  @typescript-eslint/no-unsafe-assignment
+   84:33  warning  Unsafe call of an `any` typed value                                                                  @typescript-eslint/no-unsafe-call
+   84:35  warning  Unsafe member access .target on an `any` value                                                       @typescript-eslint/no-unsafe-member-access
+   84:47  warning  Unsafe assignment of an `any` value                                                                  @typescript-eslint/no-unsafe-assignment
+   84:50  warning  Unsafe call of an `any` typed value                                                                  @typescript-eslint/no-unsafe-call
+   84:52  warning  Unsafe member access .target on an `any` value                                                       @typescript-eslint/no-unsafe-member-access
+   87:54  warning  Unexpected any. Specify a different type                                                             @typescript-eslint/no-explicit-any
+   88:11  warning  Unsafe assignment of an `any` value                                                                  @typescript-eslint/no-unsafe-assignment
+   88:19  warning  Unsafe call of an `any` typed value                                                                  @typescript-eslint/no-unsafe-call
+   88:21  warning  Unsafe member access .target on an `any` value                                                       @typescript-eslint/no-unsafe-member-access
+   90:11  warning  Unsafe assignment of an `any` value                                                                  @typescript-eslint/no-unsafe-assignment
+   90:21  warning  Unsafe call of an `any` typed value                                                                  @typescript-eslint/no-unsafe-call
+   90:27  warning  Unsafe member access .getPointerPosition on an `any` value                                           @typescript-eslint/no-unsafe-member-access
+   92:11  warning  Unsafe assignment of an `any` value                                                                  @typescript-eslint/no-unsafe-assignment
+   92:23  warning  Unsafe call of an `any` typed value                                                                  @typescript-eslint/no-unsafe-call
+   92:23  warning  Unsafe call of an `any` typed value                                                                  @typescript-eslint/no-unsafe-call
+   92:23  warning  Unsafe call of an `any` typed value                                                                  @typescript-eslint/no-unsafe-call
+   92:29  warning  Unsafe member access .getAbsoluteTransform on an `any` value                                         @typescript-eslint/no-unsafe-member-access
+   92:52  warning  Unsafe member access .copy on an `any` value                                                         @typescript-eslint/no-unsafe-member-access
+   92:59  warning  Unsafe member access .invert on an `any` value                                                       @typescript-eslint/no-unsafe-member-access
+   93:11  warning  Unsafe assignment of an `any` value                                                                  @typescript-eslint/no-unsafe-assignment
+   93:17  warning  Unsafe call of an `any` typed value                                                                  @typescript-eslint/no-unsafe-call
+   93:27  warning  Unsafe member access .point on an `any` value                                                        @typescript-eslint/no-unsafe-member-access
+   94:11  warning  Unsafe assignment of an `any` value                                                                  @typescript-eslint/no-unsafe-assignment
+   94:20  warning  Unsafe member access .x on an `any` value                                                            @typescript-eslint/no-unsafe-member-access
+   94:23  warning  Unsafe assignment of an `any` value                                                                  @typescript-eslint/no-unsafe-assignment
+   94:32  warning  Unsafe member access .y on an `any` value                                                            @typescript-eslint/no-unsafe-member-access
+  100:51  warning  Unsafe argument of type `any` assigned to a parameter of type `number`                               @typescript-eslint/no-unsafe-argument
+  100:55  warning  Unsafe argument of type `any` assigned to a parameter of type `number`                               @typescript-eslint/no-unsafe-argument
+
+C:\sandpr\ticket-editor\src\presentation\components\elements\LineEl.tsx
+  20:30  warning  Unexpected any. Specify a different type                    @typescript-eslint/no-explicit-any
+  21:7   warning  Unsafe member access .cancelBubble on an `any` value        @typescript-eslint/no-unsafe-member-access
+  23:11  warning  Unsafe assignment of an `any` value                         @typescript-eslint/no-unsafe-assignment
+  23:19  warning  Unsafe call of an `any` typed value                         @typescript-eslint/no-unsafe-call
+  23:21  warning  Unsafe member access .target on an `any` value              @typescript-eslint/no-unsafe-member-access
+  24:11  warning  Unsafe assignment of an `any` value                         @typescript-eslint/no-unsafe-assignment
+  24:15  warning  Unsafe call of an `any` typed value                         @typescript-eslint/no-unsafe-call
+  24:22  warning  Unsafe member access .getPointerPosition on an `any` value  @typescript-eslint/no-unsafe-member-access
+  26:18  warning  Unsafe member access .x on an `any` value                   @typescript-eslint/no-unsafe-member-access
+  26:22  warning  Unsafe call of an `any` typed value                         @typescript-eslint/no-unsafe-call
+  26:28  warning  Unsafe member access .scaleX on an `any` value              @typescript-eslint/no-unsafe-member-access
+  26:40  warning  Unsafe member access .y on an `any` value                   @typescript-eslint/no-unsafe-member-access
+  26:44  warning  Unsafe call of an `any` typed value                         @typescript-eslint/no-unsafe-call
+  26:50  warning  Unsafe member access .scaleY on an `any` value              @typescript-eslint/no-unsafe-member-access
+  36:34  warning  Unexpected any. Specify a different type                    @typescript-eslint/no-explicit-any
+  37:11  warning  Unsafe assignment of an `any` value                         @typescript-eslint/no-unsafe-assignment
+  37:17  warning  Unsafe member access .target on an `any` value              @typescript-eslint/no-unsafe-member-access
+  38:11  warning  Unsafe assignment of an `any` value                         @typescript-eslint/no-unsafe-assignment
+  38:16  warning  Unsafe call of an `any` typed value                         @typescript-eslint/no-unsafe-call
+  38:18  warning  Unsafe member access .scaleX on an `any` value              @typescript-eslint/no-unsafe-member-access
+  39:11  warning  Unsafe assignment of an `any` value                         @typescript-eslint/no-unsafe-assignment
+  39:16  warning  Unsafe call of an `any` typed value                         @typescript-eslint/no-unsafe-call
+  39:18  warning  Unsafe member access .scaleY on an `any` value              @typescript-eslint/no-unsafe-member-access
+  40:5   warning  Unsafe call of an `any` typed value                         @typescript-eslint/no-unsafe-call
+  40:7   warning  Unsafe member access .scaleX on an `any` value              @typescript-eslint/no-unsafe-member-access
+  41:5   warning  Unsafe call of an `any` typed value                         @typescript-eslint/no-unsafe-call
+  41:7   warning  Unsafe member access .scaleY on an `any` value              @typescript-eslint/no-unsafe-member-access
+  58:7   warning  Unsafe assignment of an `any` value                         @typescript-eslint/no-unsafe-assignment
+  58:10  warning  Unsafe call of an `any` typed value                         @typescript-eslint/no-unsafe-call
+  58:12  warning  Unsafe member access .x on an `any` value                   @typescript-eslint/no-unsafe-member-access
+  59:7   warning  Unsafe assignment of an `any` value                         @typescript-eslint/no-unsafe-assignment
+  59:10  warning  Unsafe call of an `any` typed value                         @typescript-eslint/no-unsafe-call
+  59:12  warning  Unsafe member access .y on an `any` value                   @typescript-eslint/no-unsafe-member-access
+  60:7   warning  Unsafe assignment of an `any` value                         @typescript-eslint/no-unsafe-assignment
+  60:17  warning  Unsafe call of an `any` typed value                         @typescript-eslint/no-unsafe-call
+  60:19  warning  Unsafe member access .rotation on an `any` value            @typescript-eslint/no-unsafe-member-access
+
+C:\sandpr\ticket-editor\src\presentation\components\elements\PlaceholderEl.tsx
+  15:4  warning  Arrow function has a complexity of 26. Maximum allowed is 15                                                                                                                                                                                                                 complexity
+  45:6  warning  React Hook useEffect has missing dependencies: 'el.height', 'onUpdate', 'pad.bottom', and 'pad.top'. Either include them or remove the dependency array. If 'onUpdate' changes too often, find the parent component that defines it and wrap that definition in useCallback  react-hooks/exhaustive-deps
+
+C:\sandpr\ticket-editor\src\presentation\components\elements\ShapeEl.tsx
+  14:4  warning  Arrow function has a complexity of 28. Maximum allowed is 15  complexity
+
+C:\sandpr\ticket-editor\src\presentation\components\elements\StampEl.tsx
+   15:4   warning  Arrow function has a complexity of 63. Maximum allowed is 15                                                                                                                                 complexity
+   16:9   warning  The 'shapes' logical expression could make the dependencies of useMemo Hook (at line 20) change on every render. To fix this, wrap the initialization of 'shapes' in its own useMemo() Hook  react-hooks/exhaustive-deps
+   16:9   warning  The 'shapes' logical expression could make the dependencies of useMemo Hook (at line 21) change on every render. To fix this, wrap the initialization of 'shapes' in its own useMemo() Hook  react-hooks/exhaustive-deps
+   63:25  warning  Unsafe argument of type `any` assigned to a parameter of type `CanvasRenderingContext2D`                                                                                                     @typescript-eslint/no-unsafe-argument
+   63:33  warning  Unexpected any. Specify a different type                                                                                                                                                     @typescript-eslint/no-explicit-any
+   63:38  warning  Unsafe member access ._context on an `any` value                                                                                                                                             @typescript-eslint/no-unsafe-member-access
+   68:25  warning  Unsafe argument of type `any` assigned to a parameter of type `CanvasRenderingContext2D`                                                                                                     @typescript-eslint/no-unsafe-argument
+   68:33  warning  Unexpected any. Specify a different type                                                                                                                                                     @typescript-eslint/no-explicit-any
+   68:38  warning  Unsafe member access ._context on an `any` value                                                                                                                                             @typescript-eslint/no-unsafe-member-access
+  135:25  warning  Unexpected any. Specify a different type                                                                                                                                                     @typescript-eslint/no-explicit-any
+  135:30  warning  Unsafe member access ._context on an `any` value                                                                                                                                             @typescript-eslint/no-unsafe-member-access
+  199:25  warning  Unexpected any. Specify a different type                                                                                                                                                     @typescript-eslint/no-explicit-any
+  199:30  warning  Unsafe member access ._context on an `any` value                                                                                                                                             @typescript-eslint/no-unsafe-member-access
+
+C:\sandpr\ticket-editor\src\presentation\components\elements\TextEl.tsx
+  17:46  warning  Unexpected any. Specify a different type       @typescript-eslint/no-explicit-any
+  94:16  warning  Unsafe call of an `any` typed value            @typescript-eslint/no-unsafe-call
+  94:28  warning  Unsafe member access .lines on an `any` value  @typescript-eslint/no-unsafe-member-access
+
+C:\sandpr\ticket-editor\src\presentation\components\elements\properties\MiscProps.tsx
+  37:81   warning  Unsafe assignment of an `any` value       @typescript-eslint/no-unsafe-assignment
+  37:110  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  60:79   warning  Unsafe assignment of an `any` value       @typescript-eslint/no-unsafe-assignment
+  60:106  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\sandpr\ticket-editor\src\presentation\components\elements\properties\TableProps.tsx
+  10:44  warning  Unsafe argument of type `any[]` assigned to a parameter of type `string[]`  @typescript-eslint/no-unsafe-argument
+
+C:\sandpr\ticket-editor\src\presentation\components\elements\properties\TextProps.tsx
+  17:79   warning  Unsafe assignment of an `any` value       @typescript-eslint/no-unsafe-assignment
+  17:104  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\sandpr\ticket-editor\src\presentation\components\elements\register-all.tsx
+  32:54   warning  Unsafe assignment of an `any` value       @typescript-eslint/no-unsafe-assignment
+  32:84   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  33:56   warning  Unsafe assignment of an `any` value       @typescript-eslint/no-unsafe-assignment
+  33:87   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  34:54   warning  Unsafe assignment of an `any` value       @typescript-eslint/no-unsafe-assignment
+  34:84   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  35:56   warning  Unsafe assignment of an `any` value       @typescript-eslint/no-unsafe-assignment
+  35:87   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  36:58   warning  Unsafe assignment of an `any` value       @typescript-eslint/no-unsafe-assignment
+  36:90   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  37:56   warning  Unsafe assignment of an `any` value       @typescript-eslint/no-unsafe-assignment
+  37:87   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  38:68   warning  Unsafe assignment of an `any` value       @typescript-eslint/no-unsafe-assignment
+  38:105  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  39:54   warning  Unsafe assignment of an `any` value       @typescript-eslint/no-unsafe-assignment
+  39:84   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  43:5    warning  Unsafe assignment of an `any` value       @typescript-eslint/no-unsafe-assignment
+  43:40   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  46:60   warning  Unsafe assignment of an `any` value       @typescript-eslint/no-unsafe-assignment
+  46:93   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  47:56   warning  Unsafe assignment of an `any` value       @typescript-eslint/no-unsafe-assignment
+  47:87   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\sandpr\ticket-editor\src\presentation\components\elements\registry.ts
+   5:18  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   6:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   7:20  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   8:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   9:18  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  10:22  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  12:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  24:23  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\sandpr\ticket-editor\src\presentation\components\elements\types.ts
+   2:18  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   3:17  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   4:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   5:20  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   6:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   7:23  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  10:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\sandpr\ticket-editor\src\presentation\components\richText\TableOperationsToolbar.tsx
+  25:47  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\sandpr\ticket-editor\src\presentation\components\richText\extensions.ts
+   21:7   warning  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+   21:27  warning  Unsafe member access .types on an `any` value                           @typescript-eslint/no-unsafe-member-access
+   33:5   warning  Unsafe return of a value of type `any`                                  @typescript-eslint/no-unsafe-return
+   34:54  warning  Unexpected any. Specify a different type                                @typescript-eslint/no-explicit-any
+   35:9   warning  Unsafe return of a value of type `any`                                  @typescript-eslint/no-unsafe-return
+   35:9   warning  Unsafe call of an `any` typed value                                     @typescript-eslint/no-unsafe-call
+   35:9   warning  Unsafe call of an `any` typed value                                     @typescript-eslint/no-unsafe-call
+   35:9   warning  Unsafe call of an `any` typed value                                     @typescript-eslint/no-unsafe-call
+   35:17  warning  Unsafe member access .setMark on an `any` value                         @typescript-eslint/no-unsafe-member-access
+   35:52  warning  Unsafe member access .run on an `any` value                             @typescript-eslint/no-unsafe-member-access
+   36:40  warning  Unexpected any. Specify a different type                                @typescript-eslint/no-explicit-any
+   37:9   warning  Unsafe return of a value of type `any`                                  @typescript-eslint/no-unsafe-return
+   37:9   warning  Unsafe call of an `any` typed value                                     @typescript-eslint/no-unsafe-call
+   37:9   warning  Unsafe call of an `any` typed value                                     @typescript-eslint/no-unsafe-call
+   37:9   warning  Unsafe call of an `any` typed value                                     @typescript-eslint/no-unsafe-call
+   37:9   warning  Unsafe call of an `any` typed value                                     @typescript-eslint/no-unsafe-call
+   37:17  warning  Unsafe member access .setMark on an `any` value                         @typescript-eslint/no-unsafe-member-access
+   37:58  warning  Unsafe member access .removeEmptyTextStyle on an `any` value            @typescript-eslint/no-unsafe-member-access
+   37:81  warning  Unsafe member access .run on an `any` value                             @typescript-eslint/no-unsafe-member-access
+   38:10  warning  Unexpected any. Specify a different type                                @typescript-eslint/no-explicit-any
+   46:25  warning  Unexpected any. Specify a different type                                @typescript-eslint/no-explicit-any
+   46:39  warning  Unsafe member access .bgColor on an `any` value                         @typescript-eslint/no-unsafe-member-access
+   46:85  warning  Unsafe member access .bgColor on an `any` value                         @typescript-eslint/no-unsafe-member-access
+   51:25  warning  Unexpected any. Specify a different type                                @typescript-eslint/no-explicit-any
+   51:39  warning  Unsafe member access .borderColor on an `any` value                     @typescript-eslint/no-unsafe-member-access
+   51:85  warning  Unsafe member access .borderColor on an `any` value                     @typescript-eslint/no-unsafe-member-access
+   56:25  warning  Unexpected any. Specify a different type                                @typescript-eslint/no-explicit-any
+   56:39  warning  Unsafe member access .borderWidth on an `any` value                     @typescript-eslint/no-unsafe-member-access
+   56:85  warning  Unsafe member access .borderWidth on an `any` value                     @typescript-eslint/no-unsafe-member-access
+   61:25  warning  Unexpected any. Specify a different type                                @typescript-eslint/no-explicit-any
+   61:39  warning  Unsafe member access .borderStyle on an `any` value                     @typescript-eslint/no-unsafe-member-access
+   61:85  warning  Unsafe member access .borderStyle on an `any` value                     @typescript-eslint/no-unsafe-member-access
+   66:25  warning  Unexpected any. Specify a different type                                @typescript-eslint/no-explicit-any
+   66:39  warning  Unsafe member access .cellPadding on an `any` value                     @typescript-eslint/no-unsafe-member-access
+   66:80  warning  Unsafe member access .cellPadding on an `any` value                     @typescript-eslint/no-unsafe-member-access
+   71:25  warning  Unexpected any. Specify a different type                                @typescript-eslint/no-explicit-any
+   71:39  warning  Unsafe member access .textAlign on an `any` value                       @typescript-eslint/no-unsafe-member-access
+   71:81  warning  Unsafe member access .textAlign on an `any` value                       @typescript-eslint/no-unsafe-member-access
+   76:25  warning  Unexpected any. Specify a different type                                @typescript-eslint/no-explicit-any
+   76:39  warning  Unsafe member access .verticalAlign on an `any` value                   @typescript-eslint/no-unsafe-member-access
+   76:89  warning  Unsafe member access .verticalAlign on an `any` value                   @typescript-eslint/no-unsafe-member-access
+  100:9   warning  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  100:29  warning  Unsafe member access .types on an `any` value                           @typescript-eslint/no-unsafe-member-access
+  115:5   warning  Unsafe return of a value of type `any`                                  @typescript-eslint/no-unsafe-return
+  116:47  warning  Unexpected any. Specify a different type                                @typescript-eslint/no-explicit-any
+  117:15  warning  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  118:15  warning  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  119:9   warning  Unsafe call of an `any` typed value                                     @typescript-eslint/no-unsafe-call
+  119:15  warning  Unsafe member access .doc on an `any` value                             @typescript-eslint/no-unsafe-member-access
+  119:49  warning  Unexpected any. Specify a different type                                @typescript-eslint/no-explicit-any
+  120:15  warning  Unsafe call of an `any` typed value                                     @typescript-eslint/no-unsafe-call
+  120:28  warning  Unsafe member access .types on an `any` value                           @typescript-eslint/no-unsafe-member-access
+  120:48  warning  Unsafe member access .type on an `any` value                            @typescript-eslint/no-unsafe-member-access
+  121:19  warning  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  121:34  warning  Unsafe member access .attrs on an `any` value                           @typescript-eslint/no-unsafe-member-access
+  122:13  warning  Unsafe call of an `any` typed value                                     @typescript-eslint/no-unsafe-call
+  122:16  warning  Unsafe member access .setNodeMarkup on an `any` value                   @typescript-eslint/no-unsafe-member-access
+  122:56  warning  Unsafe member access .attrs on an `any` value                           @typescript-eslint/no-unsafe-member-access
+  122:80  warning  Unsafe argument of type `any` assigned to a parameter of type `number`  @typescript-eslint/no-unsafe-argument
+  125:23  warning  Unsafe call of an `any` typed value                                     @typescript-eslint/no-unsafe-call
+  128:48  warning  Unexpected any. Specify a different type                                @typescript-eslint/no-explicit-any
+  129:15  warning  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  130:15  warning  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  131:9   warning  Unsafe call of an `any` typed value                                     @typescript-eslint/no-unsafe-call
+  131:15  warning  Unsafe member access .doc on an `any` value                             @typescript-eslint/no-unsafe-member-access
+  131:49  warning  Unexpected any. Specify a different type                                @typescript-eslint/no-explicit-any
+  132:15  warning  Unsafe call of an `any` typed value                                     @typescript-eslint/no-unsafe-call
+  132:28  warning  Unsafe member access .types on an `any` value                           @typescript-eslint/no-unsafe-member-access
+  132:48  warning  Unsafe member access .type on an `any` value                            @typescript-eslint/no-unsafe-member-access
+  133:34  warning  Unsafe member access .attrs on an `any` value                           @typescript-eslint/no-unsafe-member-access
+  134:13  warning  Unsafe call of an `any` typed value                                     @typescript-eslint/no-unsafe-call
+  134:16  warning  Unsafe member access .setNodeMarkup on an `any` value                   @typescript-eslint/no-unsafe-member-access
+  134:56  warning  Unsafe member access .attrs on an `any` value                           @typescript-eslint/no-unsafe-member-access
+  137:23  warning  Unsafe call of an `any` typed value                                     @typescript-eslint/no-unsafe-call
+  140:10  warning  Unexpected any. Specify a different type                                @typescript-eslint/no-explicit-any
+
+C:\sandpr\ticket-editor\src\presentation\hooks\canvas\useCanvasConnectorDraft.ts
+  63:6  warning  React Hook useCallback has a missing dependency: 'setDraft'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\sandpr\ticket-editor\src\presentation\hooks\canvas\useCanvasDblClick.ts
+  27:72  warning  Arrow function has a complexity of 32. Maximum allowed is 15  complexity
+  41:9   warning  Unsafe assignment of an `any` value                           @typescript-eslint/no-unsafe-assignment
+  41:22  warning  Unexpected any. Specify a different type                      @typescript-eslint/no-explicit-any
+  41:27  warning  Unsafe member access .html on an `any` value                  @typescript-eslint/no-unsafe-member-access
+  44:9   warning  Unsafe assignment of an `any` value                           @typescript-eslint/no-unsafe-assignment
+  44:26  warning  Unexpected any. Specify a different type                      @typescript-eslint/no-explicit-any
+  44:31  warning  Unsafe member access .fontSize on an `any` value              @typescript-eslint/no-unsafe-member-access
+  45:9   warning  Unsafe assignment of an `any` value                           @typescript-eslint/no-unsafe-assignment
+  45:28  warning  Unexpected any. Specify a different type                      @typescript-eslint/no-explicit-any
+  45:33  warning  Unsafe member access .fontFamily on an `any` value            @typescript-eslint/no-unsafe-member-access
+  46:9   warning  Unsafe assignment of an `any` value                           @typescript-eslint/no-unsafe-assignment
+  46:27  warning  Unexpected any. Specify a different type                      @typescript-eslint/no-explicit-any
+  46:32  warning  Unsafe member access .fontStyle on an `any` value             @typescript-eslint/no-unsafe-member-access
+  47:9   warning  Unsafe assignment of an `any` value                           @typescript-eslint/no-unsafe-assignment
+  47:32  warning  Unexpected any. Specify a different type                      @typescript-eslint/no-explicit-any
+  47:37  warning  Unsafe member access .textDecoration on an `any` value        @typescript-eslint/no-unsafe-member-access
+  48:9   warning  Unsafe assignment of an `any` value                           @typescript-eslint/no-unsafe-assignment
+  48:22  warning  Unexpected any. Specify a different type                      @typescript-eslint/no-explicit-any
+  48:27  warning  Unsafe member access .fill on an `any` value                  @typescript-eslint/no-unsafe-member-access
+  49:9   warning  Unsafe assignment of an `any` value                           @typescript-eslint/no-unsafe-assignment
+  49:23  warning  Unexpected any. Specify a different type                      @typescript-eslint/no-explicit-any
+  49:28  warning  Unsafe member access .align on an `any` value                 @typescript-eslint/no-unsafe-member-access
+  50:9   warning  Unsafe assignment of an `any` value                           @typescript-eslint/no-unsafe-assignment
+  50:31  warning  Unexpected any. Specify a different type                      @typescript-eslint/no-explicit-any
+  50:36  warning  Unsafe member access .verticalAlign on an `any` value         @typescript-eslint/no-unsafe-member-access
+  51:9   warning  Unsafe assignment of an `any` value                           @typescript-eslint/no-unsafe-assignment
+  51:28  warning  Unexpected any. Specify a different type                      @typescript-eslint/no-explicit-any
+  51:33  warning  Unsafe member access .lineHeight on an `any` value            @typescript-eslint/no-unsafe-member-access
+  52:9   warning  Unsafe assignment of an `any` value                           @typescript-eslint/no-unsafe-assignment
+  52:25  warning  Unexpected any. Specify a different type                      @typescript-eslint/no-explicit-any
+  52:30  warning  Unsafe member access .padding on an `any` value               @typescript-eslint/no-unsafe-member-access
+  53:9   warning  Unsafe assignment of an `any` value                           @typescript-eslint/no-unsafe-assignment
+  53:28  warning  Unexpected any. Specify a different type                      @typescript-eslint/no-explicit-any
+  53:33  warning  Unsafe member access .background on an `any` value            @typescript-eslint/no-unsafe-member-access
+
+C:\sandpr\ticket-editor\src\presentation\hooks\canvas\useCanvasDrag.ts
+   45:58  warning  Unexpected any. Specify a different type                                @typescript-eslint/no-explicit-any
+   62:11  warning  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+   62:40  warning  Unsafe call of an `any` typed value                                     @typescript-eslint/no-unsafe-call
+   62:42  warning  Unsafe member access .target on an `any` value                          @typescript-eslint/no-unsafe-member-access
+   63:11  warning  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+   63:40  warning  Unsafe call of an `any` typed value                                     @typescript-eslint/no-unsafe-call
+   63:42  warning  Unsafe member access .target on an `any` value                          @typescript-eslint/no-unsafe-member-access
+   64:19  warning  Unsafe argument of type `any` assigned to a parameter of type `number`  @typescript-eslint/no-unsafe-argument
+   64:40  warning  Unsafe argument of type `any` assigned to a parameter of type `number`  @typescript-eslint/no-unsafe-argument
+   66:20  warning  Unsafe call of an `any` typed value                                     @typescript-eslint/no-unsafe-call
+   66:22  warning  Unsafe member access .target on an `any` value                          @typescript-eslint/no-unsafe-member-access
+   70:7   warning  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+   71:7   warning  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+   74:7   warning  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+   75:7   warning  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+   77:7   warning  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+   77:18  warning  Unsafe member access .evt on an `any` value                             @typescript-eslint/no-unsafe-member-access
+   85:32  warning  Arrow function has a complexity of 27. Maximum allowed is 15            complexity
+  197:38  warning  Unexpected any. Specify a different type                                @typescript-eslint/no-explicit-any
+  200:5   warning  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  200:22  warning  Unsafe member access .evt on an `any` value                             @typescript-eslint/no-unsafe-member-access
+  201:5   warning  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  201:21  warning  Unsafe call of an `any` typed value                                     @typescript-eslint/no-unsafe-call
+  201:23  warning  Unsafe member access .target on an `any` value                          @typescript-eslint/no-unsafe-member-access
+  202:5   warning  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  202:21  warning  Unsafe call of an `any` typed value                                     @typescript-eslint/no-unsafe-call
+  202:23  warning  Unsafe member access .target on an `any` value                          @typescript-eslint/no-unsafe-member-access
+  207:37  warning  Unexpected any. Specify a different type                                @typescript-eslint/no-explicit-any
+  215:11  warning  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  215:18  warning  Unsafe call of an `any` typed value                                     @typescript-eslint/no-unsafe-call
+  215:20  warning  Unsafe member access .target on an `any` value                          @typescript-eslint/no-unsafe-member-access
+  216:11  warning  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  216:18  warning  Unsafe call of an `any` typed value                                     @typescript-eslint/no-unsafe-call
+  216:20  warning  Unsafe member access .target on an `any` value                          @typescript-eslint/no-unsafe-member-access
+  217:19  warning  Unsafe argument of type `any` assigned to a parameter of type `number`  @typescript-eslint/no-unsafe-argument
+  217:38  warning  Unsafe argument of type `any` assigned to a parameter of type `number`  @typescript-eslint/no-unsafe-argument
+  219:25  warning  Unsafe member access .evt on an `any` value                             @typescript-eslint/no-unsafe-member-access
+  219:43  warning  Unsafe member access .evt on an `any` value                             @typescript-eslint/no-unsafe-member-access
+  225:9   warning  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  226:9   warning  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  248:42  warning  Unsafe argument of type `any` assigned to a parameter of type `number`  @typescript-eslint/no-unsafe-argument
+  248:48  warning  Unsafe argument of type `any` assigned to a parameter of type `number`  @typescript-eslint/no-unsafe-argument
+
+C:\sandpr\ticket-editor\src\presentation\hooks\canvas\useCanvasDrop.ts
+  28:18  warning  Unexpected any. Specify a different type                                                                                                                                                  @typescript-eslint/no-explicit-any
+  29:11  warning  Unsafe assignment of an `any` value                                                                                                                                                       @typescript-eslint/no-unsafe-assignment
+  35:17  warning  Unsafe member access .kind on an `any` value                                                                                                                                              @typescript-eslint/no-unsafe-member-access
+  36:40  warning  Unsafe argument of type `any` assigned to a parameter of type `{ path: string; arrayName: string; sampleCount?: number | undefined; arrayChildren: { name: string; type: string; }[]; }`  @typescript-eslint/no-unsafe-argument
+  43:17  warning  Unsafe member access .kind on an `any` value                                                                                                                                              @typescript-eslint/no-unsafe-member-access
+  45:13  warning  Unsafe assignment of an `any` value                                                                                                                                                       @typescript-eslint/no-unsafe-assignment
+  45:42  warning  Unsafe argument of type `any` assigned to a parameter of type `string`                                                                                                                    @typescript-eslint/no-unsafe-argument
+  45:50  warning  Unsafe member access .path on an `any` value                                                                                                                                              @typescript-eslint/no-unsafe-member-access
+  45:67  warning  Unsafe member access .sample on an `any` value                                                                                                                                            @typescript-eslint/no-unsafe-member-access
+  46:40  warning  Unsafe argument of type `any` assigned to a parameter of type `string`                                                                                                                    @typescript-eslint/no-unsafe-argument
+  46:48  warning  Unsafe member access .path on an `any` value                                                                                                                                              @typescript-eslint/no-unsafe-member-access
+  46:54  warning  Unsafe argument of type `any` assigned to a parameter of type `DataFieldType`                                                                                                             @typescript-eslint/no-unsafe-argument
+  46:62  warning  Unsafe member access .fieldType on an `any` value                                                                                                                                         @typescript-eslint/no-unsafe-member-access
+  46:73  warning  Unsafe argument of type `any` assigned to a parameter of type `string`                                                                                                                    @typescript-eslint/no-unsafe-argument
+  53:17  warning  Unsafe member access .kind on an `any` value                                                                                                                                              @typescript-eslint/no-unsafe-member-access
+  54:63  warning  Unsafe member access .templateId on an `any` value                                                                                                                                        @typescript-eslint/no-unsafe-member-access
+
+C:\sandpr\ticket-editor\src\presentation\hooks\canvas\useCanvasHoverAnchor.ts
+  10:34  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\sandpr\ticket-editor\src\presentation\hooks\canvas\useCanvasViewport.ts
+  141:41  warning  Unsafe argument of type `any` assigned to a parameter of type `EventListenerOrEventListenerObject`          @typescript-eslint/no-unsafe-argument
+  141:54  warning  Unexpected any. Specify a different type                                                                    @typescript-eslint/no-explicit-any
+  142:42  warning  Unsafe argument of type `any` assigned to a parameter of type `EventListenerOrEventListenerObject`          @typescript-eslint/no-unsafe-argument
+  142:55  warning  Unexpected any. Specify a different type                                                                    @typescript-eslint/no-explicit-any
+  147:48  warning  Unsafe argument of type `any` assigned to a parameter of type `boolean | EventListenerOptions | undefined`  @typescript-eslint/no-unsafe-argument
+  147:69  warning  Unexpected any. Specify a different type                                                                    @typescript-eslint/no-explicit-any
+  148:46  warning  Unsafe argument of type `any` assigned to a parameter of type `EventListenerOrEventListenerObject`          @typescript-eslint/no-unsafe-argument
+  148:59  warning  Unexpected any. Specify a different type                                                                    @typescript-eslint/no-explicit-any
+  149:47  warning  Unsafe argument of type `any` assigned to a parameter of type `EventListenerOrEventListenerObject`          @typescript-eslint/no-unsafe-argument
+  149:60  warning  Unexpected any. Specify a different type                                                                    @typescript-eslint/no-explicit-any
+  174:62  warning  Unexpected any. Specify a different type                                                                    @typescript-eslint/no-explicit-any
+  180:7   warning  Unsafe assignment of an `any` value                                                                         @typescript-eslint/no-unsafe-assignment
+  180:12  warning  Unsafe member access .clientX on an `any` value                                                             @typescript-eslint/no-unsafe-member-access
+  181:7   warning  Unsafe assignment of an `any` value                                                                         @typescript-eslint/no-unsafe-assignment
+  181:12  warning  Unsafe member access .clientY on an `any` value                                                             @typescript-eslint/no-unsafe-member-access
+
+C:\sandpr\ticket-editor\src\presentation\hooks\editor\useEditingCommit.ts
+  7:29  warning  Arrow function has a complexity of 23. Maximum allowed is 15  complexity
+
+C:\sandpr\ticket-editor\src\presentation\hooks\useAutoSave.ts
+  48:9   warning  Unsafe call of an `any` typed value                          @typescript-eslint/no-unsafe-call
+  48:20  warning  Unexpected any. Specify a different type                     @typescript-eslint/no-explicit-any
+  48:25  warning  Unsafe member access .requestIdleCallback on an `any` value  @typescript-eslint/no-unsafe-member-access
+  64:11  warning  Unsafe assignment of an `any` value                          @typescript-eslint/no-unsafe-assignment
+
+C:\sandpr\ticket-editor\src\presentation\hooks\useEditorShortcuts.ts
+   36:38  warning  Arrow function has a complexity of 48. Maximum allowed is 15  complexity
+  173:24  warning  Unexpected any. Specify a different type                      @typescript-eslint/no-explicit-any
+  173:29  warning  Unsafe member access .x on an `any` value                     @typescript-eslint/no-unsafe-member-access
+  174:24  warning  Unexpected any. Specify a different type                      @typescript-eslint/no-explicit-any
+  174:29  warning  Unsafe member access .y on an `any` value                     @typescript-eslint/no-unsafe-member-access
+  200:24  warning  Unexpected any. Specify a different type                      @typescript-eslint/no-explicit-any
+  200:29  warning  Unsafe member access .x on an `any` value                     @typescript-eslint/no-unsafe-member-access
+  201:24  warning  Unexpected any. Specify a different type                      @typescript-eslint/no-explicit-any
+  201:29  warning  Unsafe member access .y on an `any` value                     @typescript-eslint/no-unsafe-member-access
+
+C:\sandpr\ticket-editor\src\presentation\hooks\useStampFillMode.ts
+  43:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  53:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  71:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  90:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+
+C:\sandpr\ticket-editor\src\presentation\stores\ModalsStore.ts
+  197:11  warning  Unsafe assignment of an `any` value       @typescript-eslint/no-unsafe-assignment
+  204:20  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\sandpr\ticket-editor\src\services\snap.ts
+  13:8   warning  Function 'computeSnap' has too many parameters (5). Maximum allowed is 4  max-params
+  13:8   warning  Function 'computeSnap' has a complexity of 16. Maximum allowed is 15      complexity
+  56:49  warning  Unexpected any. Specify a different type                                  @typescript-eslint/no-explicit-any
+  56:54  warning  Unsafe member access .id on an `any` value                                @typescript-eslint/no-unsafe-member-access
+
+C:\sandpr\ticket-editor\src\workers\fillWorker.ts
+  26:5  warning  Unused eslint-disable directive (no problems were reported from 'no-console')
+
+✖ 525 problems (0 errors, 525 warnings)
+  0 errors and 1 warning potentially fixable with the `--fix` option.
+

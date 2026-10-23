@@ -1,4 +1,4 @@
-import type { DataRoot } from '../types';
+﻿import type { DataRoot } from '@/shared/types';
 
 export function resolveSample(data: DataRoot[], path: string): string | null {
   if (!path) return null;

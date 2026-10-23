@@ -1,6 +1,5 @@
-import type { CanvasElement, Slide } from '../types';
-import { SNAP_THRESHOLD } from '../types';
-import { gridRound } from '../lib/geometry';
+﻿import type { Slide, CanvasElement } from '@/shared/types';
+import { GRID_SIZE, SNAP_THRESHOLD } from '@/shared/constants';
 
 export interface SnapResult {
   x: number;
@@ -9,73 +8,106 @@ export interface SnapResult {
   h: number[];
 }
 
+const gridRound = (v: number): number => Math.round(v / GRID_SIZE) * GRID_SIZE;
+
+interface Candidate {
+  val: number;
+  guide: number;
+  type: 'grid' | 'slide' | 'element';
+}
+
 export function computeSnap(
-  el: CanvasElement,
+  el: CanvasElement | { id: string; x: number; y: number; width: number; height: number },
   x: number,
   y: number,
   slide: Slide,
-  showGrid: boolean,
+  excludeIds: string[] = []
 ): SnapResult {
-  const v: number[] = [];
-  const h: number[] = [];
+  const xs: Candidate[] = [];
+  const ys: Candidate[] = [];
+
   const bw = el.width;
   const bh = el.height;
-  const xs: { v: number; d: number; guide: number }[] = [];
-  const ys: { v: number; d: number; guide: number }[] = [];
 
-  if (showGrid) {
-    const gx = gridRound(x);
-    const gy = gridRound(y);
-    xs.push({ v: gx, d: Math.abs(x - gx), guide: gx });
-    ys.push({ v: gy, d: Math.abs(y - gy), guide: gy });
-  }
+  // 1. Сетка
+  const gx = gridRound(x);
+  const gy = gridRound(y);
+  xs.push({ val: gx, guide: gx, type: 'grid' });
+  ys.push({ val: gy, guide: gy, type: 'grid' });
 
-  const cx = x + bw / 2;
-  const cy = y + bh / 2;
+  // 2. Слайд: края + центр
   const stageW = slide.width;
   const stageH = slide.height;
 
-  xs.push({ v: stageW / 2 - bw / 2, d: Math.abs(cx - stageW / 2), guide: stageW / 2 });
-  xs.push({ v: 0, d: Math.abs(x), guide: 0 });
-  xs.push({ v: stageW - bw, d: Math.abs(x + bw - stageW), guide: stageW });
+  xs.push({ val: stageW / 2 - bw / 2, guide: stageW / 2, type: 'slide' });
+  xs.push({ val: 0, guide: 0, type: 'slide' });
+  xs.push({ val: stageW - bw, guide: stageW, type: 'slide' });
 
+  ys.push({ val: stageH / 2 - bh / 2, guide: stageH / 2, type: 'slide' });
+  ys.push({ val: 0, guide: 0, type: 'slide' });
+  ys.push({ val: stageH - bh, guide: stageH, type: 'slide' });
+
+  // 3. Padding
   const pad = slide.padding;
-  xs.push({ v: pad.left, d: Math.abs(x - pad.left), guide: pad.left });
-  xs.push({ v: stageW - pad.right - bw, d: Math.abs(x + bw - (stageW - pad.right)), guide: stageW - pad.right });
+  xs.push({ val: pad.left, guide: pad.left, type: 'slide' });
+  xs.push({ val: stageW - pad.right - bw, guide: stageW - pad.right, type: 'slide' });
+  ys.push({ val: pad.top, guide: pad.top, type: 'slide' });
+  ys.push({ val: stageH - pad.bottom - bh, guide: stageH - pad.bottom, type: 'slide' });
 
-  ys.push({ v: pad.top, d: Math.abs(y - pad.top), guide: pad.top });
-  ys.push({ v: stageH - pad.bottom - bh, d: Math.abs(y + bh - (stageH - pad.bottom)), guide: stageH - pad.bottom });
-  ys.push({ v: stageH / 2 - bh / 2, d: Math.abs(cy - stageH / 2), guide: stageH / 2 });
-  ys.push({ v: 0, d: Math.abs(y), guide: 0 });
-  ys.push({ v: stageH - bh, d: Math.abs(y + bh - stageH), guide: stageH });
-
+  // 4. Другие элементы
   for (const other of slide.elements) {
-    if (other.id === el.id) continue;
+    if (excludeIds.includes(other.id) || (el as any).id === other.id) continue;
+    if (other.locked) continue;
+
     const oL = other.x;
     const oR = other.x + other.width;
     const oC = other.x + other.width / 2;
     const oT = other.y;
     const oB = other.y + other.height;
     const oM = other.y + other.height / 2;
-    const l = x;
-    const r = x + bw;
-    const c = x + bw / 2;
-    const t = y;
-    const b = y + bh;
-    const m = y + bh / 2;
 
-    xs.push({ v: oL, d: Math.abs(l - oL), guide: oL });
-    xs.push({ v: oR - bw, d: Math.abs(r - oR), guide: oR });
-    xs.push({ v: oC - bw / 2, d: Math.abs(c - oC), guide: oC });
-    ys.push({ v: oT, d: Math.abs(t - oT), guide: oT });
-    ys.push({ v: oB - bh, d: Math.abs(b - oB), guide: oB });
-    ys.push({ v: oM - bh / 2, d: Math.abs(m - oM), guide: oM });
+    xs.push({ val: oL, guide: oL, type: 'element' });
+    xs.push({ val: oR - bw, guide: oR, type: 'element' });
+    xs.push({ val: oC - bw / 2, guide: oC, type: 'element' });
+
+    ys.push({ val: oT, guide: oT, type: 'element' });
+    ys.push({ val: oB - bh, guide: oB, type: 'element' });
+    ys.push({ val: oM - bh / 2, guide: oM, type: 'element' });
   }
 
-  const bestX = xs.reduce((a, b) => (b.d < a.d ? b : a), xs[0]);
-  const bestY = ys.reduce((a, b) => (b.d < a.d ? b : a), ys[0]);
-  if (bestX && bestX.d < SNAP_THRESHOLD) { x = bestX.v; v.push(bestX.guide); }
-  if (bestY && bestY.d < SNAP_THRESHOLD) { y = bestY.v; h.push(bestY.guide); }
+  let bestX: Candidate | null = null;
+  let minDx = Infinity;
+  for (const c of xs) {
+    const d = Math.abs(x - c.val);
+    if (d < minDx) { 
+      minDx = d; 
+      bestX = c; 
+    }
+  }
 
-  return { x, y, v, h };
+  let bestY: Candidate | null = null;
+  let minDy = Infinity;
+  for (const c of ys) {
+    const d = Math.abs(y - c.val);
+    if (d < minDy) { 
+      minDy = d; 
+      bestY = c; 
+    }
+  }
+
+  const v: number[] = [];
+  const h: number[] = [];
+  let finalX = x;
+  let finalY = y;
+
+  if (bestX !== null && minDx < SNAP_THRESHOLD) {
+    finalX = bestX.val;
+    if (bestX.type !== 'grid') v.push(bestX.guide);
+  }
+  if (bestY !== null && minDy < SNAP_THRESHOLD) {
+    finalY = bestY.val;
+    if (bestY.type !== 'grid') h.push(bestY.guide);
+  }
+
+  return { x: finalX, y: finalY, v, h };
 }

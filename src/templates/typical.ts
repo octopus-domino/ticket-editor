@@ -1,58 +1,15 @@
-import type {
-  Slide, TextElement, ShapeElement, LineElement, FooterElement,
-} from '../types';
-import { uid } from '../lib/uid';
+﻿// src/templates/typical.ts
+import type { Slide } from '@/shared/types';
+import {
+  uid,
+  makeText as text,
+  makeShape as shape,
+  makeLine as line,
+  makeFooterInPrintArea as footer,
+} from './helpers';
 
-/* ---------- Локальные helper-фабрики ---------- */
-
-function text(o: Partial<TextElement>): TextElement {
-  return {
-    id: uid(), type: 'text', x: 0, y: 0, width: 300, height: 40, rotation: 0,
-    text: '', fontSize: 16, fontFamily: 'Arial', fill: '#111',
-    fontStyle: 'normal', textDecoration: '',
-    align: 'left', verticalAlign: 'top', lineHeight: 1.2,
-    padding: { top: 4, right: 4, bottom: 4, left: 4 },
-    background: 'transparent',
-    ...o,
-  };
-}
-
-function shape(o: Partial<ShapeElement>): ShapeElement {
-  return {
-    id: uid(), type: 'shape', shape: 'rect',
-    x: 0, y: 0, width: 100, height: 100, rotation: 0,
-    fill: 'transparent', stroke: 'transparent', strokeWidth: 0,
-    text: '', fontSize: 16, textFill: '#111', radius: 0,
-    ...o,
-  };
-}
-
-function line(o: Partial<LineElement>): LineElement {
-  return {
-    id: uid(), type: 'line',
-    x: 0, y: 0, width: 300, height: 20, rotation: 0,
-    points: [0, 10, 300, 10],
-    stroke: '#111', strokeWidth: 1, dash: 'solid', isArrow: false,
-    ...o,
-  };
-}
-
-function footer(o: Partial<FooterElement>): FooterElement {
-  return {
-    id: uid(), type: 'footer',
-    x: 0, y: 1070, width: 794, height: 40, rotation: 0,
-    text: 'ООО «Компания» · www.example.com',
-    fill: '#ffffff', bgColor: '#1e293b', fontSize: 12,
-    ...o,
-  };
-}
-
-/* ---------- Размеры ---------- */
-
-const A4P = { width: 794, height: 1123 };   // A4 портрет
-const A4L = { width: 1123, height: 794 };   // A4 ландшафт
-
-/* ---------- Интерфейс ---------- */
+const A4P = { width: 794, height: 1123 } as const;
+const A4L = { width: 1123, height: 794 } as const;
 
 export interface TypicalLayout {
   id: string;
@@ -62,12 +19,7 @@ export interface TypicalLayout {
   build: () => Slide;
 }
 
-/* =====================================================
-   ТИПОВЫЕ МАКЕТЫ
-   ===================================================== */
-
 export const TYPICAL_LAYOUTS: TypicalLayout[] = [
-
   /* ---------- 1. Титульный лист документа ---------- */
   {
     id: 'doc-title',
@@ -81,23 +33,24 @@ export const TYPICAL_LAYOUTS: TypicalLayout[] = [
       background: '#ffffff',
       padding: { top: 60, right: 60, bottom: 60, left: 60 },
       elements: [
-        text({ x: 60, y: 80, width: 674, height: 30, text: 'НАЗВАНИЕ ОРГАНИЗАЦИИ',
+        text({ x: 60, y: 80, width: 674, height: 30,
+          text: 'НАЗВАНИЕ ОРГАНИЗАЦИИ',
           fontSize: 16, fontStyle: 'bold', align: 'center' }),
         text({ x: 60, y: 115, width: 674, height: 20,
-          text: 'Отрасль · Подразделение · Документ',
+          text: 'Отдел · Подразделение · Документ',
           fontSize: 11, align: 'center', fill: '#666' }),
-        line({ x: 60, y: 150, width: 674, height: 1, points: [0, 0, 674, 0], stroke: '#111', strokeWidth: 1 }),
-
+        line({ x: 60, y: 150, width: 674, height: 1,
+          points: [0, 0, 674, 0], stroke: '#111', strokeWidth: 1 }),
         text({ x: 60, y: 480, width: 674, height: 80,
           text: 'НАЗВАНИЕ ДОКУМЕНТА',
           fontSize: 40, fontStyle: 'bold', align: 'center', lineHeight: 1.1 }),
         text({ x: 60, y: 590, width: 674, height: 30,
           text: 'Подзаголовок или краткое описание документа',
           fontSize: 16, align: 'center', fill: '#666' }),
-
-        text({ x: 60, y: 940, width: 320, height: 24, text: 'Автор: Иванов И.И.', fontSize: 13 }),
+        text({ x: 60, y: 940, width: 320, height: 24,
+          text: 'Автор: И.И. Иванов', fontSize: 13 }),
         text({ x: 60, y: 965, width: 320, height: 24,
-          text: 'Должность: руководитель отдела', fontSize: 13, fill: '#666' }),
+          text: 'Должность: руководитель', fontSize: 13, fill: '#666' }),
         text({ x: 414, y: 940, width: 320, height: 24,
           text: 'Дата: 15.03.2026', fontSize: 13, align: 'right' }),
         text({ x: 414, y: 965, width: 320, height: 24,
@@ -112,32 +65,39 @@ export const TYPICAL_LAYOUTS: TypicalLayout[] = [
     name: 'Бланк с шапкой и подвалом',
     icon: '📋',
     description: 'A4, цветная шапка, пустое поле, футер с контактами',
-    build: () => ({
-      id: uid(), name: 'Бланк',
-      format: 'custom', orientation: 'portrait',
-      width: A4P.width, height: A4P.height,
-      background: '#ffffff',
-      padding: { top: 20, right: 40, bottom: 60, left: 40 },
-      elements: [
-        shape({ x: 0, y: 0, width: A4P.width, height: 100, fill: '#1e3a8a', radius: 0 }),
-        text({ x: 40, y: 26, width: 500, height: 30, text: 'ООО «Пример»',
-          fontSize: 22, fontStyle: 'bold', fill: '#ffffff' }),
-        text({ x: 40, y: 60, width: 500, height: 20,
-          text: 'Официальный документ · 2026 год',
-          fontSize: 12, fill: '#c7d2fe' }),
-        text({ x: 540, y: 36, width: 214, height: 20,
-          text: '+7 (495) 000-00-00', fontSize: 12, fill: '#c7d2fe', align: 'right' }),
-        text({ x: 540, y: 56, width: 214, height: 20,
-          text: 'www.example.com', fontSize: 12, fill: '#c7d2fe', align: 'right' }),
-
-        text({ x: 40, y: 520, width: 714, height: 40,
-          text: 'ИСХОДЯЩИЙ ДОКУМЕНТ',
-          fontSize: 22, align: 'center', fill: '#e5e7eb', fontStyle: 'bold' }),
-
-        footer({ y: 1050, height: 40,
-          text: 'ООО «Пример» · г. Москва, ул. Ленина, 5 · +7 (495) 000-00-00' }),
-      ],
-    }),
+    build: () => {
+      const padding = { top: 20, right: 40, bottom: 60, left: 40 };
+      return {
+        id: uid(), name: 'Бланк',
+        format: 'custom', orientation: 'portrait',
+        width: A4P.width, height: A4P.height,
+        background: '#ffffff',
+        padding,
+        elements: [
+          shape({ x: 0, y: 0, width: A4P.width, height: 100,
+            fill: '#1e3a8a', radius: 0 }),
+          text({ x: 40, y: 26, width: 500, height: 30,
+            text: 'ООО «Пример»',
+            fontSize: 22, fontStyle: 'bold', fill: '#ffffff' }),
+          text({ x: 40, y: 60, width: 500, height: 20,
+            text: 'Официальный документ · 2026 год',
+            fontSize: 12, fill: '#c7d2fe' }),
+          text({ x: 540, y: 36, width: 214, height: 20,
+            text: '+7 (495) 000-00-00',
+            fontSize: 12, fill: '#c7d2fe', align: 'right' }),
+          text({ x: 540, y: 56, width: 214, height: 20,
+            text: 'www.example.com',
+            fontSize: 12, fill: '#c7d2fe', align: 'right' }),
+          text({ x: 40, y: 520, width: 714, height: 40,
+            text: 'ИНФОРМАЦИЯ О КОМПАНИИ',
+            fontSize: 22, align: 'center', fill: '#e5e7eb', fontStyle: 'bold' }),
+          footer(A4P.width, A4P.height, padding, {
+            height: 40,
+            text: 'ООО «Пример» · г. Москва, ул. Ленина, 5 · +7 (495) 000-00-00',
+          }),
+        ],
+      };
+    },
   },
 
   /* ---------- 3. Обложка отчёта ---------- */
@@ -154,23 +114,18 @@ export const TYPICAL_LAYOUTS: TypicalLayout[] = [
       padding: { top: 60, right: 60, bottom: 60, left: 60 },
       elements: [
         shape({ x: 60, y: 60, width: 60, height: 60, fill: '#38bdf8', radius: 12 }),
-        text({ x: 132, y: 78, width: 200, height: 24, text: 'LOGO',
-          fontSize: 18, fontStyle: 'bold', fill: '#38bdf8' }),
-
+        text({ x: 132, y: 78, width: 200, height: 24,
+          text: 'LOGO', fontSize: 18, fontStyle: 'bold', fill: '#38bdf8' }),
         text({ x: 60, y: 420, width: 674, height: 100,
           text: 'ГОДОВОЙ ОТЧЁТ',
           fontSize: 52, fontStyle: 'bold', fill: '#ffffff', lineHeight: 1.05 }),
         text({ x: 60, y: 530, width: 674, height: 30,
-          text: 'За 2026 год',
-          fontSize: 20, fill: '#94a3b8' }),
-
+          text: 'за 2026 год', fontSize: 20, fill: '#94a3b8' }),
         line({ x: 60, y: 590, width: 200, height: 1,
           points: [0, 0, 200, 0], stroke: '#38bdf8', strokeWidth: 2 }),
-
         text({ x: 60, y: 620, width: 500, height: 80,
           text: 'Ключевые результаты, достижения и планы на будущее.',
           fontSize: 16, fill: '#94a3b8', lineHeight: 1.5 }),
-
         text({ x: 60, y: 990, width: 674, height: 40,
           text: '2026', fontSize: 24, fill: '#38bdf8', fontStyle: 'bold' }),
       ],
@@ -181,7 +136,7 @@ export const TYPICAL_LAYOUTS: TypicalLayout[] = [
   {
     id: 'pres-title',
     name: 'Титульный слайд',
-    icon: '🎬',
+    icon: '🖼',
     description: 'Ландшафт, крупный заголовок, автор, дата',
     build: () => ({
       id: uid(), name: 'Титульный слайд',
@@ -190,37 +145,34 @@ export const TYPICAL_LAYOUTS: TypicalLayout[] = [
       background: '#ffffff',
       padding: { top: 60, right: 80, bottom: 60, left: 80 },
       elements: [
-        shape({ x: 0, y: 0, width: 12, height: A4L.height, fill: '#3b82f6', radius: 0 }),
-
+        shape({ x: 0, y: 0, width: 12, height: A4L.height,
+          fill: '#3b82f6', radius: 0 }),
         text({ x: 80, y: 220, width: 963, height: 100,
           text: 'Название презентации',
           fontSize: 54, fontStyle: 'bold', fill: '#111', lineHeight: 1.1 }),
         text({ x: 80, y: 340, width: 963, height: 30,
           text: 'Подзаголовок с уточнением',
           fontSize: 20, fill: '#666' }),
-
         line({ x: 80, y: 400, width: 400, height: 1,
           points: [0, 0, 400, 0], stroke: '#3b82f6', strokeWidth: 3 }),
-
         text({ x: 80, y: 640, width: 400, height: 24,
-          text: 'Автор: Иванов И.И.', fontSize: 14 }),
+          text: 'Автор: И.И. Иванов', fontSize: 14 }),
         text({ x: 80, y: 665, width: 400, height: 24,
           text: 'Компания · Отдел', fontSize: 13, fill: '#666' }),
-
         text({ x: 663, y: 640, width: 380, height: 24,
           text: '15 марта 2026', fontSize: 14, align: 'right' }),
       ],
     }),
   },
 
-  /* ---------- 5. Слайд «Содержание» ---------- */
+  /* ---------- 5. Оглавление ---------- */
   {
     id: 'pres-toc',
-    name: 'Слайд «Содержание»',
+    name: 'Оглавление',
     icon: '📑',
-    description: 'Ландшафт, заголовок и нумерованный список пунктов',
+    description: 'Ландшафт, 5 пунктов с номерами',
     build: () => ({
-      id: uid(), name: 'Содержание',
+      id: uid(), name: 'Оглавление',
       format: 'custom', orientation: 'landscape',
       width: A4L.width, height: A4L.height,
       background: '#ffffff',
@@ -230,27 +182,22 @@ export const TYPICAL_LAYOUTS: TypicalLayout[] = [
           text: 'Содержание', fontSize: 36, fontStyle: 'bold' }),
         line({ x: 80, y: 120, width: 963, height: 1,
           points: [0, 0, 963, 0], stroke: '#e5e7eb', strokeWidth: 2 }),
-
         text({ x: 80, y: 180, width: 60, height: 40, text: '01',
           fontSize: 28, fontStyle: 'bold', fill: '#3b82f6' }),
         text({ x: 160, y: 190, width: 883, height: 30,
           text: 'Введение и постановка задачи', fontSize: 20, fill: '#111' }),
-
         text({ x: 80, y: 280, width: 60, height: 40, text: '02',
           fontSize: 28, fontStyle: 'bold', fill: '#3b82f6' }),
         text({ x: 160, y: 290, width: 883, height: 30,
           text: 'Анализ текущей ситуации', fontSize: 20, fill: '#111' }),
-
         text({ x: 80, y: 380, width: 60, height: 40, text: '03',
           fontSize: 28, fontStyle: 'bold', fill: '#3b82f6' }),
         text({ x: 160, y: 390, width: 883, height: 30,
-          text: 'Предлагаемое решение', fontSize: 20, fill: '#111' }),
-
+          text: 'Предлагаемые решения', fontSize: 20, fill: '#111' }),
         text({ x: 80, y: 480, width: 60, height: 40, text: '04',
           fontSize: 28, fontStyle: 'bold', fill: '#3b82f6' }),
         text({ x: 160, y: 490, width: 883, height: 30,
           text: 'Результаты и выводы', fontSize: 20, fill: '#111' }),
-
         text({ x: 80, y: 580, width: 60, height: 40, text: '05',
           fontSize: 28, fontStyle: 'bold', fill: '#3b82f6' }),
         text({ x: 160, y: 590, width: 883, height: 30,
@@ -290,7 +237,7 @@ export const TYPICAL_LAYOUTS: TypicalLayout[] = [
     id: 'pres-two-columns',
     name: 'Слайд в две колонки',
     icon: '📊',
-    description: 'Ландшафт, заголовок и две текстовые колонки',
+    description: 'Ландшафт, заголовок и два текстовых блока',
     build: () => ({
       id: uid(), name: 'Две колонки',
       format: 'custom', orientation: 'landscape',
@@ -302,15 +249,15 @@ export const TYPICAL_LAYOUTS: TypicalLayout[] = [
           text: 'Заголовок слайда', fontSize: 36, fontStyle: 'bold' }),
         line({ x: 80, y: 120, width: 963, height: 1,
           points: [0, 0, 963, 0], stroke: '#e5e7eb', strokeWidth: 2 }),
-
-        shape({ x: 80, y: 180, width: 60, height: 6, fill: '#3b82f6', radius: 3 }),
+        shape({ x: 80, y: 180, width: 60, height: 6,
+          fill: '#3b82f6', radius: 3 }),
         text({ x: 80, y: 200, width: 440, height: 30,
           text: 'Первый аспект', fontSize: 22, fontStyle: 'bold' }),
         text({ x: 80, y: 240, width: 440, height: 200,
-          text: 'Описание первого аспекта. Здесь можно разместить несколько предложений текста, который раскроет суть.',
+          text: 'Описание первого аспекта. Здесь можно разместить текст, который раскрывает тему.',
           fontSize: 16, fill: '#555', lineHeight: 1.6 }),
-
-        shape({ x: 603, y: 180, width: 60, height: 6, fill: '#3b82f6', radius: 3 }),
+        shape({ x: 603, y: 180, width: 60, height: 6,
+          fill: '#3b82f6', radius: 3 }),
         text({ x: 603, y: 200, width: 440, height: 30,
           text: 'Второй аспект', fontSize: 22, fontStyle: 'bold' }),
         text({ x: 603, y: 240, width: 440, height: 200,
@@ -324,8 +271,8 @@ export const TYPICAL_LAYOUTS: TypicalLayout[] = [
   {
     id: 'pres-three-cards',
     name: 'Слайд с тремя карточками',
-    icon: '🃏',
-    description: 'Ландшафт, три блока с иконками и описанием',
+    icon: '🎴',
+    description: 'Ландшафт, три блока с иконками',
     build: () => ({
       id: uid(), name: 'Три карточки',
       format: 'custom', orientation: 'landscape',
@@ -335,38 +282,38 @@ export const TYPICAL_LAYOUTS: TypicalLayout[] = [
       elements: [
         text({ x: 80, y: 60, width: 963, height: 50,
           text: 'Ключевые направления', fontSize: 36, fontStyle: 'bold' }),
-
-        shape({ x: 80, y: 200, width: 290, height: 380, fill: '#ffffff',
-          stroke: '#e5e7eb', strokeWidth: 1, radius: 12 }),
-        shape({ x: 110, y: 230, width: 60, height: 60, fill: '#dbeafe', radius: 30 }),
-        text({ x: 110, y: 244, width: 60, height: 30, text: '⚡',
+        shape({ x: 80, y: 200, width: 290, height: 380,
+          fill: '#ffffff', stroke: '#e5e7eb', strokeWidth: 1, radius: 12 }),
+        shape({ x: 110, y: 230, width: 60, height: 60,
+          fill: '#dbeafe', radius: 30 }),
+        text({ x: 110, y: 244, width: 60, height: 30, text: '🎯',
           fontSize: 28, align: 'center' }),
         text({ x: 110, y: 320, width: 230, height: 30,
-          text: 'Скорость', fontSize: 20, fontStyle: 'bold' }),
+          text: 'Фокус', fontSize: 20, fontStyle: 'bold' }),
         text({ x: 110, y: 360, width: 230, height: 180,
-          text: 'Описание первой карточки. Что она даёт клиенту?',
+          text: 'Описание первого направления. Что она даёт?',
           fontSize: 14, fill: '#555', lineHeight: 1.6 }),
-
-        shape({ x: 396, y: 200, width: 290, height: 380, fill: '#ffffff',
-          stroke: '#e5e7eb', strokeWidth: 1, radius: 12 }),
-        shape({ x: 426, y: 230, width: 60, height: 60, fill: '#dcfce7', radius: 30 }),
-        text({ x: 426, y: 244, width: 60, height: 30, text: '🛡',
+        shape({ x: 396, y: 200, width: 290, height: 380,
+          fill: '#ffffff', stroke: '#e5e7eb', strokeWidth: 1, radius: 12 }),
+        shape({ x: 426, y: 230, width: 60, height: 60,
+          fill: '#dcfce7', radius: 30 }),
+        text({ x: 426, y: 244, width: 60, height: 30, text: '🎯',
           fontSize: 28, align: 'center' }),
         text({ x: 426, y: 320, width: 230, height: 30,
-          text: 'Надёжность', fontSize: 20, fontStyle: 'bold' }),
+          text: 'Мадёжность', fontSize: 20, fontStyle: 'bold' }),
         text({ x: 426, y: 360, width: 230, height: 180,
-          text: 'Описание второй карточки. Какие гарантии даём?',
+          text: 'Описание второго направления. Какие гарантии?',
           fontSize: 14, fill: '#555', lineHeight: 1.6 }),
-
-        shape({ x: 712, y: 200, width: 290, height: 380, fill: '#ffffff',
-          stroke: '#e5e7eb', strokeWidth: 1, radius: 12 }),
-        shape({ x: 742, y: 230, width: 60, height: 60, fill: '#fef3c7', radius: 30 }),
-        text({ x: 742, y: 244, width: 60, height: 30, text: '💰',
+        shape({ x: 712, y: 200, width: 290, height: 380,
+          fill: '#ffffff', stroke: '#e5e7eb', strokeWidth: 1, radius: 12 }),
+        shape({ x: 742, y: 230, width: 60, height: 60,
+          fill: '#fef3c7', radius: 30 }),
+        text({ x: 742, y: 244, width: 60, height: 30, text: '🎯',
           fontSize: 28, align: 'center' }),
         text({ x: 742, y: 320, width: 230, height: 30,
           text: 'Выгода', fontSize: 20, fontStyle: 'bold' }),
         text({ x: 742, y: 360, width: 230, height: 180,
-          text: 'Описание третьей карточки. Почему это выгодно?',
+          text: 'Описание третьего направления. Почему это выгодно?',
           fontSize: 14, fill: '#555', lineHeight: 1.6 }),
       ],
     }),
@@ -386,12 +333,12 @@ export const TYPICAL_LAYOUTS: TypicalLayout[] = [
       padding: { top: 60, right: 80, bottom: 60, left: 80 },
       elements: [
         text({ x: 80, y: 260, width: 963, height: 80,
-          text: 'Спасибо за внимание', fontSize: 56, fontStyle: 'bold',
-          fill: '#ffffff', align: 'center' }),
+          text: 'Спасибо за внимание',
+          fontSize: 56, fontStyle: 'bold', fill: '#ffffff', align: 'center' }),
         line({ x: 461, y: 380, width: 200, height: 1,
           points: [0, 0, 200, 0], stroke: '#38bdf8', strokeWidth: 3 }),
         text({ x: 80, y: 440, width: 963, height: 30,
-          text: 'Есть вопросы? Свяжитесь со мной',
+          text: 'Есть вопросы? Обращайтесь со мной',
           fontSize: 18, fill: '#94a3b8', align: 'center' }),
         text({ x: 80, y: 520, width: 963, height: 24,
           text: 'ivanov@example.com  ·  +7 (999) 123-45-67',
@@ -400,39 +347,45 @@ export const TYPICAL_LAYOUTS: TypicalLayout[] = [
     }),
   },
 
-  /* ---------- 10. Карточка: слева текст, справа картинка ---------- */
+  /* ---------- 10. Карточка: текст + картинка ---------- */
   {
     id: 'card-side-by-side',
     name: 'Карточка: текст + картинка',
-    icon: '🗂',
+    icon: '🖼',
     description: 'Портрет, две колонки, место для картинки',
-    build: () => ({
-      id: uid(), name: 'Карточка',
-      format: 'custom', orientation: 'portrait',
-      width: A4P.width, height: A4P.height,
-      background: '#ffffff',
-      padding: { top: 40, right: 40, bottom: 40, left: 40 },
-      elements: [
-        shape({ x: 40, y: 40, width: 714, height: 120, fill: '#1e293b', radius: 12 }),
-        text({ x: 60, y: 70, width: 674, height: 40,
-          text: 'Заголовок документа', fontSize: 26, fontStyle: 'bold', fill: '#ffffff' }),
-        text({ x: 60, y: 115, width: 674, height: 24,
-          text: 'Описание или номер', fontSize: 14, fill: '#cbd5e1' }),
-
-        text({ x: 40, y: 200, width: 360, height: 30,
-          text: 'Информация', fontSize: 20, fontStyle: 'bold' }),
-        text({ x: 40, y: 240, width: 360, height: 300,
-          text: 'Подробное описание содержимого. Здесь может быть текст, условия, характеристики, примечания и другая информация, которую нужно разместить слева.',
-          fontSize: 14, fill: '#555', lineHeight: 1.7 }),
-
-        shape({ x: 420, y: 200, width: 334, height: 340, fill: '#f1f5f9',
-          stroke: '#cbd5e1', strokeWidth: 1, radius: 8 }),
-        text({ x: 420, y: 360, width: 334, height: 30,
-          text: 'Место для картинки', fontSize: 14, fill: '#94a3b8', align: 'center' }),
-
-        footer({ y: 1050, height: 40, text: 'document · 15.03.2026' }),
-      ],
-    }),
+    build: () => {
+      const padding = { top: 40, right: 40, bottom: 40, left: 40 };
+      return {
+        id: uid(), name: 'Карточка',
+        format: 'custom', orientation: 'portrait',
+        width: A4P.width, height: A4P.height,
+        background: '#ffffff',
+        padding,
+        elements: [
+          shape({ x: 40, y: 40, width: 714, height: 120,
+            fill: '#1e293b', radius: 12 }),
+          text({ x: 60, y: 70, width: 674, height: 40,
+            text: 'Заголовок документа',
+            fontSize: 26, fontStyle: 'bold', fill: '#ffffff' }),
+          text({ x: 60, y: 115, width: 674, height: 24,
+            text: 'Описание или номер',
+            fontSize: 14, fill: '#cbd5e1' }),
+          text({ x: 40, y: 200, width: 360, height: 30,
+            text: 'Информация', fontSize: 20, fontStyle: 'bold' }),
+          text({ x: 40, y: 240, width: 360, height: 300,
+            text: 'Подробное описание содержимого. Здесь может быть текст, список, инструкции или примечания.',
+            fontSize: 14, fill: '#555', lineHeight: 1.7 }),
+          shape({ x: 420, y: 200, width: 334, height: 340,
+            fill: '#f1f5f9', stroke: '#cbd5e1', strokeWidth: 1, radius: 8 }),
+          text({ x: 420, y: 360, width: 334, height: 30,
+            text: 'Место для картинки',
+            fontSize: 14, fill: '#94a3b8', align: 'center' }),
+          footer(A4P.width, A4P.height, padding, {
+            height: 40, text: 'document · 15.03.2026',
+          }),
+        ],
+      };
+    },
   },
 
   /* ---------- 11. Пустой лист A4 ---------- */
@@ -440,7 +393,7 @@ export const TYPICAL_LAYOUTS: TypicalLayout[] = [
     id: 'blank-a4',
     name: 'Пустой лист A4',
     icon: '⬜',
-    description: 'A4 в портретной ориентации с отступами 40 мм',
+    description: 'A4 portrait, padding 40',
     build: () => ({
       id: uid(), name: 'Пустой лист',
       format: 'a4', orientation: 'portrait',
@@ -456,7 +409,7 @@ export const TYPICAL_LAYOUTS: TypicalLayout[] = [
     id: 'blank-slide',
     name: 'Пустой слайд',
     icon: '⬛',
-    description: 'Ландшафт A4 без элементов',
+    description: 'A4 landscape без элементов',
     build: () => ({
       id: uid(), name: 'Пустой слайд',
       format: 'custom', orientation: 'landscape',
@@ -465,5 +418,221 @@ export const TYPICAL_LAYOUTS: TypicalLayout[] = [
       padding: { top: 40, right: 60, bottom: 40, left: 60 },
       elements: [],
     }),
+  },
+
+  /* ---------- 13. Билет Яндекс.Афиши ---------- */
+  {
+    id: 'ticket-yandex',
+    name: 'Билет Яндекс.Афиши',
+    icon: '🎫',
+    description: '700×500, баннер, полосы, штрих-код',
+    build: () => {
+      const W = 700, H = 500;
+      const YELLOW = '#FFDD00';
+      const INK = '#000000';
+      const MUTED = '#555555';
+      const FAINT = '#888888';
+
+      const stripe = (x: number, y: number, w: number, rotation: number) =>
+        shape({ x, y, width: w, height: 46,
+          fill: YELLOW, stroke: 'transparent', strokeWidth: 0, rotation });
+
+      const barcode = Array.from({ length: 40 }).map((_, i) =>
+        shape({ x: 24 + i * 3.4, y: 452,
+          width: i % 3 === 0 ? 2 : 1, height: 26,
+          fill: INK, stroke: 'transparent', strokeWidth: 0 }));
+
+      const icons = Array.from({ length: 6 }).map((_, i) =>
+        shape({ x: 452 + i * 30, y: 296,
+          width: 22, height: 22,
+          fill: 'transparent', stroke: MUTED, strokeWidth: 1, radius: 11 }));
+
+      return {
+        id: uid(), name: 'Билет Яндекс.Афиши',
+        format: 'custom', orientation: 'landscape',
+        width: W, height: H, background: '#ffffff',
+        padding: { top: 0, right: 0, bottom: 0, left: 0 },
+        elements: [
+          stripe(-180, 220, 1100, -34),
+          stripe(-180, 120, 1100, 42),
+          shape({ x: 24, y: 22, width: 34, height: 34,
+            fill: YELLOW, radius: 17 }),
+          text({ x: 24, y: 30, width: 34, height: 20, text: 'Я',
+            fontSize: 18, fontStyle: 'bold', align: 'center', fill: INK }),
+          text({ x: 66, y: 30, width: 200, height: 20,
+            text: 'Яндекс Афиша',
+            fontSize: 15, fontStyle: 'bold', fill: INK }),
+          text({ x: 24, y: 82, width: 40, height: 20, text: '6+',
+            fontSize: 12, fontStyle: 'bold', fill: INK }),
+          text({ x: 60, y: 82, width: 120, height: 20,
+            text: 'Концерт', fontSize: 11, fill: MUTED }),
+          text({ x: 24, y: 118, width: 400, height: 70,
+            text: 'RADIO TAPOK. Концерт',
+            fontSize: 28, fontStyle: 'bold', lineHeight: 1.1, fill: INK }),
+          text({ x: 24, y: 200, width: 400, height: 24,
+            text: '11 ноября 2023, 20:00',
+            fontSize: 16, fill: INK }),
+          text({ x: 24, y: 262, width: 400, height: 22,
+            text: 'MTC Live Холл', fontSize: 15, fontStyle: 'bold', fill: INK }),
+          text({ x: 24, y: 286, width: 400, height: 20,
+            text: 'Пресненский пр-д., 80, стр. 1',
+            fontSize: 11, fill: FAINT }),
+          text({ x: 24, y: 332, width: 120, height: 16,
+            text: 'СЕКТОР', fontSize: 9, fill: FAINT }),
+          text({ x: 24, y: 350, width: 150, height: 20,
+            text: 'Трибуна 101', fontSize: 13, fill: INK }),
+          text({ x: 220, y: 332, width: 60, height: 16,
+            text: 'РЯД', fontSize: 9, fill: FAINT }),
+          text({ x: 220, y: 350, width: 60, height: 20,
+            text: '8', fontSize: 13, fill: INK }),
+          text({ x: 300, y: 332, width: 60, height: 16,
+            text: 'МЕСТО', fontSize: 9, fill: FAINT }),
+          text({ x: 300, y: 350, width: 60, height: 20,
+            text: '14', fontSize: 13, fill: INK }),
+          text({ x: 24, y: 398, width: 120, height: 14,
+            text: 'НОМЕР ЗАКАЗА', fontSize: 8, fill: FAINT }),
+          text({ x: 24, y: 414, width: 120, height: 18,
+            text: '21915751', fontSize: 12, fill: INK }),
+          text({ x: 155, y: 398, width: 120, height: 14,
+            text: 'ДАТА ЗАКАЗА', fontSize: 8, fill: FAINT }),
+          text({ x: 155, y: 414, width: 120, height: 18,
+            text: '19 августа, 17:23', fontSize: 12, fill: INK }),
+          text({ x: 290, y: 398, width: 100, height: 14,
+            text: 'ЦЕНА', fontSize: 8, fill: FAINT }),
+          text({ x: 290, y: 414, width: 100, height: 18,
+            text: '1500.00 ₽', fontSize: 12, fill: INK }),
+          text({ x: 400, y: 398, width: 120, height: 14,
+            text: 'НОМЕР БИЛЕТА', fontSize: 8, fill: FAINT }),
+          text({ x: 400, y: 414, width: 120, height: 18,
+            text: '50306281', fontSize: 12, fill: INK }),
+          ...barcode,
+          text({ x: 24, y: 484, width: 220, height: 14,
+            text: '74207410420', fontSize: 10, fill: MUTED }),
+          line({ x: 430, y: 20, width: 1, height: H - 40,
+            points: [0, 0, 0, H - 40], stroke: '#cccccc',
+            strokeWidth: 1, dash: 'dashed' }),
+          text({ x: 452, y: 24, width: 220, height: 20,
+            text: 'Электронный билет', fontSize: 12, fill: MUTED }),
+          shape({ x: 610, y: 20, width: 70, height: 70,
+            fill: '#f5f5f5', stroke: INK, strokeWidth: 1 }),
+          text({ x: 610, y: 42, width: 70, height: 24, text: 'QR',
+            fontSize: 18, fontStyle: 'bold', align: 'center', fill: INK }),
+          text({ x: 452, y: 100, width: 260, height: 18,
+            text: 'Как работает билет', fontSize: 12, fontStyle: 'bold', fill: INK }),
+          text({ x: 452, y: 120, width: 240, height: 60,
+            text: 'По билету можно пройти только один раз, его нельзя копировать и передавать.',
+            fontSize: 10, fill: MUTED, lineHeight: 1.35 }),
+          text({ x: 452, y: 190, width: 260, height: 18,
+            text: 'Как вернуть', fontSize: 12, fontStyle: 'bold', fill: INK }),
+          text({ x: 452, y: 210, width: 240, height: 40,
+            text: 'Если событие отменили или перенесли — вернём полную стоимость.',
+            fontSize: 10, fill: MUTED, lineHeight: 1.35 }),
+          ...icons,
+          text({ x: 452, y: 336, width: 240, height: 18,
+            text: 'Это электронный билет, без него не найдите', fontSize: 11, fontStyle: 'bold', fill: INK }),
+          text({ x: 452, y: 356, width: 240, height: 24,
+            text: 'Билет утверждён приказом ООО «Яндекс»',
+            fontSize: 9, fill: MUTED, lineHeight: 1.3 }),
+          text({ x: 452, y: 408, width: 80, height: 70,
+            text: 'Продавец\nООО «Афиша»\nИНН: 7704624281',
+            fontSize: 8, fill: MUTED, lineHeight: 1.35 }),
+          text({ x: 540, y: 408, width: 80, height: 70,
+            text: 'Организатор\nИП Иванов И.И.\nИНН: 502711347104',
+            fontSize: 8, fill: MUTED, lineHeight: 1.35 }),
+          text({ x: 630, y: 408, width: 60, height: 70,
+            text: 'Адрес:\n+7 495 123-45-67',
+            fontSize: 8, fill: MUTED, lineHeight: 1.35 }),
+        ],
+      };
+    },
+  },
+
+  /* ---------- 14. Каталог товаров (сетка) ---------- */
+  {
+    id: 'catalog-magnit',
+    name: 'Каталог товаров',
+    icon: '🛒',
+    description: 'A4, красная шапка, 3×3 карточек',
+    build: () => {
+      const W = 794, H = 1123;
+      const RED = '#E30611';
+      const DARK = '#111111';
+      const MUTED = '#777777';
+      const CARD_BG = '#F5F5F5';
+
+      const CARD_W = 238;
+      const CARD_H = 290;
+      const COL_X = [20, 268, 516] as const;
+      const ROW_Y = [170, 480, 790] as const;
+
+      const card = (x: number, y: number, idx: number) => [
+        shape({ x, y, width: CARD_W, height: CARD_H,
+          fill: CARD_BG, stroke: '#E5E5E5', strokeWidth: 1, radius: 10 }),
+        shape({ x: x + 10, y: y + 10, width: CARD_W - 20, height: 130,
+          fill: '#FFFFFF', stroke: 'transparent', strokeWidth: 0, radius: 6 }),
+        text({ x: x + 10, y: y + 65, width: CARD_W - 20, height: 20,
+          text: 'ФОТО', fontSize: 12, align: 'center', fill: '#BBBBBB' }),
+        shape({ x: x + 10, y: y + 10, width: 56, height: 26,
+          fill: RED, radius: 6 }),
+        text({ x: x + 10, y: y + 15, width: 56, height: 20,
+          text: '-25%', fontSize: 13, fontStyle: 'bold',
+          align: 'center', fill: '#FFFFFF' }),
+        text({ x: x + 14, y: y + 152, width: CARD_W - 28, height: 40,
+          text: `Наименование товара ${idx + 1}`,
+          fontSize: 13, fontStyle: 'bold', lineHeight: 1.25, fill: DARK }),
+        text({ x: x + 14, y: y + 200, width: CARD_W - 28, height: 32,
+          text: '199 ₽', fontSize: 24, fontStyle: 'bold', fill: RED }),
+        text({ x: x + 14, y: y + 240, width: CARD_W - 28, height: 20,
+          text: '259 ₽', fontSize: 14, fill: MUTED, textDecoration: 'line-through' }),
+        text({ x: x + 14, y: y + 262, width: CARD_W - 28, height: 18,
+          text: 'за 1 кг', fontSize: 10, fill: MUTED }),
+      ];
+
+      return {
+        id: uid(), name: 'Каталог товаров',
+        format: 'custom', orientation: 'portrait',
+        width: W, height: H, background: '#FFFFFF',
+        padding: { top: 0, right: 0, bottom: 0, left: 0 },
+        elements: [
+          shape({ x: 0, y: 0, width: W, height: 140,
+            fill: RED, stroke: 'transparent', strokeWidth: 0, radius: 0 }),
+          shape({ x: 20, y: 24, width: 42, height: 42,
+            fill: '#FFFFFF', radius: 21 }),
+          text({ x: 20, y: 34, width: 42, height: 26, text: 'М',
+            fontSize: 24, fontStyle: 'bold', align: 'center', fill: RED }),
+          text({ x: 74, y: 30, width: 300, height: 30,
+            text: 'Магнит', fontSize: 26, fontStyle: 'bold', fill: '#FFFFFF' }),
+          text({ x: 74, y: 60, width: 300, height: 20,
+            text: 'у дома', fontSize: 14, fill: '#FFDDDD' }),
+          text({ x: 470, y: 30, width: 304, height: 24,
+            text: 'Каталог акций', fontSize: 13, fill: '#FFDDDD', align: 'right' }),
+          text({ x: 470, y: 54, width: 304, height: 26,
+            text: 'с 20 октября по 3 ноября',
+            fontSize: 15, fontStyle: 'bold', fill: '#FFFFFF', align: 'right' }),
+          text({ x: 470, y: 82, width: 304, height: 20,
+            text: 'Скидки до 50%', fontSize: 13, fill: '#FFDDDD', align: 'right' }),
+          text({ x: 20, y: 148, width: 500, height: 24,
+            text: 'ВЫГОДНЫЕ ЦЕНЫ КАЖДЫЙ ДЕНЬ',
+            fontSize: 12, fontStyle: 'bold', fill: RED }),
+          ...card(COL_X[0], ROW_Y[0], 0),
+          ...card(COL_X[1], ROW_Y[0], 1),
+          ...card(COL_X[2], ROW_Y[0], 2),
+          ...card(COL_X[0], ROW_Y[1], 3),
+          ...card(COL_X[1], ROW_Y[1], 4),
+          ...card(COL_X[2], ROW_Y[1], 5),
+          ...card(COL_X[0], ROW_Y[2], 6),
+          ...card(COL_X[1], ROW_Y[2], 7),
+          ...card(COL_X[2], ROW_Y[2], 8),
+          shape({ x: 0, y: 1090, width: W, height: 33,
+            fill: DARK, stroke: 'transparent', strokeWidth: 0, radius: 0 }),
+          text({ x: 20, y: 1098, width: 500, height: 20,
+            text: 'Магнит · 8 800 200-90-02 · magnit.ru',
+            fontSize: 11, fill: '#FFFFFF' }),
+          text({ x: 474, y: 1098, width: 300, height: 20,
+            text: 'Цены действительны на момент акции',
+            fontSize: 10, fill: '#AAAAAA', align: 'right' }),
+        ],
+      };
+    },
   },
 ];

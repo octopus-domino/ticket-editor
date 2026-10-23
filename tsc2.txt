@@ -1,0 +1,178 @@
+
+> ticket-editor@3.0.0 typecheck
+> tsc -p tsconfig.json --noEmit
+
+src/infrastructure/state/DocumentStore.ts(1,37): error TS2307: Cannot find module 'immer' or its corresponding type declarations.
+src/infrastructure/state/DocumentStore.ts(73,34): error TS7006: Parameter 'draft' implicitly has an 'any' type.
+src/presentation/components/Canvas.tsx(2,49): error TS2307: Cannot find module 'react-konva' or its corresponding type declarations.
+src/presentation/components/Canvas.tsx(3,24): error TS2307: Cannot find module 'konva' or its corresponding type declarations.
+src/presentation/components/Canvas.tsx(161,25): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/Canvas.tsx(191,44): error TS7006: Parameter 'x' implicitly has an 'any' type.
+src/presentation/components/Canvas.tsx(192,52): error TS7006: Parameter 'x' implicitly has an 'any' type.
+src/presentation/components/Canvas.tsx(229,30): error TS7006: Parameter 'oldBox' implicitly has an 'any' type.
+src/presentation/components/Canvas.tsx(229,38): error TS7006: Parameter 'newBox' implicitly has an 'any' type.
+src/presentation/components/Canvas.tsx(233,32): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/Canvas.tsx(243,44): error TS7006: Parameter 'x' implicitly has an 'any' type.
+src/presentation/components/Canvas.tsx(244,52): error TS7006: Parameter 'x' implicitly has an 'any' type.
+src/presentation/components/Canvas.tsx(252,56): error TS7006: Parameter 'v' implicitly has an 'any' type.
+src/presentation/components/Canvas.tsx(252,59): error TS7006: Parameter 'i' implicitly has an 'any' type.
+src/presentation/components/canvas/CanvasPreviewLayer.tsx(2,43): error TS2307: Cannot find module 'react-konva' or its corresponding type declarations.
+src/presentation/components/canvas/CanvasPreviewLayer.tsx(106,27): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/canvas/CanvasPreviewLayer.tsx(107,28): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/canvas/CanvasPreviewLayer.tsx(108,28): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/Editor.tsx(106,36): error TS7006: Parameter 'x' implicitly has an 'any' type.
+src/presentation/components/Editor.tsx(108,39): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/Editor.tsx(120,36): error TS7006: Parameter 'x' implicitly has an 'any' type.
+src/presentation/components/Editor.tsx(122,39): error TS7006: Parameter 'el' implicitly has an 'any' type.
+src/presentation/components/Editor.tsx(134,36): error TS7006: Parameter 'x' implicitly has an 'any' type.
+src/presentation/components/Editor.tsx(135,36): error TS7006: Parameter 'x' implicitly has an 'any' type.
+src/presentation/components/elements/ConnectorEl.tsx(2,56): error TS2307: Cannot find module 'react-konva' or its corresponding type declarations.
+src/presentation/components/elements/ConnectorEl.tsx(110,52): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/ConnectorEl.tsx(120,27): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/ConnectorEl.tsx(121,27): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/ConnectorEl.tsx(121,73): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/ConnectorEl.tsx(121,118): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/ConnectorEl.tsx(123,27): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/ConnectorEl.tsx(124,27): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/ConnectorEl.tsx(124,71): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/ConnectorEl.tsx(124,114): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/DiagramEl.tsx(2,46): error TS2307: Cannot find module 'react-konva' or its corresponding type declarations.
+src/presentation/components/elements/DiagramEl.tsx(31,21): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/DiagramEl.tsx(32,15): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/DiagramEl.tsx(33,20): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/DiagramEl.tsx(34,18): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/DiagramEl.tsx(36,19): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/DiagramEl.tsx(38,24): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/FillEl.tsx(2,37): error TS2307: Cannot find module 'react-konva' or its corresponding type declarations.
+src/presentation/components/elements/FillEl.tsx(28,21): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/FillEl.tsx(29,15): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/FillEl.tsx(31,19): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/FillEl.tsx(50,27): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/FillEl.tsx(51,26): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/FillEl.tsx(52,25): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/FooterEl.tsx(2,48): error TS2307: Cannot find module 'react-konva' or its corresponding type declarations.
+src/presentation/components/elements/FooterEl.tsx(18,19): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/FooterEl.tsx(19,13): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/FooterEl.tsx(21,17): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/ImageEl.tsx(2,33): error TS2307: Cannot find module 'react-konva' or its corresponding type declarations.
+src/presentation/components/elements/ImageEl.tsx(27,21): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/ImageEl.tsx(28,15): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/ImageEl.tsx(30,19): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/LineEl.tsx(2,23): error TS2307: Cannot find module 'react-konva' or its corresponding type declarations.
+src/presentation/components/elements/LineEl.tsx(73,21): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/LineEl.tsx(74,15): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/LineEl.tsx(77,19): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/PlaceholderEl.tsx(2,52): error TS2307: Cannot find module 'react-konva' or its corresponding type declarations.
+src/presentation/components/elements/PlaceholderEl.tsx(3,24): error TS2307: Cannot find module 'konva' or its corresponding type declarations.
+src/presentation/components/elements/PlaceholderEl.tsx(52,25): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/PlaceholderEl.tsx(53,19): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/PlaceholderEl.tsx(55,23): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/PlaceholderEl.tsx(57,28): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/PlaceholderEl.tsx(81,23): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/PlaceholderEl.tsx(82,17): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/PlaceholderEl.tsx(84,21): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/PlaceholderEl.tsx(86,26): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/PlaceholderEl.tsx(127,23): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/PlaceholderEl.tsx(128,17): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/PlaceholderEl.tsx(130,21): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/PlaceholderEl.tsx(132,26): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/PlaceholderEl.tsx(176,21): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/PlaceholderEl.tsx(177,15): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/PlaceholderEl.tsx(179,19): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/PlaceholderEl.tsx(181,24): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/RichTable.tsx(2,48): error TS2307: Cannot find module 'react-konva' or its corresponding type declarations.
+src/presentation/components/elements/ShapeEl.tsx(2,55): error TS2307: Cannot find module 'react-konva' or its corresponding type declarations.
+src/presentation/components/elements/ShapeEl.tsx(57,21): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/ShapeEl.tsx(58,15): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/ShapeEl.tsx(61,19): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/StampEl.tsx(2,109): error TS2307: Cannot find module 'react-konva' or its corresponding type declarations.
+src/presentation/components/elements/StampEl.tsx(37,23): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/StampEl.tsx(38,17): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/StampEl.tsx(39,22): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/StampEl.tsx(40,20): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/StampEl.tsx(43,21): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/StampEl.tsx(62,35): error TS7006: Parameter 'ctx' implicitly has an 'any' type.
+src/presentation/components/elements/StampEl.tsx(67,35): error TS7006: Parameter 'ctx' implicitly has an 'any' type.
+src/presentation/components/elements/StampEl.tsx(86,21): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/StampEl.tsx(87,15): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/StampEl.tsx(88,20): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/StampEl.tsx(89,18): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/StampEl.tsx(92,19): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/StampEl.tsx(129,47): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/presentation/components/elements/StampEl.tsx(188,47): error TS7006: Parameter 'ctx' implicitly has an 'any' type.
+src/presentation/components/elements/TableEl.tsx(2,35): error TS2307: Cannot find module 'react-konva' or its corresponding type declarations.
+src/presentation/components/elements/TableEl.tsx(37,21): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/TableEl.tsx(39,19): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/TextEl.tsx(2,48): error TS2307: Cannot find module 'react-konva' or its corresponding type declarations.
+src/presentation/components/elements/TextEl.tsx(79,21): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/TextEl.tsx(80,15): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/elements/TextEl.tsx(82,19): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/GridLayer.tsx(7,23): error TS2307: Cannot find module 'react-konva' or its corresponding type declarations.
+src/presentation/components/GridLayer.tsx(19,19): error TS7006: Parameter 'ctx' implicitly has an 'any' type.
+src/presentation/components/GridLayer.tsx(19,24): error TS7006: Parameter 'shape' implicitly has an 'any' type.
+src/presentation/components/LeftPanel.tsx(50,36): error TS7006: Parameter 'x' implicitly has an 'any' type.
+src/presentation/components/LeftPanel.tsx(59,41): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/presentation/components/LeftPanel.tsx(69,41): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/presentation/components/PropertiesPanel.tsx(18,36): error TS7006: Parameter 'x' implicitly has an 'any' type.
+src/presentation/components/PropertiesPanel.tsx(19,40): error TS7006: Parameter 'x' implicitly has an 'any' type.
+src/presentation/components/richText/extensions.ts(1,27): error TS2307: Cannot find module '@tiptap/core' or its corresponding type declarations.
+src/presentation/components/richText/extensions.ts(2,23): error TS2307: Cannot find module '@tiptap/extension-table-cell' or its corresponding type declarations.
+src/presentation/components/richText/extensions.ts(3,25): error TS2307: Cannot find module '@tiptap/extension-table-header' or its corresponding type declarations.
+src/presentation/components/richText/extensions.ts(5,16): error TS2664: Invalid module name in augmentation, module '@tiptap/core' cannot be found.
+src/presentation/components/richText/extensions.ts(25,23): error TS7006: Parameter 'el' implicitly has an 'any' type.
+src/presentation/components/richText/extensions.ts(26,24): error TS7006: Parameter 'attrs' implicitly has an 'any' type.
+src/presentation/components/richText/extensions.ts(104,25): error TS7006: Parameter 'element' implicitly has an 'any' type.
+src/presentation/components/richText/extensions.ts(105,26): error TS7006: Parameter 'attributes' implicitly has an 'any' type.
+src/presentation/components/richText/TableOperationsToolbar.tsx(2,29): error TS2307: Cannot find module '@tiptap/react' or its corresponding type declarations.
+src/presentation/components/RichTextEditor.tsx(2,42): error TS2307: Cannot find module '@tiptap/react' or its corresponding type declarations.
+src/presentation/components/RichTextEditor.tsx(3,24): error TS2307: Cannot find module '@tiptap/starter-kit' or its corresponding type declarations.
+src/presentation/components/RichTextEditor.tsx(4,23): error TS2307: Cannot find module '@tiptap/extension-underline' or its corresponding type declarations.
+src/presentation/components/RichTextEditor.tsx(5,23): error TS2307: Cannot find module '@tiptap/extension-text-align' or its corresponding type declarations.
+src/presentation/components/RichTextEditor.tsx(6,23): error TS2307: Cannot find module '@tiptap/extension-text-style' or its corresponding type declarations.
+src/presentation/components/RichTextEditor.tsx(7,19): error TS2307: Cannot find module '@tiptap/extension-color' or its corresponding type declarations.
+src/presentation/components/RichTextEditor.tsx(8,23): error TS2307: Cannot find module '@tiptap/extension-highlight' or its corresponding type declarations.
+src/presentation/components/RichTextEditor.tsx(9,18): error TS2307: Cannot find module '@tiptap/extension-link' or its corresponding type declarations.
+src/presentation/components/RichTextEditor.tsx(10,19): error TS2307: Cannot find module '@tiptap/extension-table' or its corresponding type declarations.
+src/presentation/components/RichTextEditor.tsx(11,22): error TS2307: Cannot find module '@tiptap/extension-table-row' or its corresponding type declarations.
+src/presentation/components/RichTextEditor.tsx(12,24): error TS2307: Cannot find module '@tiptap/extension-font-family' or its corresponding type declarations.
+src/presentation/components/RichTextEditor.tsx(13,23): error TS2307: Cannot find module '@tiptap/extension-gapcursor' or its corresponding type declarations.
+src/presentation/components/shapes/PolylineRenderer.tsx(2,30): error TS2307: Cannot find module 'react-konva' or its corresponding type declarations.
+src/presentation/components/shapes/PolylineRenderer.tsx(68,25): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/shapes/PolylineRenderer.tsx(69,24): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/SlidesBar.tsx(42,41): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/presentation/components/StampEditor.tsx(5,8): error TS2307: Cannot find module 'react-konva' or its corresponding type declarations.
+src/presentation/components/StampEditor.tsx(6,24): error TS2307: Cannot find module 'konva' or its corresponding type declarations.
+src/presentation/components/StampEditor.tsx(265,29): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/StampEditor.tsx(280,33): error TS7006: Parameter 'ctx' implicitly has an 'any' type.
+src/presentation/components/StampEditor.tsx(280,38): error TS7006: Parameter 'shape' implicitly has an 'any' type.
+src/presentation/components/StampEditor.tsx(332,38): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/StampEditor.tsx(530,21): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/StampEditor.tsx(542,19): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/StampEditor.tsx(543,19): error TS7006: Parameter 'ctx' implicitly has an 'any' type.
+src/presentation/components/StampEditor.tsx(605,19): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/components/StampLibraryPanel.tsx(34,36): error TS7006: Parameter 'x' implicitly has an 'any' type.
+src/presentation/components/stamps/CompositeFillLayer.tsx(7,33): error TS2307: Cannot find module 'react-konva' or its corresponding type declarations.
+src/presentation/hooks/canvas/useCanvasConnectorDraft.ts(81,41): error TS7006: Parameter 'x' implicitly has an 'any' type.
+src/presentation/hooks/canvas/useCanvasDrag.ts(2,24): error TS2307: Cannot find module 'konva' or its corresponding type declarations.
+src/presentation/hooks/canvas/useCanvasDrag.ts(261,37): error TS7006: Parameter 'x' implicitly has an 'any' type.
+src/presentation/hooks/canvas/useCanvasDrop.ts(3,24): error TS2307: Cannot find module 'konva' or its corresponding type declarations.
+src/presentation/hooks/canvas/useCanvasDrop.ts(38,38): error TS7006: Parameter 'xx' implicitly has an 'any' type.
+src/presentation/hooks/canvas/useCanvasDrop.ts(48,38): error TS7006: Parameter 'xx' implicitly has an 'any' type.
+src/presentation/hooks/canvas/useCanvasDrop.ts(58,38): error TS7006: Parameter 'xx' implicitly has an 'any' type.
+src/presentation/hooks/canvas/useCanvasFillMode.ts(27,38): error TS7006: Parameter 'x' implicitly has an 'any' type.
+src/presentation/hooks/canvas/useCanvasFillMode.ts(28,37): error TS7006: Parameter 'x' implicitly has an 'any' type.
+src/presentation/hooks/canvas/useCanvasFillMode.ts(55,36): error TS7006: Parameter 'x' implicitly has an 'any' type.
+src/presentation/hooks/canvas/useCanvasViewport.ts(2,24): error TS2307: Cannot find module 'konva' or its corresponding type declarations.
+src/presentation/hooks/editor/useClipboardActions.ts(24,36): error TS7006: Parameter 'x' implicitly has an 'any' type.
+src/presentation/hooks/editor/useClipboardActions.ts(26,39): error TS7006: Parameter 'el' implicitly has an 'any' type.
+src/presentation/hooks/editor/useClipboardActions.ts(40,36): error TS7006: Parameter 'x' implicitly has an 'any' type.
+src/presentation/hooks/editor/useDiagramCommit.ts(8,36): error TS7006: Parameter 'x' implicitly has an 'any' type.
+src/presentation/hooks/editor/useDiagramCommit.ts(9,36): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/hooks/editor/useEditingCommit.ts(8,40): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/presentation/hooks/editor/useEditingCommit.ts(9,40): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/hooks/editor/useEditingCommit.ts(38,37): error TS7006: Parameter 'row' implicitly has an 'any' type.
+src/presentation/hooks/editor/useStampCommit.ts(8,36): error TS7006: Parameter 'x' implicitly has an 'any' type.
+src/presentation/hooks/editor/useStampCommit.ts(9,36): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/presentation/hooks/editor/useStyleClipboard.ts(21,36): error TS7006: Parameter 'x' implicitly has an 'any' type.
+src/presentation/hooks/editor/useStyleClipboard.ts(22,36): error TS7006: Parameter 'x' implicitly has an 'any' type.
+src/shared/schemas/document.ts(14,19): error TS2307: Cannot find module 'zod' or its corresponding type declarations.

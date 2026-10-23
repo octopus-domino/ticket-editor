@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# backups created by scripts/refactor-imports.ps1
+.imports-backup/
+*.imports-backup/

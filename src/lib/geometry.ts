@@ -1,5 +1,5 @@
-import type { CanvasElement, Slide } from '../types';
-import { GRID_SIZE } from '../types';
+﻿import type { CanvasElement, Slide } from '@/shared/types';
+import { GRID_SIZE } from '@/shared/constants';
 
 export interface BBox { x: number; y: number; w: number; h: number; }
 

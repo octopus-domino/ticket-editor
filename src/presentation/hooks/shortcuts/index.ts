@@ -1,0 +1,1 @@
+export { matches, type KeySpec } from './keyMatcher';

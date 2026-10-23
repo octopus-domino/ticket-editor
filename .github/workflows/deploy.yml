@@ -30,18 +30,17 @@ jobs:
         run: npm ci
 
       - name: Build project
-        # Здесь можно передать переменные окружения, если у вас развернут бэкенд
-        # env:
-        #   VITE_EXPORT_API: ${{ secrets.VITE_EXPORT_API }}
         run: npm run build
 
       - name: Setup Pages
-        uses: actions/configure-pages@v4
+        uses: actions/configure-pages@v5
+        # enablement: true # Раскомментируйте, если хотите, чтобы action попытался включить Pages автоматически
+        # (требуется токен с правами administration: write)
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './dist' # Vite по умолчанию собирает в папку dist
+          path: './dist'
 
   deploy:
     environment:

@@ -36,11 +36,14 @@ export const authApi = {
         method: 'POST',
         credentials: 'include',
       });
-      if (!res.ok) return null;
+      
+      if (res.status === 401) return null; // Не авторизован, но сеть в порядке
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      
       return (await res.json()) as AuthResponse;
     } catch (e) {
-      console.warn('Backend unreachable:', e);
-      return null;
+      console.warn('Backend unreachable during refresh:', e);
+      throw e; // Пробрасываем ошибку, чтобы отловить её в bootstrap
     }
   },
 

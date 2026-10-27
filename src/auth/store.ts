@@ -7,6 +7,7 @@ export interface AuthState {
   accessToken: string | null;
   booting: boolean;
   error: string | null;
+  offline: boolean;
 }
 
 const INITIAL: AuthState = {
@@ -14,6 +15,7 @@ const INITIAL: AuthState = {
   accessToken: null,
   booting: true,
   error: null,
+  offline: false,
 };
 
 export class AuthStore extends SimpleStore<AuthState> {
@@ -22,19 +24,30 @@ export class AuthStore extends SimpleStore<AuthState> {
   }
 
   setSession(accessToken: string, user: User): void {
-    this.setState({ user, accessToken, booting: false, error: null });
+    this.setState({ user, accessToken, booting: false, error: null, offline: false });
   }
 
   clear(): void {
-    this.setState({ user: null, accessToken: null, booting: false, error: null });
+    this.setState({ user: null, accessToken: null, booting: false, error: null, offline: false });
   }
 
   async bootstrap(): Promise<void> {
-    const data = await authApi.refresh();
-    if (data) {
-      this.setSession(data.accessToken, data.user);
-    } else {
-      this.clear();
+    try {
+      const data = await authApi.refresh();
+      if (data) {
+        this.setSession(data.accessToken, data.user);
+      } else {
+        this.clear();
+      }
+    } catch {
+      // Сетевая ошибка — бэкенд недоступен
+      this.setState({
+        user: { id: 'offline', email: 'offline@local', name: 'Локальный режим' },
+        accessToken: null,
+        booting: false,
+        error: null,
+        offline: true,
+      });
     }
   }
 

@@ -2,18 +2,21 @@
 /* ============================================================
    lib/serverExport.ts
    F-IO-11, F-IO-12, F-EI-01..04, NFR-SEC-06.
-   Отправка слайда на сервер экспорта → Blob → download.
+   Отправка слайдов на сервер экспорта → Blob → download.
+   Использует authFetch — access-токен подставляется автоматически,
+   при 401 выполняется refresh и повтор.
    ============================================================ */
 
 import type { Slide } from '../shared/types';
 import { CONFIG } from '../shared/config';
+import { authFetch } from '@/shared/api/client';
 import { embedImagesInSlide } from './embedImages';
 
 const TIMEOUT_MS = 30_000;
 
-function buildPayload(slide: Slide, extraOptions: Record<string, unknown> = {}) {
+function buildPayload(slides: Slide[], extraOptions: Record<string, unknown> = {}) {
   return {
-    slides: [slide],
+    slides,
     options: {
       embedImages: true,
       prettyPrint: false,
@@ -27,7 +30,7 @@ async function postForBlob(
   body: unknown,
   signal: AbortSignal,
 ): Promise<Blob> {
-  const res = await fetch(url, {
+  const res = await authFetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -43,6 +46,7 @@ async function postForBlob(
 
 /**
  * F-IO-11: SVG через сервер (с embed images).
+ * Экспортирует ОДИН слайд — SVG не поддерживает многостраничность.
  */
 export async function exportSvgServer(slide: Slide): Promise<void> {
   const prepared = await embedImagesInSlide(slide);
@@ -52,7 +56,7 @@ export async function exportSvgServer(slide: Slide): Promise<void> {
   try {
     const blob = await postForBlob(
       `${CONFIG.EXPORT_API}/svg`,
-      buildPayload(prepared),
+      buildPayload([prepared]),
       controller.signal,
     );
     const filename = `${(slide.name || 'slide').replace(/[^\w.-]+/g, '_')}.svg`;
@@ -63,21 +67,46 @@ export async function exportSvgServer(slide: Slide): Promise<void> {
 }
 
 /**
- * F-IO-12: PDF/A-2b через сервер (с embed images).
+ * F-IO-12: PDF/A-2b всего документа (все слайды) через сервер.
  */
-export async function exportPdfaServer(slide: Slide): Promise<void> {
-  const prepared = await embedImagesInSlide(slide);
+export async function exportPdfaServer(slides: Slide[]): Promise<void> {
+  if (!slides.length) return;
+
+  const preparedSlides = await Promise.all(slides.map((s) => embedImagesInSlide(s)));
+
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
   try {
     const blob = await postForBlob(
       `${CONFIG.EXPORT_API}/pdf?mode=pdfa`,
-      buildPayload(prepared, { pdfVersion: 'pdf/a-2b' }),
+      buildPayload(preparedSlides, { pdfVersion: 'pdf/a-2b' }),
       controller.signal,
     );
-    const filename = `${(slide.name || 'slide').replace(/[^\w.-]+/g, '_')}.pdf`;
-    downloadBlob(blob, filename);
+    downloadBlob(blob, 'document.pdf');
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+/**
+ * PDF (не PDF/A) всего документа.
+ */
+export async function exportPdfServer(slides: Slide[]): Promise<void> {
+  if (!slides.length) return;
+
+  const preparedSlides = await Promise.all(slides.map((s) => embedImagesInSlide(s)));
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+  try {
+    const blob = await postForBlob(
+      `${CONFIG.EXPORT_API}/pdf?mode=pdf`,
+      buildPayload(preparedSlides),
+      controller.signal,
+    );
+    downloadBlob(blob, 'document.pdf');
   } finally {
     clearTimeout(timeoutId);
   }

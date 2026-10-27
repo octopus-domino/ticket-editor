@@ -39,67 +39,70 @@ export function useEditorShortcuts({ docStore, selStore, modalsStore, clipboardA
     const groupSelection = (): void => {
       const ids = selStore.getState().selectedIds;
       if (ids.length < 2) return;
-      
+
       docStore.commit((draft: DocumentState) => {
         const s = draft.slides.find((x) => x.id === draft.activeId);
         if (!s) return;
-        
-        const selected = s.elements.filter(e => ids.includes(e.id));
+
+        const selected = s.elements.filter((e) => ids.includes(e.id));
         if (selected.length < 2) return;
 
-        const minX = Math.min(...selected.map(e => e.x));
-        const minY = Math.min(...selected.map(e => e.y));
-        const maxX = Math.max(...selected.map(e => e.x + e.width));
-        const maxY = Math.max(...selected.map(e => e.y + e.height));
+        const minX = Math.min(...selected.map((e) => e.x));
+        const minY = Math.min(...selected.map((e) => e.y));
+        const maxX = Math.max(...selected.map((e) => e.x + e.width));
+        const maxY = Math.max(...selected.map((e) => e.y + e.height));
 
         const group: GroupElement = {
           id: generateIdWithPrefix('group'),
           type: 'group',
           x: minX, y: minY,
-          width: maxX - minX,
-          height: maxY - minY,
-          rotation: 0,
-          children: ids,
+          width: Math.max(1, maxX - minX),
+          height: Math.max(1, maxY - minY),
+          rotation: 0, children: ids,
         };
-        
         s.elements.push(group);
       }, 'group');
-      
-      const newGroup = docStore.getState().slides.find(x => x.id === docStore.getState().activeId)?.elements.slice(-1)[0];
+
+      const state = docStore.getState();
+      const slide = state.slides.find((x) => x.id === state.activeId);
+      const newGroup = slide?.elements.slice(-1)[0];
       if (newGroup && newGroup.type === 'group') {
-        selStore.setIds([newGroup.id, ...(newGroup as GroupElement).children]);
+        selStore.setIds([newGroup.id]);
       }
     };
 
     const ungroupSelection = (): void => {
       const state = docStore.getState();
-      const slide = state.slides.find(x => x.id === state.activeId);
+      const slide = state.slides.find((x) => x.id === state.activeId);
       if (!slide) return;
 
       const ids = selStore.getState().selectedIds;
-      const groupId = ids.find(id => {
-        const el = slide.elements.find(e => e.id === id);
+      const groupId = ids.find((id) => {
+        const el = slide.elements.find((e) => e.id === id);
         return el?.type === 'group';
       });
-      
+
       if (!groupId) return;
-      
+
       docStore.commit((draft: DocumentState) => {
         const s = draft.slides.find((x) => x.id === draft.activeId);
         if (!s) return;
-        s.elements = s.elements.filter(e => e.id !== groupId);
+        s.elements = s.elements.filter((e) => e.id !== groupId);
       }, 'ungroup');
       selStore.clear();
     };
 
     const getSelectedElements = () => {
       const state = docStore.getState();
-      const slide = state.slides.find(x => x.id === state.activeId);
+      const slide = state.slides.find((x) => x.id === state.activeId);
       if (!slide) return [];
       const ids = selStore.getState().selectedIds;
-      return slide.elements.filter(e => ids.includes(e.id));
+      return slide.elements.filter((e) => ids.includes(e.id));
     };
 
+    // В таблице — только обычные шорткаты. Undo/Redo обрабатываются
+    // отдельной веткой в onKey ниже, чтобы работали даже при фокусе
+    // в поле ввода панели свойств.
     const handlers: Handler[] = [
       { spec: { key: 'Escape' }, handle: () => selStore.clear() },
       {
@@ -111,7 +114,7 @@ export function useEditorShortcuts({ docStore, selStore, modalsStore, clipboardA
           docStore.commit((draft: DocumentState) => {
             const s = draft.slides.find((x) => x.id === draft.activeId);
             if (!s) return;
-            s.elements = s.elements.filter(el => !ids.includes(el.id));
+            s.elements = s.elements.filter((el) => !ids.includes(el.id));
           });
           selStore.clear();
         },
@@ -125,14 +128,11 @@ export function useEditorShortcuts({ docStore, selStore, modalsStore, clipboardA
           docStore.commit((draft: DocumentState) => {
             const s = draft.slides.find((x) => x.id === draft.activeId);
             if (!s) return;
-            s.elements = s.elements.filter(el => !ids.includes(el.id));
+            s.elements = s.elements.filter((el) => !ids.includes(el.id));
           });
           selStore.clear();
         },
       },
-      { spec: { code: 'KeyZ', ctrl: true, shift: false }, handle: (e) => { e.preventDefault(); docStore.undo(); } },
-      { spec: { code: 'KeyY', ctrl: true }, handle: (e) => { e.preventDefault(); docStore.redo(); } },
-      { spec: { code: 'KeyZ', ctrl: true, shift: true }, handle: (e) => { e.preventDefault(); docStore.redo(); } },
       {
         spec: { code: 'KeyC', ctrl: true },
         handle: (e) => { e.preventDefault(); clipboardActions.copy(getSelectedElements()); }
@@ -149,25 +149,38 @@ export function useEditorShortcuts({ docStore, selStore, modalsStore, clipboardA
         spec: { code: 'KeyD', ctrl: true },
         handle: (e) => { e.preventDefault(); clipboardActions.duplicate(getSelectedElements()); }
       },
-      { 
-        spec: { code: 'KeyG', ctrl: true, shift: false }, 
-        handle: (e) => { 
-          e.preventDefault(); 
-          groupSelection(); 
-        } 
+      {
+        spec: { code: 'KeyG', ctrl: true, shift: false },
+        handle: (e) => { e.preventDefault(); groupSelection(); }
       },
-      { 
-        spec: { code: 'KeyG', ctrl: true, shift: true }, 
-        handle: (e) => { 
-          e.preventDefault(); 
-          ungroupSelection(); 
-        } 
+      {
+        spec: { code: 'KeyG', ctrl: true, shift: true },
+        handle: (e) => { e.preventDefault(); ungroupSelection(); }
       },
     ];
 
     const onKey = (e: KeyboardEvent): void => {
       const ms = modalsStore.getState();
       if (ms.stampEditorTarget || ms.diagramEditorTarget) return;
+
+      const isCtrl = e.ctrlKey || e.metaKey;
+
+      // === Undo/Redo приоритетнее всего ===
+      // Работает даже если фокус остался в поле панели свойств.
+      // Не мешает только редактору текста — там браузер делает нативный undo.
+      if (isCtrl && e.code === 'KeyZ' && !ms.editing) {
+        e.preventDefault();
+        if (e.shiftKey) docStore.redo();
+        else docStore.undo();
+        return;
+      }
+      if (isCtrl && e.code === 'KeyY' && !ms.editing) {
+        e.preventDefault();
+        docStore.redo();
+        return;
+      }
+
+      // === Остальные шорткаты ===
       if (isEditable(e.target) && !ms.editing) return;
 
       for (const h of handlers) {

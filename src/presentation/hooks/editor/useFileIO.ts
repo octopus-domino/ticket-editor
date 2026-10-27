@@ -7,6 +7,7 @@ import { migrateDocument } from '@/lib/migrations';
 import {
   exportSvgServer as doExportSvgServer,
   exportPdfaServer as doExportPdfaServer,
+  exportPdfServer as doExportPdfServer,
 } from '@/lib/serverExport';
 import { CONFIG } from '@/shared/config';
 
@@ -98,7 +99,6 @@ export function useFileIO() {
       const file = input.files?.[0];
       if (!file) return;
 
-      // F-IO-06 / REG-P5: лимит размера
       if (file.size > CONFIG.MAX_IMPORT_SIZE) {
         const mb = (CONFIG.MAX_IMPORT_SIZE / 1024 / 1024).toFixed(0);
         alert(`Файл слишком большой (макс. ${mb} MB)`);
@@ -111,7 +111,6 @@ export function useFileIO() {
 
         /* ---------- v8: partial import ---------- */
 
-        // Один элемент: { type: 'shape' | 'text' | 'path' | 'chart' | ... }
         if (
           parsed && typeof parsed === 'object'
           && !Array.isArray(parsed)
@@ -136,7 +135,6 @@ export function useFileIO() {
           return;
         }
 
-        // Массив элементов: [{...}, {...}]
         if (Array.isArray(parsed)) {
           const ids: string[] = [];
           docStore.commit((draft) => {
@@ -206,14 +204,24 @@ export function useFileIO() {
   }, [getActiveSlide]);
 
   /* ============================================================
-     F-IO-12: PDF/A через сервер
+     F-IO-12: PDF/A через сервер (ВСЕ СЛАЙДЫ)
      ============================================================ */
 
   const exportPdfaServer = useCallback(async () => {
-    const active = getActiveSlide();
-    if (!active) return;
-    await doExportPdfaServer(active);
-  }, [getActiveSlide]);
+    const state = docStore.getState();
+    if (!state.slides || state.slides.length === 0) return;
+    await doExportPdfaServer(state.slides);
+  }, [docStore]);
+
+  /* ============================================================
+     PDF (не PDF/A) через сервер (ВСЕ СЛАЙДЫ)
+     ============================================================ */
+
+  const exportPdfServer = useCallback(async () => {
+    const state = docStore.getState();
+    if (!state.slides || state.slides.length === 0) return;
+    await doExportPdfServer(state.slides);
+  }, [docStore]);
 
   /* ============================================================
      F-IMG-05: Добавить картинку
@@ -305,6 +313,7 @@ export function useFileIO() {
     exportSvgLocal,
     exportSvgServer,
     exportPdfaServer,
+    exportPdfServer,
     addImage,
     setBackgroundImage,
     removeBackgroundImage,

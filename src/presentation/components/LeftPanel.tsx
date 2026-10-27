@@ -54,6 +54,10 @@ export const LeftPanel: React.FC = () => {
   const fillMode = useStore(modalsStore, (s) => s.fillMode);
   const fillColor = useStore(modalsStore, (s) => s.fillColor);
   const showGrid = useStore(modalsStore, (s) => s.showGrid);
+  
+  // Читаем текущий режим
+  const editorMode = useStore(modalsStore, (s) => s.editorMode);
+
   const canUndo = docStore.canUndo;
   const canRedo = docStore.canRedo;
 
@@ -161,8 +165,84 @@ export const LeftPanel: React.FC = () => {
     e.dataTransfer.effectAllowed = 'copy';
   };
 
+  // Генерация кнопок в зависимости от режима
+  const renderElementTiles = () => {
+    if (editorMode === 'schema') {
+      return (
+        <>
+          <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'simple-text')} onClick={() => add(newSimpleText())}><span className="tile-ico">A</span><span>Текст</span></button>
+          <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'rect')} onClick={() => add(newShape('rect'))}><span className="tile-ico">▭</span><span>Блок</span></button>
+          <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'roundRect')} onClick={() => add(newShape('roundRect'))}><span className="tile-ico">▢</span><span>Блок (R)</span></button>
+          <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'circle')} onClick={() => add(newShape('circle'))}><span className="tile-ico">○</span><span>Круг</span></button>
+          <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'triangle')} onClick={() => add(newShape('triangle'))}><span className="tile-ico">△</span><span>Треуг.</span></button>
+          <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'line')} onClick={() => add(newLine())}><span className="tile-ico">╱</span><span>Линия</span></button>
+          <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'line-arrow')} onClick={() => { const l = newLine(); l.isArrow = true; add(l); }}><span className="tile-ico">➔</span><span>Стрелка</span></button>
+        </>
+      );
+    }
+    // По умолчанию (print)
+    return (
+      <>
+        <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'simple-text')} onClick={() => add(newSimpleText())}><span className="tile-ico">A</span><span>Текст</span></button>
+        <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'text')} onClick={() => add(newText())}><span className="tile-ico">📝</span><span>Rich</span></button>
+        <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'footer')} onClick={() => add(newFooter(activeSlide))}><span className="tile-ico">¬</span><span>Футер</span></button>
+        <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'table')} onClick={() => add(newTable())}><span className="tile-ico">▦</span><span>Таблица</span></button>
+        <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'line')} onClick={() => add(newLine())}><span className="tile-ico">╱</span><span>Линия</span></button>
+        <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'rect')} onClick={() => add(newShape('rect'))}><span className="tile-ico">▭</span><span>Прямоуг.</span></button>
+        <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'roundRect')} onClick={() => add(newShape('roundRect'))}><span className="tile-ico">▢</span><span>Округл.</span></button>
+        <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'circle')} onClick={() => add(newShape('circle'))}><span className="tile-ico">○</span><span>Круг</span></button>
+        <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'triangle')} onClick={() => add(newShape('triangle'))}><span className="tile-ico">△</span><span>Треуг.</span></button>
+        <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'star')} onClick={() => add(newShape('star'))}><span className="tile-ico">☆</span><span>Звезда</span></button>
+        <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'arc')} onClick={() => add(newShape('arc'))}><span className="tile-ico">◔</span><span>Дуга</span></button>
+        <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'path')} onClick={() => add(newPath())}><span className="tile-ico">✎</span><span>Path</span></button>
+        <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'chart-bar')} onClick={() => add(newChart('bar'))}><span className="tile-ico">📊</span><span>Bar</span></button>
+        <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'chart-donut')} onClick={() => add(newChart('donut'))}><span className="tile-ico">◎</span><span>Donut</span></button>
+      </>
+    );
+  };
+
   return (
     <aside className="left-panel">
+      
+      {/* ======================================================== */}
+      {/* ПЕРЕКЛЮЧАТЕЛЬ РЕЖИМОВ (Специально сделан заметным)        */}
+      {/* ======================================================== */}
+      <div style={{ 
+        display: 'flex', 
+        gap: 4, 
+        padding: 4, 
+        background: '#e2e8f0', 
+        borderRadius: 8, 
+        marginBottom: 12,
+        border: '2px solid #6366f1' // Яркая обводка, чтобы точно заметить
+      }}>
+        <button 
+          type="button"
+          style={{ 
+            flex: 1, padding: '8px 0', borderRadius: 6, border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: 13,
+            background: editorMode === 'print' ? '#fff' : 'transparent',
+            color: editorMode === 'print' ? '#4f46e5' : '#64748b',
+            boxShadow: editorMode === 'print' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+          }}
+          onClick={() => modalsStore.setEditorMode('print')}
+        >
+          🖨 Полиграфия
+        </button>
+        <button 
+          type="button"
+          style={{ 
+            flex: 1, padding: '8px 0', borderRadius: 6, border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: 13,
+            background: editorMode === 'schema' ? '#fff' : 'transparent',
+            color: editorMode === 'schema' ? '#4f46e5' : '#64748b',
+            boxShadow: editorMode === 'schema' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+          }}
+          onClick={() => modalsStore.setEditorMode('schema')}
+        >
+          📐 Схемы
+        </button>
+      </div>
+      {/* ======================================================== */}
+
       <Section title="Файл" icon="📁" defaultOpen>
         <button type="button" className="tool-btn" onClick={fileIO.importJson}>
           📥 Импорт JSON
@@ -194,17 +274,21 @@ export const LeftPanel: React.FC = () => {
         </button>
       </Section>
 
-      <Section title="Макеты" icon="🎨">
-        {TYPICAL_LAYOUTS.map((l) => (
-          <button key={l.id} type="button" className="tool-btn" title={l.description} onClick={() => applyLayout(l.id)}>{l.icon} {l.name}</button>
-        ))}
-      </Section>
+      {editorMode === 'print' && (
+        <>
+          <Section title="Макеты" icon="🎨">
+            {TYPICAL_LAYOUTS.map((l) => (
+              <button key={l.id} type="button" className="tool-btn" title={l.description} onClick={() => applyLayout(l.id)}>{l.icon} {l.name}</button>
+            ))}
+          </Section>
 
-      <Section title="Документы" icon="📄">
-        {BUNDLES.map((b) => (
-          <button key={b.id} type="button" className="tool-btn" title={b.description} onClick={() => applyBundle(b.id)}>{b.icon} {b.name}</button>
-        ))}
-      </Section>
+          <Section title="Документы" icon="📄">
+            {BUNDLES.map((b) => (
+              <button key={b.id} type="button" className="tool-btn" title={b.description} onClick={() => applyBundle(b.id)}>{b.icon} {b.name}</button>
+            ))}
+          </Section>
+        </>
+      )}
 
       <Section title="Формат" icon="📐" defaultOpen>
         <label className="field-label">Размер</label>
@@ -242,37 +326,34 @@ export const LeftPanel: React.FC = () => {
 
       <Section title="Элементы" icon="🧩" defaultOpen>
         <div className="tool-grid">
-          <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'simple-text')} onClick={() => add(newSimpleText())}><span className="tile-ico">A</span><span>Текст</span></button>
-          <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'text')} onClick={() => add(newText())}><span className="tile-ico">📝</span><span>Rich</span></button>
-          <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'footer')} onClick={() => add(newFooter(activeSlide))}><span className="tile-ico">¬</span><span>Футер</span></button>
-          <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'table')} onClick={() => add(newTable())}><span className="tile-ico">▦</span><span>Таблица</span></button>
-          <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'line')} onClick={() => add(newLine())}><span className="tile-ico">╱</span><span>Линия</span></button>
-          <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'line-arrow')} onClick={() => { const l = newLine(); l.isArrow = true; add(l); }}><span className="tile-ico">➔</span><span>Стрелка</span></button>
-          <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'rect')} onClick={() => add(newShape('rect'))}><span className="tile-ico">▭</span><span>Прямоуг.</span></button>
-          <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'roundRect')} onClick={() => add(newShape('roundRect'))}><span className="tile-ico">▢</span><span>Округл.</span></button>
-          <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'circle')} onClick={() => add(newShape('circle'))}><span className="tile-ico">○</span><span>Круг</span></button>
-          <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'triangle')} onClick={() => add(newShape('triangle'))}><span className="tile-ico">△</span><span>Треуг.</span></button>
-          <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'star')} onClick={() => add(newShape('star'))}><span className="tile-ico">☆</span><span>Звезда</span></button>
-          <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'arc')} onClick={() => add(newShape('arc'))}><span className="tile-ico">◔</span><span>Дуга</span></button>
-          <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'path')} onClick={() => add(newPath())}><span className="tile-ico">✎</span><span>Path</span></button>
-          <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'chart-bar')} onClick={() => add(newChart('bar'))}><span className="tile-ico">📊</span><span>Bar</span></button>
-          <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'chart-donut')} onClick={() => add(newChart('donut'))}><span className="tile-ico">◎</span><span>Donut</span></button>
+          {renderElementTiles()}
         </div>
       </Section>
 
-      <Section title="Штампы" icon="🔖"><StampLibraryPanel /></Section>
+      {editorMode === 'print' && (
+        <>
+          <Section title="Штампы" icon="🔖"><StampLibraryPanel /></Section>
+          <Section title="Графы" icon="📊"><GraphToolPanel /></Section>
+        </>
+      )}
+
       <Section title="Компоновка" icon="🎯"><ArrangePanel /></Section>
-      <Section title="Pathfinder" icon="⚡"><PathfinderPanel /></Section>
-      <Section title="Графы" icon="📊"><GraphToolPanel /></Section>
+      
+      {editorMode === 'print' && (
+        <Section title="Pathfinder" icon="⚡"><PathfinderPanel /></Section>
+      )}
+      
       <Section title="Стили" icon="🎨"><StylesPanel /></Section>
       <Section title="Символы" icon="🔗"><SymbolsPanel /></Section>
 
-      <Section title="Заливка" icon="🎨">
-        <label className="check-row"><input type="checkbox" checked={fillMode} onChange={(e) => modalsStore.setFillMode(e.target.checked)} /><span>Режим заливки</span></label>
-        <label className="field-label">Цвет заливки</label>
-        <input type="color" className="field" value={fillColor} onChange={(e) => modalsStore.setFillColor(e.target.value)} />
-        <p className="hint-sm">Клик по фигуре — залить область.<br />Клик по пустому месту — добавить точку.<br />Esc — отменить.</p>
-      </Section>
+      {editorMode === 'print' && (
+        <Section title="Заливка" icon="🎨">
+          <label className="check-row"><input type="checkbox" checked={fillMode} onChange={(e) => modalsStore.setFillMode(e.target.checked)} /><span>Режим заливки</span></label>
+          <label className="field-label">Цвет заливки</label>
+          <input type="color" className="field" value={fillColor} onChange={(e) => modalsStore.setFillColor(e.target.value)} />
+          <p className="hint-sm">Клик по фигуре — залить область.<br />Клик по пустому месту — добавить точку.<br />Esc — отменить.</p>
+        </Section>
+      )}
 
       <Section title="Вид" icon="👁">
         <label className="check-row"><input type="checkbox" checked={showGrid} onChange={(e) => modalsStore.setShowGrid(e.target.checked)} /><span>Показать сетку</span></label>

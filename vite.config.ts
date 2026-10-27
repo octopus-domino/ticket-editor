@@ -1,9 +1,5 @@
 /* ============================================================
    vite.config.ts
-
-   NFR-PERF-08: react/konva/tiptap — отдельные vendor-чанки.
-   NFR-SEC-08: env через define.
-   ESM-safe: __dirname через fileURLToPath(import.meta.url).
    ============================================================ */
 
 import { defineConfig } from 'vite';
@@ -15,19 +11,29 @@ const ROOT = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   plugins: [react()],
-  
-  // ВАЖНО: указываем имя репозитория, так как сайт будет доступен по адресу
-  // https://<ваш-ник>.github.io/ticket-editor/
-  base: '/ticket-editor/', 
-
   resolve: {
     alias: {
+      '@/ui': path.resolve(ROOT, 'src/presentation'),
+      '@/presentation': path.resolve(ROOT, 'src/presentation'),
       '@/shared': path.resolve(ROOT, 'src/shared'),
       '@/domain': path.resolve(ROOT, 'src/domain'),
       '@/application': path.resolve(ROOT, 'src/application'),
       '@/infra': path.resolve(ROOT, 'src/infrastructure'),
       '@/lib': path.resolve(ROOT, 'src/lib'),
-      '@/ui': path.resolve(ROOT, 'src/presentation'),
+      '@/auth': path.resolve(ROOT, 'src/auth'),
+      '@/workspace': path.resolve(ROOT, 'src/workspace'),
+    },
+  },
+  server: {
+    port: 5173,
+    proxy: {
+      // Все запросы к /api проксируются на Spring Boot.
+      // Фронт и бэк для браузера становятся одним origin → cookie работают.
+      '/api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+        secure: false,
+      },
     },
   },
   build: {
@@ -57,9 +63,9 @@ export default defineConfig({
             '@tiptap/extension-gapcursor',
           ],
           'zod-vendor': ['zod'],
+          'router-vendor': ['react-router-dom'],
         },
       },
     },
   },
-  server: { port: 5173 },
 });

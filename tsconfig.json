@@ -25,7 +25,10 @@
       "@/application/*":  ["./src/application/*"],
       "@/infra/*":        ["./src/infrastructure/*"],
       "@/lib/*":          ["./src/lib/*"],
-      "@/ui/*":           ["./src/presentation/*"]
+      "@/ui/*":           ["./src/presentation/*"],
+      "@/presentation/*": ["./src/presentation/*"],
+      "@/auth/*":         ["./src/auth/*"],
+      "@/workspace/*":    ["./src/workspace/*"]
     }
   },
   "include": ["src"],

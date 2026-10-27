@@ -32,9 +32,10 @@ export const PathEl: React.FC<Props> = ({
     >
       <Path
         data={el.d}
-        fill={el.fill === 'transparent' ? undefined : el.fill}
+        fill={el.fill === 'transparent' ? 'rgba(0,0,0,0.001)' : el.fill}
         stroke={el.stroke === 'transparent' ? undefined : el.stroke}
         strokeWidth={el.strokeWidth || 0}
+        hitStrokeWidth={20}
         perfectDrawEnabled={false}
       />
       {isSelected && (

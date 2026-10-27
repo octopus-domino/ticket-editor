@@ -44,7 +44,7 @@ export function useCanvasDrop(params: {
     if (payload.kind === 'chart') {
       const chart = newChart(payload.chartKind === 'donut' ? 'donut' : 'bar', x, y);
       chart.dataPath = payload.path ?? null;
-      chart.valueField = payload.valueField; // <-- передаем
+      chart.valueField = payload.valueField;
       docStore.commit((draft) => {
         const s = draft.slides.find((xx) => xx.id === draft.activeId);
         if (s) s.elements.push(chart);

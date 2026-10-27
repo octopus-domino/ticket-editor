@@ -1,7 +1,7 @@
-﻿import React, { useCallback, useEffect, useRef } from 'react';
+﻿import React, { useCallback, useLayoutEffect, useRef } from 'react';
 import { Stage, Layer, Rect, Transformer } from 'react-konva';
 import type Konva from 'konva';
-import type { Slide, AnchorSide, CanvasElement, GroupElement } from '@/shared/types';
+import type { Slide, AnchorSide, CanvasElement } from '@/shared/types';
 import { useStore } from '@/shared/store/store';
 import { useDocumentStore, useSelectionStore, useModalsStore } from '@/ui/providers/EditorProvider';
 import { ElementRenderer } from './ElementRenderer';
@@ -43,6 +43,7 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
   const fillMode = useStore(modalsStore, (s) => s.fillMode);
   const showGrid = useStore(modalsStore, (s) => s.showGrid);
   const showMargins = useStore(modalsStore, (s) => s.showMargins);
+  const editorMode = useStore(modalsStore, (s) => s.editorMode);
 
   const viewport = useCanvasViewport({ wrapRef, zoom, onZoomChange, stageRef });
   const drag = useCanvasDrag({ docStore, selStore, modalsStore, slide });
@@ -53,29 +54,38 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
   const hover = useCanvasHoverAnchor({ slide });
   const dbl = useCanvasDblClick({ modalsStore, zoom });
 
-  useEffect(() => {
+  // Принудительный forceUpdate рамки на следующем кадре,
+  // чтобы фигуры/группы выделялись мгновенно после клика.
+  useLayoutEffect(() => {
     const tr = trRef.current;
     const stage = stageRef.current;
     if (!tr || !stage) return;
 
-    if (selectedIds.length !== 1) {
-      tr.nodes([]);
-      return;
-    }
+    const apply = () => {
+      if (selectedIds.length !== 1) {
+        tr.nodes([]);
+        tr.getLayer()?.batchDraw();
+        return;
+      }
+      const node = stage.findOne(`#${selectedIds[0]}`);
+      if (node) {
+        tr.nodes([node]);
+        tr.forceUpdate();
+        tr.getLayer()?.batchDraw();
+      } else {
+        tr.nodes([]);
+        tr.getLayer()?.batchDraw();
+      }
+    };
 
-    const el = slide.elements.find((e) => e.id === selectedIds[0]);
-    if (!el) {
-      tr.nodes([]);
-      return;
-    }
+    apply();
+    const raf1 = requestAnimationFrame(apply);
+    const raf2 = requestAnimationFrame(() => requestAnimationFrame(apply));
 
-    const node = stage.findOne('#' + selectedIds[0]);
-    if (node) {
-      tr.nodes([node]);
-      tr.getLayer()?.batchDraw();
-    } else {
-      tr.nodes([]);
-    }
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+    };
   }, [selectedIds, slide.elements]);
 
   const handleStartDraft = useCallback((id: string, side: AnchorSide, _clientX: number, _clientY: number) => {
@@ -136,28 +146,35 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
     if (rubber.isActive()) rubber.finish(slide.elements);
   }, [zoom, draft, rubber, slide.elements, viewport.isPanning]);
 
+  /**
+   * ВАЖНО: не сбрасываем множественное выделение, если клик пришёлся
+   * на уже выделенный элемент. Это позволяет:
+   *   - тащить всю рамку, начав drag с любого выделенного элемента;
+   *   - открывать контекстное меню «Сгруппировать / Разгруппировать»
+   *     на множественном выделении.
+   *
+   * Одиночное выделение работает как раньше:
+   *   - клик по невыделенному элементу  → selection = [el.id];
+   *   - shift/ctrl/meta + клик          → toggle в selection;
+   *   - клик по пустому месту           → clear (в onStageDown).
+   */
   const handleSelect = (el: CanvasElement, e?: ElementSelectEvent) => {
     if (viewport.isPanning) return;
     const nativeEvt = e && 'evt' in e ? e.evt : undefined;
     const multi = isMultiSelectEvent(nativeEvt);
     const current = selStore.getState().selectedIds;
 
-    const parentGroup = slide.elements.find(
-      (p): p is GroupElement => p.type === 'group' && p.children.includes(el.id)
-    );
-
-    if (parentGroup) {
-      if (multi) {
-        const newIds = [...new Set([...current, parentGroup.id])];
-        selStore.setIds(newIds);
-      } else if (!current.includes(parentGroup.id)) {
-        selStore.setIds([parentGroup.id]);
-      }
+    if (multi) {
+      const exists = current.includes(el.id);
+      selStore.setIds(exists ? current.filter((x) => x !== el.id) : [...current, el.id]);
       return;
     }
 
-    if (multi) selStore.select(el.id, true);
-    else if (!current.includes(el.id)) selStore.select(el.id);
+    // Не трогаем selection, если элемент уже в нём —
+    // иначе ломается drag множественного выделения.
+    if (!current.includes(el.id)) {
+      selStore.setIds([el.id]);
+    }
   };
 
   return (
@@ -179,6 +196,7 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
         onMouseMove={onStageMove}
         onMouseUp={onStageUp}
         onContextMenu={(e) => {
+          if (e.target !== e.target.getStage()) return;
           e.evt.preventDefault();
           modalsStore.setContextMenu({
             x: e.evt.clientX,
@@ -207,12 +225,13 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
           )}
         </Layer>
 
+        {/* Плоский рендер ВСЕХ элементов */}
         <Layer name="elements-layer" listening={!fillMode}>
           {slide.elements.map((el) => (
             <ElementRenderer
               key={el.id}
               element={el}
-              elements={el.type === 'connector' ? elementsRef.current : undefined}
+              elements={elementsRef.current}
               isSelected={selectedIds.includes(el.id)}
               isEditing={editing?.id === el.id}
               onSelect={(e) => handleSelect(el, e)}
@@ -254,15 +273,20 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
               }}
               onContextMenu={(ev: Konva.KonvaEventObject<PointerEvent>) => {
                 ev.evt.preventDefault();
-                const parentGroup = slide.elements.find(
-                  (p): p is GroupElement => p.type === 'group' && p.children.includes(el.id)
-                );
-                const targetId = parentGroup ? parentGroup.id : el.id;
-                if (!selectedIds.includes(targetId)) selStore.select(targetId);
+                ev.cancelBubble = true;
+
+                // ВАЖНО: не сбрасываем множественное выделение,
+                // если правый клик пришёлся на уже выделенный элемент.
+                // Иначе в меню не появятся «Сгруппировать / Разгруппировать».
+                const current = selStore.getState().selectedIds;
+                if (!current.includes(el.id)) {
+                  selStore.setIds([el.id]);
+                }
+
                 modalsStore.setContextMenu({
                   x: ev.evt.clientX,
                   y: ev.evt.clientY,
-                  elementId: targetId,
+                  elementId: el.id,
                 });
               }}
             />
@@ -333,7 +357,6 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
                   target.width = Math.max(20, target.width * sx);
                   target.height = Math.max(20, target.height * sy);
 
-                  // Scale polygon points
                   if (target.type === 'shape' && target.shape === 'polygon') {
                     const shape = target;
                     if (Array.isArray(shape.polygonPoints) && shape.polygonPoints.length > 0) {
@@ -353,7 +376,6 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
                     }
                   }
 
-                  // Scale clipPath
                   if (target.clipPathId) {
                     const clipper = s.elements.find((e) => e.id === target.clipPathId);
                     if (clipper) {
@@ -383,6 +405,7 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
           slideWidth={slide.width}
           slideHeight={slide.height}
           listening={!fillMode}
+          editorMode={editorMode}
         />
       </Stage>
     </div>

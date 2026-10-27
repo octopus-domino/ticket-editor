@@ -3,7 +3,7 @@ import type Konva from 'konva';
 import type { DocumentStore } from '@/infra/state/DocumentStore';
 import type { SelectionStore } from '@/ui/stores/SelectionStore';
 import type { ModalsStore } from '@/ui/stores/ModalsStore';
-import type { Slide, CanvasElement } from '@/shared/types';
+import type { Slide, CanvasElement, GroupElement } from '@/shared/types';
 import { guidesStore } from '@/ui/stores/GuidesStore';
 import { dragLiveStore } from '@/ui/stores/DragLiveStore';
 import { SNAP_THRESHOLD, GRID_SIZE } from '@/shared/constants';
@@ -46,12 +46,34 @@ export function useCanvasDrag(params: {
     modalsStore.setFloatingPos(null);
 
     const current = selStore.getState().selectedIds;
-    const ids = current.includes(el.id) ? current : [el.id];
-    if (!current.includes(el.id)) selStore.setIds([el.id]);
+
+    const parentGroup = slideRef.current.elements.find(
+      (p): p is GroupElement => p.type === 'group' && p.children.includes(el.id)
+    );
+
+    const idsToMoveSet = new Set<string>();
+
+    if (parentGroup) {
+      if (!current.includes(parentGroup.id)) {
+        selStore.setIds([parentGroup.id]);
+      }
+      idsToMoveSet.add(parentGroup.id);
+      parentGroup.children.forEach((cid) => idsToMoveSet.add(cid));
+    } else {
+      const baseIds = current.includes(el.id) ? current : [el.id];
+      if (!current.includes(el.id)) selStore.setIds([el.id]);
+      baseIds.forEach((id) => idsToMoveSet.add(id));
+      for (const id of baseIds) {
+        const target = slideRef.current.elements.find((e2) => e2.id === id);
+        if (target && target.type === 'group') {
+          target.children.forEach((cid) => idsToMoveSet.add(cid));
+        }
+      }
+    }
 
     const orig: Record<string, { x: number; y: number }> = {};
     for (const ee of slideRef.current.elements) {
-      if (!ids.includes(ee.id)) continue;
+      if (!idsToMoveSet.has(ee.id)) continue;
       if (ee.type === 'connector') continue;
       orig[ee.id] = { x: ee.x, y: ee.y };
     }
@@ -65,16 +87,14 @@ export function useCanvasDrag(params: {
 
     const xs: number[] = [];
     const ys: number[] = [];
-    
-    // Slide bounds
+
     xs.push(0, slideRef.current.width / 2, slideRef.current.width);
     ys.push(0, slideRef.current.height / 2, slideRef.current.height);
     xs.push(slideRef.current.padding.left, slideRef.current.width - slideRef.current.padding.right);
     ys.push(slideRef.current.padding.top, slideRef.current.height - slideRef.current.padding.bottom);
 
-    // Other elements
     for (const other of slideRef.current.elements) {
-      if (ids.includes(other.id) || other.locked) continue;
+      if (idsToMoveSet.has(other.id) || other.locked) continue;
       xs.push(other.x, other.x + other.width / 2, other.x + other.width);
       ys.push(other.y, other.y + other.height / 2, other.y + other.height);
     }
@@ -119,15 +139,12 @@ export function useCanvasDrag(params: {
         if (d < bestY.d) { bestY = { v: val, d, guide: val }; }
       };
 
-      // Grid
       checkX(Math.round(rawX / GRID_SIZE) * GRID_SIZE);
       checkY(Math.round(rawY / GRID_SIZE) * GRID_SIZE);
 
-      // Cached lines
       for (const val of curr.snapCache.xs) checkX(val);
       for (const val of curr.snapCache.ys) checkY(val);
 
-      // Hysteresis X
       if (curr.snappedX !== null) {
         if (Math.abs(rawX - curr.snappedX) < SNAP_THRESHOLD * 2) {
           finalX = curr.snappedX;
@@ -140,7 +157,6 @@ export function useCanvasDrag(params: {
         curr.snappedX = bestX.v;
       }
 
-      // Hysteresis Y
       if (curr.snappedY !== null) {
         if (Math.abs(rawY - curr.snappedY) < SNAP_THRESHOLD * 2) {
           finalY = curr.snappedY;
@@ -163,12 +179,9 @@ export function useCanvasDrag(params: {
     const dx = finalX - curr.startX;
     const dy = finalY - curr.startY;
 
-    // Move other top-level elements (multi-select)
     if (curr.layer) {
       for (const [id, o] of Object.entries(curr.orig)) {
         if (id === curr.id) continue;
-        const el = slideRef.current.elements.find(e => e.id === id);
-        if (el?.type === 'group') continue;
         const node = curr.layer.findOne('#' + id);
         if (node) { node.x(o.x + dx); node.y(o.y + dy); }
       }
@@ -184,7 +197,6 @@ export function useCanvasDrag(params: {
         if (!c) return;
         c.rafId = null;
 
-        // Collect guides (only L/C/R of dragging element against all cached lines)
         const gv: number[] = [];
         const gh: number[] = [];
         if (!isCtrl) {
@@ -235,26 +247,11 @@ export function useCanvasDrag(params: {
       const sl = draft.slides.find((x) => x.id === draft.activeId);
       if (!sl) return;
 
-      // 1. Move all elements in orig by dx/dy (including groups)
       for (const [id, o] of Object.entries(s.orig)) {
         const el = sl.elements.find((e) => e.id === id);
         if (!el || el.type === 'connector') continue;
         el.x = o.x + dx;
         el.y = o.y + dy;
-      }
-
-      // 2. If any group was moved, move its children by dx/dy
-      for (const [id] of Object.entries(s.orig)) {
-        const el = sl.elements.find((e) => e.id === id);
-        if (!el || el.type !== 'group') continue;
-        for (const childId of el.children) {
-          if (s.orig[childId]) continue; // already moved in step 1
-          const child = sl.elements.find((e) => e.id === childId);
-          if (child) {
-            child.x += dx;
-            child.y += dy;
-          }
-        }
       }
     }, 'move-group');
   }, [docStore]);

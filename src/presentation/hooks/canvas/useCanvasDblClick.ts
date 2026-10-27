@@ -1,5 +1,4 @@
-﻿// src/presentation/hooks/canvas/useCanvasDblClick.ts
-import { useCallback } from 'react';
+﻿import { useCallback } from 'react';
 import type { ModalsStore } from '../../stores/ModalsStore';
 import type { CanvasElement } from '@/shared/types';
 import { findTableCellAt } from '@/domain/slide/hitTest';
@@ -38,7 +37,7 @@ export function useCanvasDblClick(params: {
         html: 'html' in el ? el.html : undefined,
         x: screenX, y: screenY,
         width: screenW, height: screenH,
-        fontSize: el.fontSize ?? 16,
+        fontSize: (el.fontSize ?? 16) * zoom,
         fontFamily: el.type === 'text' ? el.fontFamily : 'Arial',
         fontStyle: el.type === 'text' ? el.fontStyle : 'normal',
         textDecoration: el.type === 'text' ? el.textDecoration : '',
@@ -47,7 +46,12 @@ export function useCanvasDblClick(params: {
         verticalAlign: el.type === 'text' ? el.verticalAlign : 'top',
         lineHeight: el.type === 'text' ? el.lineHeight : 1.5,
         padding: el.type === 'text'
-          ? el.padding
+          ? {
+              top: el.padding.top * zoom,
+              right: el.padding.right * zoom,
+              bottom: el.padding.bottom * zoom,
+              left: el.padding.left * zoom,
+            }
           : { top: 0, right: 0, bottom: 0, left: 0 },
         background: el.type === 'text' ? el.background : 'transparent',
         isRich,
@@ -62,7 +66,7 @@ export function useCanvasDblClick(params: {
         value: el.text ?? '',
         x: screenX, y: screenY,
         width: screenW, height: screenH,
-        fontSize: el.fontSize ?? 16,
+        fontSize: (el.fontSize ?? 16) * zoom,
         fontFamily: el.textFontFamily ?? 'Arial',
         fontStyle: el.textFontStyle ?? 'normal',
         textDecoration: el.textDecoration ?? '',
@@ -70,7 +74,14 @@ export function useCanvasDblClick(params: {
         align: el.textAlign ?? 'center',
         verticalAlign: el.textVerticalAlign ?? 'middle',
         lineHeight: el.textLineHeight ?? 1.3,
-        padding: el.textPadding ?? { top: 8, right: 8, bottom: 8, left: 8 },
+        padding: el.textPadding
+          ? {
+              top: el.textPadding.top * zoom,
+              right: el.textPadding.right * zoom,
+              bottom: el.textPadding.bottom * zoom,
+              left: el.textPadding.left * zoom,
+            }
+          : { top: 8, right: 8, bottom: 8, left: 8 },
         background: 'transparent',
         isRich: false,
       });
@@ -92,10 +103,10 @@ export function useCanvasDblClick(params: {
         x: screenX + cell.col * cellW,
         y: screenY + cell.row * cellH,
         width: cellW, height: cellH,
-        fontSize: el.fontSize,
+        fontSize: el.fontSize * zoom,
         fontFamily: 'Arial', fontStyle: 'normal', textDecoration: '',
         fill: '#111', align: 'left', verticalAlign: 'top', lineHeight: 1.2,
-        padding: { top: 6, right: 6, bottom: 6, left: 6 },
+        padding: { top: 6 * zoom, right: 6 * zoom, bottom: 6 * zoom, left: 6 * zoom },
         background: '#fff', isRich: false,
       });
       return;

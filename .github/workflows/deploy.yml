@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [ master ] # Если ваша ветка называется master, поменяйте на master
+    branches: [ master ]
 
 permissions:
   contents: read
@@ -31,11 +31,17 @@ jobs:
 
       - name: Build project
         run: npm run build
+        env:
+          # base для Vite: /<repo>/
+          VITE_BASE_URL: /${{ github.event.repository.name }}/
+
+      - name: SPA fallback for GitHub Pages
+        # GitHub Pages отдаёт 404 на прямые заходы по /editor/:id.
+        # Копия index.html в 404.html → Pages отдаст SPA, роутер разберётся.
+        run: cp dist/index.html dist/404.html
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
-        # enablement: true # Раскомментируйте, если хотите, чтобы action попытался включить Pages автоматически
-        # (требуется токен с правами administration: write)
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

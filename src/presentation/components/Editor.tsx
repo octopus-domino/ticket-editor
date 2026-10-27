@@ -14,9 +14,11 @@ import type {
   ShapeElement,
   TextElement,
   GroupElement,
+  Slide,
+  DataRoot,
 } from '@/shared/types';
 import { useStore } from '@/shared/store/store';
-import { DocumentStore } from '@/infra/state/DocumentStore';
+import { DocumentStore, type InitialDocument } from '@/infra/state/DocumentStore';
 import { SelectionStore } from '../stores/SelectionStore';
 import { ModalsStore } from '../stores/ModalsStore';
 import { GraphicsStore } from '../stores/GraphicsStore';
@@ -47,6 +49,7 @@ import { MigrationBanner } from './MigrationBanner';
 import { isFeatureEnabled } from '@/shared/flags';
 import type { TextStylePatch } from './TextToolbar';
 import { generateIdWithPrefix } from '@/shared/utils/id';
+import { fixGroupBoundsInPlace } from '@/lib/migrations';
 
 /* ---------- Lazy-модалки ---------- */
 
@@ -62,6 +65,23 @@ const DiagramEditorHost = lazy(() =>
 const TextToolbar = lazy(() =>
   import('./TextToolbar').then((m) => ({ default: m.TextToolbar })),
 );
+
+/* ---------- public props ---------- */
+
+export interface EditorInitialDoc {
+  slides: Slide[];
+  data: DataRoot[];
+  activeId: string;
+}
+
+export interface EditorProps {
+  /** Идентификатор документа в backend (для autosave). Опционально. */
+  documentId?: string;
+  /** Начальное состояние — приходит из backend API. */
+  initialDoc?: EditorInitialDoc;
+  /** Колбэк для сохранения на backend. Если не передан — работает localStorage-autosave. */
+  onSave?: (state: EditorInitialDoc) => Promise<void>;
+}
 
 /* ---------- pure helpers ---------- */
 
@@ -104,9 +124,40 @@ function applyTextStylePatch(
   return {};
 }
 
+/* ---------- backend autosave ---------- */
+
+function useBackendAutoSave(
+  slides: Slide[],
+  data: DataRoot[],
+  activeId: string,
+  onSave?: (state: EditorInitialDoc) => Promise<void>,
+): void {
+  const timerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!onSave) return;
+    if (timerRef.current) window.clearTimeout(timerRef.current);
+
+    timerRef.current = window.setTimeout(() => {
+      void onSave({ slides, data, activeId }).catch((e) => {
+        // eslint-disable-next-line no-console
+        console.warn('backend autosave failed:', e);
+      });
+    }, 1500);
+
+    return () => {
+      if (timerRef.current) window.clearTimeout(timerRef.current);
+    };
+  }, [slides, data, activeId, onSave]);
+}
+
 /* ---------- layout ---------- */
 
-const EditorLayout: React.FC = () => {
+interface EditorLayoutProps {
+  onSave?: (state: EditorInitialDoc) => Promise<void>;
+}
+
+const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave }) => {
   const docStore = useDocumentStore();
   const selStore = useSelectionStore();
   const modalsStore = useModalsStore();
@@ -125,7 +176,9 @@ const EditorLayout: React.FC = () => {
   const [zoom, setZoom] = useState(1);
   const [liveMessage, setLiveMessage] = useState('');
 
+  /* Восстановление localStorage autosave — только если backend-сохранение не задано */
   useEffect(() => {
+    if (onSave) return; // при работе с backend localStorage-восстановление не нужно
     const saved = loadAutoSave();
     if (
       saved &&
@@ -137,12 +190,22 @@ const EditorLayout: React.FC = () => {
         draft.slides = saved.slides;
         draft.activeId = saved.activeSlideId || saved.slides[0].id;
         draft.data = saved.data;
+
+        for (const slide of draft.slides) {
+          fixGroupBoundsInPlace(slide.elements as any[]);
+        }
       }, 'restore-autosave');
       clearAutoSave();
     } else if (saved) {
       clearAutoSave();
     }
-  }, [docStore]);
+  }, [docStore, onSave]);
+
+  /* Один раз при монтировании: починить уже загруженные группы */
+  useEffect(() => {
+    docStore.fixAllGroupBounds();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const activeSlide = slides.find((s) => s.id === activeId);
 
@@ -153,21 +216,27 @@ const EditorLayout: React.FC = () => {
     setZoom,
   });
 
-  useAutoSave(slides, data, activeId ?? null);
+  /* localStorage-autosave — только когда работаем без backend */
+  useAutoSave(
+    onSave ? [] : slides,
+    onSave ? [] : data,
+    onSave ? null : (activeId ?? null),
+  );
+
+  /* backend-autosave — только когда работаем с backend */
+  useBackendAutoSave(slides, data, activeId, onSave);
 
   const commitEditing = useEditingCommit(docStore);
   const commitStamp = useStampCommit(docStore);
   const commitDiagram = useDiagramCommit(docStore);
-  
-  // Единственный вызов useClipboardActions
+
   const {
     copy, cut, paste, duplicate,
     copyAsJson, pasteFromJson,
   } = useClipboardActions(docStore, selStore, modalsStore);
-  
+
   const { copyStyle, applyStyle } = useStyleClipboard(docStore, selStore, modalsStore);
 
-  // Передаем функции в шорткаты
   useEditorShortcuts({
     docStore,
     selStore,
@@ -259,7 +328,8 @@ const EditorLayout: React.FC = () => {
         id: generateIdWithPrefix('group'),
         type: 'group',
         x: minX, y: minY,
-        width: maxX - minX, height: maxY - minY,
+        width: Math.max(1, maxX - minX),
+        height: Math.max(1, maxY - minY),
         rotation: 0, children: ids,
       };
       s.elements.push(group);
@@ -308,11 +378,9 @@ const EditorLayout: React.FC = () => {
       const el = s.elements[i];
       s.elements.splice(i, 1);
 
-      if (dir === 'front') {
-        s.elements.push(el);
-      } else if (dir === 'back') {
-        s.elements.unshift(el);
-      } else if (dir === 'forward') {
+      if (dir === 'front') s.elements.push(el);
+      else if (dir === 'back') s.elements.unshift(el);
+      else if (dir === 'forward') {
         const j = Math.min(s.elements.length, i + 1);
         s.elements.splice(j, 0, el);
       } else if (dir === 'backward') {
@@ -455,8 +523,8 @@ const EditorLayout: React.FC = () => {
             closeContextMenu();
           }}
           canPasteJson={canPasteJson}
-          onApplyClipByTop={undefined} // Stub for now
-          onRemoveClip={undefined} // Stub for now
+          onApplyClipByTop={undefined}
+          onRemoveClip={undefined}
           canClip={false}
           canRemoveClip={false}
         />
@@ -531,19 +599,37 @@ const EditorLayout: React.FC = () => {
   );
 };
 
-export const Editor: React.FC = () => {
+/* ---------- public component ---------- */
+
+export const Editor: React.FC<EditorProps> = ({
+  documentId,
+  initialDoc,
+  onSave,
+}) => {
   const stores = useMemo(
-    () => ({
-      document: new DocumentStore(),
-      selection: new SelectionStore(),
-      modals: new ModalsStore(),
-      graphics: new GraphicsStore(),
-    }),
-    [],
+    () => {
+      const initial: InitialDocument | undefined = initialDoc
+        ? {
+            slides: initialDoc.slides,
+            data: initialDoc.data,
+            activeId: initialDoc.activeId,
+          }
+        : undefined;
+      return {
+        document: new DocumentStore(initial),
+        selection: new SelectionStore(),
+        modals: new ModalsStore(),
+        graphics: new GraphicsStore(),
+      };
+    },
+    // Пересоздаём store при смене documentId, иначе останется состояние прошлого документа
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [documentId],
   );
+
   return (
     <EditorProvider stores={stores}>
-      <EditorLayout />
+      <EditorLayout onSave={onSave} />
     </EditorProvider>
   );
 };

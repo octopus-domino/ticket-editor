@@ -11,6 +11,7 @@ import type {
 } from '@/shared/types';
 import { createSlide } from '@/domain/slide/operations';
 import { generateId } from '@/shared/utils/id';
+import { fixGroupBoundsInPlace } from '@/lib/migrations';
 
 export interface DocumentState {
   slides: Slide[];
@@ -20,6 +21,12 @@ export interface DocumentState {
 }
 
 export type Mutator = (draft: Draft<DocumentState>) => void;
+
+export interface InitialDocument {
+  slides: Slide[];
+  data: DataRoot[];
+  activeId: string;
+}
 
 interface HistoryEntry {
   state: DocumentState;
@@ -117,14 +124,25 @@ export class DocumentStore extends SimpleStore<DocumentState> {
   private historyIndex = -1;
   private historyBytes = 0;
 
-  constructor() {
-    const initial = createSlide(1);
-    super({
-      slides: [initial],
-      activeId: initial.id,
-      data: createDefaultData(),
-      historyVersion: 0,
-    });
+  constructor(initial?: InitialDocument) {
+    if (initial && initial.slides.length > 0) {
+      super({
+        slides: initial.slides,
+        activeId: initial.activeId || initial.slides[0].id,
+        data: initial.data.length > 0 ? initial.data : createDefaultData(),
+        historyVersion: 0,
+      });
+      // Однократная нормализация групп на случай, если пришли раздутые bounds
+      this.fixAllGroupBounds();
+    } else {
+      const slide = createSlide(1);
+      super({
+        slides: [slide],
+        activeId: slide.id,
+        data: createDefaultData(),
+        historyVersion: 0,
+      });
+    }
     this.pushHistory();
   }
 
@@ -164,6 +182,18 @@ export class DocumentStore extends SimpleStore<DocumentState> {
     const next = produce(prev, mutator);
     if (next === prev) return;
     this.setState(next);
+  }
+
+  /**
+   * Пересчитывает bounds всех групп во всех слайдах.
+   * Не пишет в историю — это техническая нормализация данных.
+   */
+  fixAllGroupBounds(): void {
+    this.setStateForDrag((draft) => {
+      for (const slide of draft.slides) {
+        fixGroupBoundsInPlace(slide.elements as any[]);
+      }
+    });
   }
 
   commitSnapshot(): void {
@@ -209,7 +239,7 @@ export class DocumentStore extends SimpleStore<DocumentState> {
       const removed = this.history.shift();
       if (removed) {
         this.historyBytes -= removed.bytes;
-        this.historyIndex--; // <--- ИСПРАВЛЕНИЕ: сдвигаем индекс при удалении первого элемента
+        this.historyIndex--;
       }
     } else {
       this.historyIndex++;

@@ -33,11 +33,13 @@ interface Props {
   slideWidth: number;
   slideHeight: number;
   listening?: boolean;
+  editorMode?: 'print' | 'schema';
 }
 
 export const CanvasPreviewLayer: React.FC<Props> = ({
   zoom, fillPoints, draft, elements, rubberBand,
   onStartDraft, ghostRect, selectedIds, slideWidth, slideHeight, listening = true,
+  editorMode = 'print',
 }) => {
   const hoveredId = useSyncExternalStore(hoverStore.subscribe, hoverStore.getSnapshot);
   const guides = useSyncExternalStore(guidesStore.subscribe, guidesStore.getSnapshot);
@@ -48,12 +50,15 @@ export const CanvasPreviewLayer: React.FC<Props> = ({
   const hoveredEl = hoveredId ? elements.find((x) => x.id === hoveredId) ?? null : null;
 
   const isPolygon = hoveredEl?.type === 'shape' && (hoveredEl as any).shape === 'polygon';
+
+  // Якоря (жёлтые точки) показываем ТОЛЬКО в режиме схем.
   const showAnchors =
-    !!hoveredEl && 
-    hoveredEl.type !== 'group' && 
+    editorMode === 'schema' &&
+    !!hoveredEl &&
+    hoveredEl.type !== 'group' &&
     !isPolygon &&
-    !draft && 
-    !rubberBand && 
+    !draft &&
+    !rubberBand &&
     !selectedIds.includes(hoveredEl.id);
 
   let groupBBox: { x: number; y: number; w: number; h: number } | null = null;
@@ -66,7 +71,7 @@ export const CanvasPreviewLayer: React.FC<Props> = ({
         return live ? { ...el, ...live } : el;
       })
       .filter((e): e is CanvasElement => !!e);
-    
+
     if (chosen.length > 1) {
       const minX = Math.min(...chosen.map((e) => e.x));
       const minY = Math.min(...chosen.map((e) => e.y));
@@ -105,10 +110,10 @@ export const CanvasPreviewLayer: React.FC<Props> = ({
       )}
 
       {showAnchors && (['top', 'right', 'bottom', 'left'] as AnchorSide[]).map((side) => {
-        const pos = getAnchorPoint(hoveredEl, side);
+        const pos = getAnchorPoint(hoveredEl!, side);
         return (
           <Circle key={side} x={pos.x} y={pos.y} radius={6 / zoom} fill="#fbbf24" stroke="#f59e0b" strokeWidth={1.5 / zoom}
-            onMouseDown={(e) => { e.cancelBubble = true; onStartDraft(hoveredEl.id, side, e.evt.clientX, e.evt.clientY); }}
+            onMouseDown={(e) => { e.cancelBubble = true; onStartDraft(hoveredEl!.id, side, e.evt.clientX, e.evt.clientY); }}
             onMouseEnter={(e) => { const stage = e.target.getStage(); if (stage) stage.container().style.cursor = 'crosshair'; }}
             onMouseLeave={(e) => { const stage = e.target.getStage(); if (stage) stage.container().style.cursor = 'default'; }}
           />

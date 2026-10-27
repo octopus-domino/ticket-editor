@@ -4,15 +4,65 @@ import type { Slide, DataRoot } from '@/shared/types';
 
 export const CURRENT_VERSION = '2.0';
 
-/**
- * Возвращаемый тип — НАШ доменный, а не `ValidatedDocument` из zod.
- * Zod используется только как валидатор (runtime-check), типы берём из
- * `shared/types`, чтобы `DocumentStore` (immer/WritableDraft) принял результат.
- */
 export interface MigratedDocument {
   slides: Slide[];
   data: DataRoot[];
   activeSlideId?: string;
+}
+
+/**
+ * Пересчитывает bounds всех групп из их детей.
+ * Поддерживает вложенные группы (несколько проходов).
+ * Трогает только группы, где расхождение > 0.5px.
+ */
+export function fixGroupBoundsInPlace(elements: any[]): void {
+  if (!Array.isArray(elements) || elements.length === 0) return;
+
+  for (let iter = 0; iter < 5; iter++) {
+    let changed = false;
+    const byId = new Map<string, any>();
+    for (const el of elements) {
+      if (el && typeof el.id === 'string') byId.set(el.id, el);
+    }
+
+    for (const el of elements) {
+      if (!el || el.type !== 'group' || !Array.isArray(el.children) || el.children.length === 0) {
+        continue;
+      }
+
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (const cid of el.children) {
+        const child = byId.get(cid);
+        if (!child) continue;
+        if (typeof child.x !== 'number' || typeof child.y !== 'number') continue;
+        if (typeof child.width !== 'number' || typeof child.height !== 'number') continue;
+        if (child.x < minX) minX = child.x;
+        if (child.y < minY) minY = child.y;
+        if (child.x + child.width > maxX) maxX = child.x + child.width;
+        if (child.y + child.height > maxY) maxY = child.y + child.height;
+      }
+
+      if (minX === Infinity) continue;
+
+      const newW = Math.max(1, maxX - minX);
+      const newH = Math.max(1, maxY - minY);
+
+      if (
+        Math.abs(el.x - minX) > 0.5 ||
+        Math.abs(el.y - minY) > 0.5 ||
+        Math.abs(el.width - newW) > 0.5 ||
+        Math.abs(el.height - newH) > 0.5
+      ) {
+        el.x = minX;
+        el.y = minY;
+        el.width = newW;
+        el.height = newH;
+        changed = true;
+      }
+    }
+
+    if (!changed) break;
+  }
 }
 
 /* ---------- миграции ---------- */
@@ -65,13 +115,6 @@ function migrate_1_5_to_2_0(doc: any): any {
   };
 }
 
-/**
- * Финальные дефолты — применяются ПОСЛЕ всех миграций, но ДО zod-парсинга.
- * Это гарантия, что zod-output совпадёт с доменным типом по всем
- * обязательным полям, которые в zod объявлены `.optional()`.
- *
- * Сейчас — только `TextElement.richText` (в типе `boolean`, в zod `boolean?`).
- */
 function applyFinalDefaults(doc: any): any {
   const slides = (doc.slides || []).map((slide: any) => ({
     ...slide,
@@ -87,12 +130,6 @@ function applyFinalDefaults(doc: any): any {
 
 /* ---------- публичная точка ---------- */
 
-/**
- * F-MIG-01..10: Пошаговая миграция документа к CURRENT_VERSION.
- * Бросает Error, если версия не поддерживается (F-MIG-09).
- *
- * Возвращает доменный тип `MigratedDocument`, не `ValidatedDocument`.
- */
 export function migrateDocument(raw: unknown): MigratedDocument {
   if (!raw || typeof raw !== 'object') {
     throw new Error('Invalid document: not an object');
@@ -117,18 +154,18 @@ export function migrateDocument(raw: unknown): MigratedDocument {
 
   doc = applyFinalDefaults(doc);
 
+  // NEW: пересчитываем bounds всех групп из их детей
+  for (const slide of doc.slides || []) {
+    if (Array.isArray(slide.elements)) {
+      fixGroupBoundsInPlace(slide.elements);
+    }
+  }
+
   const result = DocumentSchema.safeParse(doc);
   if (!result.success) {
     throw new Error(`Document validation failed: ${result.error.message}`);
   }
 
-  // Safe cast: zod-валидация уже гарантирует структуру, defaults применены.
-  // Расхождения между zod-output и доменным типом:
-  //   1) passthrough сохраняет лишние поля (не мешает),
-  //   2) DataRoot.fields в zod — `unknown[]` из-за рекурсии (z.ZodType),
-  //      но структурно — это `DataField[]`,
-  //   3) все `.optional()` поля с `.default()` после парсинга заполнены,
-  //   4) `richText` заполнен через applyFinalDefaults.
   return {
     slides: result.data.slides as unknown as Slide[],
     data: result.data.data as unknown as DataRoot[],

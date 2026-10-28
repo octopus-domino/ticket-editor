@@ -59,7 +59,7 @@ export const LoginPage: React.FC = () => {
       <h2 style={{ marginTop: 0 }}>Вход</h2>
       
       <a
-        href="http://localhost:8080/oauth2/authorization/google"
+        href="/oauth2/authorization/google"
         style={{
           display: 'block', textAlign: 'center', padding: '10px',
           background: '#fff', border: '1px solid #cbd5e1',

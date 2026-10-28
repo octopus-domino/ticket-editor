@@ -32,15 +32,17 @@ export class AuthStore extends SimpleStore<AuthState> {
   }
 
   async bootstrap(): Promise<void> {
-    try {
-      const data = await authApi.refresh();
-      if (data) {
-        this.setSession(data.accessToken, data.user);
-      } else {
-        this.clear();
-      }
-    } catch {
-      // Сетевая ошибка — бэкенд недоступен
+  try {
+    const data = await authApi.refresh();
+    if (data) {
+      this.setSession(data.accessToken, data.user);
+    } else {
+      this.clear();       // 401 — нормально, не залогинен
+    }
+  } catch (e) {
+    const msg = (e as Error).message || '';
+    if (/Failed to fetch|NetworkError|Load failed|fetch failed/i.test(msg)) {
+      // реально нет сети / контейнер упал
       this.setState({
         user: { id: 'offline', email: 'offline@local', name: 'Локальный режим' },
         accessToken: null,
@@ -48,8 +50,13 @@ export class AuthStore extends SimpleStore<AuthState> {
         error: null,
         offline: true,
       });
+    } else {
+      // 403/500 — бэк ЖИВ, просто отказал. Не маскируем под «офлайн».
+      console.error('auth.bootstrap failed:', e);
+      this.clear();
     }
   }
+}
 
   async login(email: string, password: string): Promise<void> {
     try {

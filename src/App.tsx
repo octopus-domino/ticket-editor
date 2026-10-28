@@ -27,15 +27,14 @@ const App: React.FC = () => {
           ⚠️ Бэкенд недоступен. Вы работаете в локальном режиме. Изменения сохраняются в этом браузере.
         </div>
       )}
-      
+
       <div style={{ display: 'flex', flexDirection: 'column', height: offline ? 'calc(100vh - 37px)' : '100vh' }}>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
-          <Route path="/oauth2/redirect" element={<OAuth2RedirectPage />} />
+          <Route path="/auth/callback" element={<OAuth2RedirectPage />} />
 
           <Route path="/" element={<ProtectedRoute><WorkspaceLayout /></ProtectedRoute>}>
-            {/* Если пользователь зашел на главную, и мы оффлайн — кидаем в локальный проект */}
             <Route index element={offline ? <Navigate to="/editor/local" replace /> : <WorkspaceHome />} />
             <Route path="editor/:docId" element={<EditorPage />} />
           </Route>

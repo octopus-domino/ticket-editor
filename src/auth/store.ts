@@ -32,31 +32,31 @@ export class AuthStore extends SimpleStore<AuthState> {
   }
 
   async bootstrap(): Promise<void> {
-  try {
-    const data = await authApi.refresh();
-    if (data) {
-      this.setSession(data.accessToken, data.user);
-    } else {
-      this.clear();       // 401 — нормально, не залогинен
-    }
-  } catch (e) {
-    const msg = (e as Error).message || '';
-    if (/Failed to fetch|NetworkError|Load failed|fetch failed/i.test(msg)) {
-      // реально нет сети / контейнер упал
-      this.setState({
-        user: { id: 'offline', email: 'offline@local', name: 'Локальный режим' },
-        accessToken: null,
-        booting: false,
-        error: null,
-        offline: true,
-      });
-    } else {
-      // 403/500 — бэк ЖИВ, просто отказал. Не маскируем под «офлайн».
-      console.error('auth.bootstrap failed:', e);
-      this.clear();
+    try {
+      const data = await authApi.refresh();
+      if (data) {
+        this.setSession(data.accessToken, data.user);
+      } else {
+        this.clear();
+      }
+    } catch (e) {
+      const msg = (e as Error).message || '';
+      if (/Failed to fetch|NetworkError|Load failed|fetch failed/i.test(msg)) {
+        // Сеть/бэк реально недоступны — работаем в локальном режиме
+        this.setState({
+          user: { id: 'offline', email: 'offline@local', name: 'Локальный режим' },
+          accessToken: null,
+          booting: false,
+          error: null,
+          offline: true,
+        });
+      } else {
+        // HTTP-ошибка (403, 500 и т.п.) — бэк жив, просто отказал
+        console.error('auth.bootstrap failed:', e);
+        this.clear();
+      }
     }
   }
-}
 
   async login(email: string, password: string): Promise<void> {
     try {

@@ -37,12 +37,18 @@ export class AuthStore extends SimpleStore<AuthState> {
       if (data) {
         this.setSession(data.accessToken, data.user);
       } else {
+        // 401 — валидной refresh-cookie нет, юзер не залогинен
         this.clear();
       }
     } catch (e) {
       const msg = (e as Error).message || '';
-      if (/Failed to fetch|NetworkError|Load failed|fetch failed/i.test(msg)) {
-        // Сеть/бэк реально недоступны — работаем в локальном режиме
+      const isNetworkError = /Failed to fetch|NetworkError|Load failed|fetch failed/i.test(msg);
+      const isHttp404 = /^HTTP 404/.test(msg);
+
+      // Network error ИЛИ 404 от статического хостинга (GH Pages без бэкенда)
+      // → бэкенда нет → локальный режим
+      if (isNetworkError || isHttp404) {
+        console.warn('[bootstrap] backend unavailable, switching to offline mode:', e);
         this.setState({
           user: { id: 'offline', email: 'offline@local', name: 'Локальный режим' },
           accessToken: null,
@@ -51,8 +57,8 @@ export class AuthStore extends SimpleStore<AuthState> {
           offline: true,
         });
       } else {
-        // HTTP-ошибка (403, 500 и т.п.) — бэк жив, просто отказал
-        console.error('auth.bootstrap failed:', e);
+        // HTTP 500/403/... — бэкенд есть, но сломан → покажем login
+        console.error('[bootstrap] backend returned error:', e);
         this.clear();
       }
     }

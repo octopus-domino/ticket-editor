@@ -31,20 +31,13 @@ export const authApi = {
   },
 
   async refresh(): Promise<AuthResponse | null> {
-    try {
-      const res = await fetch(`${API_BASE}/api/auth/refresh`, {
-        method: 'POST',
-        credentials: 'include',
-      });
-      
-      if (res.status === 401) return null; // Не авторизован, но сеть в порядке
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      
-      return (await res.json()) as AuthResponse;
-    } catch (e) {
-      console.warn('Backend unreachable during refresh:', e);
-      throw e; // Пробрасываем ошибку, чтобы отловить её в bootstrap
-    }
+    const res = await fetch(`${API_BASE}/api/auth/refresh`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+    if (res.status === 401) return null;   // валидной cookie нет — нормальный сценарий
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return (await res.json()) as AuthResponse;
   },
 
   async logout(): Promise<void> {
@@ -54,12 +47,12 @@ export const authApi = {
         credentials: 'include',
       });
     } catch (e) {
-      console.warn('Backend unreachable during logout:', e);
+      // logout в оффлайне — не ошибка
+      console.warn('logout network error (ignored):', e);
     }
   },
 
   async me(): Promise<User> {
-    // authFetch автоматически подставит Bearer-токен из authStore
     const res = await authFetch('/api/auth/me');
     return json<User>(res);
   },

@@ -18,6 +18,24 @@ const INITIAL: AuthState = {
   offline: false,
 };
 
+/**
+ * Хосты, на которых заведомо нет бэкенда.
+ * На них bootstrap() сразу уходит в offline-режим, не делая запросов к /api.
+ */
+const STATIC_HOST_PATTERNS: RegExp[] = [
+  /\.github\.io$/i,          // GitHub Pages
+  /\.gitlab\.io$/i,          // GitLab Pages
+  /\.netlify\.app$/i,        // Netlify
+  /\.vercel\.app$/i,         // Vercel
+  /\.surge\.sh$/i,           // Surge
+];
+
+function isStaticHost(): boolean {
+  if (typeof window === 'undefined') return false;
+  const host = window.location.hostname;
+  return STATIC_HOST_PATTERNS.some((re) => re.test(host));
+}
+
 export class AuthStore extends SimpleStore<AuthState> {
   constructor() {
     super(INITIAL);
@@ -32,6 +50,20 @@ export class AuthStore extends SimpleStore<AuthState> {
   }
 
   async bootstrap(): Promise<void> {
+    // Хостинг статики (GH Pages и т.п.) — бэкенда нет by design.
+    // Не стучимся в /api, сразу локальный режим.
+    if (isStaticHost()) {
+      console.info('[bootstrap] static host detected, skipping API — offline mode');
+      this.setState({
+        user: { id: 'offline', email: 'offline@local', name: 'Локальный режим' },
+        accessToken: null,
+        booting: false,
+        error: null,
+        offline: true,
+      });
+      return;
+    }
+
     try {
       const data = await authApi.refresh();
       if (data) {
@@ -43,11 +75,11 @@ export class AuthStore extends SimpleStore<AuthState> {
     } catch (e) {
       const msg = (e as Error).message || '';
       const isNetworkError = /Failed to fetch|NetworkError|Load failed|fetch failed/i.test(msg);
-      const isHttp404 = /^HTTP 404/.test(msg);
+      // Страховка: если хост всё же динамический, но API отвечает
+      // 404/405/501 — значит, за этим URL бэкенда нет
+      const isMissingApi = /^HTTP (404|405|501)\b/.test(msg);
 
-      // Network error ИЛИ 404 от статического хостинга (GH Pages без бэкенда)
-      // → бэкенда нет → локальный режим
-      if (isNetworkError || isHttp404) {
+      if (isNetworkError || isMissingApi) {
         console.warn('[bootstrap] backend unavailable, switching to offline mode:', e);
         this.setState({
           user: { id: 'offline', email: 'offline@local', name: 'Локальный режим' },

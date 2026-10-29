@@ -37,12 +37,6 @@ function escapeHtml(s: string): string {
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 }
 
-/**
- * Plain → HTML. Переносы строк → <br>.
- * Нужен для старых TextElement: у них richText: true, но нет html,
- * а текст лежит в el.text. Без этого редактор открывался пустым
- * и затирал старый текст при закрытии.
- */
 function plainToHtml(text: string): string {
   if (!text) return '<p></p>';
   return `<p>${escapeHtml(text).replace(/\n/g, '<br>')}</p>`;
@@ -58,13 +52,6 @@ export const RichTextInlineEditor: React.FC<Props> = ({
 
   const innerWidth = Math.max(40, element.width - element.padding.left - element.padding.right);
 
-  /*
-   * Исходный HTML до нормализации ширин таблиц.
-   * Приоритет: editing.html → wrap(editing.value) → пустой.
-   *
-   * Случай со старыми элементами (richText:true, html:undefined, есть text):
-   * оборачиваем text в <p> — иначе редактор стартует пустым и затирает контент.
-   */
   const baseHtml = useMemo(() => {
     if (editing.html && editing.html.trim()) return editing.html;
     const plain = editing.value ?? '';
@@ -72,11 +59,6 @@ export const RichTextInlineEditor: React.FC<Props> = ({
     return plainToHtml(plain);
   }, [editing.html, editing.value]);
 
-  /*
-   * Нормализация ширин таблиц под innerWidth + обёртка <p>, если в
-   * контенте есть <table>. Нужна, чтобы TipTap корректно распарсил
-   * и чтобы таблица не вылезала за пределы элемента.
-   */
   const processedHtml = useMemo(() => {
     let clean = baseHtml;
     if (clean.includes('<table')) {
@@ -127,7 +109,6 @@ export const RichTextInlineEditor: React.FC<Props> = ({
         : raw;
     } catch (err) {
       console.error('[RichTextInlineEditor] serialization failed:', err);
-      // Страховка: если сериализация упала, не затираем исходный контент.
       html = baseHtml;
     }
     if (html.includes('<table') && /<\/table>\s*$/.test(html)) html += '<p><br></p>';
@@ -136,7 +117,6 @@ export const RichTextInlineEditor: React.FC<Props> = ({
     const hasRichContent = html.includes('<table') || html.includes('<img');
     const isEmpty = !text.trim() && !hasRichContent;
 
-    // Пустой документ — сохраняем плейсхолдер, иначе текст + html.
     onCommit(isEmpty ? '' : html, isEmpty ? '' : text);
     onClose();
   }, [editor, onCommit, onClose, baseHtml, innerWidth]);
@@ -153,23 +133,40 @@ export const RichTextInlineEditor: React.FC<Props> = ({
     return () => document.removeEventListener('keydown', onKey);
   }, [handleCommit]);
 
-  /* Клик вне оверлея и тулбара → commit */
+  /*
+   * Клик вне оверлея и тулбара → commit.
+   *
+   * ВАЖНО: capture=true. Konva-элементы на холсте в своих onMouseDown
+   * выставляют e.cancelBubble = true, что останавливает НАТИВНОЕ всплытие
+   * и не даёт событию дойти до document в фазе bubble. Из-за этого клик
+   * по другому элементу канвы не закрывал редактор — Konva гасил событие.
+   *
+   * Фаза перехвата срабатывает ДО того, как событие попадёт в Konva
+   * (document — предок Konva-контейнера), поэтому мы закрываем редактор
+   * первым делом, а уже потом Konva обрабатывает клик и выделяет
+   * нужный элемент.
+   */
   useEffect(() => {
     const onMouseDown = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
       if (overlayRef.current?.contains(target)) return;
       if (toolbarRef.current?.contains(target)) return;
-      if (target.closest('.rt-popover')) return;
+      if (target.closest && target.closest('.rt-popover')) return;
       handleCommit();
     };
-    const t = setTimeout(() => document.addEventListener('mousedown', onMouseDown), 0);
+    // setTimeout — чтобы клик, который ОТКРЫЛ редактор, не попал
+    // в этот же обработчик и не закрыл его сразу же.
+    const t = setTimeout(
+      () => document.addEventListener('mousedown', onMouseDown, true),
+      0,
+    );
     return () => {
       clearTimeout(t);
-      document.removeEventListener('mousedown', onMouseDown);
+      document.removeEventListener('mousedown', onMouseDown, true);
     };
   }, [handleCommit]);
 
-  /* Позиция тулбара — fixed поверх, над элементом */
   useLayoutEffect(() => {
     const updatePos = () => {
       if (!overlayRef.current) return;
@@ -303,34 +300,10 @@ export const RichTextInlineEditor: React.FC<Props> = ({
 
         <div className="rt-sep" />
         <div className="rt-group">
-          <button
-            type="button"
-            className={`rt-btn ${editor.isActive('bold') ? 'active' : ''}`}
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => editor.chain().focus().toggleBold().run()}
-            title="Жирный"
-          ><b>B</b></button>
-          <button
-            type="button"
-            className={`rt-btn ${editor.isActive('italic') ? 'active' : ''}`}
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => editor.chain().focus().toggleItalic().run()}
-            title="Курсив"
-          ><i>I</i></button>
-          <button
-            type="button"
-            className={`rt-btn ${editor.isActive('underline') ? 'active' : ''}`}
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => editor.chain().focus().toggleUnderline().run()}
-            title="Подчёркнутый"
-          ><u>U</u></button>
-          <button
-            type="button"
-            className={`rt-btn ${editor.isActive('strike') ? 'active' : ''}`}
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => editor.chain().focus().toggleStrike().run()}
-            title="Зачёркнутый"
-          ><s>S</s></button>
+          <button type="button" className={`rt-btn ${editor.isActive('bold') ? 'active' : ''}`} onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().toggleBold().run()} title="Жирный"><b>B</b></button>
+          <button type="button" className={`rt-btn ${editor.isActive('italic') ? 'active' : ''}`} onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().toggleItalic().run()} title="Курсив"><i>I</i></button>
+          <button type="button" className={`rt-btn ${editor.isActive('underline') ? 'active' : ''}`} onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().toggleUnderline().run()} title="Подчёркнутый"><u>U</u></button>
+          <button type="button" className={`rt-btn ${editor.isActive('strike') ? 'active' : ''}`} onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().toggleStrike().run()} title="Зачёркнутый"><s>S</s></button>
         </div>
 
         <div className="rt-sep" />

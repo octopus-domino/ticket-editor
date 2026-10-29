@@ -1,4 +1,3 @@
-// src/shared/api/client.ts
 import { authStore } from '@/auth/store';
 
 const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? '';
@@ -35,20 +34,21 @@ export async function authFetch(input: RequestInfo | URL, init: RequestInit = {}
     try {
       return await fetch(url, { ...init, headers, credentials: 'include' });
     } catch (e) {
-      throw new Error('Сетевая ошибка. Проверьте подключение к интернету.');
+      throw new Error('Сетевая ошибка. Проверьте подключение.');
     }
   };
 
   const token = authStore.getState().accessToken;
   let res = await doFetch(token);
 
+  // Если бэкенд вернул 401 (а не 302) — пробуем обновить токен
   if (res.status === 401) {
     const ok = await tryRefresh();
     if (ok) {
       const newToken = authStore.getState().accessToken;
       res = await doFetch(newToken);
     } else {
-      authStore.clear();
+      authStore.clear(); // refresh не удался — выкидываем на логин
     }
   }
   return res;

@@ -29,6 +29,25 @@ interface Props {
 
 type PopKind = null | 'color' | 'bg';
 
+const TOOLBAR_HEIGHT = 52;
+const TOOLBAR_GAP = 8;
+
+function escapeHtml(s: string): string {
+  return s.replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
+}
+
+/**
+ * Plain → HTML. Переносы строк → <br>.
+ * Нужен для старых TextElement: у них richText: true, но нет html,
+ * а текст лежит в el.text. Без этого редактор открывался пустым
+ * и затирал старый текст при закрытии.
+ */
+function plainToHtml(text: string): string {
+  if (!text) return '<p></p>';
+  return `<p>${escapeHtml(text).replace(/\n/g, '<br>')}</p>`;
+}
+
 export const RichTextInlineEditor: React.FC<Props> = ({
   editing, element, zoom, onClose, onCommit,
 }) => {
@@ -39,16 +58,34 @@ export const RichTextInlineEditor: React.FC<Props> = ({
 
   const innerWidth = Math.max(40, element.width - element.padding.left - element.padding.right);
 
+  /*
+   * Исходный HTML до нормализации ширин таблиц.
+   * Приоритет: editing.html → wrap(editing.value) → пустой.
+   *
+   * Случай со старыми элементами (richText:true, html:undefined, есть text):
+   * оборачиваем text в <p> — иначе редактор стартует пустым и затирает контент.
+   */
+  const baseHtml = useMemo(() => {
+    if (editing.html && editing.html.trim()) return editing.html;
+    const plain = editing.value ?? '';
+    if (!plain.trim() || plain === 'Введите текст') return '<p></p>';
+    return plainToHtml(plain);
+  }, [editing.html, editing.value]);
+
+  /*
+   * Нормализация ширин таблиц под innerWidth + обёртка <p>, если в
+   * контенте есть <table>. Нужна, чтобы TipTap корректно распарсил
+   * и чтобы таблица не вылезала за пределы элемента.
+   */
   const processedHtml = useMemo(() => {
-    const isPlaceholder = editing.html?.includes('Введите текст') || !editing.html?.trim();
-    let clean = isPlaceholder ? '<p></p>' : (editing.html ?? '<p></p>');
+    let clean = baseHtml;
     if (clean.includes('<table')) {
       if (!clean.startsWith('<p>') && !clean.startsWith('<div>')) clean = '<p><br></p>' + clean;
       if (!clean.endsWith('</p>') && !clean.endsWith('</div>')) clean += '<p><br></p>';
       clean = normalizeTableWidthsInHtml(clean, innerWidth);
     }
     return clean;
-  }, [editing.html, innerWidth]);
+  }, [baseHtml, innerWidth]);
 
   const editor = useEditor({
     extensions: [
@@ -81,25 +118,28 @@ export const RichTextInlineEditor: React.FC<Props> = ({
 
   const handleCommit = useCallback(() => {
     if (!editor) return;
+
     let html = '';
     try {
       const raw = editor.getHTML();
-      // Передаём innerWidth — сериализация ужмёт таблицу, если она
-      // шире контейнера. Без этого лишние пиксели накапливались между
-      // сохранениями и на канве таблица растягивалась до 100%.
       html = raw.includes('<table')
         ? serializeRichHtml(editor.view.dom, raw, innerWidth)
         : raw;
     } catch (err) {
       console.error('[RichTextInlineEditor] serialization failed:', err);
-      html = editing.html ?? '';
+      // Страховка: если сериализация упала, не затираем исходный контент.
+      html = baseHtml;
     }
     if (html.includes('<table') && /<\/table>\s*$/.test(html)) html += '<p><br></p>';
-    const isEmpty = !html || html === '<p></p>' || html === '<p><br></p>';
+
     const text = editor.getText();
-    onCommit(isEmpty ? '' : html, text);
+    const hasRichContent = html.includes('<table') || html.includes('<img');
+    const isEmpty = !text.trim() && !hasRichContent;
+
+    // Пустой документ — сохраняем плейсхолдер, иначе текст + html.
+    onCommit(isEmpty ? '' : html, isEmpty ? '' : text);
     onClose();
-  }, [editor, onCommit, onClose, editing.html, innerWidth]);
+  }, [editor, onCommit, onClose, baseHtml, innerWidth]);
 
   /* Escape → commit */
   useEffect(() => {
@@ -113,7 +153,7 @@ export const RichTextInlineEditor: React.FC<Props> = ({
     return () => document.removeEventListener('keydown', onKey);
   }, [handleCommit]);
 
-  /* Клик вне оверлея и тулбара → commit. */
+  /* Клик вне оверлея и тулбара → commit */
   useEffect(() => {
     const onMouseDown = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
@@ -129,12 +169,12 @@ export const RichTextInlineEditor: React.FC<Props> = ({
     };
   }, [handleCommit]);
 
-  /* Фиксированное позиционирование тулбара над элементом */
+  /* Позиция тулбара — fixed поверх, над элементом */
   useLayoutEffect(() => {
     const updatePos = () => {
       if (!overlayRef.current) return;
       const rect = overlayRef.current.getBoundingClientRect();
-      let top = rect.top - 52 - 8;
+      let top = rect.top - TOOLBAR_HEIGHT - TOOLBAR_GAP;
       if (top < 8) top = 8;
 
       let left = Math.max(16, rect.left);

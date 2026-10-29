@@ -30,24 +30,31 @@ export const PathEl: React.FC<Props> = ({
       onDragEnd={(e) => { onDragEnd?.(e); }}
       onContextMenu={onContextMenu}
     >
-      <Path
-        data={el.d}
-        fill={el.fill === 'transparent' ? 'rgba(0,0,0,0.001)' : el.fill}
-        stroke={el.stroke === 'transparent' ? undefined : el.stroke}
-        strokeWidth={el.strokeWidth || 0}
-        hitStrokeWidth={20}
-        perfectDrawEnabled={false}
-      />
-      {isSelected && (
+      <Group
+        scaleX={el.flipX ? -1 : 1}
+        scaleY={el.flipY ? -1 : 1}
+        x={el.flipX ? el.width : 0}
+        y={el.flipY ? el.height : 0}
+      >
         <Path
           data={el.d}
-          fill="transparent"
-          stroke="#6366f1"
-          strokeWidth={1.5}
-          dash={[6, 4]}
-          listening={false}
+          fill={el.fill === 'transparent' ? 'rgba(0,0,0,0.001)' : el.fill}
+          stroke={el.stroke === 'transparent' ? undefined : el.stroke}
+          strokeWidth={el.strokeWidth || 0}
+          hitStrokeWidth={20}
+          perfectDrawEnabled={false}
         />
-      )}
+        {isSelected && (
+          <Path
+            data={el.d}
+            fill="transparent"
+            stroke="#6366f1"
+            strokeWidth={1.5}
+            dash={[6, 4]}
+            listening={false}
+          />
+        )}
+      </Group>
     </Group>
   );
 };

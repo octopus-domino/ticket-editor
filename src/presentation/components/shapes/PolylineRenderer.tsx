@@ -55,6 +55,7 @@ export const PolylineRenderer: React.FC<PolylineRendererProps> = ({
         lineCap="round"
         lineJoin="round"
         listening={false}
+        strokeScaleEnabled={false}
       />
     );
   })();
@@ -79,6 +80,7 @@ export const PolylineRenderer: React.FC<PolylineRendererProps> = ({
         lineCap="round"
         lineJoin="round"
         listening={false}
+        strokeScaleEnabled={false}
       />
       {arrowNode}
       {isSelected && Array.from({ length: pointCount }).map((_, i) => {

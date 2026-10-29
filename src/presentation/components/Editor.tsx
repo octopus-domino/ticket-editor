@@ -75,11 +75,8 @@ export interface EditorInitialDoc {
 }
 
 export interface EditorProps {
-  /** Идентификатор документа в backend (для autosave). Опционально. */
   documentId?: string;
-  /** Начальное состояние — приходит из backend API. */
   initialDoc?: EditorInitialDoc;
-  /** Колбэк для сохранения на backend. Если не передан — работает localStorage-autosave. */
   onSave?: (state: EditorInitialDoc) => Promise<void>;
 }
 
@@ -176,9 +173,8 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave }) => {
   const [zoom, setZoom] = useState(1);
   const [liveMessage, setLiveMessage] = useState('');
 
-  /* Восстановление localStorage autosave — только если backend-сохранение не задано */
   useEffect(() => {
-    if (onSave) return; // при работе с backend localStorage-восстановление не нужно
+    if (onSave) return;
     const saved = loadAutoSave();
     if (
       saved &&
@@ -201,7 +197,6 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave }) => {
     }
   }, [docStore, onSave]);
 
-  /* Один раз при монтировании: починить уже загруженные группы */
   useEffect(() => {
     docStore.fixAllGroupBounds();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -216,14 +211,12 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave }) => {
     setZoom,
   });
 
-  /* localStorage-autosave — только когда работаем без backend */
   useAutoSave(
     onSave ? [] : slides,
     onSave ? [] : data,
     onSave ? null : (activeId ?? null),
   );
 
-  /* backend-autosave — только когда работаем с backend */
   useBackendAutoSave(slides, data, activeId, onSave);
 
   const commitEditing = useEditingCommit(docStore);
@@ -432,6 +425,9 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave }) => {
     diagramElement.type === 'diagram' &&
     isFeatureEnabled('FEATURE_DIAGRAM');
 
+  /* Rich-редактор рендерится внутри Canvas (inline). Здесь — только plain. */
+  const showPlainInlineEditor = !!editing && !editing.isRich;
+
   return (
     <div className="editor-shell" role="application" aria-label="Редактор билетов">
       {isFeatureEnabled('FEATURE_SHOW_MIGRATION_BANNER') && (
@@ -541,7 +537,7 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave }) => {
         />
       )}
 
-      {editing && (
+      {showPlainInlineEditor && editing && (
         <ErrorBoundary fallback={<div style={{ padding: 20 }}>Ошибка в редакторе текста</div>}>
           <Suspense fallback={null}>
             <InlineEditorHost
@@ -622,7 +618,6 @@ export const Editor: React.FC<EditorProps> = ({
         graphics: new GraphicsStore(),
       };
     },
-    // Пересоздаём store при смене documentId, иначе останется состояние прошлого документа
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [documentId],
   );

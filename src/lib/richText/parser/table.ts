@@ -96,10 +96,18 @@ export function parseTableEl(
 
   const colWidths = resolveColWidths(table, cells, colCount);
 
-  return { cells, rowCount: grid.length, colCount, colWidths };
+  /* Читаем editorWidth из data-editor-width, если он есть. */
+  const editorWidthAttr = table.getAttribute('data-editor-width');
+  let editorWidth: number | undefined;
+  if (editorWidthAttr) {
+    const n = parseFloat(editorWidthAttr);
+    if (Number.isFinite(n) && n > 0) editorWidth = n;
+  }
+
+  return { cells, rowCount: grid.length, colCount, colWidths, editorWidth };
 }
 
-/* ---------- helpers ---------- */
+/* ---------- helpers (без изменений) ---------- */
 
 function parseBorderSide(el: HTMLElement, side: 'top' | 'right' | 'bottom' | 'left'): BorderSide | undefined {
   const s = el.style;
@@ -108,7 +116,6 @@ function parseBorderSide(el: HTMLElement, side: 'top' | 'right' | 'bottom' | 'le
   const style = s.getPropertyValue(`border-${side}-style`) || undefined;
 
   if (!color && !widthStr && !style) {
-    // Fallback на общий border-color/width/style
     const commonColor = s.borderColor || undefined;
     const commonWidth = s.borderWidth || undefined;
     const commonStyle = s.borderStyle || undefined;

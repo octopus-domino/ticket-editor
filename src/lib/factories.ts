@@ -1,12 +1,11 @@
 ﻿/* ============================================================
    lib/factories.ts
-   v8: + newPath, newChart, arc defaults в newShape
    ============================================================ */
 
 import type {
   Slide, TextElement, ShapeElement, LineElement, TableElement, FooterElement,
   StampElement, PlaceholderElement, DocFormat, Orientation, DataFieldType,
-  StampShape, BasicShape, PathElement, ChartElement, ChartKind,
+  StampShape, BasicShape, PathElement, ChartElement, ChartKind, QrElement,
 } from '@/shared/types';
 import { FORMATS } from '@/shared/constants';
 import { getFormatSize } from '@/shared/utils/formats';
@@ -100,6 +99,12 @@ export function newShape(shape: BasicShape, x = 200, y = 200): ShapeElement {
     base.fill = '#eef2ff';
     base.stroke = '#6366f1';
   }
+  if (shape === 'star') {
+    base.innerRadiusRatio = 1 / 2.4;
+  }
+  if (shape === 'triangle') {
+    base.polygonPoints = [75, 0, 150, 150, 0, 150];
+  }
   return base;
 }
 
@@ -186,10 +191,6 @@ export function makeArrayTable(
   };
 }
 
-/* ============================================================
-   v8: Path — SVG path как элемент
-   ============================================================ */
-
 export function newPath(x = 200, y = 200): PathElement {
   return {
     id: uid(), type: 'path',
@@ -200,10 +201,6 @@ export function newPath(x = 200, y = 200): PathElement {
     strokeWidth: 2,
   };
 }
-
-/* ============================================================
-   v8: Chart — гистограмма / пончик с data binding
-   ============================================================ */
 
 export function newChart(kind: ChartKind, x = 200, y = 200): ChartElement {
   return {
@@ -216,5 +213,21 @@ export function newChart(kind: ChartKind, x = 200, y = 200): ChartElement {
     barWidth: 40,
     gap: 12,
     donutInnerRatio: 0.5,
+  };
+}
+
+export function newQr(x = 100, y = 100, size = 200): QrElement {
+  return {
+    id: uid(),
+    type: 'qr',
+    x, y,
+    width: size, height: size,
+    rotation: 0,
+    text: 'https://example.com',
+    format: 'QR',
+    fgColor: '#000000',
+    bgColor: '#ffffff',
+    margin: 4,
+    ecc: 'M',
   };
 }

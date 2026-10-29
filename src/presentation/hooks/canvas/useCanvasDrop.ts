@@ -2,7 +2,10 @@
 import type { RefObject } from 'react';
 import type Konva from 'konva';
 import type { DocumentStore } from '@/infra/state/DocumentStore';
-import { makeArrayTable, makePlaceholder, newText, newSimpleText, newFooter, newTable, newLine, newShape, newPath, newChart } from '@/lib/factories';
+import {
+  makeArrayTable, makePlaceholder, newText, newSimpleText, newFooter,
+  newTable, newLine, newShape, newPath, newChart, newQr,
+} from '@/lib/factories';
 import { resolveSample } from '@/lib/resolveSample';
 import { newStampFromTemplate } from '@/lib/stamps/factories';
 import { getAllStamps } from '@/lib/stamps/library';
@@ -104,6 +107,7 @@ export function useCanvasDrop(params: {
         case 'path': el = newPath(cx, cy); break;
         case 'chart-bar': el = newChart('bar', cx, cy); break;
         case 'chart-donut': el = newChart('donut', cx, cy); break;
+        case 'qr': el = newQr(cx, cy); break;
         default: return;
       }
       if (el) {

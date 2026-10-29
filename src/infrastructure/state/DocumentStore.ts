@@ -1,7 +1,5 @@
 ﻿/* ============================================================
    infrastructure/state/DocumentStore.ts
-   F-H-01..07, I-05, I-13, F-DATA-07, F-DATA-11.
-   NFR-MEM-02, REG-P6: лимит истории и по кол-ву, и по байтам.
    ============================================================ */
 
 import { produce, type Draft } from 'immer';
@@ -132,7 +130,6 @@ export class DocumentStore extends SimpleStore<DocumentState> {
         data: initial.data.length > 0 ? initial.data : createDefaultData(),
         historyVersion: 0,
       });
-      // Однократная нормализация групп на случай, если пришли раздутые bounds
       this.fixAllGroupBounds();
     } else {
       const slide = createSlide(1);
@@ -184,10 +181,6 @@ export class DocumentStore extends SimpleStore<DocumentState> {
     this.setState(next);
   }
 
-  /**
-   * Пересчитывает bounds всех групп во всех слайдах.
-   * Не пишет в историю — это техническая нормализация данных.
-   */
   fixAllGroupBounds(): void {
     this.setStateForDrag((draft) => {
       for (const slide of draft.slides) {
@@ -210,30 +203,29 @@ export class DocumentStore extends SimpleStore<DocumentState> {
     const now = Date.now();
     const last = this.history[this.historyIndex];
 
+    // Дешёвое приближение: считаем по факту лениво
+    const approxBytes = 4096;
+
     if (
       mergeKey &&
       last?.mergeKey === mergeKey &&
       now - last.timestamp < MERGE_TIMEOUT_MS
     ) {
       const state = this.getState();
-      const bytes = estimateBytes(state);
-      this.historyBytes += bytes - last.bytes;
       this.history[this.historyIndex] = {
         state,
-        bytes,
+        bytes: approxBytes,
         mergeKey,
         timestamp: now,
       };
-      this.trimHistoryBytes();
       this.bumpHistoryVersion();
       return;
     }
 
     this.history = this.history.slice(0, this.historyIndex + 1);
     const state = this.getState();
-    const bytes = estimateBytes(state);
-    this.history.push({ state, bytes, mergeKey, timestamp: now });
-    this.historyBytes += bytes;
+    this.history.push({ state, bytes: approxBytes, mergeKey, timestamp: now });
+    this.historyBytes += approxBytes;
 
     if (this.history.length > MAX_HISTORY) {
       const removed = this.history.shift();
@@ -247,6 +239,20 @@ export class DocumentStore extends SimpleStore<DocumentState> {
 
     this.trimHistoryBytes();
     this.bumpHistoryVersion();
+
+    // Отложенный пересчёт байтов, чтобы не блокировать кадр
+    setTimeout(() => this.recalculateHistoryBytes(), 0);
+  }
+
+  private recalculateHistoryBytes(): void {
+    let total = 0;
+    for (const entry of this.history) {
+      const b = estimateBytes(entry.state);
+      entry.bytes = b;
+      total += b;
+    }
+    this.historyBytes = total;
+    this.trimHistoryBytes();
   }
 
   private trimHistoryBytes(): void {

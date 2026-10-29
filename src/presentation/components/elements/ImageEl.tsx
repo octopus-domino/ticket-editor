@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useState } from 'react';
-import { Image as KImage } from 'react-konva';
+import { Group, Image as KImage } from 'react-konva';
 import type { ImageElement } from '@/shared/types';
 import type { CommonProps } from './types';
 
@@ -22,14 +22,31 @@ export const ImageEl: React.FC<Props> = ({
   if (!img) return null;
 
   return (
-    <KImage
-      id={el.id} name="element" x={el.x} y={el.y} width={el.width} height={el.height} image={img} rotation={el.rotation} draggable
+    <Group
+      id={el.id}
+      name="element"
+      x={el.x}
+      y={el.y}
+      rotation={el.rotation}
+      draggable
       onMouseDown={(e) => { e.cancelBubble = true; onSelect(e); }}
       onTap={(e) => { e.cancelBubble = true; onSelect(e); }}
-      onDragStart={onDragStart} onDragMove={onDragMove}
+      onDragStart={onDragStart}
+      onDragMove={onDragMove}
       onDragEnd={(e) => { onDragEnd?.(e); }}
       onContextMenu={onContextMenu}
-      perfectDrawEnabled={false} // ОГРОМНЫЙ БУСТ FPS
-    />
+    >
+      <Group
+        scaleX={el.flipX ? -1 : 1}
+        scaleY={el.flipY ? -1 : 1}
+        x={el.flipX ? el.width : 0}
+        y={el.flipY ? el.height : 0}
+      >
+        <KImage
+          x={0} y={0} width={el.width} height={el.height} image={img}
+          perfectDrawEnabled={false}
+        />
+      </Group>
+    </Group>
   );
 };

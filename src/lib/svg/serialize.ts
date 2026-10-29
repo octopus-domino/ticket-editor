@@ -1,6 +1,5 @@
 ﻿/* ============================================================
-   lib/svg/serialize.ts (v8)
-   + path, chart, clipPath defs
+   lib/svg/serialize.ts
    ============================================================ */
 
 import type { Slide } from '@/shared/types';
@@ -8,7 +7,7 @@ import { escapeXml } from './escape';
 import {
   toSvgText, toSvgShape, toSvgLine, toSvgTable, toSvgImage,
   toSvgFooter, toSvgPlaceholder, toSvgFill, toSvgConnector,
-  toSvgDiagram, toSvgStamp, toSvgPath, toSvgChart,
+  toSvgDiagram, toSvgStamp, toSvgPath, toSvgChart, toSvgQr,
   collectGradientDefs, collectClipDefs,
 } from './exporters';
 
@@ -46,6 +45,7 @@ export function serializeSlideToSvg(slide: Slide): string {
       case 'placeholder': inner = toSvgPlaceholder(el); break;
       case 'diagram':     inner = toSvgDiagram(el); break;
       case 'stamp':       inner = toSvgStamp(el); break;
+      case 'qr':          inner = toSvgQr(el); break;
       default: break;
     }
     if (!inner) return;

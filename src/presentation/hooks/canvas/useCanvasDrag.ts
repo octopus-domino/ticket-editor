@@ -15,11 +15,18 @@ interface SnapCache {
   ys: number[];
 }
 
+interface OrigData {
+  x: number;
+  y: number;
+  node: Konva.Node | null;
+}
+
 interface DragState {
   id: string;
   startX: number;
   startY: number;
-  orig: Record<string, { x: number; y: number }>;
+  orig: Record<string, OrigData>;
+  origCount: number;
   layer: Konva.Layer | null;
   pendingX: number;
   pendingY: number;
@@ -27,7 +34,42 @@ interface DragState {
   lastEvt: MouseEvent | undefined;
   snappedX: number | null;
   snappedY: number | null;
-  snapCache: SnapCache;
+  snapCache: SnapCache | null;
+  width: number;
+  height: number;
+}
+
+function findNearest(arr: number[], target: number, threshold: number): number | null {
+  if (arr.length === 0) return null;
+  let lo = 0, hi = arr.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (arr[mid] < target) lo = mid + 1;
+    else hi = mid;
+  }
+  let best: number | null = null;
+  let bestDist = threshold;
+  const start = Math.max(0, lo - 3);
+  const end = Math.min(arr.length - 1, lo + 3);
+  for (let i = start; i <= end; i++) {
+    const d = Math.abs(target - arr[i]);
+    if (d < bestDist) { bestDist = d; best = arr[i]; }
+  }
+  return best;
+}
+
+function findAllNear(arr: number[], target: number, threshold: number, out: number[]): void {
+  if (arr.length === 0) return;
+  let lo = 0, hi = arr.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (arr[mid] < target - threshold) lo = mid + 1;
+    else hi = mid;
+  }
+  for (let i = lo; i < arr.length; i++) {
+    if (arr[i] > target + threshold) break;
+    if (Math.abs(arr[i] - target) < threshold) out.push(arr[i]);
+  }
 }
 
 export function useCanvasDrag(params: {
@@ -44,19 +86,14 @@ export function useCanvasDrag(params: {
 
   const onDragStart = useCallback((el: CanvasElement, e: any) => {
     modalsStore.setFloatingPos(null);
-
     const current = selStore.getState().selectedIds;
-
     const parentGroup = slideRef.current.elements.find(
       (p): p is GroupElement => p.type === 'group' && p.children.includes(el.id)
     );
-
     const idsToMoveSet = new Set<string>();
 
     if (parentGroup) {
-      if (!current.includes(parentGroup.id)) {
-        selStore.setIds([parentGroup.id]);
-      }
+      if (!current.includes(parentGroup.id)) selStore.setIds([parentGroup.id]);
       idsToMoveSet.add(parentGroup.id);
       parentGroup.children.forEach((cid) => idsToMoveSet.add(cid));
     } else {
@@ -71,11 +108,15 @@ export function useCanvasDrag(params: {
       }
     }
 
-    const orig: Record<string, { x: number; y: number }> = {};
+    const layer = (e.target.getLayer?.() as Konva.Layer | null) ?? null;
+    if (layer) layer.listening(false);
+
+    const orig: Record<string, OrigData> = {};
     for (const ee of slideRef.current.elements) {
-      if (!idsToMoveSet.has(ee.id)) continue;
-      if (ee.type === 'connector') continue;
-      orig[ee.id] = { x: ee.x, y: ee.y };
+      if (!idsToMoveSet.has(ee.id) || ee.type === 'connector') continue;
+      // findOne в Konva 9 возвращает Node | undefined — нормализуем в null.
+      const node = layer ? (layer.findOne('#' + ee.id) ?? null) : null;
+      orig[ee.id] = { x: ee.x, y: ee.y, node };
     }
 
     const origEl = orig[el.id];
@@ -83,35 +124,13 @@ export function useCanvasDrag(params: {
     const startY = origEl ? origEl.y : e.target.y();
     if (!isFinite(startX) || !isFinite(startY)) return;
 
-    const layer = (e.target.getLayer?.() as Konva.Layer | null) ?? null;
-
-    const xs: number[] = [];
-    const ys: number[] = [];
-
-    xs.push(0, slideRef.current.width / 2, slideRef.current.width);
-    ys.push(0, slideRef.current.height / 2, slideRef.current.height);
-    xs.push(slideRef.current.padding.left, slideRef.current.width - slideRef.current.padding.right);
-    ys.push(slideRef.current.padding.top, slideRef.current.height - slideRef.current.padding.bottom);
-
-    for (const other of slideRef.current.elements) {
-      if (idsToMoveSet.has(other.id) || other.locked) continue;
-      xs.push(other.x, other.x + other.width / 2, other.x + other.width);
-      ys.push(other.y, other.y + other.height / 2, other.y + other.height);
-    }
-
     state.current = {
-      id: el.id,
-      startX,
-      startY,
-      orig,
-      layer,
-      pendingX: startX,
-      pendingY: startY,
-      rafId: null,
-      lastEvt: e.evt,
-      snappedX: null,
-      snappedY: null,
-      snapCache: { xs, ys },
+      id: el.id, startX, startY, orig,
+      origCount: Object.keys(orig).length, layer,
+      pendingX: startX, pendingY: startY,
+      rafId: null, lastEvt: e.evt, snappedX: null, snappedY: null,
+      snapCache: null,
+      width: el.width, height: el.height,
     };
   }, [selStore, modalsStore]);
 
@@ -120,53 +139,73 @@ export function useCanvasDrag(params: {
     if (!curr) return;
     curr.lastEvt = e.evt;
 
+    if (!curr.snapCache) {
+      const xsSet = new Set<number>();
+      const ysSet = new Set<number>();
+      const sl = slideRef.current;
+
+      xsSet.add(0); xsSet.add(sl.width / 2); xsSet.add(sl.width);
+      ysSet.add(0); ysSet.add(sl.height / 2); ysSet.add(sl.height);
+      xsSet.add(sl.padding.left);
+      xsSet.add(sl.width - sl.padding.right);
+      ysSet.add(sl.padding.top);
+      ysSet.add(sl.height - sl.padding.bottom);
+
+      for (const other of sl.elements) {
+        if (curr.orig[other.id] || other.locked) continue;
+        xsSet.add(other.x);
+        xsSet.add(other.x + other.width / 2);
+        xsSet.add(other.x + other.width);
+        ysSet.add(other.y);
+        ysSet.add(other.y + other.height / 2);
+        ysSet.add(other.y + other.height);
+      }
+
+      curr.snapCache = {
+        xs: Array.from(xsSet).sort((a, b) => a - b),
+        ys: Array.from(ysSet).sort((a, b) => a - b),
+      };
+    }
+
     const rawX = e.target.x();
     const rawY = e.target.y();
-
     const isCtrl = !!(e.evt?.ctrlKey || e.evt?.metaKey);
     let finalX = rawX;
     let finalY = rawY;
-    let bestX = { v: rawX, d: SNAP_THRESHOLD, guide: 0 };
-    let bestY = { v: rawY, d: SNAP_THRESHOLD, guide: 0 };
 
     if (!isCtrl) {
-      const checkX = (val: number) => {
-        const d = Math.abs(rawX - val);
-        if (d < bestX.d) { bestX = { v: val, d, guide: val }; }
-      };
-      const checkY = (val: number) => {
-        const d = Math.abs(rawY - val);
-        if (d < bestY.d) { bestY = { v: val, d, guide: val }; }
-      };
+      const gridX = Math.round(rawX / GRID_SIZE) * GRID_SIZE;
+      const gridY = Math.round(rawY / GRID_SIZE) * GRID_SIZE;
+      let bestDistX = Math.abs(rawX - gridX);
+      let bestDistY = Math.abs(rawY - gridY);
+      let bestX = gridX;
+      let bestY = gridY;
 
-      checkX(Math.round(rawX / GRID_SIZE) * GRID_SIZE);
-      checkY(Math.round(rawY / GRID_SIZE) * GRID_SIZE);
-
-      for (const val of curr.snapCache.xs) checkX(val);
-      for (const val of curr.snapCache.ys) checkY(val);
+      const nearX = findNearest(curr.snapCache.xs, rawX, SNAP_THRESHOLD);
+      if (nearX !== null) {
+        const d = Math.abs(rawX - nearX);
+        if (d < bestDistX) { bestX = nearX; bestDistX = d; }
+      }
+      const nearY = findNearest(curr.snapCache.ys, rawY, SNAP_THRESHOLD);
+      if (nearY !== null) {
+        const d = Math.abs(rawY - nearY);
+        if (d < bestDistY) { bestY = nearY; bestDistY = d; }
+      }
 
       if (curr.snappedX !== null) {
-        if (Math.abs(rawX - curr.snappedX) < SNAP_THRESHOLD * 2) {
-          finalX = curr.snappedX;
-        } else {
-          curr.snappedX = null;
-        }
+        if (Math.abs(rawX - curr.snappedX) < SNAP_THRESHOLD * 2) finalX = curr.snappedX;
+        else curr.snappedX = null;
       }
-      if (curr.snappedX === null && bestX.d < SNAP_THRESHOLD) {
-        finalX = bestX.v;
-        curr.snappedX = bestX.v;
+      if (curr.snappedX === null && bestDistX < SNAP_THRESHOLD) {
+        finalX = bestX; curr.snappedX = bestX;
       }
 
       if (curr.snappedY !== null) {
-        if (Math.abs(rawY - curr.snappedY) < SNAP_THRESHOLD * 2) {
-          finalY = curr.snappedY;
-        } else {
-          curr.snappedY = null;
-        }
+        if (Math.abs(rawY - curr.snappedY) < SNAP_THRESHOLD * 2) finalY = curr.snappedY;
+        else curr.snappedY = null;
       }
-      if (curr.snappedY === null && bestY.d < SNAP_THRESHOLD) {
-        finalY = bestY.v;
-        curr.snappedY = bestY.v;
+      if (curr.snappedY === null && bestDistY < SNAP_THRESHOLD) {
+        finalY = bestY; curr.snappedY = bestY;
       }
     } else {
       curr.snappedX = null;
@@ -179,13 +218,15 @@ export function useCanvasDrag(params: {
     const dx = finalX - curr.startX;
     const dy = finalY - curr.startY;
 
-    if (curr.layer) {
-      for (const [id, o] of Object.entries(curr.orig)) {
+    if (curr.origCount > 1) {
+      for (const id in curr.orig) {
         if (id === curr.id) continue;
-        const node = curr.layer.findOne('#' + id);
-        if (node) { node.x(o.x + dx); node.y(o.y + dy); }
+        const o = curr.orig[id];
+        if (o.node) {
+          o.node.x(o.x + dx);
+          o.node.y(o.y + dy);
+        }
       }
-      curr.layer.batchDraw();
     }
 
     curr.pendingX = finalX;
@@ -194,35 +235,30 @@ export function useCanvasDrag(params: {
     if (curr.rafId === null) {
       curr.rafId = requestAnimationFrame(() => {
         const c = state.current;
-        if (!c) return;
+        if (!c || !c.snapCache) return;
         c.rafId = null;
 
         const gv: number[] = [];
         const gh: number[] = [];
         if (!isCtrl) {
           const lx = c.pendingX;
-          const rx = c.pendingX + (c.orig[c.id]
-            ? (slideRef.current.elements.find(e => e.id === c.id)?.width ?? 0)
-            : 0);
-          for (const val of c.snapCache.xs) {
-            if (Math.abs(lx - val) < SNAP_THRESHOLD) gv.push(val);
-            if (Math.abs(rx - val) < SNAP_THRESHOLD) gv.push(val);
-          }
+          const rx = c.pendingX + c.width;
+          findAllNear(c.snapCache.xs, lx, SNAP_THRESHOLD, gv);
+          findAllNear(c.snapCache.xs, rx, SNAP_THRESHOLD, gv);
+
           const ty = c.pendingY;
-          const by = c.pendingY + (c.orig[c.id]
-            ? (slideRef.current.elements.find(e => e.id === c.id)?.height ?? 0)
-            : 0);
-          for (const val of c.snapCache.ys) {
-            if (Math.abs(ty - val) < SNAP_THRESHOLD) gh.push(val);
-            if (Math.abs(by - val) < SNAP_THRESHOLD) gh.push(val);
-          }
+          const by = c.pendingY + c.height;
+          findAllNear(c.snapCache.ys, ty, SNAP_THRESHOLD, gh);
+          findAllNear(c.snapCache.ys, by, SNAP_THRESHOLD, gh);
         }
+
         guidesStore.set(Array.from(new Set(gv)), Array.from(new Set(gh)));
 
         const ddx = c.pendingX - c.startX;
         const ddy = c.pendingY - c.startY;
         const live: Record<string, { x: number; y: number }> = {};
-        for (const [id, o] of Object.entries(c.orig)) {
+        for (const id in c.orig) {
+          const o = c.orig[id];
           live[id] = { x: o.x + ddx, y: o.y + ddy };
         }
         dragLiveStore.set(live);
@@ -238,18 +274,23 @@ export function useCanvasDrag(params: {
     guidesStore.clear();
     dragLiveStore.clear();
 
+    // Откладываем возврат listening и очистку — отпускание мыши мгновенно
+    const layer = s.layer;
+    setTimeout(() => {
+      if (layer) layer.listening(true);
+    }, 0);
+
     const dx = s.pendingX - s.startX;
     const dy = s.pendingY - s.startY;
-
     if (Math.abs(dx) < MIN_MOVE_PX && Math.abs(dy) < MIN_MOVE_PX) return;
 
     docStore.commit((draft) => {
       const sl = draft.slides.find((x) => x.id === draft.activeId);
       if (!sl) return;
-
-      for (const [id, o] of Object.entries(s.orig)) {
+      for (const id in s.orig) {
         const el = sl.elements.find((e) => e.id === id);
         if (!el || el.type === 'connector') continue;
+        const o = s.orig[id];
         el.x = o.x + dx;
         el.y = o.y + dy;
       }

@@ -77,8 +77,6 @@ const CellBackground: React.FC<{
   const ch = rowOffsets[Math.min(cell.rowIndex + cell.rowspan, rowOffsets.length - 1)] - cy;
 
   const fill = resolveFill(cell);
-
-  // Per-side, если хоть одна задана явно; иначе legacy fallback.
   const sides = resolveSides(cell);
 
   return (
@@ -110,6 +108,8 @@ const BorderLine: React.FC<{
       strokeWidth={side.width ?? 1}
       dash={dash}
       listening={false}
+      strokeScaleEnabled={false}
+      perfectDrawEnabled={false}
     />
   );
 };
@@ -132,7 +132,6 @@ function resolveSides(cell: RichTableCell): {
   bottom?: BorderSide;
   left?: BorderSide;
 } {
-  // Если хоть одна сторона видима — рисуем только их.
   if (
     isSideVisible(cell.borderTop) ||
     isSideVisible(cell.borderRight) ||
@@ -147,7 +146,6 @@ function resolveSides(cell: RichTableCell): {
     };
   }
 
-  // Явно заданы, но все none — границ нет.
   if (
     cell.borderTop !== undefined ||
     cell.borderRight !== undefined ||
@@ -157,7 +155,6 @@ function resolveSides(cell: RichTableCell): {
     return {};
   }
 
-  // Legacy fallback: полная сетка.
   const legacy: BorderSide = {
     color: cell.borderColor || '#cbd5e1',
     width: cell.borderWidth ?? 1,

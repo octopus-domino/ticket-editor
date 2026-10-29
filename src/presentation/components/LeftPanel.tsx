@@ -13,6 +13,8 @@ import { PathfinderPanel } from './panels/PathfinderPanel';
 import { GraphToolPanel } from './panels/GraphToolPanel';
 import { StylesPanel } from './panels/StylesPanel';
 import { SymbolsPanel } from './panels/SymbolsPanel';
+import { QrModal } from './QrModal';
+import { generateId } from '@/shared/utils/id';
 
 const Section: React.FC<{ title: string; icon?: string; defaultOpen?: boolean; children: React.ReactNode }> = ({ title, icon, defaultOpen = false, children }) => {
   const [open, setOpen] = useState(defaultOpen);
@@ -55,7 +57,6 @@ export const LeftPanel: React.FC = () => {
   const fillColor = useStore(modalsStore, (s) => s.fillColor);
   const showGrid = useStore(modalsStore, (s) => s.showGrid);
   
-  // Читаем текущий режим
   const editorMode = useStore(modalsStore, (s) => s.editorMode);
 
   const canUndo = docStore.canUndo;
@@ -63,6 +64,7 @@ export const LeftPanel: React.FC = () => {
 
   const [pdfBusy, setPdfBusy] = useState(false);
   const [svgBusy, setSvgBusy] = useState(false);
+  const [qrModalOpen, setQrModalOpen] = useState(false);
 
   if (!activeSlide) return null;
 
@@ -165,7 +167,6 @@ export const LeftPanel: React.FC = () => {
     e.dataTransfer.effectAllowed = 'copy';
   };
 
-  // Генерация кнопок в зависимости от режима
   const renderElementTiles = () => {
     if (editorMode === 'schema') {
       return (
@@ -180,7 +181,6 @@ export const LeftPanel: React.FC = () => {
         </>
       );
     }
-    // По умолчанию (print)
     return (
       <>
         <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'simple-text')} onClick={() => add(newSimpleText())}><span className="tile-ico">A</span><span>Текст</span></button>
@@ -197,6 +197,7 @@ export const LeftPanel: React.FC = () => {
         <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'path')} onClick={() => add(newPath())}><span className="tile-ico">✎</span><span>Path</span></button>
         <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'chart-bar')} onClick={() => add(newChart('bar'))}><span className="tile-ico">📊</span><span>Bar</span></button>
         <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'chart-donut')} onClick={() => add(newChart('donut'))}><span className="tile-ico">◎</span><span>Donut</span></button>
+        <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'qr')} onClick={() => setQrModalOpen(true)}><span className="tile-ico">🔳</span><span>QR-код</span></button>
       </>
     );
   };
@@ -204,17 +205,8 @@ export const LeftPanel: React.FC = () => {
   return (
     <aside className="left-panel">
       
-      {/* ======================================================== */}
-      {/* ПЕРЕКЛЮЧАТЕЛЬ РЕЖИМОВ (Специально сделан заметным)        */}
-      {/* ======================================================== */}
       <div style={{ 
-        display: 'flex', 
-        gap: 4, 
-        padding: 4, 
-        background: '#e2e8f0', 
-        borderRadius: 8, 
-        marginBottom: 12,
-        border: '2px solid #6366f1' // Яркая обводка, чтобы точно заметить
+        display: 'flex', gap: 4, padding: 4, background: '#e2e8f0', borderRadius: 8, marginBottom: 12, border: '2px solid #6366f1'
       }}>
         <button 
           type="button"
@@ -241,35 +233,16 @@ export const LeftPanel: React.FC = () => {
           📐 Схемы
         </button>
       </div>
-      {/* ======================================================== */}
 
       <Section title="Файл" icon="📁" defaultOpen>
-        <button type="button" className="tool-btn" onClick={fileIO.importJson}>
-          📥 Импорт JSON
-        </button>
-        <button type="button" className="tool-btn" onClick={fileIO.exportJson}>
-          📤 Экспорт JSON
-        </button>
-
+        <button type="button" className="tool-btn" onClick={fileIO.importJson}>📥 Импорт JSON</button>
+        <button type="button" className="tool-btn" onClick={fileIO.exportJson}>📤 Экспорт JSON</button>
         <div style={{ height: 8 }} />
-
-        <button type="button" className="tool-btn" onClick={fileIO.exportSvgLocal}>
-          🖼 SVG (локально)
-        </button>
-        <button
-          type="button"
-          className="tool-btn"
-          onClick={handleExportSvgServer}
-          disabled={svgBusy}
-        >
+        <button type="button" className="tool-btn" onClick={fileIO.exportSvgLocal}>🖼 SVG (локально)</button>
+        <button type="button" className="tool-btn" onClick={handleExportSvgServer} disabled={svgBusy}>
           {svgBusy ? '⏳ SVG (сервер)…' : '🖼 SVG (сервер)'}
         </button>
-        <button
-          type="button"
-          className="tool-btn primary"
-          onClick={handleExportPdfaServer}
-          disabled={pdfBusy}
-        >
+        <button type="button" className="tool-btn primary" onClick={handleExportPdfaServer} disabled={pdfBusy}>
           {pdfBusy ? '⏳ PDF/A (сервер)…' : '📄 PDF/A (сервер)'}
         </button>
       </Section>
@@ -362,6 +335,16 @@ export const LeftPanel: React.FC = () => {
           <button type="button" className="tool-btn" onClick={() => docStore.redo()} disabled={!canRedo}>↷ Повторить</button>
         </div>
       </Section>
+
+      {qrModalOpen && (
+        <QrModal
+          isOpen={qrModalOpen}
+          onClose={() => setQrModalOpen(false)}
+          onSave={(el) => {
+            add(el);
+          }}
+        />
+      )}
     </aside>
   );
 };

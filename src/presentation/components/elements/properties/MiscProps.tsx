@@ -1,7 +1,7 @@
 ﻿import React from 'react';
 import type { 
   LineElement, ImageElement, FooterElement, PlaceholderElement, 
-  FillElement, ConnectorElement, StampElement, DiagramElement 
+  FillElement, ConnectorElement, StampElement, DiagramElement, QrElement
 } from '@/shared/types';
 import { Group, L, inputStyle, normalizeColor } from './ui';
 import { useModalsStore } from '../../../providers/EditorProvider';
@@ -92,3 +92,57 @@ export const DiagramProps: React.FC<{ el: DiagramElement }> = ({ el }) => {
     </Group>
   );
 };
+
+export const QrProps: React.FC<{ el: QrElement; update: (p: Partial<QrElement>) => void }> = ({ el, update }) => (
+  <Group title="QR-код">
+    <L label="Алгоритм">
+      <select style={inputStyle} value={el.format || 'QR'} onChange={(e) => update({ format: e.target.value as QrElement['format'] })}>
+        <option value="QR">QR Code</option>
+        <option value="DATA_MATRIX">Data Matrix</option>
+        <option value="AZTEC">Aztec</option>
+        <option value="PDF_417">PDF417</option>
+      </select>
+    </L>
+    <L label="Текст / URL">
+      <textarea
+        style={{ ...inputStyle, minHeight: 80, fontFamily: 'monospace', fontSize: 11 }}
+        value={el.text}
+        onChange={(e) => update({ text: e.target.value })}
+        placeholder="https://example.com"
+      />
+    </L>
+    <L label="Цвет кода">
+      <input
+        style={inputStyle} type="color"
+        value={normalizeColor(el.fgColor)}
+        onChange={(e) => update({ fgColor: e.target.value })}
+      />
+    </L>
+    <L label="Цвет фона">
+      <input
+        style={inputStyle} type="color"
+        value={normalizeColor(el.bgColor)}
+        onChange={(e) => update({ bgColor: e.target.value })}
+      />
+    </L>
+    <L label="Отступ (модули)">
+      <input
+        style={inputStyle} type="number" min={0} max={10}
+        value={el.margin}
+        onChange={(e) => update({ margin: Math.max(0, +e.target.value) })}
+      />
+    </L>
+    <L label="Уровень коррекции">
+      <select style={inputStyle} value={el.ecc} onChange={(e) => update({ ecc: e.target.value as QrElement['ecc'] })}>
+        <option value="L">L (низкий, ~7%)</option>
+        <option value="M">M (средний, ~15%)</option>
+        <option value="Q">Q (высокий, ~25%)</option>
+        <option value="H">H (максимум, ~30%)</option>
+      </select>
+    </L>
+    <p style={{ fontSize: 11, color: '#94a3b8', margin: '4px 0 0', lineHeight: 1.4 }}>
+      На канве отображается placeholder. Реальная картинка генерируется
+      при экспорте SVG / PDF на сервере.
+    </p>
+  </Group>
+);

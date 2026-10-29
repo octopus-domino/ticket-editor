@@ -7,6 +7,8 @@ import { useDocumentStore, useSelectionStore, useModalsStore } from '@/ui/provid
 import { ElementRenderer } from './ElementRenderer';
 import { GridLayer } from './GridLayer';
 import { CanvasPreviewLayer } from './canvas/CanvasPreviewLayer';
+import { RichTextInlineEditor } from './richText/RichTextInlineEditor';
+import { useEditingCommit } from '../hooks/editor/useEditingCommit';
 import { useCanvasViewport } from '@/ui/hooks/canvas/useCanvasViewport';
 import {
   useCanvasDrag, useCanvasRubberBand, useCanvasFillMode,
@@ -30,6 +32,7 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
   const docStore = useDocumentStore();
   const selStore = useSelectionStore();
   const modalsStore = useModalsStore();
+  const commitEditing = useEditingCommit(docStore);
 
   const stageRef = useRef<Konva.Stage>(null);
   const trRef = useRef<Konva.Transformer>(null);
@@ -54,8 +57,6 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
   const hover = useCanvasHoverAnchor({ slide });
   const dbl = useCanvasDblClick({ modalsStore, zoom });
 
-  // Принудительный forceUpdate рамки на следующем кадре,
-  // чтобы фигуры/группы выделялись мгновенно после клика.
   useLayoutEffect(() => {
     const tr = trRef.current;
     const stage = stageRef.current;
@@ -98,6 +99,10 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
   }, [zoom, draft, viewport.isPanning]);
 
   const onStageDown = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
+    // Пока rich-редактор открыт, глотаем клик по Stage.
+    // Закрытие и commit произойдут через mousedown-listener в RichTextInlineEditor.
+    if (editing?.isRich) return;
+
     isDraggingRef.current = false;
     if (viewport.isPanning) {
       viewport.handleMouseDown(e.evt);
@@ -121,7 +126,7 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
       modalsStore.setFloatingPos(null);
       rubber.begin(wx, wy);
     }
-  }, [zoom, fillMode, fill, selStore, modalsStore, rubber, viewport]);
+  }, [editing, zoom, fillMode, fill, selStore, modalsStore, rubber, viewport]);
 
   const onStageMove = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
     if (viewport.isPanning) return;
@@ -146,18 +151,6 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
     if (rubber.isActive()) rubber.finish(slide.elements);
   }, [zoom, draft, rubber, slide.elements, viewport.isPanning]);
 
-  /**
-   * ВАЖНО: не сбрасываем множественное выделение, если клик пришёлся
-   * на уже выделенный элемент. Это позволяет:
-   *   - тащить всю рамку, начав drag с любого выделенного элемента;
-   *   - открывать контекстное меню «Сгруппировать / Разгруппировать»
-   *     на множественном выделении.
-   *
-   * Одиночное выделение работает как раньше:
-   *   - клик по невыделенному элементу  → selection = [el.id];
-   *   - shift/ctrl/meta + клик          → toggle в selection;
-   *   - клик по пустому месту           → clear (в onStageDown).
-   */
   const handleSelect = (el: CanvasElement, e?: ElementSelectEvent) => {
     if (viewport.isPanning) return;
     const nativeEvt = e && 'evt' in e ? e.evt : undefined;
@@ -170,12 +163,19 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
       return;
     }
 
-    // Не трогаем selection, если элемент уже в нём —
-    // иначе ломается drag множественного выделения.
     if (!current.includes(el.id)) {
       selStore.setIds([el.id]);
     }
   };
+
+  /* Inline rich-editor: элемент по id (мировые координаты + реальный размер). */
+  const editingRichElement =
+    editing && editing.isRich
+      ? slide.elements.find(
+          (e): e is Extract<CanvasElement, { type: 'text' }> =>
+            e.id === editing.id && e.type === 'text',
+        ) ?? null
+      : null;
 
   return (
     <div
@@ -185,6 +185,7 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
       aria-label={`Холст, ${slide.elements.length} элементов`}
       onDragOver={drop.onDragOver}
       onDrop={drop.onDrop}
+      style={{ position: 'relative' }}
     >
       <Stage
         ref={stageRef}
@@ -225,7 +226,6 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
           )}
         </Layer>
 
-        {/* Плоский рендер ВСЕХ элементов */}
         <Layer name="elements-layer" listening={!fillMode}>
           {slide.elements.map((el) => (
             <ElementRenderer
@@ -274,15 +274,10 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
               onContextMenu={(ev: Konva.KonvaEventObject<PointerEvent>) => {
                 ev.evt.preventDefault();
                 ev.cancelBubble = true;
-
-                // ВАЖНО: не сбрасываем множественное выделение,
-                // если правый клик пришёлся на уже выделенный элемент.
-                // Иначе в меню не появятся «Сгруппировать / Разгруппировать».
                 const current = selStore.getState().selectedIds;
                 if (!current.includes(el.id)) {
                   selStore.setIds([el.id]);
                 }
-
                 modalsStore.setContextMenu({
                   x: ev.evt.clientX,
                   y: ev.evt.clientY,
@@ -298,6 +293,7 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
             ref={trRef}
             rotateEnabled
             resizeEnabled
+            flipEnabled={false}
             keepRatio={false}
             draggable={false}
             rotationSnaps={[0, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165, 180, 195, 210, 225, 240, 255, 270, 285, 300, 315, 330, 345]}
@@ -308,7 +304,7 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
             anchorSize={10}
             shouldOverdrawWholeArea={false}
             boundBoxFunc={(oldBox, newBox) => {
-              if (newBox.width < 20 || newBox.height < 20) return oldBox;
+              if (Math.abs(newBox.width) < 20 || Math.abs(newBox.height) < 20) return oldBox;
               return newBox;
             }}
             onTransformEnd={(e) => {
@@ -317,8 +313,6 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
               const sx = node.scaleX();
               const sy = node.scaleY();
               const rotation = node.rotation();
-
-              if (sx === 1 && sy === 1 && rotation === 0) return;
 
               node.scaleX(1);
               node.scaleY(1);
@@ -331,15 +325,17 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
 
                 const oldX = target.x;
                 const oldY = target.y;
+                const newWidth = Math.max(20, target.width * sx);
+                const newHeight = Math.max(20, target.height * sy);
+
+                target.x = node.x();
+                target.y = node.y();
+                target.width = newWidth;
+                target.height = newHeight;
+                target.rotation = rotation;
 
                 if (target.type === 'group') {
                   const group = target;
-                  target.x = node.x();
-                  target.y = node.y();
-                  target.rotation = rotation;
-                  target.width = Math.max(20, target.width * sx);
-                  target.height = Math.max(20, target.height * sy);
-
                   for (const child of s.elements) {
                     if (group.children.includes(child.id)) {
                       const relX = child.x - oldX;
@@ -351,13 +347,7 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
                     }
                   }
                 } else {
-                  target.x = node.x();
-                  target.y = node.y();
-                  target.rotation = rotation;
-                  target.width = Math.max(20, target.width * sx);
-                  target.height = Math.max(20, target.height * sy);
-
-                  if (target.type === 'shape' && target.shape === 'polygon') {
+                  if (target.type === 'shape' && (target.shape === 'polygon' || target.shape === 'triangle')) {
                     const shape = target;
                     if (Array.isArray(shape.polygonPoints) && shape.polygonPoints.length > 0) {
                       const pts = shape.polygonPoints;
@@ -408,6 +398,19 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
           editorMode={editorMode}
         />
       </Stage>
+
+      {editingRichElement && editing && (
+        <RichTextInlineEditor
+          editing={editing}
+          element={editingRichElement}
+          zoom={zoom}
+          onClose={() => modalsStore.closeEditor()}
+          onCommit={(html, text) => {
+            commitEditing(editing, html, text);
+            modalsStore.closeEditor();
+          }}
+        />
+      )}
     </div>
   );
 };

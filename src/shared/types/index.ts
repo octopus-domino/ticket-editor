@@ -1,6 +1,5 @@
 /* ============================================================
    shared/types/index.ts
-   v8: + arc, path, chart, clipPathId, sampleValues
    ============================================================ */
 
 export type StampShape = 'circle' | 'oval' | 'rect' | 'triangle';
@@ -19,6 +18,7 @@ export type StampShapeKind = 'circle' | 'ellipse' | 'rect' | 'triangle' | 'line'
 export type StampFillMode = 'subtract' | 'intersect';
 export type ImageFit = 'contain' | 'cover' | 'fill';
 export type ChartKind = 'bar' | 'donut';
+export type QrFormat = 'QR' | 'DATA_MATRIX' | 'AZTEC' | 'PDF_417';
 
 export type AppearanceFillType = 'solid' | 'linear' | 'radial';
 export type StrokeAlign = 'center' | 'inside' | 'outside';
@@ -72,7 +72,6 @@ export interface DataField {
   sample: string;
   children?: DataField[];
   sampleCount?: number;
-  /** v8: явные числовые значения — используется ChartElement для data binding */
   sampleValues?: number[];
 }
 
@@ -89,8 +88,9 @@ export interface BaseElement extends Bounds {
   appearance?: Appearance;
   styleId?: string | null;
   symbolId?: string | null;
-  /** v8: id элемента-клиппера */
   clipPathId?: string | null;
+  flipX?: boolean;
+  flipY?: boolean;
 }
 
 export interface TextElement extends BaseElement {
@@ -146,11 +146,11 @@ export interface ShapeElement extends BaseElement {
   rasterFill?: { src: string; relX: number; relY: number; relW: number; relH: number };
   polygonPoints?: number[];
   polygonSubpaths?: number[][];
-  // v8: arc geometry (angles — градусы, radiuses — доли от 0 до 1 от min(w,h)/2)
   arcStartAngle?: number;
   arcEndAngle?: number;
   arcInnerRadius?: number;
   arcOuterRadius?: number;
+  innerRadiusRatio?: number;
 }
 
 export interface PathElement extends BaseElement {
@@ -165,7 +165,7 @@ export interface ChartElement extends BaseElement {
   type: 'chart';
   chartKind: ChartKind;
   dataPath: string | null;
-  valueField?: string; // <-- ДОБАВЛЕНО
+  valueField?: string;
   values: number[];
   palette: string[];
   barWidth: number;
@@ -255,6 +255,18 @@ export interface ConnectorElement extends BaseElement {
   labelOffsetY?: number;
 }
 
+export interface QrElement extends BaseElement {
+  type: 'qr';
+  text: string;
+  format: QrFormat;
+  fgColor: string;
+  bgColor: string;
+  margin: number;
+  ecc: 'L' | 'M' | 'Q' | 'H';
+  /** Заполняется при локальном SVG-экспорте; в JSON документа не сохраняется. */
+  _qrDataUrl?: string;
+}
+
 export interface StampShapeItem {
   id: string;
   kind: StampShapeKind;
@@ -335,7 +347,8 @@ export interface StampElement extends BaseElement {
 export type CanvasElement =
   | TextElement | ImageElement | ShapeElement | PathElement | ChartElement
   | LineElement | TableElement | FooterElement | PlaceholderElement
-  | FillElement | DiagramElement | ConnectorElement | StampElement | GroupElement;
+  | FillElement | DiagramElement | ConnectorElement | StampElement | GroupElement
+  | QrElement;
 
 export const isTextElement = (el: CanvasElement): el is TextElement => el.type === 'text';
 export const isShapeElement = (el: CanvasElement): el is ShapeElement => el.type === 'shape';
@@ -351,6 +364,7 @@ export const isStampElement = (el: CanvasElement): el is StampElement => el.type
 export const isImageElement = (el: CanvasElement): el is ImageElement => el.type === 'image';
 export const isDiagramElement = (el: CanvasElement): el is DiagramElement => el.type === 'diagram';
 export const isGroupElement = (el: CanvasElement): el is GroupElement => el.type === 'group';
+export const isQrElement = (el: CanvasElement): el is QrElement => el.type === 'qr';
 
 export interface Slide {
   id: string;

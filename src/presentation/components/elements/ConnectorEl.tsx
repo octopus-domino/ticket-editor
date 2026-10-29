@@ -17,17 +17,23 @@ interface Props extends CommonProps<ConnectorElement> {
 export const ConnectorEl: React.FC<Props> = ({
   el, elements, onSelect, onContextMenu, isSelected, onUpdate,
 }) => {
-  const dragVersion = useSyncExternalStore(dragLiveStore.subscribe, dragLiveStore.getSnapshot);
+  useSyncExternalStore(
+    dragLiveStore.subscribe,
+    () => {
+      const a = dragLiveStore.get(el.fromId);
+      const b = dragLiveStore.get(el.toId);
+      if (!a && !b) return '';
+      return `${a?.x ?? ''},${a?.y ?? ''}|${b?.x ?? ''},${b?.y ?? ''}`;
+    },
+  );
 
   const { from, to } = useMemo(
     () => resolveConnectorEnds(el, elements),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [el.fromId, el.toId, elements],
   );
 
   const obstacles = useMemo(
     () => elements.filter((e) =>
-      // Исключаем группы, коннекторы, заливки и линии
       e.type !== 'connector' && e.type !== 'fill' && e.type !== 'line' && e.type !== 'group' && !e.locked
     ),
     [elements],
@@ -35,24 +41,37 @@ export const ConnectorEl: React.FC<Props> = ({
 
   const [dragState, setDragState] = useState<{ endpoint: 'from' | 'to'; x: number; y: number } | null>(null);
 
-  const points = useMemo(() => {
-    if (!from || !to) return null;
+  const liveFrom = dragLiveStore.get(el.fromId);
+  const liveTo = dragLiveStore.get(el.toId);
 
-    const liveFrom = dragLiveStore.get(el.fromId);
-    const liveTo = dragLiveStore.get(el.toId);
-    const fromEff = liveFrom ? { ...from, ...liveFrom } : from;
-    const toEff = liveTo ? { ...to, ...liveTo } : to;
+  const fromEff = liveFrom && from ? { ...from, ...liveFrom } : from;
+  const toEff = liveTo && to ? { ...to, ...liveTo } : to;
+
+  const fromX = fromEff?.x;
+  const fromY = fromEff?.y;
+  const fromW = fromEff?.width;
+  const fromH = fromEff?.height;
+
+  const toX = toEff?.x;
+  const toY = toEff?.y;
+  const toW = toEff?.width;
+  const toH = toEff?.height;
+
+  const points = useMemo(() => {
+    if (!fromEff || !toEff) return null;
 
     let pts = routeConnector(fromEff, el.fromAnchor, toEff, el.toAnchor, el.routing, obstacles);
-
     if (dragState) {
       pts = [...pts];
       if (dragState.endpoint === 'from') { pts[0] = dragState.x; pts[1] = dragState.y; }
       else { pts[pts.length - 2] = dragState.x; pts[pts.length - 1] = dragState.y; }
     }
     return pts;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [from, to, el.routing, el.fromAnchor, el.toAnchor, obstacles, dragState, el.fromId, el.toId, dragVersion]);
+  }, [
+    fromX, fromY, fromW, fromH,
+    toX, toY, toW, toH,
+    el.routing, el.fromAnchor, el.toAnchor, obstacles, dragState,
+  ]);
 
   const arrowHead = useMemo(() => {
     if (!el.isArrow || !points) return null;
@@ -76,7 +95,7 @@ export const ConnectorEl: React.FC<Props> = ({
     return { x: m.x + (el.labelOffsetX || 0), y: m.y + (el.labelOffsetY || 0) };
   }, [el.label, el.labelOffsetX, el.labelOffsetY, points]);
 
-  if (!points || !from || !to) return null;
+  if (!points || !fromEff || !toEff) return null;
 
   const dashArr = STAMP_DASH_MAP[el.dash];
   const startX = points[0], startY = points[1];
@@ -111,10 +130,10 @@ export const ConnectorEl: React.FC<Props> = ({
   return (
     <Group id={el.id} name="element" onMouseDown={(e) => { e.cancelBubble = true; onSelect(e); }} onContextMenu={onContextMenu}>
       <Line points={points} stroke="rgba(0,0,0,0.001)" strokeWidth={20} lineCap="round" lineJoin="round" listening />
-      <Line points={points} stroke={el.stroke} strokeWidth={el.strokeWidth} dash={dashArr} lineCap="round" lineJoin="round" listening={false} />
-      {arrowHead && <Line points={arrowHead} stroke={el.stroke} strokeWidth={el.strokeWidth} lineCap="round" lineJoin="round" listening={false} />}
+      <Line points={points} stroke={el.stroke} strokeWidth={el.strokeWidth} dash={dashArr} lineCap="round" lineJoin="round" listening={false} perfectDrawEnabled={false} strokeScaleEnabled={false} />
+      {arrowHead && <Line points={arrowHead} stroke={el.stroke} strokeWidth={el.strokeWidth} lineCap="round" lineJoin="round" listening={false} perfectDrawEnabled={false} strokeScaleEnabled={false} />}
       {labelPos && el.label && (
-        <KonvaText x={labelPos.x} y={labelPos.y} text={el.label} fontSize={el.labelFontSize || 12} fontFamily="Arial" fill={el.labelFill || el.stroke} offsetX={el.label.length * (el.labelFontSize || 12) * 0.3} offsetY={(el.labelFontSize || 12) / 2} listening={false} />
+        <KonvaText x={labelPos.x} y={labelPos.y} text={el.label} fontSize={el.labelFontSize || 12} fontFamily="Arial" fill={el.labelFill || el.stroke} offsetX={el.label.length * (el.labelFontSize || 12) * 0.3} offsetY={(el.labelFontSize || 12) / 2} listening={false} perfectDrawEnabled={false} />
       )}
       {isSelected && (
         <>

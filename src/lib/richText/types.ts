@@ -83,6 +83,21 @@ export interface RichTableData {
   rowCount: number;
   colCount: number;
   colWidths: number[] | null;
+
+  /**
+   * Ширина таблицы в редакторе TipTap на момент сохранения HTML,
+   * в CSS-пикселях. Записывается из live DOM (`table.getBoundingClientRect().width`)
+   * и хранится в `data-editor-width` атрибуте `<table>`.
+   *
+   * Семантика: `colWidths` — абсолютные пиксели относительно `editorWidth`.
+   * На canvas у нас другая `innerWidth` → масштабируем как
+   * `colWidths[i] / editorWidth * innerWidth`. Это даёт 1:1 совпадение
+   * с визуалом TipTap при любом значении `innerWidth`.
+   *
+   * Если `undefined` (документ из старых версий) — fallback на эвристику
+   * в `resolveColPixelWidths`.
+   */
+  editorWidth?: number;
 }
 
 export type RichBlock =

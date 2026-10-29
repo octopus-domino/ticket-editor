@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
@@ -15,12 +15,42 @@ import { FontSize, CustomTableCell, CustomTableHeader, Indent } from './richText
 import { ColorPickerPopover } from './richText/ColorPickerPopover';
 import { TableOperationsToolbar } from './richText/TableOperationsToolbar';
 import { TEXT_COLORS, BG_COLORS, FONT_SIZES, FONT_FAMILIES } from './richText/palettes';
+import { serializeRichHtml, normalizeTableWidthsInHtml } from '@/lib/richText/tableSync';
+import { useDraggableModal } from '../hooks/useDraggableModal';
+import { useLiveHtml } from '../hooks/useLiveHtml';
+import type { Padding } from '@/shared/types';
+
+/**
+ * Максимальная визуальная ширина страницы внутри модала. Если
+ * innerWidth * zoom больше — ужимаем через transform: scale, чтобы
+ * модал не расползся на несколько экранов. Layout при этом остаётся
+ * innerWidth → переносы строк и пропорции совпадают с канвой.
+ */
+const MAX_MODAL_CONTENT_WIDTH = 1400;
+/** Минимальный отступ вокруг страницы. */
+const MODAL_PADDING = 48;
+/** Минимальная ширина модала — чтобы тулбар влезал в одну строку. */
+const MIN_MODAL_WIDTH = 600;
+/** Отступы от краёв вьюпорта. */
+const MODAL_VIEWPORT_MARGIN = 32;
 
 interface Props {
   isOpen: boolean;
   initialHtml: string;
+  /** bbox.width элемента на канве (без учёта zoom). */
+  contentWidth: number;
+  /** padding элемента. */
+  padding: Padding;
+  /** Шрифтовые атрибуты элемента. */
+  fontFamily: string;
+  fontSize: number;
+  lineHeight: number;
+  fill: string;
+  /** Текущий зум холста. Влияет на визуальный масштаб страницы. */
+  zoom: number;
   onClose: () => void;
   onSave: (html: string) => void;
+  onChange?: (html: string) => void;
 }
 
 type PopKind = null | 'color' | 'bg';
@@ -37,28 +67,54 @@ const Btn: React.FC<BtnProps> = ({ onClick, active, title, children }) => (
     type="button"
     className={`rt-btn ${active ? 'active' : ''}`}
     onClick={onClick}
+    onMouseDown={(e) => e.preventDefault()}
     title={title}
   >
     {children}
   </button>
 );
 
-export const RichTextEditor: React.FC<Props> = ({ isOpen, initialHtml, onClose, onSave }) => {
+export const RichTextEditor: React.FC<Props> = ({
+  isOpen,
+  initialHtml,
+  contentWidth,
+  padding,
+  fontFamily,
+  fontSize,
+  lineHeight,
+  fill,
+  zoom,
+  onClose,
+  onSave,
+  onChange,
+}) => {
   const [pop, setPop] = useState<PopKind>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
+  const { position, onHeaderMouseDown } = useDraggableModal();
 
-  const isPlaceholder = initialHtml.includes('Введите текст') || !initialHtml.trim();
-  let cleanHtml = isPlaceholder ? '<p></p>' : initialHtml;
+  const innerWidth = Math.max(40, contentWidth - padding.left - padding.right);
 
-  // Оборачиваем таблицу в параграфы для ProseMirror
-  if (cleanHtml.includes('<table')) {
-    if (!cleanHtml.startsWith('<p>') && !cleanHtml.startsWith('<div>')) {
-      cleanHtml = '<p><br></p>' + cleanHtml;
+  /*
+   * Обработка initialHtml ДО создания редактора:
+   *   • placeholder → пустой абзац
+   *   • оборачиваем таблицу в <p> сверху и снизу (требование TipTap)
+   *   • нормализуем ширины таблиц под innerWidth
+   */
+  const processedHtml = useMemo(() => {
+    const isPlaceholder = initialHtml.includes('Введите текст') || !initialHtml.trim();
+    let cleanHtml = isPlaceholder ? '<p></p>' : initialHtml;
+
+    if (cleanHtml.includes('<table')) {
+      if (!cleanHtml.startsWith('<p>') && !cleanHtml.startsWith('<div>')) {
+        cleanHtml = '<p><br></p>' + cleanHtml;
+      }
+      if (!cleanHtml.endsWith('</p>') && !cleanHtml.endsWith('</div>')) {
+        cleanHtml += '<p><br></p>';
+      }
+      cleanHtml = normalizeTableWidthsInHtml(cleanHtml, innerWidth);
     }
-    if (!cleanHtml.endsWith('</p>') && !cleanHtml.endsWith('</div>')) {
-      cleanHtml += '<p><br></p>';
-    }
-  }
+    return cleanHtml;
+  }, [initialHtml, innerWidth]);
 
   const editor = useEditor({
     extensions: [
@@ -77,59 +133,53 @@ export const RichTextEditor: React.FC<Props> = ({ isOpen, initialHtml, onClose, 
       CustomTableCell,
       Indent,
     ],
-    content: cleanHtml,
+    content: processedHtml,
   });
 
   useEffect(() => {
     if (isOpen && editor) {
-      editor.commands.setContent(cleanHtml);
+      editor.commands.setContent(processedHtml);
       setTimeout(() => {
-        try {
-          editor.commands.focus('end');
-        } catch {
-          /* noop */
-        }
+        try { editor.commands.focus('end'); } catch { /* noop */ }
       }, 50);
     }
-  }, [isOpen, cleanHtml, editor]);
+  }, [isOpen, processedHtml, editor]);
+
+  useLiveHtml({
+    editor,
+    onChange: onChange ?? (() => undefined),
+    enabled: isOpen && !!onChange,
+  });
 
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent): void => {
+    const handler = (e: MouseEvent) => {
       if (toolbarRef.current && !toolbarRef.current.contains(e.target as Node)) {
         setPop(null);
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
   }, []);
 
   const handleSave = useCallback(() => {
     if (!editor) return;
-    
+
     let html = '';
     try {
-      html = editor.getHTML();
+      const raw = editor.getHTML();
+      html = raw.includes('<table') ? serializeRichHtml(editor.view.dom, raw) : raw;
     } catch (err) {
-      console.error('[RichTextEditor] getHTML failed:', err);
+      console.error('[RichTextEditor] serialization failed:', err);
       html = initialHtml;
     }
 
-    // ЗАЩИТА: ProseMirror не позволяет таблице быть последним элементом.
-    // Если пользователь удаляет параграф под таблицей, ProseMirror 
-    // может удалить и саму таблицу. Если это произошло — восстанавливаем.
     const hadTable = initialHtml.includes('<table');
     const hasTable = html.includes('<table');
-    
     if (hadTable && !hasTable) {
       const stripped = html.replace(/<[^>]+>/g, '').replace(/[\s\u00A0\u200B]/g, '');
-      // Восстанавливаем только если пользователь не ввёл никакого нового текста
-      if (!stripped) {
-        html = initialHtml;
-      }
+      if (!stripped) html = initialHtml;
     }
 
-    // Гарантируем, что после таблицы всегда есть пустой параграф
-    // (иначе при следующем открытии ProseMirror снова её сломает)
     if (html.includes('<table') && /<\/table>\s*$/.test(html)) {
       html += '<p><br></p>';
     }
@@ -139,16 +189,65 @@ export const RichTextEditor: React.FC<Props> = ({ isOpen, initialHtml, onClose, 
     onClose();
   }, [editor, onSave, onClose, initialHtml]);
 
+  /*
+   * Визуальный масштаб страницы:
+   *   • при zoom = 1 и innerWidth ≤ MAX — scale = 1 (норма);
+   *   • при zoom = 2 и innerWidth ≤ MAX/2 — scale = 2 (крупнее, как на канве);
+   *   • при zoom = 0.5 — scale = 0.5 (мельче, как на канве);
+   *   • если innerWidth * zoom > MAX — ограничиваем сверху,
+   *     чтобы модал не расползся за экран.
+   *
+   * Layout остаётся `innerWidth` CSS-пикселей. Transform scale только
+   * визуально увеличивает. Переносы строк, ширины колонок, размеры
+   * шрифтов — 1:1 с тем, что видит Konva при данном zoom.
+   */
+  const maxAllowedScale = MAX_MODAL_CONTENT_WIDTH / innerWidth;
+  const visualScale = Math.min(zoom, maxAllowedScale);
+  const visualWidth = innerWidth * visualScale;
+
+  const modalWidth = Math.min(
+    Math.max(MIN_MODAL_WIDTH, visualWidth + MODAL_PADDING * 2),
+    window.innerWidth - MODAL_VIEWPORT_MARGIN * 2,
+  );
+  const modalHeight = Math.min(window.innerHeight * 0.9, 820);
+
+  const pageStyle = useMemo<React.CSSProperties>(() => ({
+    width: innerWidth,
+    transform: visualScale !== 1 ? `scale(${visualScale})` : undefined,
+    transformOrigin: 'top left',
+    background: '#ffffff',
+    boxShadow: '0 0 0 1px #e2e8f0, 0 4px 16px rgba(15, 23, 42, 0.08)',
+    minHeight: 200,
+    fontFamily,
+    fontSize,
+    lineHeight,
+    color: fill,
+  }), [innerWidth, visualScale, fontFamily, fontSize, lineHeight, fill]);
+
   if (!isOpen || !editor) return null;
 
-  const currentFontSize = (editor.getAttributes('textStyle').fontSize || '16px').replace('px', '');
-  const currentColor = editor.getAttributes('textStyle').color || '#000000';
+  const currentFontSize = (editor.getAttributes('textStyle').fontSize || `${fontSize}px`).replace('px', '');
+  const currentColor = editor.getAttributes('textStyle').color || fill || '#000000';
   const currentHighlight = editor.getAttributes('highlight').color || null;
 
   return (
     <div className="rt-modal-backdrop" onMouseDown={handleSave}>
-      <div className="rt-modal" onMouseDown={(e) => e.stopPropagation()}>
-        <div className="rt-header">
+      <div
+        className="rt-modal"
+        onMouseDown={(e) => e.stopPropagation()}
+        style={{
+          transform: `translate(${position.x}px, ${position.y}px)`,
+          width: modalWidth,
+          height: modalHeight,
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        <div
+          className="rt-header"
+          onMouseDown={onHeaderMouseDown}
+          style={{ cursor: 'grab', userSelect: 'none' }}
+        >
           <h3>Редактор текста</h3>
           <button type="button" className="rt-close" onClick={handleSave}>×</button>
         </div>
@@ -176,7 +275,7 @@ export const RichTextEditor: React.FC<Props> = ({ isOpen, initialHtml, onClose, 
             </select>
             <select
               className="rt-select"
-              value={editor.getAttributes('textStyle').fontFamily || 'Arial'}
+              value={editor.getAttributes('textStyle').fontFamily || fontFamily}
               onChange={(e) => editor.chain().focus().setFontFamily(e.target.value).run()}
             >
               {FONT_FAMILIES.map((f) => (
@@ -184,14 +283,11 @@ export const RichTextEditor: React.FC<Props> = ({ isOpen, initialHtml, onClose, 
               ))}
             </select>
             <select
-              className="rt-select"
-              style={{ width: 60 }}
+              className="rt-select" style={{ width: 60 }}
               value={currentFontSize}
               onChange={(e) => editor.chain().focus().setFontSize(`${e.target.value}px`).run()}
             >
-              {FONT_SIZES.map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
+              {FONT_SIZES.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
 
@@ -257,7 +353,24 @@ export const RichTextEditor: React.FC<Props> = ({ isOpen, initialHtml, onClose, 
         </div>
 
         <div className="rt-content-wrapper">
-          <EditorContent editor={editor} className="rt-editor-content" />
+          <div
+            style={{
+              width: visualWidth,
+              flex: '0 0 auto',
+            }}
+          >
+            <div
+              className="rt-page"
+              style={pageStyle}
+              onMouseDown={(e) => {
+                if (e.target === e.currentTarget) {
+                  editor.chain().focus().run();
+                }
+              }}
+            >
+              <EditorContent editor={editor} className="rt-editor-content" />
+            </div>
+          </div>
         </div>
       </div>
     </div>

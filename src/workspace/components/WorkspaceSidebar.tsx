@@ -6,6 +6,21 @@ import { workspaceStore } from '../store';
 import { workspaceApi } from '../api';
 import type { TreeNode } from '../types';
 
+/* ============================================================
+   Поиск пути к документу (id папок-предков в порядке вложенности).
+   Возвращает null, если документ не найден.
+   ============================================================ */
+function findPathToNode(tree: TreeNode[], targetId: string): string[] | null {
+  for (const node of tree) {
+    if (node.id === targetId) return [];
+    if (node.type === 'folder') {
+      const sub = findPathToNode(node.children, targetId);
+      if (sub) return [node.id, ...sub];
+    }
+  }
+  return null;
+}
+
 const InlineInput: React.FC<{
   initialValue?: string;
   placeholder: string;
@@ -55,7 +70,6 @@ const TreeItem: React.FC<{
   offline: boolean;
 }> = ({ node, depth, currentDocId, activeFolderId, offline }) => {
   const navigate = useNavigate();
-  const [open, setOpen] = useState(depth === 0);
   const [hovered, setHovered] = useState(false);
   const [creatingChild, setCreatingChild] = useState<'folder' | 'document' | null>(null);
   const [renaming, setRenaming] = useState(false);
@@ -64,36 +78,63 @@ const TreeItem: React.FC<{
   const isActiveFolder = isFolder && node.id === activeFolderId;
   const isActiveDoc = !isFolder && node.id === currentDocId;
 
+  // Открытость папки персистится в WorkspaceStore (localStorage).
+  // Реактивно через useStore — при expandFolders() компонент перерендерится.
+  const open = useStore(
+    workspaceStore,
+    (s) => isFolder && s.expandedFolders.includes(node.id),
+  );
+
   const handleCreateChild = async (type: 'folder' | 'document', name: string) => {
     if (offline) { setCreatingChild(null); return; }
-    if (type === 'folder') {
-      await workspaceApi.createFolder(name, node.id);
-    } else {
-      const doc = await workspaceApi.createDocument(name, node.id);
+    try {
+      if (type === 'folder') {
+        await workspaceApi.createFolder(name, node.id);
+      } else {
+        const doc = await workspaceApi.createDocument(name, node.id);
+        await workspaceStore.refresh();
+        setCreatingChild(null);
+        navigate(`/editor/${doc.id}`);
+        return;
+      }
       await workspaceStore.refresh();
+      workspaceStore.expandFolders([node.id]);
+    } catch (err) {
+      alert('Ошибка создания: ' + (err as Error).message);
+    } finally {
       setCreatingChild(null);
-      navigate(`/editor/${doc.id}`);
-      return;
     }
-    await workspaceStore.refresh();
-    setCreatingChild(null);
   };
 
   const handleRename = async (name: string) => {
     if (offline) { setRenaming(false); return; }
     if (name === node.name) { setRenaming(false); return; }
-    if (isFolder) await workspaceApi.renameFolder(node.id, name);
-    else await workspaceApi.renameDocument(node.id, name);
-    await workspaceStore.refresh();
-    setRenaming(false);
+    try {
+      if (isFolder) await workspaceApi.renameFolder(node.id, name);
+      else await workspaceApi.renameDocument(node.id, name);
+      await workspaceStore.refresh();
+    } catch (err) {
+      alert('Ошибка переименования: ' + (err as Error).message);
+    } finally {
+      setRenaming(false);
+    }
   };
 
   const handleDelete = async () => {
     if (offline) return;
     if (!confirm(`Удалить «${node.name}»?`)) return;
-    if (isFolder) await workspaceApi.deleteFolder(node.id);
-    else await workspaceApi.deleteDocument(node.id);
-    await workspaceStore.refresh();
+    try {
+      if (isFolder) await workspaceApi.deleteFolder(node.id);
+      else await workspaceApi.deleteDocument(node.id);
+      await workspaceStore.refresh();
+    } catch (err) {
+      alert('Ошибка удаления: ' + (err as Error).message);
+    }
+  };
+
+  const handleToggleFolder = () => {
+    workspaceStore.toggleFolder(node.id);
+    workspaceStore.setActiveFolder(node.id);
   };
 
   if (renaming) {
@@ -127,8 +168,7 @@ const TreeItem: React.FC<{
         }}
         onClick={() => {
           if (isFolder) {
-            setOpen(!open);
-            workspaceStore.setActiveFolder(node.id);
+            handleToggleFolder();
           } else {
             navigate(`/editor/${node.id}`);
           }
@@ -151,8 +191,8 @@ const TreeItem: React.FC<{
           <div style={{ display: 'flex', gap: 4, marginLeft: 8 }} onClick={(e) => e.stopPropagation()}>
             {isFolder && (
               <>
-                <button title="Новый документ" onClick={() => { setCreatingChild('document'); setOpen(true); workspaceStore.setActiveFolder(node.id); }} style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 12, padding: 2 }}>📄+</button>
-                <button title="Новая папка" onClick={() => { setCreatingChild('folder'); setOpen(true); workspaceStore.setActiveFolder(node.id); }} style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 12, padding: 2 }}>📁+</button>
+                <button title="Новый документ" onClick={() => { setCreatingChild('document'); workspaceStore.expandFolders([node.id]); workspaceStore.setActiveFolder(node.id); }} style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 12, padding: 2 }}>📄+</button>
+                <button title="Новая папка" onClick={() => { setCreatingChild('folder'); workspaceStore.expandFolders([node.id]); workspaceStore.setActiveFolder(node.id); }} style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 12, padding: 2 }}>📁+</button>
               </>
             )}
             <button title="Переименовать" onClick={() => setRenaming(true)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 12, padding: 2 }}>✏️</button>
@@ -186,7 +226,7 @@ export const WorkspaceSidebar: React.FC = () => {
   const activeFolderId = useStore(workspaceStore, (s) => s.activeFolderId);
   const user = useStore(authStore, (s) => s.user);
   const offline = useStore(authStore, (s) => s.offline);
-  
+
   const navigate = useNavigate();
   const { docId } = useParams();
   const currentDocId = docId ?? null;
@@ -199,19 +239,35 @@ export const WorkspaceSidebar: React.FC = () => {
     }
   }, [offline]);
 
+  /* Автораскрытие папок-предков активного документа.
+     Работает и при переходе из дерева, и при F5 на /editor/:id,
+     и после refresh() дерева. */
+  useEffect(() => {
+    if (!currentDocId || tree.length === 0) return;
+    const path = findPathToNode(tree, currentDocId);
+    if (path && path.length > 0) {
+      workspaceStore.expandFolders(path);
+    }
+  }, [currentDocId, tree]);
+
   const handleCreateRoot = async (type: 'folder' | 'document', name: string) => {
     if (offline) { setCreatingRoot(null); return; }
-    if (type === 'folder') {
-      await workspaceApi.createFolder(name, activeFolderId);
-    } else {
-      const doc = await workspaceApi.createDocument(name, activeFolderId);
+    try {
+      if (type === 'folder') {
+        await workspaceApi.createFolder(name, activeFolderId);
+      } else {
+        const doc = await workspaceApi.createDocument(name, activeFolderId);
+        await workspaceStore.refresh();
+        setCreatingRoot(null);
+        navigate(`/editor/${doc.id}`);
+        return;
+      }
       await workspaceStore.refresh();
+    } catch (err) {
+      alert('Ошибка создания: ' + (err as Error).message);
+    } finally {
       setCreatingRoot(null);
-      navigate(`/editor/${doc.id}`);
-      return;
     }
-    await workspaceStore.refresh();
-    setCreatingRoot(null);
   };
 
   const logout = async () => {
@@ -225,17 +281,17 @@ export const WorkspaceSidebar: React.FC = () => {
         <div style={{ fontSize: 13, color: '#64748b', fontWeight: 500, marginBottom: 4 }}>
           {user?.name || user?.email}
         </div>
-        
+
         {!offline && (
           <div style={{ display: 'flex', gap: 4 }}>
-            <button 
-              onClick={() => { setCreatingRoot('document'); workspaceStore.setActiveFolder(null); }} 
+            <button
+              onClick={() => { setCreatingRoot('document'); workspaceStore.setActiveFolder(null); }}
               style={{ flex: 1, padding: '6px 0', background: '#6366f1', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
             >
               + Документ
             </button>
-            <button 
-              onClick={() => { setCreatingRoot('folder'); workspaceStore.setActiveFolder(null); }} 
+            <button
+              onClick={() => { setCreatingRoot('folder'); workspaceStore.setActiveFolder(null); }}
               style={{ flex: 1, padding: '6px 0', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
             >
               + Папка
@@ -246,7 +302,7 @@ export const WorkspaceSidebar: React.FC = () => {
 
       <div style={{ flex: 1, overflowY: 'auto', padding: 8 }}>
         {loading && !offline && <div style={{ fontSize: 12, color: '#94a3b8', padding: 8 }}>Загрузка...</div>}
-        
+
         {!offline && creatingRoot && (
           <InlineInput
             placeholder={creatingRoot === 'folder' ? 'Название папки...' : 'Название документа...'}

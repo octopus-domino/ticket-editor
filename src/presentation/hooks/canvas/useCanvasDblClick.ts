@@ -22,44 +22,63 @@ export function useCanvasDblClick(params: {
     const screenW = el.width * zoom;
     const screenH = el.height * zoom;
 
-    /* ---------- text / footer ---------- */
-    if (el.type === 'text' || el.type === 'footer') {
-      const isRich =
-        el.type === 'footer'
-          ? true
-          : (el.type === 'text' ? el.richText !== false : false);
-
+    /* ---------- text: rich, если не отключён явно ---------- */
+    if (el.type === 'text') {
+      const isRich = el.richText !== false;
       modalsStore.openEditor({
         id: el.id,
-        field: el.type === 'footer' ? 'footerText' : 'text',
-        kind: el.type,
+        field: 'text',
+        kind: 'text',
         value: el.text ?? '',
-        html: 'html' in el ? el.html : undefined,
+        html: el.html,
         x: screenX, y: screenY,
         width: screenW, height: screenH,
         fontSize: (el.fontSize ?? 16) * zoom,
-        fontFamily: el.type === 'text' ? el.fontFamily : 'Arial',
-        fontStyle: el.type === 'text' ? el.fontStyle : 'normal',
-        textDecoration: el.type === 'text' ? el.textDecoration : '',
+        fontFamily: el.fontFamily,
+        fontStyle: el.fontStyle,
+        textDecoration: el.textDecoration,
         fill: el.fill ?? '#000',
-        align: el.type === 'text' ? el.align : 'center',
-        verticalAlign: el.type === 'text' ? el.verticalAlign : 'top',
-        lineHeight: el.type === 'text' ? el.lineHeight : 1.5,
-        padding: el.type === 'text'
-          ? {
-              top: el.padding.top * zoom,
-              right: el.padding.right * zoom,
-              bottom: el.padding.bottom * zoom,
-              left: el.padding.left * zoom,
-            }
-          : { top: 0, right: 0, bottom: 0, left: 0 },
-        background: el.type === 'text' ? el.background : 'transparent',
+        align: el.align,
+        verticalAlign: el.verticalAlign,
+        lineHeight: el.lineHeight,
+        padding: {
+          top: el.padding.top * zoom,
+          right: el.padding.right * zoom,
+          bottom: el.padding.bottom * zoom,
+          left: el.padding.left * zoom,
+        },
+        background: el.background,
         isRich,
       });
       return;
     }
 
-    /* ---------- shape: inline plain-редактор ---------- */
+    /* ---------- footer: только plain (rich-html на Konva не рендерится) ---------- */
+    if (el.type === 'footer') {
+      modalsStore.openEditor({
+        id: el.id,
+        field: 'footerText',
+        kind: 'footer',
+        value: el.text ?? '',
+        html: el.html,
+        x: screenX, y: screenY,
+        width: screenW, height: screenH,
+        fontSize: (el.fontSize ?? 16) * zoom,
+        fontFamily: 'Arial',
+        fontStyle: 'normal',
+        textDecoration: '',
+        fill: el.fill ?? '#000',
+        align: 'center',
+        verticalAlign: 'top',
+        lineHeight: 1.5,
+        padding: { top: 0, right: 0, bottom: 0, left: 0 },
+        background: 'transparent',
+        isRich: false,
+      });
+      return;
+    }
+
+    /* ---------- shape: inline plain ---------- */
     if (el.type === 'shape') {
       modalsStore.openEditor({
         id: el.id, field: 'shapeText', kind: 'shape',
@@ -88,7 +107,7 @@ export function useCanvasDblClick(params: {
       return;
     }
 
-    /* ---------- table: inline plain-редактор ячейки ---------- */
+    /* ---------- table: inline plain, ячейка ---------- */
     if (el.type === 'table') {
       const worldX = (vp.clientX - vp.viewportLeft) / zoom;
       const worldY = (vp.clientY - vp.viewportTop) / zoom;

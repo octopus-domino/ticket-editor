@@ -21,7 +21,17 @@ export const TableEl: React.FC<Props> = ({
     for (let c = 0; c < el.cols; c++) {
       const bg = r === 0 ? el.headerBg : '#fff';
       cells.push(
-        <Rect key={`r-${r}-${c}`} x={c * cellW} y={r * cellH} width={cellW} height={cellH} fill={bg} stroke={el.borderColor} strokeWidth={1} />
+        <Rect
+          key={`r-${r}-${c}`}
+          x={c * cellW}
+          y={r * cellH}
+          width={cellW}
+          height={cellH}
+          fill={bg}
+          stroke={el.borderColor}
+          strokeWidth={1}
+          strokeScaleEnabled={false}
+        />
       );
       const cellText = el.data[r]?.[c] ?? '';
       const isPh = /\{\{[^}]+\}\}/.test(cellText);

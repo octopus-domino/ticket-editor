@@ -11,7 +11,7 @@ interface Props extends CommonProps<FooterElement> {
 
 export const FooterEl: React.FC<Props> = ({
   el, onSelect, onDragStart, onDragMove, onDragEnd,
-  onContextMenu, onDblClick, isEditing,
+  onContextMenu, onDblClick,
 }) => (
   <Group
     id={el.id} name="element" x={el.x} y={el.y} rotation={el.rotation}
@@ -25,8 +25,21 @@ export const FooterEl: React.FC<Props> = ({
     onContextMenu={onContextMenu}
   >
     <Rect width={el.width} height={el.height} fill={el.bgColor} />
-    {!isEditing && (
-      <KonvaText x={0} y={el.height / 2 - el.fontSize / 2} width={el.width} align="center" text={el.text} fontSize={el.fontSize} fill={el.fill} />
-    )}
+    {/*
+      Раньше было `{!isEditing && <KonvaText .../>}` — при входе в
+      rich-редактор текст футера исчезал с канвы, хотя футер тоже
+      редактируется через RichTextEditor (см. useCanvasDblClick:
+      `isRich = el.type === 'footer' ? true : ...`). Убрали, чтобы
+      live-preview работал.
+    */}
+    <KonvaText
+      x={0}
+      y={el.height / 2 - el.fontSize / 2}
+      width={el.width}
+      align="center"
+      text={el.text}
+      fontSize={el.fontSize}
+      fill={el.fill}
+    />
   </Group>
 );

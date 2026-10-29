@@ -9,6 +9,7 @@ import {
   exportPdfaServer as doExportPdfaServer,
   exportPdfServer as doExportPdfServer,
 } from '@/lib/serverExport';
+import { prepareQrForExport } from '@/lib/qr';
 import { CONFIG } from '@/shared/config';
 
 /* ---------- helpers ---------- */
@@ -67,10 +68,6 @@ export function useFileIO() {
     modalsStore.setFillPoints([]);
   }, [selStore, modalsStore]);
 
-  /* ============================================================
-     F-IO-01: Export JSON
-     ============================================================ */
-
   const exportJson = useCallback(() => {
     const state = docStore.getState();
     const payload = {
@@ -86,10 +83,6 @@ export function useFileIO() {
     );
     try { localStorage.removeItem('ticket-editor:autosave'); } catch { /* ignore */ }
   }, [docStore]);
-
-  /* ============================================================
-     F-IO-02..09: Import JSON с миграциями + partial import (v8)
-     ============================================================ */
 
   const importJson = useCallback(() => {
     const input = document.createElement('input');
@@ -108,8 +101,6 @@ export function useFileIO() {
       try {
         const text = await readFileAsText(file);
         const parsed = JSON.parse(text);
-
-        /* ---------- v8: partial import ---------- */
 
         if (
           parsed && typeof parsed === 'object'
@@ -158,8 +149,6 @@ export function useFileIO() {
           return;
         }
 
-        /* ---------- полный документ ---------- */
-
         const migrated = migrateDocument(parsed);
         const validActiveId =
           migrated.slides.find((s) => s.id === migrated.activeSlideId)?.id
@@ -179,23 +168,19 @@ export function useFileIO() {
     input.click();
   }, [docStore, selStore, clearUiState]);
 
-  /* ============================================================
-     F-IO-10: SVG локально
-     ============================================================ */
-
   const exportSvgLocal = useCallback(async () => {
     const active = getActiveSlide();
     if (!active) return;
 
+    // Подтягиваем QR-картинки с сервера. Если /api/qr недоступен — toSvgQr
+    // нарисует пунктирную рамку-заглушку вместо картинки.
+    const [prepared] = await prepareQrForExport([active], '');
+
     const { serializeSlideToSvg } = await import('@/lib/svg/serialize');
-    const svg = serializeSlideToSvg(active);
+    const svg = serializeSlideToSvg(prepared);
     const safeName = (active.name || 'slide').replace(/[^\w.-]+/g, '_');
     triggerDownload(svg, `${safeName}.svg`, 'image/svg+xml');
   }, [getActiveSlide]);
-
-  /* ============================================================
-     F-IO-11: SVG через сервер
-     ============================================================ */
 
   const exportSvgServer = useCallback(async () => {
     const active = getActiveSlide();
@@ -203,29 +188,17 @@ export function useFileIO() {
     await doExportSvgServer(active);
   }, [getActiveSlide]);
 
-  /* ============================================================
-     F-IO-12: PDF/A через сервер (ВСЕ СЛАЙДЫ)
-     ============================================================ */
-
   const exportPdfaServer = useCallback(async () => {
     const state = docStore.getState();
     if (!state.slides || state.slides.length === 0) return;
     await doExportPdfaServer(state.slides);
   }, [docStore]);
 
-  /* ============================================================
-     PDF (не PDF/A) через сервер (ВСЕ СЛАЙДЫ)
-     ============================================================ */
-
   const exportPdfServer = useCallback(async () => {
     const state = docStore.getState();
     if (!state.slides || state.slides.length === 0) return;
     await doExportPdfServer(state.slides);
   }, [docStore]);
-
-  /* ============================================================
-     F-IMG-05: Добавить картинку
-     ============================================================ */
 
   const addImage = useCallback((opts: { centered?: boolean } = {}) => {
     const input = document.createElement('input');
@@ -275,10 +248,6 @@ export function useFileIO() {
     };
     input.click();
   }, [docStore, getActiveSlide]);
-
-  /* ============================================================
-     F-LP-07: фон слайда
-     ============================================================ */
 
   const setBackgroundImage = useCallback(() => {
     const input = document.createElement('input');

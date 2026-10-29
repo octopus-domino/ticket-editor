@@ -1,7 +1,5 @@
 /* ============================================================
    ticket-editor — global styles
-   Оптимизированная версия: без дубликатов, исправлены
-   .text-toolbar (position: fixed) и .stamp-editor-modal (full-screen).
    ============================================================ */
 
 :root {
@@ -102,7 +100,7 @@ input, select, textarea { font-family: inherit; }
   display: block;
   flex-shrink: 0;
   width: max-content;
-  margin: 40px; /* ВАЖНО: убран auto */
+  margin: 40px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
   background: #fff;
 }
@@ -572,7 +570,7 @@ input, select, textarea { font-family: inherit; }
 }
 
 /* ============================================================
-   RICH TEXT EDITOR (TipTap)
+   RICH TEXT EDITOR (TipTap) — WYSIWYG-page
    ============================================================ */
 .rt-modal-backdrop {
   position: fixed;
@@ -585,18 +583,15 @@ input, select, textarea { font-family: inherit; }
   justify-content: center;
 }
 .rt-modal {
-  width: 1200px;
-  max-width: 95vw;
-  height: 820px;
-  max-height: 90vh;
-  min-width: 640px;
-  min-height: 500px;
+  /* width / height задаются inline из RichTextEditor — адаптивно
+     под contentWidth * zoom. */
   background: var(--panel);
   border-radius: var(--radius-lg);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   box-shadow: var(--shadow-lg);
+  will-change: transform;
 }
 .rt-header {
   display: flex;
@@ -688,17 +683,20 @@ input, select, textarea { font-family: inherit; }
 
 .rt-content-wrapper {
   flex: 1;
-  overflow-y: auto;
-  background: #fff;
+  display: flex;
+  justify-content: center;
+  overflow: auto;
+  background: #f1f5f9;
+  padding: 24px 24px 48px;
 }
+
 .rt-editor-content {
   min-height: 100%;
-  padding: 40px 60px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 15px;
-  line-height: 1.6;
-  color: #1f2937;
+  width: 100%;
+  padding: 0;
   outline: none;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
 }
 .rt-editor-content .ProseMirror { outline: none; min-height: 100%; }
 .rt-editor-content .ProseMirror p { margin: 0 0 12px 0; }
@@ -710,23 +708,19 @@ input, select, textarea { font-family: inherit; }
 .rt-editor-content .ProseMirror li { margin-bottom: 4px; }
 .rt-editor-content .ProseMirror a { color: #2563eb; text-decoration: underline; }
 
-/* Rich tables внутри TipTap */
+/* Ширину таблицы задаём inline-стилем на <table> (см. tableSync.ts):
+   при загрузке — sum(col) как есть или ужатая до innerWidth;
+   при сохранении — реальные пиксели из live DOM.
+   CSS даёт только защитный max-width и базовые границы. */
 .rt-editor-content .ProseMirror table {
   border-collapse: collapse;
   table-layout: fixed;
-  width: 100%;
+  max-width: 100%;
   margin: 16px 0;
   overflow: hidden;
 }
 .rt-editor-content .ProseMirror td,
 .rt-editor-content .ProseMirror th {
-  /*
-   * ВАЖНО: убираем shorthand `border`. Все 4 стороны теперь
-   * приходят из inline-стилей TipTap-атрибутов (defaults заданы
-   * в extensions.ts). Иначе `border: 1px solid #cbd5e1`
-   * перебивал бы наши inline-стили для неактивных сторон
-   * и границы «не снимались» бы визуально.
-   */
   padding: 8px 12px;
   vertical-align: top;
   position: relative;
@@ -757,11 +751,14 @@ input, select, textarea { font-family: inherit; }
   z-index: 20;
 }
 .rt-editor-content .ProseMirror .tableWrapper {
+  /* Если пользователь растянет колонку за пределы innerWidth —
+     появится скролл внутри страницы, а не вылезание на серый фон.
+     На канве resolveColPixelWidths пропорционально ужмёт пиксели
+     обратно до innerWidth. */
   overflow-x: auto;
   margin: 0;
 }
 
-/* Popovers внутри тулбара */
 .rt-popover-wrap { position: relative; display: inline-flex; align-items: center; }
 .rt-popover {
   position: absolute;
@@ -848,7 +845,6 @@ input, select, textarea { font-family: inherit; }
 
 .rt-row { display: flex; flex-wrap: wrap; gap: 4px; }
 
-/* Gap cursor */
 .ProseMirror-gapcursor {
   display: none;
   pointer-events: none;
@@ -868,8 +864,7 @@ input, select, textarea { font-family: inherit; }
 .ProseMirror-focused .ProseMirror-gapcursor { display: block; }
 
 /* ============================================================
-   TEXT TOOLBAR (floating) — всегда position: fixed
-   F-TT-01..07. Координаты приходят как viewport-координаты.
+   TEXT TOOLBAR (floating)
    ============================================================ */
 .text-toolbar {
   position: fixed;
@@ -943,7 +938,7 @@ input, select, textarea { font-family: inherit; }
 .text-toolbar .tt-done:hover { background: var(--accent-hover) !important; }
 
 /* ============================================================
-   STAMP EDITOR — full-screen modal (F-STMP-E-01)
+   STAMP EDITOR — full-screen modal
    ============================================================ */
 .stamp-editor-backdrop {
   position: fixed;
@@ -1158,7 +1153,7 @@ input, select, textarea { font-family: inherit; }
 .stamp-editor-empty b { color: var(--text); }
 
 /* ============================================================
-   SR-ONLY: доступный текст для aria-live
+   SR-ONLY
    ============================================================ */
 .sr-only {
   position: absolute;
@@ -1194,4 +1189,3 @@ input, select, textarea { font-family: inherit; }
   cursor: pointer;
   padding: 0 4px;
 }
-

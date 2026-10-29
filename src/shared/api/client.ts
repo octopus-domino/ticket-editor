@@ -1,7 +1,4 @@
 // src/shared/api/client.ts
-// Если VITE_API_BASE не задан — используем относительные пути.
-// Vite dev-server проксирует /api на бэкенд → cookie работают как same-origin.
-
 import { authStore } from '@/auth/store';
 
 const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? '';
@@ -31,20 +28,23 @@ async function tryRefresh(): Promise<boolean> {
 
 export async function authFetch(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
   const url = typeof input === 'string' && input.startsWith('/') ? API_BASE + input : input;
-  const doFetch = (token: string | null) => {
+  
+  const doFetch = async (token: string | null) => {
     const headers = new Headers(init.headers);
     if (token) headers.set('Authorization', `Bearer ${token}`);
-    return fetch(url, { ...init, headers, credentials: 'include' });
+    try {
+      return await fetch(url, { ...init, headers, credentials: 'include' });
+    } catch (e) {
+      throw new Error('Сетевая ошибка. Проверьте подключение к интернету.');
+    }
   };
 
-  // ИСПРАВЛЕНО: используем getState()
   const token = authStore.getState().accessToken;
   let res = await doFetch(token);
 
   if (res.status === 401) {
     const ok = await tryRefresh();
     if (ok) {
-      // ИСПРАВЛЕНО: используем getState()
       const newToken = authStore.getState().accessToken;
       res = await doFetch(newToken);
     } else {

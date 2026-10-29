@@ -1,9 +1,5 @@
 /* ============================================================
    lib/richText/tableLayout.ts
-
-   Расчёт геометрии rich-таблиц. Чистый код без React/Konva.
-   Раньше лежал в presentation/components/elements/tableLayout.ts
-   и импортировался из lib/svg/exporters.ts → lib → presentation.
    ============================================================ */
 
 import type {
@@ -15,14 +11,12 @@ export const CELL_PADDING_DEFAULT: RichTableCellPadding =
   { top: 8, right: 10, bottom: 8, left: 10 };
 
 const MIN_ROW_HEIGHT = 12;
-
 export const CELL_BLOCK_MARGIN = 8;
-
 export const MAX_NEST_DEPTH = 4;
 
 export type CellBlockItem =
   | { kind: 'text'; layout: ReturnType<typeof layoutRuns>; height: number }
-  | { kind: 'table'; data: RichTableData; height: number };
+  | { kind: 'table'; data: RichTableData; height: number; width: number };
 
 export interface TableLayout {
   colOffsets: number[];
@@ -47,17 +41,14 @@ export function computeTableLayout(
   width: number,
   fallbackFontSize: number,
   lineHeightCoef: number,
-  
 ): TableLayout {
   const { cells, rowCount, colCount } = data;
-
   const colPixelWidths = resolveColPixelWidths(data, width, colCount);
   const colOffsets = buildOffsets(colPixelWidths);
 
   const { cellItems, cellNaturalHeights } = measureCells(
     cells, colOffsets, colCount, fallbackFontSize, lineHeightCoef,
   );
-
   const rowHeights = resolveRowHeights(cells, rowCount, cellNaturalHeights);
   const rowOffsets = buildOffsets(rowHeights);
 
@@ -71,15 +62,31 @@ export function computeTableLayout(
 }
 
 export function measureTableHeight(
-  data: RichTableData,
-  width: number,
-  fallbackFontSize: number,
-  lineHeightCoef: number,
+  data: RichTableData, width: number,
+  fallbackFontSize: number, lineHeightCoef: number,
 ): number {
   if (!data.cells.length) return 0;
   return computeTableLayout(data, width, fallbackFontSize, lineHeightCoef).totalHeight;
 }
 
+export function measureTableWidth(
+  data: RichTableData, width: number,
+  fallbackFontSize: number, lineHeightCoef: number,
+): number {
+  if (!data.cells.length) return 0;
+  return computeTableLayout(data, width, fallbackFontSize, lineHeightCoef).totalWidth;
+}
+
+/**
+ * Ширины колонок в пикселях для рендера на canvas.
+ *
+ * Логика зеркалит `normalizeWidths` из tableSync.ts:
+ *   • сумма пустая → равные доли;
+ *   • есть auto-колонки и sumExplicit < innerWidth → auto берут остаток;
+ *   • есть auto-колонки и sumExplicit ≥ innerWidth → ужать, auto — резерв;
+ *   • все явные и sum ≤ innerWidth → оставить (таблица уже элемента);
+ *   • все явные и sum > innerWidth → ужать пропорционально.
+ */
 function resolveColPixelWidths(
   data: RichTableData,
   totalWidth: number,
@@ -89,15 +96,32 @@ function resolveColPixelWidths(
   if (!colWidths || colWidths.length !== colCount) {
     return Array(colCount).fill(totalWidth / colCount);
   }
-  const explicit = colWidths.map((w) => (typeof w === 'number' && w > 0 ? w : 0));
-  const totalExplicit = explicit.reduce((a, b) => a + b, 0);
-  const autoCount = explicit.filter((w) => w === 0).length;
 
-  if (totalExplicit === 0) return Array(colCount).fill(totalWidth / colCount);
-  if (autoCount === 0) return explicit.map((w) => (w / totalExplicit) * totalWidth);
-  const remaining = Math.max(0, totalWidth - totalExplicit);
-  const autoWidth = remaining / autoCount;
-  return explicit.map((w) => (w > 0 ? w : autoWidth));
+  const clean = colWidths.map((w) => (typeof w === 'number' && w > 0 ? w : 0));
+  const sum = clean.reduce((a, b) => a + b, 0);
+  const zeroCount = clean.filter((w) => w === 0).length;
+
+  if (sum <= 0 && zeroCount === clean.length) {
+    return Array(colCount).fill(totalWidth / colCount);
+  }
+
+  if (zeroCount > 0) {
+    if (sum >= totalWidth) {
+      const autoReserve = Math.min(totalWidth * 0.3, 60 * zeroCount);
+      const explicitBudget = Math.max(1, totalWidth - autoReserve);
+      return clean.map((w) =>
+        w > 0 ? (w / sum) * explicitBudget : autoReserve / zeroCount,
+      );
+    }
+    const remaining = totalWidth - sum;
+    const auto = remaining / zeroCount;
+    return clean.map((w) => (w > 0 ? w : auto));
+  }
+
+  if (sum > totalWidth) {
+    return clean.map((w) => (w / sum) * totalWidth);
+  }
+  return clean;
 }
 
 function buildOffsets(widths: number[]): number[] {
@@ -107,11 +131,8 @@ function buildOffsets(widths: number[]): number[] {
 }
 
 function measureCells(
-  cells: RichTableCell[],
-  colOffsets: number[],
-  colCount: number,
-  fallbackFontSize: number,
-  lineHeightCoef: number,
+  cells: RichTableCell[], colOffsets: number[], colCount: number,
+  fallbackFontSize: number, lineHeightCoef: number,
 ): {
   cellItems: Map<RichTableCell, CellBlockItem[]>;
   cellNaturalHeights: Map<RichTableCell, number>;
@@ -136,10 +157,8 @@ function measureCells(
 }
 
 function measureCellContent(
-  cell: RichTableCell,
-  innerWidth: number,
-  fallbackFontSize: number,
-  lineHeightCoef: number,
+  cell: RichTableCell, innerWidth: number,
+  fallbackFontSize: number, lineHeightCoef: number,
 ): CellBlockItem[] {
   const items: CellBlockItem[] = [];
   for (const block of cell.blocks as RichBlock[]) {
@@ -147,16 +166,15 @@ function measureCellContent(
       const layout = layoutRuns(block.runs, innerWidth, lineHeightCoef);
       items.push({ kind: 'text', layout, height: layout.totalHeight });
     } else {
-      const h = measureTableHeight(block.data, innerWidth, fallbackFontSize, lineHeightCoef);
-      items.push({ kind: 'table', data: block.data, height: h });
+      const tl = computeTableLayout(block.data, innerWidth, fallbackFontSize, lineHeightCoef);
+      items.push({ kind: 'table', data: block.data, height: tl.totalHeight, width: tl.totalWidth });
     }
   }
   return items;
 }
 
 function resolveRowHeights(
-  cells: RichTableCell[],
-  rowCount: number,
+  cells: RichTableCell[], rowCount: number,
   cellNaturalHeights: Map<RichTableCell, number>,
 ): number[] {
   const rowHeights: number[] = new Array(rowCount).fill(MIN_ROW_HEIGHT);

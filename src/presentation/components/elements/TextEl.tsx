@@ -3,7 +3,10 @@ import { Group, Rect, Text as KonvaText, Shape } from 'react-konva';
 import type Konva from 'konva';
 import type { TextElement } from '@/shared/types';
 import type { CommonProps } from './types';
-import { parseHtmlToBlocks, layoutRuns, plainToHtml, measureTableHeight } from '@/lib/richText';
+import {
+  parseHtmlToBlocks, layoutRuns, plainToHtml,
+  computeTableLayout,
+} from '@/lib/richText';
 import { RichTable } from './RichTable';
 import { TEXT_PLACEHOLDER } from '@/shared/constants';
 import { drawArcText, canvasFont } from '@/lib/stamps/render';
@@ -16,11 +19,16 @@ interface Props extends CommonProps<TextElement> {
   isEditing?: boolean;
 }
 
+type PreparedItem =
+  | { kind: 'text'; layout: ReturnType<typeof layoutRuns>; height: number }
+  | { kind: 'table'; data: any; height: number; width: number };
+
 export const TextEl: React.FC<Props> = ({
   el, onSelect, onUpdate, onDragStart, onDragMove, onDragEnd,
-  onContextMenu, onDblClick, isEditing,
+  onContextMenu, onDblClick,
 }) => {
   const groupRef = useRef<Konva.Group>(null);
+  const lastEmittedHeightRef = useRef<number>(el.height);
 
   const isPlaceholder = !el.html && (el.text === TEXT_PLACEHOLDER || !el.text?.trim());
   const effectiveFill = isPlaceholder ? '#9ca3af' : (el.fill || '#000000');
@@ -32,8 +40,9 @@ export const TextEl: React.FC<Props> = ({
 
   const blocks = useMemo(() => {
     if (isArc) return [];
-    const baseFontStyle = el.fontStyle || 'normal';
-    const resolvedFontStyle = isPlaceholder ? `${baseFontStyle} italic` : baseFontStyle;
+    const resolvedFontStyle = isPlaceholder
+      ? `${el.fontStyle || 'normal'} italic`
+      : (el.fontStyle || 'normal');
     const resolvedFill = isPlaceholder ? '#9ca3af' : (el.fill || '#000000');
     const sourceHtml = el.html && el.html.trim() ? el.html : plainToHtml(el.text || '');
     return parseHtmlToBlocks(sourceHtml, {
@@ -48,10 +57,10 @@ export const TextEl: React.FC<Props> = ({
   const lineHeightCoef = el.lineHeight || 1.5;
 
   const prepared = useMemo(() => {
-    if (isArc) return { items: [], totalHeight: 0 };
-    const items: any[] = [];
+    if (isArc) return { items: [] as PreparedItem[], totalHeight: 0 };
+    const items: PreparedItem[] = [];
     let totalHeight = 0;
-    
+
     for (const block of blocks) {
       if (block.kind === 'text') {
         const layout = layoutRuns(block.runs, innerWidth, lineHeightCoef);
@@ -59,10 +68,9 @@ export const TextEl: React.FC<Props> = ({
         items.push({ kind: 'text', layout, height: layout.totalHeight });
         totalHeight += layout.totalHeight;
       } else if (block.kind === 'table') {
-        // Вычисляем высоту таблицы, чтобы правильно позиционировать следующие блоки
-        const tableHeight = measureTableHeight(block.data, innerWidth, el.fontSize, lineHeightCoef);
-        items.push({ kind: 'table', data: block.data, height: tableHeight });
-        totalHeight += tableHeight;
+        const tl = computeTableLayout(block.data, innerWidth, el.fontSize, lineHeightCoef);
+        items.push({ kind: 'table', data: block.data, height: tl.totalHeight, width: tl.totalWidth });
+        totalHeight += tl.totalHeight;
       }
     }
     return { items, totalHeight };
@@ -70,101 +78,84 @@ export const TextEl: React.FC<Props> = ({
 
   const contentHeight = padding.top + prepared.totalHeight + padding.bottom;
 
+  /**
+   * Авто-расширение ТОЛЬКО высоты. Ширину НЕ трогаем — она под
+   * resize-handle пользователя. Длинный текст переносится по innerWidth,
+   * широкая таблица ужимается resolveColPixelWidths до innerWidth.
+   * Никакого горизонтального скролла канвы быть не может.
+   */
   useLayoutEffect(() => {
     if (isArc) return;
-    const g = groupRef.current;
-    if (!g) return;
-    let maxBottom = 0;
-    for (const child of g.getChildren()) {
-      if (child.name() === HIT_RECT_NAME) continue;
-      if (!child.visible()) continue;
-      const r = child.getClientRect({ skipTransform: true, skipShadow: true, skipStroke: true });
-      const bottom = r.y + r.height;
-      if (bottom > maxBottom) maxBottom = bottom;
+    const neededHeight = Math.ceil(contentHeight);
+    if (Math.abs(neededHeight - el.height) > 2
+        && Math.abs(neededHeight - lastEmittedHeightRef.current) > 2) {
+      lastEmittedHeightRef.current = neededHeight;
+      onUpdate({ height: neededHeight });
     }
-    const measured = Math.ceil(Math.max(maxBottom, contentHeight));
-    if (Math.abs(measured - el.height) > 2) {
-      onUpdate({ height: measured });
-    }
-  }, [contentHeight, el.height, el.width, el.padding, el.fontSize, onUpdate, isArc]);
+  }, [contentHeight, el.height, onUpdate, isArc]);
+
+  const scaleX = el.flipX ? -1 : 1;
+  const scaleY = el.flipY ? -1 : 1;
+  const offsetX = el.flipX ? el.width : 0;
+  const offsetY = el.flipY ? el.height : 0;
+
+  const baseProps = {
+    id: el.id, name: 'element',
+    x: el.x + offsetX, y: el.y + offsetY,
+    scaleX, scaleY, rotation: el.rotation,
+    draggable: true,
+    onMouseDown: (e: any) => { e.cancelBubble = true; onSelect(e); },
+    onTap: (e: any) => { e.cancelBubble = true; onSelect(e); },
+    onDblClick: (e: any) => { e.cancelBubble = true; onDblClick?.(e); },
+    onDblTap: (e: any) => { e.cancelBubble = true; onDblClick?.(e); },
+    onDragStart, onDragMove,
+    onDragEnd: (e: any) => { onDragEnd?.(e); },
+    onContextMenu,
+  };
 
   if (isArc) {
     const radius = el.arcRadius ?? 150;
     const startDeg = el.arcStartAngle ?? -90;
     const endDeg = el.arcEndAngle ?? 90;
     const flip = el.arcFlip ?? false;
-
     const cx = el.width / 2;
     const cy = radius + el.height / 2;
 
     return (
-      <Group
-        id={el.id} name="element"
-        x={el.x} y={el.y} rotation={el.rotation}
-        draggable dragDistance={3}
-        onMouseDown={(e) => { e.cancelBubble = true; onSelect(e); }}
-        onTap={(e) => { e.cancelBubble = true; onSelect(e); }}
-        onDblClick={(e) => { e.cancelBubble = true; onDblClick?.(e); }}
-        onDblTap={(e) => { e.cancelBubble = true; onDblClick?.(e); }}
-        onDragStart={onDragStart} onDragMove={onDragMove}
-        onDragEnd={(e) => { onDragEnd?.(e); }}
-        onContextMenu={onContextMenu}
-      >
+      <Group {...baseProps}>
         <Rect name={HIT_RECT_NAME} width={el.width} height={el.height} fill="rgba(0,0,0,0.001)" />
         <Shape
           listening={false}
           perfectDrawEnabled={false}
           sceneFunc={(ctx) => {
             const c = (ctx as any)._context as CanvasRenderingContext2D;
-            drawArcText(c, {
-              text: el.text,
-              cx,
-              cy,
-              radius,
-              startDeg,
-              endDeg,
-              flip,
-              font: canvasFont(el.fontFamily, el.fontStyle, el.fontSize),
-              fill: effectiveFill,
-            });
+            drawArcText(c, { text: el.text, cx, cy, radius, startDeg, endDeg, flip, font: canvasFont(el.fontFamily, el.fontStyle, el.fontSize), fill: effectiveFill });
           }}
         />
       </Group>
     );
   }
 
-  let offsetY = padding.top;
-  if (el.verticalAlign === 'middle') offsetY = padding.top + Math.max(0, (innerHeight - prepared.totalHeight) / 2);
-  else if (el.verticalAlign === 'bottom') offsetY = padding.top + Math.max(0, innerHeight - prepared.totalHeight);
+  let offsetYContent = padding.top;
+  if (el.verticalAlign === 'middle') offsetYContent = padding.top + Math.max(0, (innerHeight - prepared.totalHeight) / 2);
+  else if (el.verticalAlign === 'bottom') offsetYContent = padding.top + Math.max(0, innerHeight - prepared.totalHeight);
 
   const bg = el.background && el.background !== 'transparent' ? el.background : 'transparent';
   const hitFill = bg === 'transparent' ? 'rgba(0,0,0,0.001)' : bg;
-  let cursorY = offsetY;
+  let cursorY = offsetYContent;
 
   return (
-    <Group
-      ref={groupRef}
-      id={el.id} name="element"
-      x={el.x} y={el.y} rotation={el.rotation}
-      draggable
-      onMouseDown={(e) => { e.cancelBubble = true; onSelect(e); }}
-      onTap={(e) => { e.cancelBubble = true; onSelect(e); }}
-      onDblClick={(e) => { e.cancelBubble = true; onDblClick?.(e); }}
-      onDblTap={(e) => { e.cancelBubble = true; onDblClick?.(e); }}
-      onDragStart={onDragStart} onDragMove={onDragMove}
-      onDragEnd={(e) => { onDragEnd?.(e); }}
-      onContextMenu={onContextMenu}
-    >
+    <Group ref={groupRef} {...baseProps}>
       <Rect name={HIT_RECT_NAME} width={el.width} height={el.height} fill={hitFill} listening />
-      {!isEditing && prepared.items.map((item, bi) => {
+      {prepared.items.map((item, bi) => {
         const blockTop = cursorY;
         cursorY += item.height;
-        
+
         if (item.kind === 'text') {
           return (
             <React.Fragment key={`b-${bi}`}>
-              {item.layout.lines.map((line: any[], i: number) => {
-                const lw = line.reduce((acc: number, r: any) => acc + r.width, 0);
+              {item.layout.lines.map((line, i) => {
+                const lw = line.reduce((acc, r) => acc + r.width, 0);
                 let lineOffsetX = 0;
                 if (el.align === 'center') lineOffsetX = Math.max(0, (innerWidth - lw) / 2);
                 else if (el.align === 'right') lineOffsetX = Math.max(0, innerWidth - lw);
@@ -184,24 +175,20 @@ export const TextEl: React.FC<Props> = ({
             </React.Fragment>
           );
         }
-        
-        if (item.kind === 'table') {
-          return (
-            <RichTable
-              key={`b-${bi}`}
-              data={item.data}
-              x={padding.left}
-              y={blockTop}
-              width={innerWidth}
-              fontFamily={el.fontFamily}
-              fallbackFontSize={el.fontSize}
-              fallbackFill={effectiveFill}
-              lineHeightCoef={lineHeightCoef}
-            />
-          );
-        }
-        
-        return null;
+
+        return (
+          <RichTable
+            key={`b-${bi}`}
+            data={item.data}
+            x={padding.left}
+            y={blockTop}
+            width={innerWidth}
+            fontFamily={el.fontFamily}
+            fallbackFontSize={el.fontSize}
+            fallbackFill={effectiveFill}
+            lineHeightCoef={lineHeightCoef}
+          />
+        );
       })}
     </Group>
   );

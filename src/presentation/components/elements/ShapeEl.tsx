@@ -1,15 +1,14 @@
 ﻿import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  Group, Rect, Circle, Line, Text, Star, Image as KImage, Path, Label, Tag,
-  Shape as KonvaShape,
-} from 'react-konva';
+import { Group, Rect, Text, Image as KImage, Label, Tag } from 'react-konva';
 import type Konva from 'konva';
 import type {
-  ShapeElement, AppearanceFill, AppearanceStroke, StrokeAlign,
+  ShapeElement, AppearanceFill, AppearanceStroke,
 } from '@/shared/types';
 import type { CommonProps } from './types';
 import { fillToKonva } from '@/lib/graphics/fills';
 import { useDocumentStore } from '@/ui/providers/EditorProvider';
+import { ShapePrimitive } from '../shapes/ShapePrimitive';
+import { ShapeHandles } from '../shapes/ShapeHandles';
 
 interface Props extends CommonProps<ShapeElement> {
   el: ShapeElement;
@@ -41,111 +40,6 @@ function dashToArray(dash?: string): number[] | undefined {
     default: return undefined;
   }
 }
-
-interface PrimitiveProps {
-  el: ShapeElement;
-  width: number;
-  height: number;
-  fillProps?: Record<string, any>;
-  strokeProps?: {
-    stroke: string;
-    strokeWidth: number;
-    dash?: number[];
-    align?: StrokeAlign;
-  };
-  polygonD: string | null;
-}
-
-const Primitive = React.memo<PrimitiveProps>(
-  ({ el, width: w, height: h, fillProps = {}, strokeProps = {} as any, polygonD }) => {
-    const common = { ...fillProps, ...strokeProps };
-    const align: StrokeAlign = (strokeProps as any)?.align ?? 'center';
-    const sw = (strokeProps as any)?.strokeWidth ?? 0;
-    const swAlign = align !== 'center' && sw > 0 ? sw : 0;
-
-    switch (el.shape) {
-      case 'rect':
-      case 'roundRect': {
-        const half = swAlign / 2;
-        let x = 0, y = 0, rw = w, rh = h;
-        if (align === 'inside' && half > 0) { x = half; y = half; rw = Math.max(1, w - sw); rh = Math.max(1, h - sw); }
-        else if (align === 'outside' && half > 0) { x = -half; y = -half; rw = w + sw; rh = h + sw; }
-        const rx = el.shape === 'roundRect' ? (el.radius ?? 16) : 0;
-        return <Rect x={x} y={y} width={rw} height={rh} cornerRadius={rx} {...common} />;
-      }
-      case 'circle': {
-        const r = Math.min(w, h) / 2;
-        let radius = r;
-        if (align === 'inside' && sw > 0) radius = Math.max(1, r - sw / 2);
-        else if (align === 'outside' && sw > 0) radius = r + sw / 2;
-        return <Circle x={w / 2} y={h / 2} radius={radius} {...common} />;
-      }
-      case 'triangle': {
-        const cx = w / 2;
-        const cy = h * 2 / 3;
-        const k = align === 'inside' && sw > 0 ? Math.max(0, 1 - sw / Math.min(w, h))
-          : align === 'outside' && sw > 0 ? 1 + sw / Math.min(w, h)
-          : 1;
-        const pts = [cx, 0, w, h, 0, h].map((v, i) => i % 2 === 0 ? cx + (v - cx) * k : cy + (v - cy) * k);
-        return <Line points={pts} closed lineJoin="round" {...common} />;
-      }
-      case 'star': {
-        const outerR = Math.min(w, h) / 2;
-        const innerR = outerR / 2.4;
-        let oR = outerR;
-        if (align === 'inside' && sw > 0) oR = Math.max(1, outerR - sw / 2);
-        else if (align === 'outside' && sw > 0) oR = outerR + sw / 2;
-        const iR = (innerR / outerR) * oR;
-        return <Star x={w / 2} y={h / 2} numPoints={5} innerRadius={iR} outerRadius={oR} {...common} />;
-      }
-      case 'arrow': {
-        const pts = [0, h / 2, w - 20, h / 2, w - 20, h / 2 - 15, w, h / 2, w - 20, h / 2 + 15, w - 20, h / 2];
-        return <Line points={pts} lineJoin="round" {...common} />;
-      }
-      case 'polygon': {
-        if (!polygonD) return null;
-        return <Path data={polygonD} fillRule="evenodd" {...common} />;
-      }
-      case 'arc': {
-        const cx = w / 2;
-        const cy = h / 2;
-        const baseOuter = Math.min(w, h) / 2;
-        let outer = baseOuter * (el.arcOuterRadius ?? 1);
-        const innerRatio = el.arcInnerRadius ?? 0.5;
-        if (align === 'inside' && sw > 0) outer = Math.max(1, outer - sw / 2);
-        else if (align === 'outside' && sw > 0) outer = outer + sw / 2;
-        const inner = outer * innerRatio;
-        const a0 = ((el.arcStartAngle ?? 0) * Math.PI) / 180;
-        const a1 = ((el.arcEndAngle ?? 90) * Math.PI) / 180;
-        return (
-          <KonvaShape
-            sceneFunc={(ctx, shape) => {
-              const c = (ctx as any)._context as CanvasRenderingContext2D;
-              c.beginPath();
-              c.arc(cx, cy, outer, a0, a1, false);
-              if (inner > 0.5) c.arc(cx, cy, inner, a1, a0, true);
-              else c.lineTo(cx, cy);
-              c.closePath();
-              ctx.fillStrokeShape(shape);
-            }}
-            getSelfRect={() => ({ x: 0, y: 0, width: Math.max(1, w), height: Math.max(1, h) })}
-            {...common}
-          />
-        );
-      }
-      default:
-        return null;
-    }
-  },
-  (prev, next) => (
-    prev.el === next.el &&
-    prev.width === next.width &&
-    prev.height === next.height &&
-    prev.fillProps === next.fillProps &&
-    prev.strokeProps === next.strokeProps &&
-    prev.polygonD === next.polygonD
-  ),
-);
 
 function drawClipOutline(ctx: CanvasRenderingContext2D, shape: ShapeElement): void {
   const { x, y, width: w, height: h } = shape;
@@ -191,22 +85,35 @@ function drawClipOutline(ctx: CanvasRenderingContext2D, shape: ShapeElement): vo
 }
 
 export const ShapeEl: React.FC<Props> = ({
-  el, onSelect, onDragStart, onDragMove, onDragEnd, onContextMenu, onDblClick, symbolName,
+  el, onSelect, onDragStart, onDragMove, onDragEnd, onContextMenu, onDblClick, symbolName, isSelected, onUpdate,
 }) => {
   const docStore = useDocumentStore();
   const w = el.width;
   const h = el.height;
 
-  const fills = useMemo(() => effectiveFills(el), [el]);
-  const strokes = useMemo(() => effectiveStrokes(el), [el]);
-  const fillPropsList = useMemo(() => fills.map((f) => fillToKonva(f, { width: el.width, height: el.height }) as Record<string, any>), [fills, el.width, el.height]);
+  const [localPolygonPoints, setLocalPolygonPoints] = useState<number[] | null>(null);
+  const [localStarRatio, setLocalStarRatio] = useState<number | null>(null);
+  const [isDraggingHandle, setIsDraggingHandle] = useState(false);
+
+  const activeEl = useMemo(() => {
+    if (localPolygonPoints) return { ...el, polygonPoints: localPolygonPoints };
+    if (localStarRatio !== null) return { ...el, innerRadiusRatio: localStarRatio };
+    return el;
+  }, [el, localPolygonPoints, localStarRatio]);
+
+  const fills = useMemo(() => effectiveFills(activeEl), [activeEl]);
+  const strokes = useMemo(() => effectiveStrokes(activeEl), [activeEl]);
+  const fillPropsList = useMemo(() => fills.map((f) => fillToKonva(f, { width: activeEl.width, height: activeEl.height }) as Record<string, any>), [fills, activeEl.width, activeEl.height]);
   const strokePropsList = useMemo(() => strokes.map((s) => ({
     stroke: s.color, strokeWidth: s.width, dash: dashToArray(s.dash), align: s.align ?? 'center',
   })), [strokes]);
 
   const polygonD = useMemo(() => {
-    if (el.shape !== 'polygon') return null;
-    const subpaths = el.polygonSubpaths || (el.polygonPoints ? [el.polygonPoints] : []);
+    if (activeEl.shape !== 'polygon' && activeEl.shape !== 'triangle') return null;
+    if (activeEl.shape === 'triangle' && (!activeEl.polygonPoints || activeEl.polygonPoints.length === 0)) {
+      return `M ${w/2} 0 L ${w} ${h} L 0 ${h} Z`;
+    }
+    const subpaths = activeEl.polygonSubpaths || (activeEl.polygonPoints ? [activeEl.polygonPoints] : []);
     if (subpaths.length === 0) return null;
     return subpaths.map((ring) => {
       if (ring.length < 6) return '';
@@ -214,10 +121,10 @@ export const ShapeEl: React.FC<Props> = ({
       for (let i = 0; i < ring.length; i += 2) pts.push(`${ring[i]},${ring[i + 1]}`);
       return `M ${pts.join(' L ')} Z`;
     }).join(' ');
-  }, [el.shape, el.polygonPoints, el.polygonSubpaths]);
+  }, [activeEl.shape, activeEl.polygonPoints, activeEl.polygonSubpaths, w, h]);
 
   const [rasterImg, setRasterImg] = useState<HTMLImageElement | null>(null);
-  const rasterSrc = el.rasterFill?.src;
+  const rasterSrc = activeEl.rasterFill?.src;
   useEffect(() => {
     if (!rasterSrc) { setRasterImg(null); return; }
     const i = new window.Image();
@@ -227,53 +134,80 @@ export const ShapeEl: React.FC<Props> = ({
   }, [rasterSrc]);
 
   const clipFunc = useCallback((ctx: Konva.Context) => {
-    if (!el.clipPathId) return;
+    if (!activeEl.clipPathId) return;
     const state = docStore.getState();
     const slide = state.slides.find((s) => s.id === state.activeId);
     if (!slide) return;
-    const clipper = slide.elements.find((e) => e.id === el.clipPathId);
+    const clipper = slide.elements.find((e) => e.id === activeEl.clipPathId);
     if (!clipper || clipper.type !== 'shape') return;
     const c = (ctx as any)._context as CanvasRenderingContext2D;
     drawClipOutline(c, clipper);
-  }, [el.clipPathId, docStore]);
+  }, [activeEl.clipPathId, docStore]);
 
-  const textStr = String(el.text || '');
+  const commitDrag = () => {
+    if (localPolygonPoints) {
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (let j = 0; j < localPolygonPoints.length; j += 2) {
+        if (localPolygonPoints[j] < minX) minX = localPolygonPoints[j];
+        if (localPolygonPoints[j + 1] < minY) minY = localPolygonPoints[j + 1];
+        if (localPolygonPoints[j] > maxX) maxX = localPolygonPoints[j];
+        if (localPolygonPoints[j + 1] > maxY) maxY = localPolygonPoints[j + 1];
+      }
+      const newW = Math.max(20, maxX - minX);
+      const newH = Math.max(20, maxY - minY);
+      const shiftedPts = localPolygonPoints.map((v, idx) => idx % 2 === 0 ? v - minX : v - minY);
+
+      setLocalPolygonPoints(null);
+      onUpdate({
+        x: el.x + minX,
+        y: el.y + minY,
+        width: newW,
+        height: newH,
+        polygonPoints: shiftedPts,
+      });
+    } else if (localStarRatio !== null) {
+      setLocalStarRatio(null);
+      onUpdate({ innerRadiusRatio: localStarRatio });
+    }
+  };
+
+  const textStr = String(activeEl.text || '');
   const hasText = textStr.length > 0;
-  const fontSize = el.fontSize || 18;
-  const textPad = el.textPadding || { top: 8, right: 8, bottom: 8, left: 8 };
-  const textAlign = el.textAlign || 'center';
-  const textVerticalAlign = el.textVerticalAlign || 'middle';
-  const textFontFamily = el.textFontFamily || 'Arial';
-  const textLineHeight = el.textLineHeight || 1.3;
-  const textFontStyle = el.textFontStyle || 'normal';
-  const textDecoration = el.textDecoration || '';
+  const fontSize = activeEl.fontSize || 18;
+  const tPad = activeEl.textPadding || { top: 8, right: 8, bottom: 8, left: 8 };
+  const innerW = Math.max(1, w - tPad.left - tPad.right);
+  const innerH = Math.max(1, h - tPad.top - tPad.bottom);
+  let tx = tPad.left, ty = tPad.top, tw = innerW, th = innerH;
 
-  const innerW = Math.max(1, w - textPad.left - textPad.right);
-  const innerH = Math.max(1, h - textPad.top - textPad.bottom);
-  let tx = textPad.left, ty = textPad.top, tw = innerW, th = innerH;
-
-  if (el.shape === 'circle') {
+  if (activeEl.shape === 'circle') {
     const d = Math.min(w, h);
     tw = d * 0.7; th = d * 0.7;
     tx = (w - tw) / 2; ty = (h - th) / 2;
-  } else if (el.shape === 'triangle') {
+  } else if (activeEl.shape === 'triangle') {
     tw = w * 0.55; th = h * 0.45;
     tx = (w - tw) / 2; ty = h * 0.5;
-  } else if (el.shape === 'star') {
+  } else if (activeEl.shape === 'star') {
     tw = w * 0.5; th = h * 0.5;
     tx = (w - tw) / 2; ty = (h - th) / 2;
   }
 
-  const lineBoxOffset = textVerticalAlign === 'top' ? ((textLineHeight - 1) * fontSize) / 2 : 0;
+  // textLineHeight опционален в ShapeElement. Дефолт 1.3 совпадает
+  // с newShape() из lib/factories.ts.
+  const textLineHeight = activeEl.textLineHeight ?? 1.3;
+  const lineBoxOffset = activeEl.textVerticalAlign === 'top'
+    ? ((textLineHeight - 1) * fontSize) / 2
+    : 0;
 
   return (
     <Group
       id={el.id}
       name="element"
-      x={el.x} y={el.y} rotation={el.rotation}
-      draggable
+      x={el.x}
+      y={el.y}
+      rotation={el.rotation}
+      draggable={!isDraggingHandle}
       dragDistance={3}
-      clipFunc={el.clipPathId ? clipFunc : undefined}
+      clipFunc={activeEl.clipPathId ? clipFunc : undefined}
       onMouseDown={(e) => { e.cancelBubble = true; onSelect(e); }}
       onTap={(e) => { e.cancelBubble = true; onSelect(e); }}
       onDblClick={(e) => { e.cancelBubble = true; onDblClick?.(e); }}
@@ -283,31 +217,30 @@ export const ShapeEl: React.FC<Props> = ({
       onDragEnd={(e) => { onDragEnd?.(e); }}
       onContextMenu={onContextMenu}
     >
-      {/* Прозрачный прямоугольник для габаритов и кликов */}
       <Rect width={Math.max(1, w)} height={Math.max(1, h)} fill="rgba(0,0,0,0.001)" listening={true} />
 
-      {el.rasterFill && rasterImg && (
+      {activeEl.rasterFill && rasterImg && (
         <KImage
-          x={el.rasterFill.relX * w} y={el.rasterFill.relY * h}
-          width={el.rasterFill.relW * w} height={el.rasterFill.relH * h}
+          x={activeEl.rasterFill.relX * w} y={activeEl.rasterFill.relY * h}
+          width={activeEl.rasterFill.relW * w} height={activeEl.rasterFill.relH * h}
           image={rasterImg} listening={false} perfectDrawEnabled={false}
         />
       )}
 
       {fills.map((fill, idx) => (
-        <Primitive key={`fill-${fill.id}`} el={el} width={w} height={h} fillProps={fillPropsList[idx]} polygonD={polygonD} />
+        <ShapePrimitive key={`fill-${fill.id}`} el={activeEl} width={w} height={h} fillProps={fillPropsList[idx]} polygonD={polygonD} />
       ))}
 
       {[...strokes].reverse().map((stroke, idx) => (
-        <Primitive key={`stroke-${stroke.id}`} el={el} width={w} height={h} fillProps={{ fill: 'transparent' }} strokeProps={strokePropsList[strokes.length - 1 - idx]} polygonD={polygonD} />
+        <ShapePrimitive key={`stroke-${stroke.id}`} el={activeEl} width={w} height={h} fillProps={{ fill: 'transparent' }} strokeProps={strokePropsList[strokes.length - 1 - idx]} polygonD={polygonD} />
       ))}
 
       {hasText && (
         <Text
           x={tx} y={ty + lineBoxOffset} width={tw} height={th}
-          text={textStr} fontSize={fontSize} fontFamily={textFontFamily}
-          fontStyle={textFontStyle} textDecoration={textDecoration}
-          fill={el.textFill || '#000000'} align={textAlign} verticalAlign={textVerticalAlign}
+          text={textStr} fontSize={fontSize} fontFamily={activeEl.textFontFamily}
+          fontStyle={activeEl.textFontStyle} textDecoration={activeEl.textDecoration}
+          fill={activeEl.textFill || '#000000'} align={activeEl.textAlign} verticalAlign={activeEl.textVerticalAlign}
           lineHeight={textLineHeight} wrap="word" listening={false}
         />
       )}
@@ -317,6 +250,23 @@ export const ShapeEl: React.FC<Props> = ({
           <Tag fill="#6366f1" cornerRadius={4} />
           <Text text={`🔗 ${symbolName}`} fill="#ffffff" fontSize={10} padding={4} fontStyle="bold" />
         </Label>
+      )}
+
+      {isSelected && (
+        <ShapeHandles
+          el={activeEl}
+          points={activeEl.polygonPoints || (activeEl.shape === 'triangle' ? [w / 2, 0, w, h, 0, h] : [])}
+          onUpdatePoints={(pts) => {
+            if (activeEl.shape === 'star') {
+              setLocalStarRatio(pts[0]);
+            } else {
+              setLocalPolygonPoints(pts);
+            }
+          }}
+          onCommit={commitDrag}
+          onDragStartHandle={() => setIsDraggingHandle(true)}
+          onDragEndHandle={() => setIsDraggingHandle(false)}
+        />
       )}
     </Group>
   );

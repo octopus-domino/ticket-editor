@@ -6,6 +6,7 @@ import type {
   TextElement, ShapeElement, LineElement, TableElement, ImageElement,
   FooterElement, PlaceholderElement, FillElement, ConnectorElement,
   DiagramElement, StampElement, PathElement, ChartElement, CanvasElement,
+  QrElement,
 } from '@/shared/types';
 import { escapeXml } from './escape';
 import { resolveConnectorEnds, routeConnector } from '../connectors';
@@ -26,11 +27,18 @@ function wrapTransform(el: CanvasElement, content: string): string {
   const x = el.x || 0;
   const y = el.y || 0;
   const rot = el.rotation || 0;
+  const flipX = el.flipX ? -1 : 1;
+  const flipY = el.flipY ? -1 : 1;
+  
+  const tx = x + (el.flipX ? el.width : 0);
+  const ty = y + (el.flipY ? el.height : 0);
 
-  if (x === 0 && y === 0 && rot === 0) return content;
+  if (tx === 0 && ty === 0 && rot === 0 && flipX === 1 && flipY === 1) return content;
 
-  const transforms = [`translate(${x}, ${y})`];
+  const transforms = [`translate(${tx}, ${ty})`];
   if (rot) transforms.push(`rotate(${rot})`);
+  if (flipX !== 1 || flipY !== 1) transforms.push(`scale(${flipX}, ${flipY})`);
+  
   return `<g transform="${transforms.join(' ')}">${content}</g>`;
 }
 
@@ -218,7 +226,7 @@ export function toSvgShape(el: ShapeElement): string {
   const hasAppearanceStrokes = appearance?.strokes && appearance.strokes.length > 0;
 
   if (!hasAppearanceFills && !hasAppearanceStrokes) {
-    const fillAttr = el.fill === 'transparent' ? 'none' : escapeXml(el.fill);
+    const fillAttr = (!el.fill || el.fill === 'transparent' || el.fill === '') ? 'none' : escapeXml(el.fill);
     const strokeAttrsStr =
       el.stroke && el.stroke !== 'transparent' && el.strokeWidth > 0
         ? ` stroke="${escapeXml(el.stroke)}" stroke-width="${el.strokeWidth}"`
@@ -246,7 +254,7 @@ export function toSvgShape(el: ShapeElement): string {
 }
 
 export function toSvgPath(el: PathElement): string {
-  const fill = el.fill === 'transparent' ? 'none' : escapeXml(el.fill);
+  const fill = (!el.fill || el.fill === 'transparent' || el.fill === '') ? 'none' : escapeXml(el.fill);
   const stroke = el.stroke && el.stroke !== 'transparent' && el.strokeWidth > 0
     ? ` stroke="${escapeXml(el.stroke)}" stroke-width="${el.strokeWidth}"`
     : '';
@@ -330,7 +338,6 @@ export function toSvgText(el: TextElement): string {
         const cellW = layout.colOffsets[Math.min(cell.colIndex + cell.colspan, layout.colOffsets.length - 1)] - layout.colOffsets[cell.colIndex];
         const cellH = layout.rowOffsets[Math.min(cell.rowIndex + cell.rowspan, layout.rowOffsets.length - 1)] - layout.rowOffsets[cell.rowIndex];
 
-        /* 1) Заливка — отдельный <rect> без обводки */
         const bg = cell.bgColor === 'transparent'
           ? 'none'
           : cell.bgColor || (cell.isHeader ? '#f1f5f9' : '#ffffff');
@@ -338,7 +345,6 @@ export function toSvgText(el: TextElement): string {
           svgContent += `<rect x="${cellX}" y="${cellY}" width="${cellW}" height="${cellH}" fill="${escapeXml(bg)}"/>`;
         }
 
-        /* 2) Границы — per-side, как в Konva и Java */
         const hasSide = isSideVisible(cell.borderTop)
           || isSideVisible(cell.borderRight)
           || isSideVisible(cell.borderBottom)
@@ -354,7 +360,6 @@ export function toSvgText(el: TextElement): string {
           svgContent = appendSide(svgContent, cell.borderBottom, cellX,         cellY + cellH, cellX + cellW, cellY + cellH);
           svgContent = appendSide(svgContent, cell.borderLeft,   cellX,         cellY,         cellX,         cellY + cellH);
         } else if (!explicit) {
-          /* Legacy-fallback: полная сетка для документов без border-атрибутов */
           const color = cell.borderColor || '#cbd5e1';
           const bw = cell.borderWidth ?? 1;
           svgContent += `<rect x="${cellX}" y="${cellY}" width="${cellW}" height="${cellH}" `
@@ -362,7 +367,6 @@ export function toSvgText(el: TextElement): string {
             + `${sideDash(cell.borderStyle)}/>`;
         }
 
-        /* 3) Содержимое ячейки */
         const items = layout.cellItems.get(cell);
         if (items) {
           let itemY = cellY + (cell.padding?.top ?? 8);
@@ -500,4 +504,15 @@ export function toSvgStamp(el: StampElement): string {
     });
   }
   return wrapTransform(el, svg);
+}
+
+export function toSvgQr(el: QrElement): string {
+  if (el._qrDataUrl && el._qrDataUrl.startsWith('data:image/')) {
+    const dataUrl = escapeXml(el._qrDataUrl);
+    const inner = `<image href="${dataUrl}" xlink:href="${dataUrl}" x="0" y="0" width="${el.width}" height="${el.height}" preserveAspectRatio="xMidYMid meet"/>`;
+    return wrapTransform(el, inner);
+  }
+  // Заглушка-рамка, если QR не сгенерился.
+  const inner = `<rect x="0" y="0" width="${el.width}" height="${el.height}" fill="none" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="6,4"/>`;
+  return wrapTransform(el, inner);
 }

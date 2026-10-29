@@ -1,13 +1,13 @@
-/* ============================================================
-   vite.config.ts
-   ============================================================ */
-
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
+
+// Локальный backend. Если Spring Boot в IntelliJ запущен на другом порту,
+// переопределите через VITE_BACKEND_URL=http://localhost:8081 npm run dev
+const BACKEND_URL = process.env.VITE_BACKEND_URL || 'http://localhost:8080';
 
 export default defineConfig({
   base: process.env.VITE_BASE_URL || '/',
@@ -28,10 +28,23 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      // Все запросы к /api проксируются на Spring Boot.
-      // Фронт и бэк для браузера становятся одним origin → cookie работают.
+      // Все API-запросы → Spring Boot.
+      // Браузер видит один origin (localhost:5173) → cookie работают
+      // без SameSite=None и Secure.
       '/api': {
-        target: 'http://localhost:8080',
+        target: BACKEND_URL,
+        changeOrigin: true,
+        secure: false,
+      },
+      // Клик «Войти через Google» → бэкенд отвечает 302 на Google.
+      '/oauth2': {
+        target: BACKEND_URL,
+        changeOrigin: true,
+        secure: false,
+      },
+      // Callback от Google → бэкенд обрабатывает OAuth и редиректит на фронт.
+      '/login/oauth2': {
+        target: BACKEND_URL,
         changeOrigin: true,
         secure: false,
       },

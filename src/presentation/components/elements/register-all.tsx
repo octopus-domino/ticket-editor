@@ -13,6 +13,7 @@ import { ConnectorEl } from './ConnectorEl';
 import { DiagramEl } from './DiagramEl';
 import { StampEl } from './StampEl';
 import { GroupEl } from './GroupEl';
+import { QrEl } from './QrEl';
 
 import { TextProps } from './properties/TextProps';
 import { ShapeProps } from './properties/ShapeProps';
@@ -21,13 +22,13 @@ import { ChartProps } from './properties/ChartProps';
 import { TableProps } from './properties/TableProps';
 import {
   LineProps, ImageProps, FooterProps, PlaceholderProps,
-  FillProps, ConnectorProps, StampProps, DiagramProps,
+  FillProps, ConnectorProps, StampProps, DiagramProps, QrProps,
 } from './properties/MiscProps';
 
 import {
   toSvgText, toSvgShape, toSvgLine, toSvgTable, toSvgImage,
   toSvgFooter, toSvgPlaceholder, toSvgFill, toSvgConnector,
-  toSvgDiagram, toSvgStamp, toSvgPath, toSvgChart,
+  toSvgDiagram, toSvgStamp, toSvgPath, toSvgChart, toSvgQr,
 } from '@/lib/svg/exporters';
 
 import type { ConnectorElement } from '@/shared/types';
@@ -52,4 +53,5 @@ export function registerAllElements(): void {
   registerElement({ type: 'diagram', KonvaView: DiagramEl as never, PropertiesPanel: DiagramProps as never, toSvg: toSvgDiagram });
   registerElement({ type: 'stamp',   KonvaView: StampEl   as never, PropertiesPanel: StampProps   as never, toSvg: toSvgStamp });
   registerElement({ type: 'group',   KonvaView: GroupEl   as never, PropertiesPanel: undefined as never, toSvg: () => '' });
+  registerElement({ type: 'qr',      KonvaView: QrEl      as never, PropertiesPanel: QrProps      as never, toSvg: toSvgQr });
 }

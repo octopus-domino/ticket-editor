@@ -47,31 +47,28 @@ export function cloneSlide(source: Slide): Slide {
   };
 }
 
+/**
+ * @deprecated Оставлено для обратной совместимости. Смена формата больше
+ * не рефлоует элементы — элементы остаются с абсолютными координатами
+ * и размерами. Пользователь сам двигает и масштабирует при необходимости.
+ * Не деструктивное поведение (Figma / Illustrator style).
+ */
 export function reflowElements(
   elements: CanvasElement[],
-  newWidth: number,
-  newHeight: number,
-  padding: Padding,
+  _newWidth: number,
+  _newHeight: number,
+  _padding: Padding,
 ): CanvasElement[] {
-  const printW = Math.max(0, newWidth - padding.left - padding.right);
-  const printH = Math.max(0, newHeight - padding.top - padding.bottom);
-
-  return elements.map((el) => {
-    if (el.type === 'footer') {
-      return { ...el, x: padding.left, y: newHeight - padding.bottom - el.height, width: printW };
-    }
-    if (el.type === 'placeholder') {
-      return { ...el, x: padding.left, y: padding.top, width: printW, height: printH };
-    }
-    return {
-      ...el,
-      x: Math.min(el.x, Math.max(0, newWidth - el.width)),
-      y: Math.min(el.y, Math.max(0, newHeight - el.height)),
-      width: Math.min(el.width, printW),
-    };
-  });
+  return elements;
 }
 
+/**
+ * Смена формата: обновляет только размеры страницы.
+ * Элементы НЕ трогаются — их абсолютные координаты и размеры сохраняются.
+ * Если они вылезут за пределы новой страницы — это ожидаемо, пользователь
+ * сам их переставит. Такой подход обратим: смена формата туда-обратно
+ * возвращает исходный layout без потерь.
+ */
 export function changeFormat(
   slide: Slide,
   format: DocFormat,
@@ -80,19 +77,25 @@ export function changeFormat(
   const { w, h } = getFormatSize(format, slide.orientation, customSize);
   return {
     ...slide,
-    format, width: w, height: h,
-    elements: reflowElements(slide.elements, w, h, slide.padding),
+    format,
+    width: w,
+    height: h,
   };
 }
 
+/**
+ * Смена ориентации: аналогично смене формата — только размеры страницы.
+ * Для custom-формата меняет местами width/height сохраняя их значения.
+ */
 export function changeOrientation(slide: Slide, orientation: Orientation): Slide {
   if (slide.orientation === orientation) return slide;
   const customSize = slide.format === 'custom' ? { w: slide.height, h: slide.width } : undefined;
   const { w, h } = getFormatSize(slide.format, orientation, customSize);
   return {
     ...slide,
-    orientation, width: w, height: h,
-    elements: reflowElements(slide.elements, w, h, slide.padding),
+    orientation,
+    width: w,
+    height: h,
   };
 }
 

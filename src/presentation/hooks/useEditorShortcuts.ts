@@ -100,9 +100,6 @@ export function useEditorShortcuts({ docStore, selStore, modalsStore, clipboardA
       return slide.elements.filter((e) => ids.includes(e.id));
     };
 
-    // В таблице — только обычные шорткаты. Undo/Redo обрабатываются
-    // отдельной веткой в onKey ниже, чтобы работали даже при фокусе
-    // в поле ввода панели свойств.
     const handlers: Handler[] = [
       { spec: { key: 'Escape' }, handle: () => selStore.clear() },
       {
@@ -163,11 +160,17 @@ export function useEditorShortcuts({ docStore, selStore, modalsStore, clipboardA
       const ms = modalsStore.getState();
       if (ms.stampEditorTarget || ms.diagramEditorTarget) return;
 
+      // Если фокус находится в любом поле ввода, TipTap или Inline-редакторе,
+      // мы НЕ перехватываем горячие клавиши (Ctrl+C, Ctrl+V, Delete и т.д.),
+      // позволяя браузеру и встроенным редакторам обработать их нативно.
+      if (isEditable(e.target)) {
+        return;
+      }
+
       const isCtrl = e.ctrlKey || e.metaKey;
 
       // === Undo/Redo приоритетнее всего ===
       // Работает даже если фокус остался в поле панели свойств.
-      // Не мешает только редактору текста — там браузер делает нативный undo.
       if (isCtrl && e.code === 'KeyZ' && !ms.editing) {
         e.preventDefault();
         if (e.shiftKey) docStore.redo();
@@ -181,8 +184,6 @@ export function useEditorShortcuts({ docStore, selStore, modalsStore, clipboardA
       }
 
       // === Остальные шорткаты ===
-      if (isEditable(e.target) && !ms.editing) return;
-
       for (const h of handlers) {
         if (matches(e, h.spec)) {
           h.handle(e);

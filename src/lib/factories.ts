@@ -6,6 +6,7 @@ import type {
   Slide, TextElement, ShapeElement, LineElement, TableElement, FooterElement,
   StampElement, PlaceholderElement, DocFormat, Orientation, DataFieldType,
   StampShape, BasicShape, PathElement, ChartElement, ChartKind, QrElement,
+  DiagramElement,
 } from '@/shared/types';
 import { FORMATS } from '@/shared/constants';
 import { getFormatSize } from '@/shared/utils/formats';
@@ -229,5 +230,24 @@ export function newQr(x = 100, y = 100, size = 200): QrElement {
     bgColor: '#ffffff',
     margin: 4,
     ecc: 'M',
+  };
+}
+
+/**
+ * Пустая диаграмма draw.io.
+ * SVG и XML пустые — пользователь откроет drawio двойным кликом,
+ * нарисует что-то, сохранит. После этого SVG появится на холсте.
+ */
+export function newDiagram(x = 200, y = 200): DiagramElement {
+  return {
+    id: uid(),
+    type: 'diagram',
+    x,
+    y,
+    width: 400,
+    height: 300,
+    rotation: 0,
+    svg: '',
+    xml: '',
   };
 }

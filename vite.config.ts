@@ -25,6 +25,10 @@ export default defineConfig({
       '@/workspace': path.resolve(ROOT, 'src/workspace'),
     },
   },
+  // Vite читает .env* и подставляет import.meta.env.VITE_* при сборке.
+  // Явно указываем корень, чтобы .env.production не потерялся.
+  envDir: ROOT,
+  envPrefix: 'VITE_',
   server: {
     port: 5173,
     proxy: {
@@ -36,13 +40,11 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
-      // Клик «Войти через Google» → бэкенд отвечает 302 на Google.
       '/oauth2': {
         target: BACKEND_URL,
         changeOrigin: true,
         secure: false,
       },
-      // Callback от Google → бэкенд обрабатывает OAuth и редиректит на фронт.
       '/login/oauth2': {
         target: BACKEND_URL,
         changeOrigin: true,

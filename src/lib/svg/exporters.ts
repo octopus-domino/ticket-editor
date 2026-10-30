@@ -478,7 +478,42 @@ export function toSvgConnector(el: ConnectorElement, allElements: CanvasElement[
 }
 
 export function toSvgDiagram(el: DiagramElement): string {
-  const inner = el.svg || `<rect x="0" y="0" width="${el.width}" height="${el.height}" fill="#f8fafc" stroke="#cbd5e1" stroke-dasharray="6,4" />`;
+  // Пустой SVG — рисуем плейсхолдер, как на холсте.
+  if (!el.svg || !el.svg.trim()) {
+    const inner = `<rect x="0" y="0" width="${el.width}" height="${el.height}" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="6,4" />`;
+    return wrapTransform(el, inner);
+  }
+
+  // Убираем XML-пролог и DOCTYPE, оставляем только <svg>...</svg>.
+  const cleaned = el.svg
+    .replace(/<\?xml[^>]*\?>/gi, '')
+    .replace(/<!DOCTYPE[^>]*>/gi, '')
+    .trim();
+
+  if (!cleaned.startsWith('<svg')) {
+    // Что-то странное — не встраиваем.
+    const inner = `<rect x="0" y="0" width="${el.width}" height="${el.height}" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="6,4" />`;
+    return wrapTransform(el, inner);
+  }
+
+  // Кодируем в base64 — так надёжнее, чем escapeXml: не ломается на кавычках,
+  // кириллице, амперсандах внутри data URL картинок.
+  let base64: string;
+  try {
+    // btoa не умеет unicode — используем encodeURIComponent + unescape.
+    // unescape — deprecated, но широко поддерживается (IE не в скоупе).
+    base64 = btoa(unescape(encodeURIComponent(cleaned)));
+  } catch (err) {
+    console.error('[toSvgDiagram] base64 encode failed:', err);
+    const inner = `<rect x="0" y="0" width="${el.width}" height="${el.height}" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="6,4" />`;
+    return wrapTransform(el, inner);
+  }
+
+  const dataUrl = `data:image/svg+xml;base64,${base64}`;
+  const inner =
+    `<image href="${dataUrl}" xlink:href="${dataUrl}" ` +
+    `x="0" y="0" width="${el.width}" height="${el.height}" ` +
+    `preserveAspectRatio="xMidYMid meet" />`;
   return wrapTransform(el, inner);
 }
 

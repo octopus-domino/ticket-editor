@@ -5,7 +5,10 @@ import { useStore } from '@/shared/store/store';
 import { useDocumentStore, useSelectionStore, useModalsStore } from '../providers/EditorProvider';
 import { StampLibraryPanel } from './StampLibraryPanel';
 import { changeFormat, changeOrientation } from '@/domain/slide/operations';
-import { newText, newSimpleText, newFooter, newTable, newLine, newShape, newPath, newChart } from '@/lib/factories';
+import { 
+  newText, newSimpleText, newFooter, newTable, newLine, newShape, 
+  newPath, newChart, newDiagram 
+} from '@/lib/factories';
 import { TYPICAL_LAYOUTS, BUNDLES } from '../../templates';
 import { useFileIO } from '../hooks/editor/useFileIO';
 import { ArrangePanel } from './panels/ArrangePanel';
@@ -198,6 +201,12 @@ export const LeftPanel: React.FC = () => {
         <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'chart-bar')} onClick={() => add(newChart('bar'))}><span className="tile-ico">📊</span><span>Bar</span></button>
         <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'chart-donut')} onClick={() => add(newChart('donut'))}><span className="tile-ico">◎</span><span>Donut</span></button>
         <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'qr')} onClick={() => setQrModalOpen(true)}><span className="tile-ico">🔳</span><span>QR-код</span></button>
+        
+        {/* НОВАЯ КНОПКА: Диаграмма (drawio) */}
+        <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'diagram')} onClick={() => add(newDiagram())}>
+          <span className="tile-ico">🖼</span>
+          <span>Диаграмма</span>
+        </button>
       </>
     );
   };

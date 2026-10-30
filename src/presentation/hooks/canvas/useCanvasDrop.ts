@@ -5,6 +5,7 @@ import type { DocumentStore } from '@/infra/state/DocumentStore';
 import {
   makeArrayTable, makePlaceholder, newText, newSimpleText, newFooter,
   newTable, newLine, newShape, newPath, newChart, newQr,
+  newDiagram, // ← ДОБАВЛЕНО
 } from '@/lib/factories';
 import { resolveSample } from '@/lib/resolveSample';
 import { newStampFromTemplate } from '@/lib/stamps/factories';
@@ -108,6 +109,10 @@ export function useCanvasDrop(params: {
         case 'chart-bar': el = newChart('bar', cx, cy); break;
         case 'chart-donut': el = newChart('donut', cx, cy); break;
         case 'qr': el = newQr(cx, cy); break;
+        
+        // НОВЫЙ КЕЙС: Диаграмма (drawio)
+        case 'diagram': el = newDiagram(cx, cy); break;
+        
         default: return;
       }
       if (el) {

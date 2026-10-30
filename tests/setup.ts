@@ -1,5 +1,6 @@
 /* Минимальный setup для jsdom: не тянем реальные Konva/DOM-зависимости. */
 import { vi } from 'vitest';
+import '@testing-library/jest-dom/vitest';
 
 // jsdom не реализует ResizeObserver — заглушим.
 class ResizeObserverStub {

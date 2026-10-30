@@ -570,7 +570,7 @@ input, select, textarea { font-family: inherit; }
 }
 
 /* ============================================================
-   RICH TEXT EDITOR (TipTap) — WYSIWYG-page
+   RICH TEXT EDITOR (TipTap)
    ============================================================ */
 .rt-modal-backdrop {
   position: fixed;
@@ -583,8 +583,6 @@ input, select, textarea { font-family: inherit; }
   justify-content: center;
 }
 .rt-modal {
-  /* width / height задаются inline из RichTextEditor — адаптивно
-     под contentWidth * zoom. */
   background: var(--panel);
   border-radius: var(--radius-lg);
   display: flex;
@@ -708,10 +706,6 @@ input, select, textarea { font-family: inherit; }
 .rt-editor-content .ProseMirror li { margin-bottom: 4px; }
 .rt-editor-content .ProseMirror a { color: #2563eb; text-decoration: underline; }
 
-/* Ширину таблицы задаём inline-стилем на <table> (см. tableSync.ts):
-   при загрузке — sum(col) как есть или ужатая до innerWidth;
-   при сохранении — реальные пиксели из live DOM.
-   CSS даёт только защитный max-width и базовые границы. */
 .rt-editor-content .ProseMirror table {
   border-collapse: collapse;
   table-layout: fixed;
@@ -751,10 +745,6 @@ input, select, textarea { font-family: inherit; }
   z-index: 20;
 }
 .rt-editor-content .ProseMirror .tableWrapper {
-  /* Если пользователь растянет колонку за пределы innerWidth —
-     появится скролл внутри страницы, а не вылезание на серый фон.
-     На канве resolveColPixelWidths пропорционально ужмёт пиксели
-     обратно до innerWidth. */
   overflow-x: auto;
   margin: 0;
 }
@@ -1188,4 +1178,117 @@ input, select, textarea { font-family: inherit; }
   color: #1e3a8a;
   cursor: pointer;
   padding: 0 4px;
+}
+
+/* ============================================================
+   DIAGRAM EDITOR (draw.io)
+   ============================================================ */
+.diagram-editor-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(4px);
+  z-index: 3000;
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+}
+
+.diagram-editor-modal {
+  background: #fff;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.diagram-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel-alt);
+  flex-shrink: 0;
+}
+
+.diagram-editor-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.diagram-editor-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.diagram-btn {
+  padding: 6px 12px;
+  border: 1px solid var(--border-strong);
+  background: #fff;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.diagram-btn:hover:not(:disabled) {
+  background: var(--accent-light);
+  border-color: var(--accent);
+}
+.diagram-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.diagram-editor-body {
+  flex: 1;
+  position: relative;
+  display: flex;
+  min-height: 0;
+}
+
+.diagram-iframe {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}
+
+.diagram-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  background: #fff;
+}
+
+.diagram-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e2e8f0;
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: diagram-spin 1s linear infinite;
+}
+
+@keyframes diagram-spin {
+  to { transform: rotate(360deg); }
+}
+
+.diagram-error {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  background: #fff;
+  color: var(--danger);
 }

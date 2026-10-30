@@ -1,12 +1,12 @@
-﻿import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import { Group, Rect, Image as KImage } from 'react-konva';
 import type { DiagramElement } from '@/shared/types';
 import type { CommonProps } from './types';
 
-// Оставляем только el и onUpdate. onDblClick берем из CommonProps.
 interface Props extends CommonProps<DiagramElement> {
   el: DiagramElement;
   onUpdate: (p: Partial<DiagramElement>) => void;
+  onDblClick: () => void;
 }
 
 export const DiagramEl: React.FC<Props> = ({
@@ -57,6 +57,42 @@ export const DiagramEl: React.FC<Props> = ({
     };
   }, [el.svg]);
 
+  /**
+   * Вписываем картинку в el.width × el.height, сохраняя пропорции.
+   * Это соответствует preserveAspectRatio="xMidYMid meet" в SVG-экспорте.
+   */
+  const fit = useMemo(() => {
+    if (!img) {
+      return { w: el.width, h: el.height, x: 0, y: 0 };
+    }
+
+    const nw = img.naturalWidth || img.width || 1;
+    const nh = img.naturalHeight || img.height || 1;
+    const ratio = nw / nh;
+    const boxRatio = el.width / el.height;
+
+    let w: number;
+    let h: number;
+    let x: number;
+    let y: number;
+
+    if (boxRatio > ratio) {
+      // прямоугольник шире картинки — ограничение по высоте
+      h = el.height;
+      w = h * ratio;
+      x = (el.width - w) / 2;
+      y = 0;
+    } else {
+      // прямоугольник выше картинки — ограничение по ширине
+      w = el.width;
+      h = w / ratio;
+      x = 0;
+      y = (el.height - h) / 2;
+    }
+
+    return { w, h, x, y };
+  }, [img, el.width, el.height]);
+
   return (
     <Group
       id={el.id}
@@ -68,9 +104,8 @@ export const DiagramEl: React.FC<Props> = ({
       dragDistance={3}
       onMouseDown={(e) => { e.cancelBubble = true; onSelect(e); }}
       onTap={(e) => { e.cancelBubble = true; onSelect(e); }}
-      // ИСПРАВЛЕНО: передаем событие `e` дальше в Canvas.tsx
-      onDblClick={(e) => { e.cancelBubble = true; onDblClick?.(e); }}
-      onDblTap={(e) => { e.cancelBubble = true; onDblClick?.(e); }}
+      onDblClick={(e) => { e.cancelBubble = true; onDblClick?.(); }}
+      onDblTap={(e) => { e.cancelBubble = true; onDblClick?.(); }}
       onDragStart={onDragStart}
       onDragMove={onDragMove}
       onDragEnd={(e) => {
@@ -78,29 +113,16 @@ export const DiagramEl: React.FC<Props> = ({
         onDragEnd?.(e);
       }}
       onContextMenu={onContextMenu}
-      onTransformEnd={(e) => {
-        const n = e.target;
-        const sx = n.scaleX();
-        const sy = n.scaleY();
-        n.scaleX(1);
-        n.scaleY(1);
-        onUpdate({
-          x: n.x(),
-          y: n.y(),
-          rotation: n.rotation(),
-          width: Math.max(40, el.width * sx),
-          height: Math.max(40, el.height * sy),
-        });
-      }}
     >
+      {/* Прозрачный hit-rect на всю область — чтобы клик ловился и в пустых местах */}
       <Rect width={el.width} height={el.height} fill="rgba(0,0,0,0.001)" />
 
       {img && !loadError && (
         <KImage
-          x={0}
-          y={0}
-          width={el.width}
-          height={el.height}
+          x={fit.x}
+          y={fit.y}
+          width={fit.w}
+          height={fit.h}
           image={img}
           listening={false}
           perfectDrawEnabled={false}

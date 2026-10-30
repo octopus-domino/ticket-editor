@@ -4,11 +4,12 @@
    F-DG-01..11, F-ERR-02.
    draw.io embed-протокол (JSON-сообщения).
 
-   v10.4 — починка зависания спиннера:
-     - Добавлены подробные console.log для отладки postMessage.
-     - Таймаут не сбрасывается при изменении isLoading.
-     - Отправка пустого конфига ({}), чтобы не ломать self-hosted drawio.
-     - Ослаблена проверка event.source (иногда в iframe она null).
+   v10.5 — финальная починка:
+     - Функция extractSvg корректно распаковывает base64 data URL,
+       который присылает draw.io при экспорте.
+     - Кнопка "Сохранить" теперь отправляет action: 'export',
+       а не 'save' (save — это только исходящее событие).
+     - Логи стали чище.
    ============================================================ */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -25,7 +26,6 @@ interface DiagramEditorProps {
 
 const DRAWIO_URL = CONFIG.DRAWIO_URL;
 
-/** Origin для postMessage. Если URL относительный — берём origin текущей страницы. */
 const DRAWIO_ORIGIN: string = (() => {
   try {
     const u = new URL(DRAWIO_URL, window.location.href);
@@ -36,10 +36,42 @@ const DRAWIO_ORIGIN: string = (() => {
   }
 })();
 
-const LOAD_TIMEOUT_MS = 20_000; // Увеличили до 20с для медленных сетей
+const LOAD_TIMEOUT_MS = 20_000;
 
-function isValidSvg(s: string): boolean {
-  return typeof s === 'string' && s.trim().startsWith('<svg') && s.trim().endsWith('</svg>');
+/**
+ * Draw.io может отдавать SVG в двух форматах:
+ * 1. Обычная строка, начинающаяся с <svg...
+ * 2. data:image/svg+xml;base64,PHN2Zy...
+ * Эта функция обрабатывает оба варианта и чистит XML-пролог.
+ */
+function extractSvg(input: string): string | null {
+  let cleaned = input.trim();
+
+  // 1. Если это base64 data URL — декодируем
+  if (cleaned.startsWith('data:image/svg+xml;base64,')) {
+    try {
+      const base64Str = cleaned.substring('data:image/svg+xml;base64,'.length);
+      // atob возвращает бинарную строку, прогоняем через escape/unescape для UTF-8
+      const raw = atob(base64Str);
+      cleaned = decodeURIComponent(escape(raw));
+    } catch (e) {
+      console.error('[DiagramEditor] failed to decode base64 SVG:', e);
+      return null;
+    }
+  }
+
+  // 2. Убираем XML-пролог и DOCTYPE
+  cleaned = cleaned
+    .replace(/<\?xml[^>]*\?>/gi, '')
+    .replace(/<!DOCTYPE[^>]*>/gi, '')
+    .trim();
+
+  // 3. Валидация
+  if (cleaned.startsWith('<svg') && cleaned.endsWith('</svg>')) {
+    return cleaned;
+  }
+
+  return null;
 }
 
 export const DiagramEditor: React.FC<DiagramEditorProps> = ({
@@ -56,23 +88,16 @@ export const DiagramEditor: React.FC<DiagramEditorProps> = ({
   const savedRef = useRef(false);
   const timeoutRef = useRef<number | null>(null);
 
-  /* ---------- Отправка сообщения в iframe ---------- */
   const post = useCallback((msg: unknown) => {
     const w = iframeRef.current?.contentWindow;
-    if (!w) {
-      console.warn('[DiagramEditor] iframe contentWindow is null');
-      return;
-    }
+    if (!w) return;
     try {
-      const json = JSON.stringify(msg);
-      console.log('[DiagramEditor] sending:', json);
-      w.postMessage(json, DRAWIO_ORIGIN);
+      w.postMessage(JSON.stringify(msg), DRAWIO_ORIGIN);
     } catch (err) {
       console.error('[DiagramEditor] postMessage failed:', err);
     }
   }, []);
 
-  /* ---------- Инициализация и таймаут ---------- */
   useEffect(() => {
     if (!isOpen) return;
 
@@ -81,14 +106,11 @@ export const DiagramEditor: React.FC<DiagramEditorProps> = ({
     savedRef.current = false;
     lastXmlRef.current = initialXml || '<mxGraphModel/>';
 
-    // Таймаут: если drawio не прислал init за 20s — показываем ошибку.
     if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current);
     timeoutRef.current = window.setTimeout(() => {
       setIsLoading((prev) => {
         if (prev) {
-          setLoadError(
-            'Не удалось загрузить draw.io за 20 секунд. Проверьте интернет, VPN или блокировщик рекламы.',
-          );
+          setLoadError('Не удалось загрузить draw.io за 20 секунд. Проверьте интернет.');
           return false;
         }
         return prev;
@@ -103,25 +125,12 @@ export const DiagramEditor: React.FC<DiagramEditorProps> = ({
     };
   }, [isOpen, initialXml]);
 
-  /* ---------- Обработка postMessage ---------- */
   useEffect(() => {
     if (!isOpen) return;
 
     const handleMessage = (event: MessageEvent) => {
-      // Логируем всё, что приходит (для отладки)
-      console.log('[DiagramEditor] message received:', event.origin, event.data);
-
-      // Проверка origin (ослаблена: 'null' разрешён для sandbox)
-      if (event.origin !== DRAWIO_ORIGIN && event.origin !== 'null') {
-        console.warn('[DiagramEditor] ignored message from unexpected origin:', event.origin);
-        return;
-      }
-
-      // Проверка source (если iframe ещё не готов, source может быть null)
-      if (iframeRef.current && iframeRef.current.contentWindow && event.source !== iframeRef.current.contentWindow) {
-        console.warn('[DiagramEditor] ignored message from unexpected source');
-        return;
-      }
+      if (event.origin !== DRAWIO_ORIGIN && event.origin !== 'null') return;
+      if (iframeRef.current?.contentWindow && event.source !== iframeRef.current.contentWindow) return;
 
       let msg: Record<string, unknown>;
       try {
@@ -134,7 +143,6 @@ export const DiagramEditor: React.FC<DiagramEditorProps> = ({
       const ev = msg.event;
 
       if (ev === 'configure') {
-        // Отправляем пустой конфиг (самый безопасный вариант для self-hosted)
         post({ action: 'configure', config: {} });
         return;
       }
@@ -146,39 +154,37 @@ export const DiagramEditor: React.FC<DiagramEditorProps> = ({
         }
         setIsLoading(false);
         setLoadError(null);
-        post({
-          action: 'load',
-          autosave: 1,
-          xml: lastXmlRef.current,
-        });
+        post({ action: 'load', autosave: 1, xml: lastXmlRef.current });
         return;
       }
 
       if (ev === 'autosave' || ev === 'save') {
         if (typeof msg.xml === 'string') lastXmlRef.current = msg.xml;
-        post({
-          action: 'export',
-          format: 'svg',
-          xml: lastXmlRef.current,
-        });
+        // При автосохранении от draw.io мы НЕ вызываем onSave сразу,
+        // чтобы не спамить историю. Но если пользователь нажал "Save" в самом draw.io,
+        // мы должны забрать SVG.
+        if (ev === 'save') {
+          post({ action: 'export', format: 'svg', xml: lastXmlRef.current });
+        }
         return;
       }
 
       if (ev === 'export') {
         const raw = typeof msg.data === 'string' ? msg.data : '';
-        let decoded = '';
+        let decoded = raw;
         try {
           decoded = decodeURIComponent(raw);
         } catch {
           decoded = raw;
         }
 
-        if (!isValidSvg(decoded)) {
-          console.warn('[DiagramEditor] invalid SVG from drawio:', decoded.substring(0, 100));
+        const validSvg = extractSvg(decoded);
+        if (!validSvg) {
+          console.warn('[DiagramEditor] invalid SVG after decode:', decoded.substring(0, 50));
           return;
         }
 
-        void embedImagesInSvg(decoded)
+        void embedImagesInSvg(validSvg)
           .then((embedded: string) => {
             if (savedRef.current) return;
             savedRef.current = true;
@@ -188,7 +194,7 @@ export const DiagramEditor: React.FC<DiagramEditorProps> = ({
             console.error('[DiagramEditor] embedImagesInSvg failed:', err);
             if (savedRef.current) return;
             savedRef.current = true;
-            onSave(decoded, lastXmlRef.current);
+            onSave(validSvg, lastXmlRef.current);
           });
         return;
       }
@@ -203,12 +209,11 @@ export const DiagramEditor: React.FC<DiagramEditorProps> = ({
     return () => window.removeEventListener('message', handleMessage);
   }, [isOpen, onSave, onClose, post]);
 
-  /* ---------- Кнопка Save ---------- */
+  // ИСПРАВЛЕНО: вместо 'save' (который drawio не понимает) отправляем 'export'
   const handleSave = useCallback(() => {
-    post({ action: 'save', xml: lastXmlRef.current });
+    post({ action: 'export', format: 'svg', xml: lastXmlRef.current });
   }, [post]);
 
-  /* ---------- Esc закрывает ---------- */
   useEffect(() => {
     if (!isOpen) return;
     const onKey = (e: KeyboardEvent) => {
@@ -221,7 +226,6 @@ export const DiagramEditor: React.FC<DiagramEditorProps> = ({
     return () => window.removeEventListener('keydown', onKey);
   }, [isOpen, onClose]);
 
-  /* ---------- Формирование URL ---------- */
   const iframeSrc = useMemo(() => {
     const u = new URL(DRAWIO_URL, window.location.href);
     u.searchParams.set('embed', '1');
@@ -229,7 +233,6 @@ export const DiagramEditor: React.FC<DiagramEditorProps> = ({
     u.searchParams.set('spin', '1');
     u.searchParams.set('configure', '1');
     u.searchParams.set('libraries', 'general');
-    // Принудительно отключаем сохранение в localStorage drawio
     u.searchParams.set('noSaveBtn', '1');
     return u.toString();
   }, []);
@@ -273,9 +276,7 @@ export const DiagramEditor: React.FC<DiagramEditorProps> = ({
                 onClick={() => {
                   setLoadError(null);
                   setIsLoading(true);
-                  if (iframeRef.current) {
-                    iframeRef.current.src = iframeRef.current.src;
-                  }
+                  if (iframeRef.current) iframeRef.current.src = iframeRef.current.src;
                 }}
               >
                 Попробовать снова

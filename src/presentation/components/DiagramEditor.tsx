@@ -1,4 +1,17 @@
-﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+﻿/* ============================================================
+   DiagramEditor.tsx
+
+   F-DG-01..11, F-ERR-02.
+   draw.io embed-протокол (JSON-сообщения).
+
+   v10.4 — починка зависания спиннера:
+     - Добавлены подробные console.log для отладки postMessage.
+     - Таймаут не сбрасывается при изменении isLoading.
+     - Отправка пустого конфига ({}), чтобы не ломать self-hosted drawio.
+     - Ослаблена проверка event.source (иногда в iframe она null).
+   ============================================================ */
+
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CONFIG } from '@/shared/config';
 import { embedImagesInSvg } from '@/lib/drawio/embedImagesInSvg';
 
@@ -12,6 +25,7 @@ interface DiagramEditorProps {
 
 const DRAWIO_URL = CONFIG.DRAWIO_URL;
 
+/** Origin для postMessage. Если URL относительный — берём origin текущей страницы. */
 const DRAWIO_ORIGIN: string = (() => {
   try {
     const u = new URL(DRAWIO_URL, window.location.href);
@@ -22,7 +36,7 @@ const DRAWIO_ORIGIN: string = (() => {
   }
 })();
 
-const LOAD_TIMEOUT_MS = 15_000;
+const LOAD_TIMEOUT_MS = 20_000; // Увеличили до 20с для медленных сетей
 
 function isValidSvg(s: string): boolean {
   return typeof s === 'string' && s.trim().startsWith('<svg') && s.trim().endsWith('</svg>');
@@ -42,29 +56,43 @@ export const DiagramEditor: React.FC<DiagramEditorProps> = ({
   const savedRef = useRef(false);
   const timeoutRef = useRef<number | null>(null);
 
+  /* ---------- Отправка сообщения в iframe ---------- */
   const post = useCallback((msg: unknown) => {
     const w = iframeRef.current?.contentWindow;
-    if (!w) return;
+    if (!w) {
+      console.warn('[DiagramEditor] iframe contentWindow is null');
+      return;
+    }
     try {
-      // Отправляем с targetOrigin для безопасности
-      w.postMessage(JSON.stringify(msg), DRAWIO_ORIGIN);
+      const json = JSON.stringify(msg);
+      console.log('[DiagramEditor] sending:', json);
+      w.postMessage(json, DRAWIO_ORIGIN);
     } catch (err) {
       console.error('[DiagramEditor] postMessage failed:', err);
     }
   }, []);
 
+  /* ---------- Инициализация и таймаут ---------- */
   useEffect(() => {
     if (!isOpen) return;
+
     setIsLoading(true);
     setLoadError(null);
     savedRef.current = false;
     lastXmlRef.current = initialXml || '<mxGraphModel/>';
 
+    // Таймаут: если drawio не прислал init за 20s — показываем ошибку.
+    if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current);
     timeoutRef.current = window.setTimeout(() => {
-      if (isLoading) {
-        setLoadError('Не удалось загрузить draw.io. Проверьте интернет или блокировщик рекламы.');
-        setIsLoading(false);
-      }
+      setIsLoading((prev) => {
+        if (prev) {
+          setLoadError(
+            'Не удалось загрузить draw.io за 20 секунд. Проверьте интернет, VPN или блокировщик рекламы.',
+          );
+          return false;
+        }
+        return prev;
+      });
     }, LOAD_TIMEOUT_MS);
 
     return () => {
@@ -73,17 +101,27 @@ export const DiagramEditor: React.FC<DiagramEditorProps> = ({
         timeoutRef.current = null;
       }
     };
-  }, [isOpen, initialXml, isLoading]);
+  }, [isOpen, initialXml]);
 
+  /* ---------- Обработка postMessage ---------- */
   useEffect(() => {
     if (!isOpen) return;
 
     const handleMessage = (event: MessageEvent) => {
-      // 1. Проверяем, что сообщение пришло от нашего iframe
-      if (event.source !== iframeRef.current?.contentWindow) return;
-      
-      // 2. Ослабляем проверку origin (чтобы работало даже в sandbox с origin="null")
-      if (event.origin !== DRAWIO_ORIGIN && event.origin !== 'null') return;
+      // Логируем всё, что приходит (для отладки)
+      console.log('[DiagramEditor] message received:', event.origin, event.data);
+
+      // Проверка origin (ослаблена: 'null' разрешён для sandbox)
+      if (event.origin !== DRAWIO_ORIGIN && event.origin !== 'null') {
+        console.warn('[DiagramEditor] ignored message from unexpected origin:', event.origin);
+        return;
+      }
+
+      // Проверка source (если iframe ещё не готов, source может быть null)
+      if (iframeRef.current && iframeRef.current.contentWindow && event.source !== iframeRef.current.contentWindow) {
+        console.warn('[DiagramEditor] ignored message from unexpected source');
+        return;
+      }
 
       let msg: Record<string, unknown>;
       try {
@@ -96,13 +134,8 @@ export const DiagramEditor: React.FC<DiagramEditorProps> = ({
       const ev = msg.event;
 
       if (ev === 'configure') {
-        post({
-          action: 'configure',
-          config: {
-            css: '',
-            defaultFonts: ['Arial', 'Helvetica', 'Times New Roman'],
-          },
-        });
+        // Отправляем пустой конфиг (самый безопасный вариант для self-hosted)
+        post({ action: 'configure', config: {} });
         return;
       }
 
@@ -141,7 +174,7 @@ export const DiagramEditor: React.FC<DiagramEditorProps> = ({
         }
 
         if (!isValidSvg(decoded)) {
-          console.warn('[DiagramEditor] drawio returned invalid SVG');
+          console.warn('[DiagramEditor] invalid SVG from drawio:', decoded.substring(0, 100));
           return;
         }
 
@@ -170,10 +203,12 @@ export const DiagramEditor: React.FC<DiagramEditorProps> = ({
     return () => window.removeEventListener('message', handleMessage);
   }, [isOpen, onSave, onClose, post]);
 
+  /* ---------- Кнопка Save ---------- */
   const handleSave = useCallback(() => {
     post({ action: 'save', xml: lastXmlRef.current });
   }, [post]);
 
+  /* ---------- Esc закрывает ---------- */
   useEffect(() => {
     if (!isOpen) return;
     const onKey = (e: KeyboardEvent) => {
@@ -186,6 +221,7 @@ export const DiagramEditor: React.FC<DiagramEditorProps> = ({
     return () => window.removeEventListener('keydown', onKey);
   }, [isOpen, onClose]);
 
+  /* ---------- Формирование URL ---------- */
   const iframeSrc = useMemo(() => {
     const u = new URL(DRAWIO_URL, window.location.href);
     u.searchParams.set('embed', '1');
@@ -193,6 +229,8 @@ export const DiagramEditor: React.FC<DiagramEditorProps> = ({
     u.searchParams.set('spin', '1');
     u.searchParams.set('configure', '1');
     u.searchParams.set('libraries', 'general');
+    // Принудительно отключаем сохранение в localStorage drawio
+    u.searchParams.set('noSaveBtn', '1');
     return u.toString();
   }, []);
 
@@ -204,7 +242,12 @@ export const DiagramEditor: React.FC<DiagramEditorProps> = ({
         <div className="diagram-editor-header">
           <h3>Diagram Editor</h3>
           <div className="diagram-editor-actions">
-            <button type="button" className="diagram-btn" onClick={handleSave} disabled={isLoading || !!loadError}>
+            <button
+              type="button"
+              className="diagram-btn"
+              onClick={handleSave}
+              disabled={isLoading || !!loadError}
+            >
               💾 Сохранить
             </button>
             <button type="button" className="diagram-btn" onClick={onClose}>
@@ -213,17 +256,17 @@ export const DiagramEditor: React.FC<DiagramEditorProps> = ({
           </div>
         </div>
 
-        <div className="diagram-editor-body" style={{ position: 'relative', flex: 1 }}>
+        <div className="diagram-editor-body">
           {isLoading && !loadError && (
-            <div className="diagram-loading" style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 10, background: '#fff' }}>
-              <div className="diagram-spinner" style={{ width: 32, height: 32, border: '3px solid #e2e8f0', borderTopColor: '#6366f1', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-              <p style={{ marginTop: 16, color: '#64748b' }}>Загрузка редактора…</p>
+            <div className="diagram-loading">
+              <div className="diagram-spinner" />
+              <p>Загрузка редактора…</p>
             </div>
           )}
 
           {loadError && (
-            <div className="diagram-error" style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 10, background: '#fff' }}>
-              <p style={{ color: '#dc2626', marginBottom: 16 }}>{loadError}</p>
+            <div className="diagram-error">
+              <p>{loadError}</p>
               <button
                 type="button"
                 className="diagram-btn"
@@ -244,11 +287,9 @@ export const DiagramEditor: React.FC<DiagramEditorProps> = ({
             ref={iframeRef}
             src={iframeSrc}
             className="diagram-iframe"
-            // allow-same-origin ОБЯЗАТЕЛЕН для правильной работы postMessage (без него origin="null")
             sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-downloads"
             allow="clipboard-write"
             title="Draw.io editor"
-            style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
           />
         </div>
       </div>

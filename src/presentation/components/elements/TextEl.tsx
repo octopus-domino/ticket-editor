@@ -10,6 +10,8 @@ import {
 import { RichTable } from './RichTable';
 import { TEXT_PLACEHOLDER } from '@/shared/constants';
 import { drawArcText, canvasFont } from '@/lib/stamps/render';
+import { useActiveModelValues } from '@/features/data-models/state/useActiveModelValues';
+import { resolveWithValues } from '@/lib/modelBinding';
 
 const HIT_RECT_NAME = 'hit-rect';
 
@@ -21,7 +23,7 @@ interface Props extends CommonProps<TextElement> {
 
 type PreparedItem =
   | { kind: 'text'; layout: ReturnType<typeof layoutRuns>; height: number }
-  | { kind: 'table'; data: any; height: number; width: number };
+  | { kind: 'table'; data: unknown; height: number; width: number };
 
 export const TextEl: React.FC<Props> = ({
   el, onSelect, onUpdate, onDragStart, onDragMove, onDragEnd,
@@ -30,9 +32,25 @@ export const TextEl: React.FC<Props> = ({
   const groupRef = useRef<Konva.Group>(null);
   const lastEmittedHeightRef = useRef<number>(el.height);
 
-  const isPlaceholder = !el.html && (el.text === TEXT_PLACEHOLDER || !el.text?.trim());
+  const modelValues = useActiveModelValues();
+
+  const rawText = el.text ?? '';
+  const rawHtml = el.html ?? '';
+  const htmlEmpty = !rawHtml || rawHtml.replace(/<[^>]+>/g, '').trim() === '';
+  const isPlaceholder =
+    htmlEmpty && (rawText.trim() === '' || rawText === TEXT_PLACEHOLDER);
+
   const effectiveFill = isPlaceholder ? '#9ca3af' : (el.fill || '#000000');
   const isArc = el.textMode === 'arc';
+
+  const displayText = useMemo(
+    () => resolveWithValues(rawText, modelValues),
+    [rawText, modelValues],
+  );
+  const displayHtml = useMemo(
+    () => (htmlEmpty ? undefined : resolveWithValues(rawHtml, modelValues)),
+    [rawHtml, htmlEmpty, modelValues],
+  );
 
   const padding = el.padding || { top: 0, right: 0, bottom: 0, left: 0 };
   const innerWidth = Math.max(1, el.width - padding.left - padding.right);
@@ -44,7 +62,9 @@ export const TextEl: React.FC<Props> = ({
       ? `${el.fontStyle || 'normal'} italic`
       : (el.fontStyle || 'normal');
     const resolvedFill = isPlaceholder ? '#9ca3af' : (el.fill || '#000000');
-    const sourceHtml = el.html && el.html.trim() ? el.html : plainToHtml(el.text || '');
+    const sourceHtml = displayHtml && displayHtml.trim()
+      ? displayHtml
+      : plainToHtml(displayText || '');
     return parseHtmlToBlocks(sourceHtml, {
       fontSize: el.fontSize,
       fontFamily: el.fontFamily,
@@ -52,7 +72,7 @@ export const TextEl: React.FC<Props> = ({
       textDecoration: el.textDecoration || '',
       fill: resolvedFill,
     });
-  }, [el.html, el.text, el.fontSize, el.fontFamily, el.fontStyle, el.textDecoration, el.fill, isPlaceholder, isArc]);
+  }, [displayHtml, displayText, el.fontSize, el.fontFamily, el.fontStyle, el.textDecoration, el.fill, isPlaceholder, isArc]);
 
   const lineHeightCoef = el.lineHeight || 1.5;
 
@@ -78,12 +98,6 @@ export const TextEl: React.FC<Props> = ({
 
   const contentHeight = padding.top + prepared.totalHeight + padding.bottom;
 
-  /**
-   * Авто-расширение ТОЛЬКО высоты. Ширину НЕ трогаем — она под
-   * resize-handle пользователя. Длинный текст переносится по innerWidth,
-   * широкая таблица ужимается resolveColPixelWidths до innerWidth.
-   * Никакого горизонтального скролла канвы быть не может.
-   */
   useLayoutEffect(() => {
     if (isArc) return;
     const neededHeight = Math.ceil(contentHeight);
@@ -128,8 +142,12 @@ export const TextEl: React.FC<Props> = ({
           listening={false}
           perfectDrawEnabled={false}
           sceneFunc={(ctx) => {
-            const c = (ctx as any)._context as CanvasRenderingContext2D;
-            drawArcText(c, { text: el.text, cx, cy, radius, startDeg, endDeg, flip, font: canvasFont(el.fontFamily, el.fontStyle, el.fontSize), fill: effectiveFill });
+            const c = (ctx as never as { _context: CanvasRenderingContext2D })._context;
+            drawArcText(c, {
+              text: displayText, cx, cy, radius, startDeg, endDeg, flip,
+              font: canvasFont(el.fontFamily, el.fontStyle, el.fontSize),
+              fill: effectiveFill,
+            });
           }}
         />
       </Group>
@@ -137,8 +155,11 @@ export const TextEl: React.FC<Props> = ({
   }
 
   let offsetYContent = padding.top;
-  if (el.verticalAlign === 'middle') offsetYContent = padding.top + Math.max(0, (innerHeight - prepared.totalHeight) / 2);
-  else if (el.verticalAlign === 'bottom') offsetYContent = padding.top + Math.max(0, innerHeight - prepared.totalHeight);
+  if (el.verticalAlign === 'middle') {
+    offsetYContent = padding.top + Math.max(0, (innerHeight - prepared.totalHeight) / 2);
+  } else if (el.verticalAlign === 'bottom') {
+    offsetYContent = padding.top + Math.max(0, innerHeight - prepared.totalHeight);
+  }
 
   const bg = el.background && el.background !== 'transparent' ? el.background : 'transparent';
   const hitFill = bg === 'transparent' ? 'rgba(0,0,0,0.001)' : bg;
@@ -166,8 +187,27 @@ export const TextEl: React.FC<Props> = ({
                     ? 'italic bold' : run.bold ? 'bold' : run.italic ? 'italic' : isPlaceholder ? 'italic' : 'normal';
                   return (
                     <React.Fragment key={`${i}-${j}`}>
-                      {run.bgColor && <Rect x={x} y={y} width={run.width} height={run.actualFontSize * 1.2} fill={run.bgColor} listening={false} />}
-                      <KonvaText x={x} y={y} text={run.text} fontSize={run.actualFontSize} fontFamily={run.fontFamily || el.fontFamily} fontStyle={resolvedFontStyle} textDecoration={run.underline && run.strike ? 'underline line-through' : run.underline ? 'underline' : run.strike ? 'line-through' : ''} fill={run.color || effectiveFill} listening={false} />
+                      {run.bgColor && (
+                        <Rect
+                          x={x} y={y}
+                          width={run.width} height={run.actualFontSize * 1.2}
+                          fill={run.bgColor} listening={false}
+                        />
+                      )}
+                      <KonvaText
+                        x={x} y={y}
+                        text={run.text}
+                        fontSize={run.actualFontSize}
+                        fontFamily={run.fontFamily || el.fontFamily}
+                        fontStyle={resolvedFontStyle}
+                        textDecoration={
+                          run.underline && run.strike ? 'underline line-through'
+                          : run.underline ? 'underline'
+                          : run.strike ? 'line-through' : ''
+                        }
+                        fill={run.color || effectiveFill}
+                        listening={false}
+                      />
                     </React.Fragment>
                   );
                 });

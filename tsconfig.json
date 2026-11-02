@@ -29,7 +29,8 @@
       "@/ui/*":           ["./src/presentation/*"],
       "@/presentation/*": ["./src/presentation/*"],
       "@/auth/*":         ["./src/auth/*"],
-      "@/workspace/*":    ["./src/workspace/*"]
+      "@/workspace/*":    ["./src/workspace/*"],
+      "@/features/*":     ["./src/features/*"]
     }
   },
   "include": ["src"],

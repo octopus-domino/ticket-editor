@@ -2,7 +2,6 @@
 import type { CanvasElement, TextAlign, TextVerticalAlign, Padding } from '@/shared/types';
 
 export type EditingKind = 'text' | 'shape' | 'footer' | 'stamp' | 'table' | 'placeholder';
-
 export type EditingField = 'text' | 'footerText' | 'shapeText' | 'tableCell' | 'topText' | 'centerText' | 'bottomText';
 
 export interface EditingState {
@@ -15,7 +14,6 @@ export interface EditingState {
 }
 
 export interface ContextMenuState { x: number; y: number; elementId: string | null; }
-
 export type EditorMode = 'print' | 'schema';
 
 export interface ModalsState {
@@ -32,6 +30,7 @@ export interface ModalsState {
   clipboardJson: string | null;
   clipSource: string | null;
   editorMode: EditorMode;
+  dataHighlight: boolean;
 }
 
 const INITIAL: ModalsState = {
@@ -48,6 +47,7 @@ const INITIAL: ModalsState = {
   clipboardJson: null,
   clipSource: null,
   editorMode: 'print',
+  dataHighlight: false,
 };
 
 export class ModalsStore extends SimpleStore<ModalsState> {
@@ -63,7 +63,7 @@ export class ModalsStore extends SimpleStore<ModalsState> {
   closeEditor() { this.setState((prev) => ({ ...prev, editing: null })); }
   setFloatingPos(p: { x: number; y: number } | null) { this.setState((prev) => ({ ...prev, floatingPos: p })); }
   setContextMenu(m: ContextMenuState | null) { this.setState((prev) => ({ ...prev, contextMenu: m })); }
-  
+
   openStampEditor(id: string) {
     this.setState((prev) => ({ ...prev, stampEditorTarget: id, floatingPos: null, contextMenu: null, editing: null }));
   }
@@ -79,14 +79,20 @@ export class ModalsStore extends SimpleStore<ModalsState> {
   setFillPoints(pts: number[]) { this.setState((prev) => ({ ...prev, fillPoints: pts })); }
   setShowGrid(v: boolean) { this.setState((prev) => ({ ...prev, showGrid: v })); }
   setShowMargins(v: boolean) { this.setState((prev) => ({ ...prev, showMargins: v })); }
-
   setEditorMode(mode: EditorMode) { this.setState((prev) => ({ ...prev, editorMode: mode })); }
+
+  setDataHighlight(v: boolean) { this.setState((prev) => ({ ...prev, dataHighlight: v })); }
+  toggleDataHighlight() {
+    this.setState((prev) => ({ ...prev, dataHighlight: !prev.dataHighlight }));
+  }
 
   copy(elements: CanvasElement[]) { this.clipboard = elements.map((el) => JSON.parse(JSON.stringify(el)) as CanvasElement); }
   getClipboard(): CanvasElement[] { return this.clipboard; }
 
   copyStyle(element: CanvasElement) {
-    const { id: _id, x: _x, y: _y, rotation: _r, type: _t, ...rest } = element as Partial<CanvasElement> & { id?: string; x?: number; y?: number; rotation?: number; type?: string; };
+    const { id: _id, x: _x, y: _y, rotation: _r, type: _t, ...rest } = element as Partial<CanvasElement> & {
+      id?: string; x?: number; y?: number; rotation?: number; type?: string;
+    };
     this.styleClipboard = rest as Partial<CanvasElement>;
   }
   getStyleClipboard(): Partial<CanvasElement> | null { return this.styleClipboard; }

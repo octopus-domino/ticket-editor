@@ -7,6 +7,7 @@ import { useDocumentStore, useSelectionStore, useModalsStore } from '@/ui/provid
 import { ElementRenderer } from './ElementRenderer';
 import { GridLayer } from './GridLayer';
 import { CanvasPreviewLayer } from './canvas/CanvasPreviewLayer';
+import { DataHighlightLayer } from './canvas/DataHighlightLayer';
 import { RichTextInlineEditor } from './richText/RichTextInlineEditor';
 import { useEditingCommit } from '../hooks/editor/useEditingCommit';
 import { useCanvasViewport } from '@/ui/hooks/canvas/useCanvasViewport';
@@ -47,6 +48,7 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
   const showGrid = useStore(modalsStore, (s) => s.showGrid);
   const showMargins = useStore(modalsStore, (s) => s.showMargins);
   const editorMode = useStore(modalsStore, (s) => s.editorMode);
+  const dataHighlight = useStore(modalsStore, (s) => s.dataHighlight);
 
   const viewport = useCanvasViewport({ wrapRef, zoom, onZoomChange, stageRef });
   const drag = useCanvasDrag({ docStore, selStore, modalsStore, slide });
@@ -99,8 +101,6 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
   }, [zoom, draft, viewport.isPanning]);
 
   const onStageDown = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
-    // Пока rich-редактор открыт, глотаем клик по Stage.
-    // Закрытие и commit произойдут через mousedown-listener в RichTextInlineEditor.
     if (editing?.isRich) return;
 
     isDraggingRef.current = false;
@@ -168,7 +168,6 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
     }
   };
 
-  /* Inline rich-editor: элемент по id (мировые координаты + реальный размер). */
   const editingRichElement =
     editing && editing.isRich
       ? slide.elements.find(
@@ -199,15 +198,9 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
         onContextMenu={(e) => {
           if (e.target !== e.target.getStage()) return;
           e.evt.preventDefault();
-          modalsStore.setContextMenu({
-            x: e.evt.clientX,
-            y: e.evt.clientY,
-            elementId: null,
-          });
+          modalsStore.setContextMenu({ x: e.evt.clientX, y: e.evt.clientY, elementId: null });
         }}
-        style={{
-          cursor: viewport.isPanning ? 'grab' : fillMode ? 'crosshair' : 'default',
-        }}
+        style={{ cursor: viewport.isPanning ? 'grab' : fillMode ? 'crosshair' : 'default' }}
       >
         <Layer listening={false}>
           <Rect x={0} y={0} width={slide.width} height={slide.height} fill={slide.background} />
@@ -252,17 +245,11 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
                 const clientY = 'clientY' in evt ? evt.clientY : 0;
                 const rect = stage.container().getBoundingClientRect();
                 dbl.handle(el, {
-                  viewportLeft: rect.left,
-                  viewportTop: rect.top,
-                  clientX,
-                  clientY,
+                  viewportLeft: rect.left, viewportTop: rect.top, clientX, clientY,
                 });
               }}
               onDragStart={(e) => {
-                if (draft.isDrafting() || viewport.isPanning) {
-                  e.target.stopDrag();
-                  return;
-                }
+                if (draft.isDrafting() || viewport.isPanning) { e.target.stopDrag(); return; }
                 drag.onDragStart(el, e);
                 isDraggingRef.current = true;
               }}
@@ -275,13 +262,9 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
                 ev.evt.preventDefault();
                 ev.cancelBubble = true;
                 const current = selStore.getState().selectedIds;
-                if (!current.includes(el.id)) {
-                  selStore.setIds([el.id]);
-                }
+                if (!current.includes(el.id)) selStore.setIds([el.id]);
                 modalsStore.setContextMenu({
-                  x: ev.evt.clientX,
-                  y: ev.evt.clientY,
-                  elementId: el.id,
+                  x: ev.evt.clientX, y: ev.evt.clientY, elementId: el.id,
                 });
               }}
             />
@@ -365,7 +348,6 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
                       }
                     }
                   }
-
                   if (target.clipPathId) {
                     const clipper = s.elements.find((e) => e.id === target.clipPathId);
                     if (clipper) {
@@ -397,6 +379,8 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
           listening={!fillMode}
           editorMode={editorMode}
         />
+
+        <DataHighlightLayer slide={slide} zoom={zoom} active={dataHighlight} />
       </Stage>
 
       {editingRichElement && editing && (

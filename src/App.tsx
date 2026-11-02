@@ -10,25 +10,21 @@ import { ProtectedRoute } from './auth/ProtectedRoute';
 import { WorkspaceLayout } from './workspace/components/WorkspaceLayout';
 import { WorkspaceHome } from './workspace/components/WorkspaceHome';
 import { EditorPage } from './workspace/components/EditorPage';
+import { SchemasPage } from '@/features/schemas/ui/SchemasPage';
+import { SchemaEditorPage } from '@/features/schemas/ui/SchemaEditorPage';
+import { ModelsPage } from '@/features/data-models/ui/ModelsPage';
 
 const App: React.FC = () => {
   const offline = useStore(authStore, (s) => s.offline);
 
-  useEffect(() => {
-    void authStore.bootstrap();
-  }, []);
+  useEffect(() => { void authStore.bootstrap(); }, []);
 
   const basename = import.meta.env.BASE_URL;
 
   return (
     <BrowserRouter basename={basename} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-      {offline && (
-        <div style={{ padding: '8px 16px', background: '#fffbeb', color: '#92400e', textAlign: 'center', fontSize: 13, borderBottom: '1px solid #fde68a', zIndex: 9999, position: 'relative' }}>
-          ⚠️ Бэкенд недоступен. Вы работаете в локальном режиме. Изменения сохраняются в этом браузере.
-        </div>
-      )}
-
-      <div style={{ display: 'flex', flexDirection: 'column', height: offline ? 'calc(100vh - 37px)' : '100vh' }}>
+      {offline && <div className="offline-banner">⚠️ Бэкенд недоступен. Локальный режим.</div>}
+      <div className="app-root" style={{ height: offline ? 'calc(100vh - 37px)' : '100vh' }}>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
@@ -37,6 +33,10 @@ const App: React.FC = () => {
           <Route path="/" element={<ProtectedRoute><WorkspaceLayout /></ProtectedRoute>}>
             <Route index element={offline ? <Navigate to="/editor/local" replace /> : <WorkspaceHome />} />
             <Route path="editor/:docId" element={<EditorPage />} />
+            <Route path="schemas" element={<SchemasPage />} />
+            <Route path="schemas/new" element={<SchemaEditorPage />} />
+            <Route path="schemas/:schemaId" element={<SchemaEditorPage />} />
+            <Route path="data-models" element={<ModelsPage />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

@@ -9,6 +9,8 @@ import { fillToKonva } from '@/lib/graphics/fills';
 import { useDocumentStore } from '@/ui/providers/EditorProvider';
 import { ShapePrimitive } from '../shapes/ShapePrimitive';
 import { ShapeHandles } from '../shapes/ShapeHandles';
+import { useActiveModelValues } from '@/features/data-models/state/useActiveModelValues';
+import { resolveWithValues } from '@/lib/modelBinding';
 
 interface Props extends CommonProps<ShapeElement> {
   el: ShapeElement;
@@ -91,6 +93,7 @@ export const ShapeEl: React.FC<Props> = ({
   const w = el.width;
   const h = el.height;
 
+  const modelValues = useActiveModelValues();
   const [localPolygonPoints, setLocalPolygonPoints] = useState<number[] | null>(null);
   const [localStarRatio, setLocalStarRatio] = useState<number | null>(null);
   const [isDraggingHandle, setIsDraggingHandle] = useState(false);
@@ -171,7 +174,8 @@ export const ShapeEl: React.FC<Props> = ({
     }
   };
 
-  const textStr = String(activeEl.text || '');
+  // Live-preview: {{path}} → значение
+  const textStr = resolveWithValues(String(activeEl.text || ''), modelValues);
   const hasText = textStr.length > 0;
   const fontSize = activeEl.fontSize || 18;
   const tPad = activeEl.textPadding || { top: 8, right: 8, bottom: 8, left: 8 };
@@ -191,8 +195,6 @@ export const ShapeEl: React.FC<Props> = ({
     tx = (w - tw) / 2; ty = (h - th) / 2;
   }
 
-  // textLineHeight опционален в ShapeElement. Дефолт 1.3 совпадает
-  // с newShape() из lib/factories.ts.
   const textLineHeight = activeEl.textLineHeight ?? 1.3;
   const lineBoxOffset = activeEl.textVerticalAlign === 'top'
     ? ((textLineHeight - 1) * fontSize) / 2

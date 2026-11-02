@@ -162,8 +162,33 @@ export function makePlaceholder(
   };
 }
 
+/**
+ * Массив → горизонтальная таблица:
+ *   заголовок = имена полей из arrayChildren;
+ *   каждая строка = один элемент массива.
+ *
+ * Пример:
+ *   payload.path = "event.items"
+ *   arrayChildren = [{ name: "code" }, { name: "name" }, { name: "value" }]
+ *   sampleCount = 3
+ *
+ *   data = [
+ *     ["code",                    "name",                    "value"],
+ *     ["{{event.items[0].code}}", "{{event.items[0].name}}", "{{event.items[0].value}}"],
+ *     ["{{event.items[1].code}}", "{{event.items[1].name}}", "{{event.items[1].value}}"],
+ *     ["{{event.items[2].code}}", "{{event.items[2].name}}", "{{event.items[2].value}}"],
+ *   ]
+ *
+ * Если arrayChildren пуст (массив скаляров) — одна колонка "значение":
+ *   data = [
+ *     ["значение"],
+ *     ["{{event.tags[0]}}"],
+ *     ["{{event.tags[1]}}"],
+ *   ]
+ */
 export function makeArrayTable(
-  x: number, y: number,
+  x: number,
+  y: number,
   payload: {
     path: string;
     arrayName: string;
@@ -173,22 +198,38 @@ export function makeArrayTable(
 ): TableElement {
   const children = payload.arrayChildren || [];
   const count = Math.max(1, payload.sampleCount ?? 3);
-  const header: string[] = ['Атрибут'];
-  for (let i = 0; i < count; i++) header.push(`#${i + 1}`);
+
+  const header: string[] =
+    children.length > 0
+      ? children.map((c) => c.name)
+      : ['значение'];
+
   const data: string[][] = [header];
-  children.forEach((child) => {
-    const row: string[] = [child.name];
-    for (let i = 0; i < count; i++) row.push(`{{${payload.path}[${i}].${child.name}}}`);
+  for (let i = 0; i < count; i++) {
+    const row: string[] =
+      children.length > 0
+        ? children.map((c) => `{{${payload.path}[${i}].${c.name}}}`)
+        : [`{{${payload.path}[${i}]}}`];
     data.push(row);
-  });
+  }
+
   const rows = data.length;
-  const cols = 1 + count;
+  const cols = Math.max(1, header.length);
+
   return {
-    id: uid(), type: 'table',
-    x: Math.max(0, x - 100), y: Math.max(0, y - 20),
-    width: 40 + cols * 120, height: 20 + rows * 32, rotation: 0,
-    rows, cols, data,
-    borderColor: '#cbd5e1', headerBg: '#eef2ff', fontSize: 13,
+    id: uid(),
+    type: 'table',
+    x: Math.max(0, x - 100),
+    y: Math.max(0, y - 20),
+    width: Math.max(240, 40 + cols * 120),
+    height: 20 + rows * 32,
+    rotation: 0,
+    rows,
+    cols,
+    data,
+    borderColor: '#cbd5e1',
+    headerBg: '#eef2ff',
+    fontSize: 13,
   };
 }
 
@@ -233,11 +274,6 @@ export function newQr(x = 100, y = 100, size = 200): QrElement {
   };
 }
 
-/**
- * Пустая диаграмма draw.io.
- * SVG и XML пустые — пользователь откроет drawio двойным кликом,
- * нарисует что-то, сохранит. После этого SVG появится на холсте.
- */
 export function newDiagram(x = 200, y = 200): DiagramElement {
   return {
     id: uid(),

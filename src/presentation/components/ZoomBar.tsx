@@ -5,9 +5,14 @@ interface Props {
   onChange: (z: number) => void;
   selectedCount?: number;
   fillMode?: boolean;
+  dataHighlight?: boolean;
+  onToggleDataHighlight?: () => void;
 }
 
-export const ZoomBar: React.FC<Props> = ({ zoom, onChange, selectedCount, fillMode }) => (
+export const ZoomBar: React.FC<Props> = ({
+  zoom, onChange, selectedCount, fillMode,
+  dataHighlight, onToggleDataHighlight,
+}) => (
   <div className="zoom-bar">
     <button onClick={() => onChange(Math.max(0.2, +(zoom - 0.1).toFixed(2)))}>−</button>
     <span>{Math.round(zoom * 100)}%</span>
@@ -17,5 +22,15 @@ export const ZoomBar: React.FC<Props> = ({ zoom, onChange, selectedCount, fillMo
       <span className="style-badge">Выбрано: {selectedCount}</span>
     )}
     {fillMode && <span className="style-badge">🎨 Заливка</span>}
+    {onToggleDataHighlight && (
+      <button
+        onClick={onToggleDataHighlight}
+        className={dataHighlight ? 'active' : ''}
+        title="Показать, где на холсте используются данные"
+        style={dataHighlight ? { background: '#eef2ff', borderColor: '#6366f1', color: '#4f46e5' } : undefined}
+      >
+        🏷 Данные
+      </button>
+    )}
   </div>
 );

@@ -23,6 +23,7 @@ export default defineConfig({
       '@/lib': path.resolve(ROOT, 'src/lib'),
       '@/auth': path.resolve(ROOT, 'src/auth'),
       '@/workspace': path.resolve(ROOT, 'src/workspace'),
+      '@/features': path.resolve(ROOT, 'src/features'),
     },
   },
   // Vite читает .env* и подставляет import.meta.env.VITE_* при сборке.

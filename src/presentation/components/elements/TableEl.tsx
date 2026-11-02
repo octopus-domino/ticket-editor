@@ -2,6 +2,8 @@
 import { Group, Rect, Text } from 'react-konva';
 import type { TableElement } from '@/shared/types';
 import type { CommonProps } from './types';
+import { useActiveModelValues } from '@/features/data-models/state/useActiveModelValues';
+import { resolveWithValues } from '@/lib/modelBinding';
 
 interface Props extends CommonProps<TableElement> {
   el: TableElement;
@@ -12,6 +14,7 @@ export const TableEl: React.FC<Props> = ({
   el, onSelect, onDragStart, onDragMove, onDragEnd,
   onContextMenu, onDblClick,
 }) => {
+  const modelValues = useActiveModelValues();
   const cellW = el.width / el.cols;
   const cellH = el.height / el.rows;
   const cells: React.ReactNode[] = [];
@@ -33,10 +36,27 @@ export const TableEl: React.FC<Props> = ({
           strokeScaleEnabled={false}
         />
       );
-      const cellText = el.data[r]?.[c] ?? '';
-      const isPh = /\{\{[^}]+\}\}/.test(cellText);
+      const raw = el.data[r]?.[c] ?? '';
+      const isPh = /\{\{[^}]+\}\}/.test(raw);
+      const display = resolveWithValues(raw, modelValues);
+      // Ячейка ещё не подставлена, если после resolve остались {{...}}
+      const stillUnresolved = /\{\{[^}]+\}\}/.test(display);
+
       texts.push(
-        <Text key={`t-${r}-${c}`} x={c * cellW + 6} y={r * cellH + 6} width={Math.max(1, cellW - 12)} height={Math.max(1, cellH - 12)} text={cellText} fontSize={el.fontSize} fill={isPh ? '#2563eb' : '#111'} fontStyle={isPh ? 'italic' : 'normal'} wrap="word" ellipsis listening={false} />
+        <Text
+          key={`t-${r}-${c}`}
+          x={c * cellW + 6}
+          y={r * cellH + 6}
+          width={Math.max(1, cellW - 12)}
+          height={Math.max(1, cellH - 12)}
+          text={display}
+          fontSize={el.fontSize}
+          fill={stillUnresolved && isPh ? '#2563eb' : '#111'}
+          fontStyle={stillUnresolved && isPh ? 'italic' : 'normal'}
+          wrap="word"
+          ellipsis
+          listening={false}
+        />
       );
     }
   }

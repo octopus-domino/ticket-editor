@@ -1,10 +1,13 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Editor } from '@/presentation/components/Editor';
 import { workspaceApi } from '../api';
 import type { DocumentFull } from '../types';
 import { createSlide } from '@/domain/slide/operations';
 import type { Slide, DataRoot } from '@/shared/types';
+import { schemaStore } from '@/features/schemas/state/SchemaStore';
+import { modelStore } from '@/features/data-models/state/ModelStore';
+import { schemaFromLegacyData, modelFromLegacyData } from '@/features/schemas/domain/SchemaInference';
 
 interface HydratedDoc {
   slides: Slide[];
@@ -13,6 +16,7 @@ interface HydratedDoc {
 }
 
 const OFFLINE_KEY = 'ticket-editor:offline-doc';
+const SCHEMA_KEY = 'ticket-editor:schemaId';
 
 function parseContent(content: string): HydratedDoc {
   try {
@@ -38,8 +42,9 @@ export const EditorPage: React.FC = () => {
   const [doc, setDoc] = useState<DocumentFull | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   const isLocal = docId === 'local';
+  const migratedRef = useRef(false);
 
   useEffect(() => {
     if (isLocal) {
@@ -65,6 +70,31 @@ export const EditorPage: React.FC = () => {
       .catch((e) => { if (!cancelled) { setError((e as Error).message); setLoading(false); } });
     return () => { cancelled = true; };
   }, [docId, isLocal]);
+
+  // P0.3 — Legacy migration: DataRoot[] → Schema + Model (однократно, при первом открытии)
+  useEffect(() => {
+    if (!doc || migratedRef.current) return;
+    migratedRef.current = true;
+
+    const initial = parseContent(doc.content);
+    if (initial.data.length === 0) return;
+
+    // если схема уже выбрана — миграция не нужна
+    if (localStorage.getItem(SCHEMA_KEY)) return;
+
+    void (async () => {
+      try {
+        const { name, fields } = schemaFromLegacyData(initial.data);
+        if (fields.length === 0) return;
+        const schema = await schemaStore.create({ name, fields });
+        const values = modelFromLegacyData(initial.data);
+        await modelStore.create(schema.id, 'Импорт из документа', values);
+        console.info('[migration] legacy data → schema/model created', schema.id);
+      } catch (e) {
+        console.warn('[migration] failed (offline?)', e);
+      }
+    })();
+  }, [doc]);
 
   const handleSave = useCallback(async (state: HydratedDoc) => {
     if (isLocal) {

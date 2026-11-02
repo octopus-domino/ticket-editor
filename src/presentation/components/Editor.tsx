@@ -36,6 +36,7 @@ import { useStampCommit } from '../hooks/editor/useStampCommit';
 import { useDiagramCommit } from '../hooks/editor/useDiagramCommit';
 import { useClipboardActions } from '../hooks/editor/useClipboardActions';
 import { useStyleClipboard } from '../hooks/editor/useStyleClipboard';
+import { useModelSync } from '@/features/data-models/state/useModelSync';
 import { Canvas } from './Canvas';
 import { LeftPanel } from './LeftPanel';
 import { RightPanel } from './RightPanel';
@@ -50,8 +51,7 @@ import { isFeatureEnabled } from '@/shared/flags';
 import type { TextStylePatch } from './TextToolbar';
 import { generateIdWithPrefix } from '@/shared/utils/id';
 import { fixGroupBoundsInPlace } from '@/lib/migrations';
-
-/* ---------- Lazy-модалки ---------- */
+import { resetFillRasterizer } from '@/lib/stamps/fillRasterizer';
 
 const InlineEditorHost = lazy(() =>
   import('./InlineEditorHost').then((m) => ({ default: m.InlineEditorHost })),
@@ -66,8 +66,6 @@ const TextToolbar = lazy(() =>
   import('./TextToolbar').then((m) => ({ default: m.TextToolbar })),
 );
 
-/* ---------- public props ---------- */
-
 export interface EditorInitialDoc {
   slides: Slide[];
   data: DataRoot[];
@@ -79,8 +77,6 @@ export interface EditorProps {
   initialDoc?: EditorInitialDoc;
   onSave?: (state: EditorInitialDoc) => Promise<void>;
 }
-
-/* ---------- pure helpers ---------- */
 
 function buildTextPatch(patch: TextStylePatch): Partial<TextElement> {
   const out: Partial<TextElement> = {};
@@ -121,8 +117,6 @@ function applyTextStylePatch(
   return {};
 }
 
-/* ---------- backend autosave ---------- */
-
 function useBackendAutoSave(
   slides: Slide[],
   data: DataRoot[],
@@ -148,8 +142,6 @@ function useBackendAutoSave(
   }, [slides, data, activeId, onSave]);
 }
 
-/* ---------- layout ---------- */
-
 interface EditorLayoutProps {
   onSave?: (state: EditorInitialDoc) => Promise<void>;
 }
@@ -158,6 +150,8 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave }) => {
   const docStore = useDocumentStore();
   const selStore = useSelectionStore();
   const modalsStore = useModalsStore();
+
+  useModelSync();
 
   const slides = useStore(docStore, (s) => s.slides);
   const activeId = useStore(docStore, (s) => s.activeId);
@@ -172,6 +166,13 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave }) => {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(1);
   const [liveMessage, setLiveMessage] = useState('');
+
+  const [toast, setToast] = useState<string | null>(null);
+  useEffect(() => {
+    if (!toast) return;
+    const t = window.setTimeout(() => setToast(null), 3500);
+    return () => window.clearTimeout(t);
+  }, [toast]);
 
   useEffect(() => {
     if (onSave) return;
@@ -341,14 +342,11 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave }) => {
     const state = docStore.getState();
     const slide = state.slides.find((x) => x.id === state.activeId);
     if (!slide) return;
-
     const groupId = selectedIds.find((id) => {
       const el = slide.elements.find((e) => e.id === id);
       return el?.type === 'group';
     });
-
     if (!groupId) return;
-
     docStore.commit((draft) => {
       const s = draft.slides.find((x) => x.id === draft.activeId);
       if (!s) return;
@@ -364,22 +362,14 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave }) => {
     docStore.commit((draft) => {
       const s = draft.slides.find((x) => x.id === draft.activeId);
       if (!s) return;
-
       const i = s.elements.findIndex((e) => e.id === id);
       if (i < 0) return;
-
       const el = s.elements[i];
       s.elements.splice(i, 1);
-
       if (dir === 'front') s.elements.push(el);
       else if (dir === 'back') s.elements.unshift(el);
-      else if (dir === 'forward') {
-        const j = Math.min(s.elements.length, i + 1);
-        s.elements.splice(j, 0, el);
-      } else if (dir === 'backward') {
-        const j = Math.max(0, i - 1);
-        s.elements.splice(j, 0, el);
-      }
+      else if (dir === 'forward') s.elements.splice(Math.min(s.elements.length, i + 1), 0, el);
+      else if (dir === 'backward') s.elements.splice(Math.max(0, i - 1), 0, el);
     }, `layer-${id}`);
   };
 
@@ -390,10 +380,8 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave }) => {
       if (!s) return;
       s.elements = s.elements.filter((el) => {
         if (selectedIds.includes(el.id)) return false;
-        if (
-          el.type === 'connector' &&
-          (selectedIds.includes(el.fromId) || selectedIds.includes(el.toId))
-        ) return false;
+        if (el.type === 'connector' &&
+            (selectedIds.includes(el.fromId) || selectedIds.includes(el.toId))) return false;
         return true;
       });
     }, 'delete');
@@ -410,33 +398,16 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave }) => {
     }, `update-${selectedElement.id}`);
   };
 
-  const simpleTextEditing =
-    !!editing &&
-    !editing.isRich &&
-    (editing.kind === 'text' || editing.kind === 'shape');
-
-  const showStampEditor =
-    !!stampElement &&
-    stampElement.type === 'stamp' &&
-    isFeatureEnabled('FEATURE_STAMP_EDITOR');
-
-  const showDiagramEditor =
-    !!diagramElement &&
-    diagramElement.type === 'diagram' &&
-    isFeatureEnabled('FEATURE_DIAGRAM');
-
-  /* Rich-редактор рендерится внутри Canvas (inline). Здесь — только plain. */
+  const simpleTextEditing = !!editing && !editing.isRich && (editing.kind === 'text' || editing.kind === 'shape');
+  const showStampEditor = !!stampElement && stampElement.type === 'stamp' && isFeatureEnabled('FEATURE_STAMP_EDITOR');
+  const showDiagramEditor = !!diagramElement && diagramElement.type === 'diagram' && isFeatureEnabled('FEATURE_DIAGRAM');
   const showPlainInlineEditor = !!editing && !editing.isRich;
 
   return (
     <div className="editor-shell" role="application" aria-label="Редактор билетов">
       {isFeatureEnabled('FEATURE_SHOW_MIGRATION_BANNER') && (
         <MigrationBanner
-          rollbackUrl={
-            isFeatureEnabled('FEATURE_SHOW_ROLLBACK_BUTTON')
-              ? '/?legacy=1'
-              : undefined
-          }
+          rollbackUrl={isFeatureEnabled('FEATURE_SHOW_ROLLBACK_BUTTON') ? '/?legacy=1' : undefined}
         />
       )}
 
@@ -452,14 +423,11 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave }) => {
             onChange={setZoom}
             selectedCount={selectedIds.length}
             fillMode={modalsStore.getState().fillMode}
+            dataHighlight={modalsStore.getState().dataHighlight}
+            onToggleDataHighlight={() => modalsStore.toggleDataHighlight()}
           />
           <ErrorBoundary fallback={<div style={{ padding: 20 }}>Ошибка в холсте</div>}>
-            <Canvas
-              slide={activeSlide}
-              zoom={zoom}
-              onZoomChange={setZoom}
-              wrapRef={wrapRef}
-            />
+            <Canvas slide={activeSlide} zoom={zoom} onZoomChange={setZoom} wrapRef={wrapRef} />
           </ErrorBoundary>
 
           {simpleTextEditing && editing && (
@@ -515,7 +483,7 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave }) => {
           onCopyAsJson={() => { copyAsJson(contextSelected); closeContextMenu(); }}
           onPasteFromJson={() => {
             const res = pasteFromJson();
-            if (!res.ok) alert(res.error || 'Не удалось вставить JSON');
+            if (!res.ok) setToast(res.error || 'Не удалось вставить JSON');
             closeContextMenu();
           }}
           canPasteJson={canPasteJson}
@@ -583,33 +551,20 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave }) => {
         </ErrorBoundary>
       )}
 
-      <div
-        className="sr-only"
-        role="status"
-        aria-live="polite"
-        aria-atomic="true"
-      >
+      {toast && <div className="toast">{toast}</div>}
+
+      <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
         {liveMessage}
       </div>
     </div>
   );
 };
 
-/* ---------- public component ---------- */
-
-export const Editor: React.FC<EditorProps> = ({
-  documentId,
-  initialDoc,
-  onSave,
-}) => {
+export const Editor: React.FC<EditorProps> = ({ documentId, initialDoc, onSave }) => {
   const stores = useMemo(
     () => {
       const initial: InitialDocument | undefined = initialDoc
-        ? {
-            slides: initialDoc.slides,
-            data: initialDoc.data,
-            activeId: initialDoc.activeId,
-          }
+        ? { slides: initialDoc.slides, data: initialDoc.data, activeId: initialDoc.activeId }
         : undefined;
       return {
         document: new DocumentStore(initial),
@@ -621,6 +576,15 @@ export const Editor: React.FC<EditorProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [documentId],
   );
+
+  // H6: при unmount редактора (или смене документа) гасим fill-worker и
+  // чистим его кэш (32 MB). Иначе worker остаётся жить — при HMR и при
+  // смене документа копятся экземпляры.
+  useEffect(() => {
+    return () => {
+      resetFillRasterizer();
+    };
+  }, [documentId]);
 
   return (
     <EditorProvider stores={stores}>

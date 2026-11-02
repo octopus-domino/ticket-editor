@@ -5,11 +5,14 @@ import type { DocumentStore } from '@/infra/state/DocumentStore';
 import {
   makeArrayTable, makePlaceholder, newText, newSimpleText, newFooter,
   newTable, newLine, newShape, newPath, newChart, newQr,
-  newDiagram, // ← ДОБАВЛЕНО
+  newDiagram,
 } from '@/lib/factories';
-import { resolveSample } from '@/lib/resolveSample';
 import { newStampFromTemplate } from '@/lib/stamps/factories';
 import { getAllStamps } from '@/lib/stamps/library';
+import type { StampTemplate } from '@/lib/stamps/library';
+import { modelStore } from '@/features/data-models/state/ModelStore';
+import { getByPath, appendPlaceholderPatch } from '@/lib/modelBinding';
+import type { CanvasElement } from '@/shared/types';
 
 export function useCanvasDrop(params: {
   docStore: DocumentStore;
@@ -36,6 +39,9 @@ export function useCanvasDrop(params: {
     const x = (e.clientX - rect.left) / zoom;
     const y = (e.clientY - rect.top) / zoom;
 
+    /* ============================================================
+       Array → TableElement
+       ============================================================ */
     if (payload.kind === 'array') {
       const tbl = makeArrayTable(x, y, payload);
       docStore.commit((draft) => {
@@ -56,20 +62,96 @@ export function useCanvasDrop(params: {
       return;
     }
 
+    /* ============================================================
+       Field: drop на существующий или новый элемент
+       ============================================================ */
     if (payload.kind === 'field') {
-      const data = docStore.getState().data;
-      const sample = resolveSample(data, payload.path) ?? payload.sample ?? '';
-      const ph = makePlaceholder(x, y, payload.path, payload.fieldType, sample);
+      let sample = payload.sample ?? '';
+      const mState = modelStore.getState();
+      const activeModel = mState.models.find((m) => m.id === mState.selectedId);
+      if (activeModel) {
+        const v = getByPath(activeModel.values, payload.path);
+        if (v !== undefined && v !== null) sample = String(v);
+      }
+
+      const state = docStore.getState();
+      const slide = state.slides.find((s) => s.id === state.activeId);
+      if (!slide) return;
+
+      const hits: CanvasElement[] = [];
+      for (let i = slide.elements.length - 1; i >= 0; i--) {
+        const el = slide.elements[i];
+        if (x >= el.x && x <= el.x + el.width && y >= el.y && y <= el.y + el.height) {
+          hits.push(el);
+        }
+      }
+      const target = hits.find((el) =>
+        el.type === 'text' || el.type === 'shape' || el.type === 'footer' || el.type === 'placeholder',
+      );
+
+      if (target && target.type === 'placeholder') {
+        docStore.commit((draft) => {
+          const s = draft.slides.find((xx) => xx.id === draft.activeId);
+          const t = s?.elements.find((e) => e.id === target.id);
+          if (t && t.type === 'placeholder') {
+            t.fieldPath = payload.path;
+            t.label = payload.path;
+            t.sample = sample;
+          }
+        }, `drop-field-replace-${target.id}`);
+        return;
+      }
+
+      if (target && (target.type === 'text' || target.type === 'shape' || target.type === 'footer')) {
+        const localX = x - target.x;
+        const localY = y - target.y;
+        const patch = appendPlaceholderPatch(target, payload.path, { localX, localY });
+        if (Object.keys(patch).length > 0) {
+          docStore.commit((draft) => {
+            const s = draft.slides.find((xx) => xx.id === draft.activeId);
+            const t = s?.elements.find((e) => e.id === target.id);
+            if (t) Object.assign(t, patch);
+          }, `drop-field-insert-${target.id}`);
+          return;
+        }
+      }
+
+      if (payload.fieldType === 'image') {
+        const ph = makePlaceholder(x, y, payload.path, 'image', sample);
+        docStore.commit((draft) => {
+          const s = draft.slides.find((xx) => xx.id === draft.activeId);
+          if (s) s.elements.push(ph);
+        }, 'drop-field-image');
+        return;
+      }
+
+      const text = newText(x, y);
+      text.text = `{{${payload.path}}}`;
+      text.html = `<p>{{${payload.path}}}</p>`;
+      text.width = Math.max(140, Math.min(400, payload.path.length * 12 + 60));
       docStore.commit((draft) => {
         const s = draft.slides.find((xx) => xx.id === draft.activeId);
-        if (s) s.elements.push(ph);
-      }, 'drop-field');
+        if (s) s.elements.push(text);
+      }, 'drop-field-text');
       return;
     }
 
+    /* ============================================================
+       Stamp template — ИСПРАВЛЕНО
+       payload = { kind: 'stamp-template', template: StampTemplate }
+       ============================================================ */
     if (payload.kind === 'stamp-template') {
-      const tpl = getAllStamps().find((t) => t.id === payload.templateId);
-      if (!tpl) return;
+      const inline: StampTemplate | undefined = payload.template;
+      const tpl =
+        inline && inline.id && inline.shapes && inline.texts
+          ? inline
+          : (inline?.id ? getAllStamps().find((t) => t.id === inline.id) : undefined);
+
+      if (!tpl) {
+        console.warn('[drop] stamp-template: missing payload.template');
+        return;
+      }
+
       const stamp = newStampFromTemplate(tpl, x, y);
       docStore.commit((draft) => {
         const s = draft.slides.find((xx) => xx.id === draft.activeId);
@@ -78,10 +160,13 @@ export function useCanvasDrop(params: {
       return;
     }
 
+    /* ============================================================
+       Generic new-element (все элементы из LeftPanel)
+       ============================================================ */
     if (payload.kind === 'new-element') {
       const cx = Math.max(0, x - 100);
       const cy = Math.max(0, y - 60);
-      let el: any = null;
+      let el: CanvasElement | null = null;
       switch (payload.elementType) {
         case 'text': el = newText(cx, cy); break;
         case 'simple-text': el = newSimpleText(cx, cy); break;
@@ -109,10 +194,7 @@ export function useCanvasDrop(params: {
         case 'chart-bar': el = newChart('bar', cx, cy); break;
         case 'chart-donut': el = newChart('donut', cx, cy); break;
         case 'qr': el = newQr(cx, cy); break;
-        
-        // НОВЫЙ КЕЙС: Диаграмма (drawio)
         case 'diagram': el = newDiagram(cx, cy); break;
-        
         default: return;
       }
       if (el) {

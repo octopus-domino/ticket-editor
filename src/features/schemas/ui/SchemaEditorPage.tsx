@@ -16,12 +16,7 @@ function makeDraft(): DraftField {
 
 const TYPES: FieldType[] = ['string', 'number', 'date', 'boolean', 'image', 'object', 'array'];
 
-/**
- * Из плоского списка FieldDef[] собирает дерево DraftField[].
- * Родитель-контейнер (array/object) забирает в себя детей по префиксу пути.
- * Если родителя в списке нет — путь оставляем плоским (idempotent для ручных плоских схем).
- */
-function unflattenFields(flat: FieldDef[]): DraftField[] {
+function unflattenFields(flat: readonly FieldDef[]): DraftField[] {
   const byFullPath = new Map<string, DraftField>();
   const result: DraftField[] = [];
 
@@ -56,10 +51,6 @@ function unflattenFields(flat: FieldDef[]): DraftField[] {
   return result;
 }
 
-/**
- * Обратное к unflattenFields: разворачивает дерево в плоский список путей.
- * И контейнер, и его дети сохраняются отдельными FieldDef.
- */
 function stripDraft(fields: DraftField[]): FieldDef[] {
   const out: FieldDef[] = [];
 
@@ -95,7 +86,7 @@ export const SchemaEditorPage: React.FC = () => {
 
   useEffect(() => {
     if (!schemaId) return;
-    const apply = (schema: { name: string; fields: FieldDef[] }) => {
+    const apply = (schema: { name: string; fields: readonly FieldDef[] }) => {
       setName(schema.name);
       setFields(unflattenFields(schema.fields));
     };
@@ -159,12 +150,21 @@ export const SchemaEditorPage: React.FC = () => {
           </button>
         </div>
         <FieldTree fields={fields} onChange={setFields} />
-        <button type="button" className="schema-btn-add" onClick={() => setFields((prev) => [...prev, makeDraft()])}>
+        <button
+          type="button"
+          className="schema-btn-add"
+          onClick={() => setFields((prev) => [...prev, makeDraft()])}
+        >
           + Добавить поле
         </button>
         {error && <div className="schema-error">{error}</div>}
         <div className="schema-actions">
-          <button type="button" className="schema-btn-submit" onClick={() => void submit()} disabled={busy}>
+          <button
+            type="button"
+            className="schema-btn-submit"
+            onClick={() => void submit()}
+            disabled={busy}
+          >
             {busy ? 'Сохранение…' : 'Сохранить'}
           </button>
         </div>
@@ -173,9 +173,11 @@ export const SchemaEditorPage: React.FC = () => {
   );
 };
 
-const FieldTree: React.FC<{ fields: DraftField[]; onChange: (f: DraftField[]) => void; depth?: number }> = ({
-  fields, onChange, depth = 0,
-}) => {
+const FieldTree: React.FC<{
+  fields: DraftField[];
+  onChange: (f: DraftField[]) => void;
+  depth?: number;
+}> = ({ fields, onChange, depth = 0 }) => {
   const update = (key: string, patch: Partial<DraftField>): void => {
     const walk = (arr: DraftField[]): DraftField[] =>
       arr.map((f) => {
@@ -207,20 +209,38 @@ const FieldTree: React.FC<{ fields: DraftField[]; onChange: (f: DraftField[]) =>
         return (
           <div key={f.key} className="schema-field-block">
             <div className="schema-field-row">
-              <input type="text" value={f.path} placeholder="event.title" onChange={(e) => update(f.key, { path: e.target.value })} />
-              <select value={f.type} onChange={(e) => update(f.key, { type: e.target.value as FieldType })}>
+              <input
+                type="text"
+                value={f.path}
+                placeholder="event.title"
+                onChange={(e) => update(f.key, { path: e.target.value })}
+              />
+              <select
+                value={f.type}
+                onChange={(e) => update(f.key, { type: e.target.value as FieldType })}
+              >
                 {TYPES.map((t) => <option key={t} value={t}>{FIELD_TYPE_LABEL[t]}</option>)}
               </select>
               <label>
-                <input type="checkbox" checked={f.required} onChange={(e) => update(f.key, { required: e.target.checked })} />
-                обязат.
+                <input
+                  type="checkbox"
+                  checked={f.required}
+                  onChange={(e) => update(f.key, { required: e.target.checked })}
+                />
+                обяз.
               </label>
               <button className="schema-btn-remove" onClick={() => remove(f.key)}>×</button>
             </div>
             {isContainer && (
               <>
-                <FieldTree fields={f.children ?? []} onChange={(c) => update(f.key, { children: c })} depth={depth + 1} />
-                <button className="schema-btn-add" onClick={() => addChild(f.key)}>+ дочернее поле</button>
+                <FieldTree
+                  fields={f.children ?? []}
+                  onChange={(c) => update(f.key, { children: c })}
+                  depth={depth + 1}
+                />
+                <button className="schema-btn-add" onClick={() => addChild(f.key)}>
+                  + дочернее поле
+                </button>
               </>
             )}
           </div>

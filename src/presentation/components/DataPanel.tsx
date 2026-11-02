@@ -21,6 +21,7 @@ export const DataPanel: React.FC = () => {
     if (activeSchema) {
       void modelStore.load(activeSchema.id);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSchema?.id]);
 
   const createFromDocument = async (): Promise<void> => {
@@ -54,7 +55,10 @@ export const DataPanel: React.FC = () => {
       const v = getPath(activeModel.values, path);
       if (v !== undefined && v !== null) sample = String(v);
     }
-    e.dataTransfer.setData('application/json', JSON.stringify({ kind: 'field', path, fieldType: type, sample }));
+    e.dataTransfer.setData(
+      'application/json',
+      JSON.stringify({ kind: 'field', path, fieldType: type, sample }),
+    );
     e.dataTransfer.effectAllowed = 'copy';
   };
 
@@ -64,10 +68,10 @@ export const DataPanel: React.FC = () => {
     const flat = flattenFields(activeSchema.fields);
     const prefix = `${path}.`;
 
-    // Прямые дети массива (без вложенных массивов/объектов)
+    // Явный return type — тогда type predicate ниже компилируется.
     const arrayChildren = flat
       .filter((f) => f.path.startsWith(prefix))
-      .map((f) => {
+      .map((f): { name: string; type: string } | null => {
         const rel = f.path.slice(prefix.length);
         if (rel.includes('.')) return null;
         if (f.type === 'array' || f.type === 'object') return null;
@@ -75,7 +79,6 @@ export const DataPanel: React.FC = () => {
       })
       .filter((c): c is { name: string; type: string } => c !== null);
 
-    // Если в активной модели уже есть данные — берём их длину для sampleCount
     let sampleCount = 3;
     if (activeModel) {
       const arr = getPath(activeModel.values, path);
@@ -107,7 +110,11 @@ export const DataPanel: React.FC = () => {
         <button className="dp-btn-submit" onClick={() => void createFromDocument()}>
           ⤓ Создать из документа
         </button>
-        <button className="dp-btn" onClick={() => void createEmpty()} style={{ marginTop: 8, width: '100%' }}>
+        <button
+          className="dp-btn"
+          onClick={() => void createEmpty()}
+          style={{ marginTop: 8, width: '100%' }}
+        >
           + Пустая схема
         </button>
       </div>
@@ -137,7 +144,12 @@ export const DataPanel: React.FC = () => {
       <div className="dp-section-title">Поля (drag на холст)</div>
       <div className="dp-list">
         {leafFields.map((f) => (
-          <div key={f.path} className="dp-field-chip" draggable onDragStart={(e) => onDragField(e, f.path, f.type)}>
+          <div
+            key={f.path}
+            className="dp-field-chip"
+            draggable
+            onDragStart={(e) => onDragField(e, f.path, f.type)}
+          >
             <span>{f.path}</span>
             <span className="schema-hint">{f.type}</span>
           </div>
@@ -149,7 +161,12 @@ export const DataPanel: React.FC = () => {
         <>
           <div className="dp-section-title">Массивы (drag → таблица)</div>
           {arrayFields.map((f) => (
-            <div key={f.path} className="dp-field-chip" draggable onDragStart={(e) => onDragArray(e, f.path)}>
+            <div
+              key={f.path}
+              className="dp-field-chip"
+              draggable
+              onDragStart={(e) => onDragArray(e, f.path)}
+            >
               <span>{f.path}</span>
               <span className="schema-hint">→ таблица</span>
             </div>

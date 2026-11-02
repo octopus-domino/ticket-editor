@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
-import { jsonDataModelIO } from '../api/FileDataModelIO';
-import type { ImportedModel } from '../api/DataModelRepository';
+import { modelIO, type ImportedModel } from '../api/ModelIO';
 
 interface Props {
   onImport: (models: ImportedModel[]) => Promise<void>;
 }
 
 /**
- * Inline-панель импорта: file-picker + textarea + drag-drop.
+ * Inline-панель импорта: file-picker + textarea.
  * Ошибки — inline, без alert.
  */
 export const DataModelImporter: React.FC<Props> = ({ onImport }) => {
@@ -19,17 +18,23 @@ export const DataModelImporter: React.FC<Props> = ({ onImport }) => {
   const parse = (raw: string): void => {
     setIssues([]);
     setPreview(null);
-    const res = jsonDataModelIO.fromText(raw);
-    if (res.ok) setPreview(res.models);
-    else setIssues(res.issues);
+    const res = modelIO.parse(raw);
+    if (res.ok && res.models) {
+      setPreview(res.models);
+    } else if (res.issues) {
+      setIssues([...res.issues]);
+    }
   };
 
   const handleFile = async (file: File): Promise<void> => {
     setBusy(true);
     try {
-      const res = await jsonDataModelIO.fromFile(file);
-      if (res.ok) setPreview(res.models);
-      else setIssues(res.issues);
+      const res = await modelIO.fromFile(file);
+      if (res.ok && res.models) {
+        setPreview(res.models);
+      } else if (res.issues) {
+        setIssues([...res.issues]);
+      }
     } finally {
       setBusy(false);
     }
@@ -48,8 +53,12 @@ export const DataModelImporter: React.FC<Props> = ({ onImport }) => {
   };
 
   return (
-    <div style={{ padding: 12, background: '#f8fafc', border: '1px dashed #cbd5e1',
-                  borderRadius: 6, margin: 8 }}>
+    <div
+      style={{
+        padding: 12, background: '#f8fafc', border: '1px dashed #cbd5e1',
+        borderRadius: 6, margin: 8,
+      }}
+    >
       <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
         <input
           type="file"
@@ -65,12 +74,18 @@ export const DataModelImporter: React.FC<Props> = ({ onImport }) => {
         value={text}
         onChange={(e) => { setText(e.target.value); parse(e.target.value); }}
         placeholder='Или вставьте JSON: {"items": [{"name": "...", "values": {...}}]}'
-        style={{ width: '100%', minHeight: 80, fontFamily: 'monospace', fontSize: 11,
-                 padding: 6, border: '1px solid #cbd5e1', borderRadius: 4 }}
+        style={{
+          width: '100%', minHeight: 80, fontFamily: 'monospace', fontSize: 11,
+          padding: 6, border: '1px solid #cbd5e1', borderRadius: 4,
+        }}
       />
       {issues.length > 0 && (
-        <div style={{ marginTop: 8, padding: 8, background: '#fef2f2',
-                      border: '1px solid #fecaca', borderRadius: 4, fontSize: 11, color: '#991b1b' }}>
+        <div
+          style={{
+            marginTop: 8, padding: 8, background: '#fef2f2',
+            border: '1px solid #fecaca', borderRadius: 4, fontSize: 11, color: '#991b1b',
+          }}
+        >
           {issues.slice(0, 5).map((i, k) => (
             <div key={k}>#{i.index}: {i.message}</div>
           ))}
@@ -84,15 +99,19 @@ export const DataModelImporter: React.FC<Props> = ({ onImport }) => {
           <button
             onClick={() => void apply()}
             disabled={busy}
-            style={{ padding: '6px 12px', background: '#4f46e5', color: '#fff',
-                     border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
+            style={{
+              padding: '6px 12px', background: '#4f46e5', color: '#fff',
+              border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12,
+            }}
           >
             {busy ? 'Импорт…' : 'Импортировать'}
           </button>
           <button
             onClick={() => { setPreview(null); setText(''); }}
-            style={{ marginLeft: 8, padding: '6px 12px', background: 'transparent',
-                     border: '1px solid #cbd5e1', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
+            style={{
+              marginLeft: 8, padding: '6px 12px', background: 'transparent',
+              border: '1px solid #cbd5e1', borderRadius: 4, cursor: 'pointer', fontSize: 12,
+            }}
           >
             Отмена
           </button>

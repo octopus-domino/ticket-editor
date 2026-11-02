@@ -42,12 +42,12 @@ export class GenerationStore extends SimpleStore<GenState> {
       const { jobId } = await this.client.startJob(req);
       this.pollJob(jobId);
     } catch (e) {
-      this.setState({ phase: 'error', error: (e as Error).message });
+      this.setState({ phase: 'error', result: null, job: null, error: (e as Error).message });
     }
   }
 
   async resumeJob(jobId: string): Promise<void> {
-    this.setState({ phase: 'async-running', error: null });
+    this.setState({ phase: 'async-running', result: null, job: null, error: null });
     this.pollJob(jobId);
   }
 

@@ -3,7 +3,7 @@ import type { DataSchema, FieldDef } from '@/features/schemas/domain/DataSchema'
 import { getPath, setPath } from '../domain/DataModelValidator';
 import { useModelHistory } from '../state/useModelHistory';
 
-function getDirectChildren(fields: FieldDef[], parentPath: string): FieldDef[] {
+function getDirectChildren(fields: readonly FieldDef[], parentPath: string): FieldDef[] {
   const prefix = `${parentPath}.`;
   return fields.filter((f) => {
     if (!f.path.startsWith(prefix)) return false;
@@ -11,7 +11,7 @@ function getDirectChildren(fields: FieldDef[], parentPath: string): FieldDef[] {
   });
 }
 
-function isChildOfArray(fields: FieldDef[], fieldPath: string): boolean {
+function isChildOfArray(fields: readonly FieldDef[], fieldPath: string): boolean {
   const parts = fieldPath.split('.');
   for (let i = 1; i < parts.length; i++) {
     const parentPath = parts.slice(0, i).join('.');
@@ -65,7 +65,6 @@ export const ModelValuesEditor: React.FC<{
 
   const allFields = useMemo(() => schema.fields, [schema]);
 
-  // Отфильтровываем поля, которые являются потомками массива
   const roots = useMemo(
     () => allFields.filter((f) => !isChildOfArray(allFields, f.path)),
     [allFields],
@@ -149,7 +148,6 @@ export const ModelValuesEditor: React.FC<{
       const arr = Array.isArray(val) ? (val as Record<string, unknown>[]) : [];
       const children = getDirectChildren(allFields, path);
 
-      // Если в схеме нет дочерних полей для массива — используем простую JSON-таблицу
       if (children.length === 0) {
         return (
           <div key={path} className="mv-array">
@@ -183,7 +181,11 @@ export const ModelValuesEditor: React.FC<{
                         />
                       </td>
                       <td>
-                        <button type="button" className="dp-btn-danger" onClick={() => setValue(path, arr.filter((_, j) => j !== i))}>
+                        <button
+                          type="button"
+                          className="dp-btn-danger"
+                          onClick={() => setValue(path, arr.filter((_, j) => j !== i))}
+                        >
                           ✕
                         </button>
                       </td>
@@ -196,7 +198,6 @@ export const ModelValuesEditor: React.FC<{
         );
       }
 
-      // Если есть дети (code, name) — рендерим таблицу с колонками
       return (
         <div key={path} className="mv-array">
           <div className="mv-array-head">
@@ -243,7 +244,11 @@ export const ModelValuesEditor: React.FC<{
                       );
                     })}
                     <td>
-                      <button type="button" className="dp-btn-danger" onClick={() => setValue(path, arr.filter((_, j) => j !== i))}>
+                      <button
+                        type="button"
+                        className="dp-btn-danger"
+                        onClick={() => setValue(path, arr.filter((_, j) => j !== i))}
+                      >
                         ✕
                       </button>
                     </td>
@@ -288,10 +293,22 @@ export const ModelValuesEditor: React.FC<{
   return (
     <div className="mv-editor">
       <div className="mv-toolbar">
-        <button type="button" className="dp-btn" onClick={handleUndo} disabled={!history.canUndo} title="Ctrl+Z">
+        <button
+          type="button"
+          className="dp-btn"
+          onClick={handleUndo}
+          disabled={!history.canUndo}
+          title="Ctrl+Z"
+        >
           ↶ Отменить
         </button>
-        <button type="button" className="dp-btn" onClick={handleRedo} disabled={!history.canRedo} title="Ctrl+Y">
+        <button
+          type="button"
+          className="dp-btn"
+          onClick={handleRedo}
+          disabled={!history.canRedo}
+          title="Ctrl+Y"
+        >
           ↷ Повторить
         </button>
       </div>

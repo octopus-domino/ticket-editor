@@ -11,7 +11,7 @@ export interface ValidationIssue {
   readonly message: string;
 }
 
-function isChildOfArray(fields: FieldDef[], fieldPath: string): boolean {
+function isChildOfArray(fields: readonly FieldDef[], fieldPath: string): boolean {
   const parts = fieldPath.split('.');
   for (let i = 1; i < parts.length; i++) {
     const parentPath = parts.slice(0, i).join('.');
@@ -31,7 +31,7 @@ export function validateModel(
   // 1. Корневые скаляры
   for (const f of flat) {
     if (f.type === 'object' || f.type === 'array') continue;
-    if (isChildOfArray(schema.fields, f.path)) continue; // Пропускаем тех, кто внутри массива
+    if (isChildOfArray(schema.fields, f.path)) continue;
 
     const v = getByPath(model.values, f.path);
     if (f.required && (v === undefined || v === null || String(v).trim() === '')) {
@@ -42,7 +42,7 @@ export function validateModel(
   // 2. Элементы массивов
   for (const f of flat) {
     if (f.type !== 'array') continue;
-    
+
     const arr = getByPath(model.values, f.path);
     if (arr === undefined || arr === null) {
       if (f.required) issues.push({ path: f.path, message: 'Обязательный массив не заполнен' });
@@ -57,7 +57,9 @@ export function validateModel(
     }
 
     const prefix = f.path + '.';
-    const children = flat.filter((c) => c.path.startsWith(prefix) && !c.path.slice(prefix.length).includes('.'));
+    const children = flat.filter(
+      (c) => c.path.startsWith(prefix) && !c.path.slice(prefix.length).includes('.'),
+    );
 
     arr.forEach((item, idx) => {
       for (const child of children) {

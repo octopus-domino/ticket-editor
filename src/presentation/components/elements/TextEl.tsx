@@ -6,6 +6,7 @@ import type { CommonProps } from './types';
 import {
   parseHtmlToBlocks, layoutRuns, plainToHtml,
   computeTableLayout,
+  type RichTableData,
 } from '@/lib/richText';
 import { RichTable } from './RichTable';
 import { TEXT_PLACEHOLDER } from '@/shared/constants';
@@ -23,7 +24,7 @@ interface Props extends CommonProps<TextElement> {
 
 type PreparedItem =
   | { kind: 'text'; layout: ReturnType<typeof layoutRuns>; height: number }
-  | { kind: 'table'; data: unknown; height: number; width: number };
+  | { kind: 'table'; data: RichTableData; height: number; width: number };
 
 export const TextEl: React.FC<Props> = ({
   el, onSelect, onUpdate, onDragStart, onDragMove, onDragEnd,
@@ -101,8 +102,10 @@ export const TextEl: React.FC<Props> = ({
   useLayoutEffect(() => {
     if (isArc) return;
     const neededHeight = Math.ceil(contentHeight);
-    if (Math.abs(neededHeight - el.height) > 2
-        && Math.abs(neededHeight - lastEmittedHeightRef.current) > 2) {
+    if (
+      Math.abs(neededHeight - el.height) > 2
+      && Math.abs(neededHeight - lastEmittedHeightRef.current) > 2
+    ) {
       lastEmittedHeightRef.current = neededHeight;
       onUpdate({ height: neededHeight });
     }

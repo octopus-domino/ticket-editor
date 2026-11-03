@@ -7,6 +7,7 @@ import type { DocumentFull } from '../types';
 import { hydrateDocument, type HydratedDocument } from '../hydrateDocument';
 import { documentDrafts } from '@/presentation/hooks/editor/useDocumentPersistence';
 import { authStore } from '@/auth/store';
+import { useStore } from '@/shared/store/store';
 import { schemaStore } from '@/features/schemas/state/SchemaStore';
 import { modelStore } from '@/features/data-models/state/ModelStore';
 import {
@@ -16,10 +17,10 @@ import {
 
 const OFFLINE_KEY = 'ticket-editor:offline-doc';
 
-export const EditorPage: React.FC = () => {
-  const { docId } = useParams<{ docId: string }>();
+const DocumentEditorSession: React.FC<{ docId?: string }> = ({ docId }) => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const activeSchemaId = useStore(schemaStore, (state) => state.activeId);
 
   const [doc, setDoc] = useState<DocumentFull | null>(null);
   const [loading, setLoading] = useState(true);
@@ -49,7 +50,9 @@ export const EditorPage: React.FC = () => {
         setLoading(false);
       });
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [docId, isLocal, navigate]);
 
   /* --- Загрузка обычного документа --- */
@@ -72,17 +75,21 @@ export const EditorPage: React.FC = () => {
               updatedAt: new Date(0).toISOString(),
             }
           : await workspaceApi.getDocument(docId);
+        if (cancelled) return;
+        if (remote.id !== docId) throw new Error('Сервер вернул другой документ');
 
         let initial: HydratedDocument = hydrateDocument(remote.content);
 
         // черновик из IndexedDB
         const owner = authStore.getState().user?.id ?? 'local';
         const draft = await documentDrafts.read(`${owner}:${docId}`).catch(() => null);
+        if (cancelled) return;
         if (draft && draft.savedAt > Date.parse(remote.updatedAt)) {
           initial = { ...initial, ...draft.snapshot };
         }
 
         const checkpoint = async (): Promise<void> => {
+          if (cancelled) return;
           const content = JSON.stringify({ version: '2.0', ...initial });
           if (isLocal) localStorage.setItem(OFFLINE_KEY, content);
           else await workspaceApi.saveDocument(docId, content);
@@ -122,9 +129,8 @@ export const EditorPage: React.FC = () => {
         }
 
         // активируем схему — панель «Данные» и крошки её подхватят
-        if (initial.schemaId) schemaStore.setActive(initial.schemaId);
-
         if (!cancelled) {
+          schemaStore.setActive(initial.schemaId ?? null);
           setDoc({ ...remote, content: JSON.stringify(initial) });
           setLoading(false);
         }
@@ -137,15 +143,18 @@ export const EditorPage: React.FC = () => {
     };
 
     void load();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [docId, isLocal, urlSchemaId, urlModelId]);
 
   const handleSave = useCallback(
     async (state: HydratedDocument): Promise<void> => {
+      if (!doc || doc.id !== docId || docId === 'new') return;
       const toSave: HydratedDocument = {
         ...state,
         version: '2.0',
-        schemaId: schemaStore.getState().activeId ?? undefined,
+        schemaId: activeSchemaId ?? undefined,
         legacyModelId: doc ? hydrateDocument(doc.content).legacyModelId : undefined,
       } as HydratedDocument;
 
@@ -156,10 +165,11 @@ export const EditorPage: React.FC = () => {
       if (!docId) return;
       await workspaceApi.saveDocument(docId, JSON.stringify(toSave));
     },
-    [docId, isLocal, doc],
+    [docId, isLocal, doc, activeSchemaId],
   );
 
-  if (loading) return <div style={{ padding: 40 }}>Загрузка документа…</div>;
+  if (loading || (doc && doc.id !== docId))
+    return <div style={{ padding: 40 }}>Загрузка документа…</div>;
   if (error) return <div style={{ padding: 40, color: '#dc2626' }}>{error}</div>;
   if (!doc || !docId) return <div style={{ padding: 40 }}>Документ не найден</div>;
 
@@ -200,4 +210,10 @@ export const EditorPage: React.FC = () => {
       </div>
     </div>
   );
+};
+
+/** Route identity owns loading, drafts and save callbacks; no state survives a document switch. */
+export const EditorPage: React.FC = () => {
+  const { docId } = useParams<{ docId: string }>();
+  return <DocumentEditorSession key={docId} docId={docId} />;
 };

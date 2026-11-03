@@ -7,6 +7,7 @@ export interface SchemaState {
   schemas: DataSchema[];
   activeId: string | null;
   loading: boolean;
+  loaded: boolean;
   error: string | null;
 }
 
@@ -14,6 +15,7 @@ const INITIAL: SchemaState = {
   schemas: [],
   activeId: null,
   loading: false,
+  loaded: false,
   error: null,
 };
 
@@ -41,7 +43,7 @@ export class SchemaStore extends SimpleStore<SchemaState> {
       const savedId = this.getSavedId();
       const activeId = schemas.find((x) => x.id === savedId)?.id ?? schemas[0]?.id ?? null;
       if (activeId) this.setSavedId(activeId);
-      this.setState({ schemas, activeId, loading: false, error: null });
+      this.setState({ schemas, activeId, loading: false, loaded: true, error: null });
     } catch (e) {
       if (revision !== this.loadRevision) return;
       this.setState((s) => ({ ...s, loading: false, error: (e as Error).message }));

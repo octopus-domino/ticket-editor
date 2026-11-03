@@ -17,13 +17,14 @@ export function useSchemas(): UseSchemasResult {
   const schemas = useStore(schemaStore, (s) => s.schemas);
   const activeId = useStore(schemaStore, (s) => s.activeId);
   const loading = useStore(schemaStore, (s) => s.loading);
+  const loaded = useStore(schemaStore, (s) => s.loaded);
   const error = useStore(schemaStore, (s) => s.error);
 
   useEffect(() => {
-    if (schemas.length === 0 && !loading && !error) {
+    if (!loaded && !loading && !error) {
       void schemaStore.loadAll();
     }
-  }, [schemas.length, loading, error]);
+  }, [loaded, loading, error]);
 
   const activeSchema = schemas.find((s) => s.id === activeId) ?? null;
   useEffect(() => {

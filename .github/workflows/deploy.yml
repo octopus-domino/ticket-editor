@@ -35,11 +35,6 @@ jobs:
           # base для Vite: /<repo>/
           VITE_BASE_URL: /${{ github.event.repository.name }}/
 
-      - name: SPA fallback for GitHub Pages
-        # GitHub Pages отдаёт 404 на прямые заходы по /editor/:id.
-        # Копия index.html в 404.html → Pages отдаст SPA, роутер разберётся.
-        run: cp dist/index.html dist/404.html
-
       - name: Setup Pages
         uses: actions/configure-pages@v5
 

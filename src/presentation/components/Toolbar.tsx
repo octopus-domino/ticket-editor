@@ -109,13 +109,14 @@ export const Toolbar: React.FC = () => {
    * Пользователь стоит на 3-м слайде → уйдёт 3-й.
    * Модель подставляется в значения, материаллизация вшивает значения в текст.
    */
-  const openEmail = (): void => {
+  const openEmail = (mode: 'preview' | 'send'): void => {
     if (!activeSlide) return;
     const modelState = modelStore.getState();
     const active = modelState.models.find((m) => m.id === modelState.selectedId);
     const values = active?.values ?? {};
     const materialized = materializeSlide(activeSlide, values);
-    void emailStore.openPreview([materialized]);
+    if (mode === 'send') emailStore.openSend([materialized]);
+    else void emailStore.openPreview([materialized]);
   };
 
   return (
@@ -133,17 +134,24 @@ export const Toolbar: React.FC = () => {
           💾 Сохранить как шаблон
         </button>
         {isFeatureEnabled('FEATURE_EMAIL') && (
-          <button
-            className="toolbar-btn"
-            onClick={openEmail}
-            title={
-              activeSlide
-                ? `Отправить слайд «${activeSlide.name}» по email`
-                : 'Превью, .eml, отправка'
-            }
-          >
-            📧 Email
-          </button>
+          <>
+            <button
+              className="toolbar-btn"
+              onClick={() => openEmail('send')}
+              disabled={!activeSlide}
+              title="Отправить текущий слайд по электронной почте"
+            >
+              📤 Отправить по email
+            </button>
+            <button
+              className="toolbar-btn"
+              onClick={() => openEmail('preview')}
+              disabled={!activeSlide}
+              title="Предпросмотр письма и скачивание .eml"
+            >
+              📧 Email-превью
+            </button>
+          </>
         )}
         <button className="toolbar-btn" onClick={handleExportSvg}>
           🖼 SVG

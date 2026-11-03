@@ -12,8 +12,7 @@ import { templateStore } from '../state/TemplateStore';
 import { useStore } from '@/shared/store/store';
 import './template-journey.css';
 
-export function TemplateEditorPage() {
-  const { templateId } = useParams();
+function TemplateEditorSession({ templateId }: { templateId: string }) {
   const activeSchemaId = useStore(schemaStore, (state) => state.activeId);
   const [template, setTemplate] = useState<Template | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -107,4 +106,10 @@ export function TemplateEditorPage() {
       </div>
     </div>
   );
+}
+
+export function TemplateEditorPage() {
+  const { templateId } = useParams();
+  if (!templateId) return <p role="alert">Шаблон не найден</p>;
+  return <TemplateEditorSession key={templateId} templateId={templateId} />;
 }

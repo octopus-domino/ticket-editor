@@ -641,7 +641,11 @@ export const Editor: React.FC<EditorProps> = ({ documentId, initialDoc, onSave }
 
   return (
     <EditorProvider stores={stores}>
-      <EditorLayout documentId={documentId ?? 'local'} onSave={onSave} />
+      <EditorLayout
+        key={documentId ?? 'local'}
+        documentId={documentId ?? 'local'}
+        onSave={onSave}
+      />
     </EditorProvider>
   );
 };

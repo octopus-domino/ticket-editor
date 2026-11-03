@@ -57,11 +57,13 @@ test('email shows partial failures, safely retries and confirms SMTP acceptance'
     return json([]);
   });
   await page.goto('/app/templates/T/edit');
-  await page.getByRole('button', { name: '📧 Email', exact: true }).click();
+  await page.getByRole('button', { name: '📧 Email-превью', exact: true }).click();
   await page
     .locator('.email-modal-toolbar')
     .getByRole('button', { name: '📤 Отправить', exact: true })
     .click();
+  await page.locator('.email-form').getByRole('button', { name: 'Отмена', exact: true }).click();
+  await page.getByRole('button', { name: '📤 Отправить по email', exact: true }).click();
   const form = page.locator('.email-form');
   await form.getByLabel('Кому', { exact: true }).fill('recipient@example.test');
   await form.getByRole('button', { name: 'Отправить', exact: true }).click();

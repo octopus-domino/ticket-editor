@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   DocumentPersistence,
   type PersistenceStatus,
@@ -15,15 +15,26 @@ export function useDocumentPersistence(
 ) {
   const [status, setStatus] = useState<PersistenceStatus>('saved');
   const [error, setError] = useState<string | undefined>();
+  const targetRef = useRef({ id, save });
+  if (targetRef.current.id !== id || Boolean(targetRef.current.save) !== Boolean(save)) {
+    targetRef.current = { id, save };
+  } else targetRef.current.save = save;
+  const target = targetRef.current;
+  const enabled = Boolean(save);
   const persistence = useMemo(
     () =>
-      save
-        ? new DocumentPersistence(id, documentDrafts, save, (next, reason) => {
-            setStatus(next);
-            setError(reason);
-          })
+      enabled
+        ? new DocumentPersistence(
+            id,
+            documentDrafts,
+            (value) => target.save!(value),
+            (next, reason) => {
+              setStatus(next);
+              setError(reason);
+            },
+          )
         : null,
-    [id, save],
+    [id, enabled, target],
   );
   const { slides, data, activeId, bindings } = snapshot;
   useEffect(() => {
@@ -31,7 +42,7 @@ export function useDocumentPersistence(
   }, [id, slides]);
   useEffect(() => {
     persistence?.update({ slides, data, activeId, bindings });
-  }, [persistence, slides, data, activeId, bindings]);
+  }, [persistence, slides, data, activeId, bindings, save]);
   useEffect(() => {
     const flush = () => {
       void persistence?.flush().catch(() => undefined);

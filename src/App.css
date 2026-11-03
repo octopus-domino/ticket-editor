@@ -67,7 +67,7 @@ input, select, textarea { font-family: inherit; }
   border-bottom: 1px solid var(--border);
 }
 .toolbar h1 { font-size: 16px; margin: 0; font-weight: 600; }
-.toolbar-actions { display: flex; gap: 8px; }
+.toolbar-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .toolbar-btn {
   padding: 6px 12px;
   border: 1px solid var(--border-strong);

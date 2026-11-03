@@ -683,3 +683,13 @@
     font-size: 22px;
   }
 }
+.codoc-footer-pages {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  width: 100%;
+  order: 4;
+}
+.codoc-footer-pages a:hover {
+  text-decoration: underline;
+}

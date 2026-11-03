@@ -5,6 +5,7 @@ import { reachGoal } from '@/shared/analytics/metrika';
 import { USE_CASES, FEATURES, FAQ } from './content';
 import './landing.css';
 import { FeedbackWidget } from '@/features/feedback/ui/FeedbackWidget';
+import { SEARCH_PAGES } from './searchPages';
 
 export function LandingPage() {
   const user = useStore(authStore, (s) => s.user);
@@ -249,6 +250,13 @@ export function LandingPage() {
           CoDoc.
         </Link>
         <span>Редактор шаблонов и генератор PDF онлайн</span>
+        <nav className="codoc-footer-pages" aria-label="Возможности CoDoc">
+          {SEARCH_PAGES.map((page) => (
+            <Link key={page.path} to={page.path}>
+              {page.label}
+            </Link>
+          ))}
+        </nav>
         <FeedbackWidget surface="landing" />
         <a href="#main-content">Наверх ↑</a>
         <small>© {new Date().getFullYear()} CoDoc</small>

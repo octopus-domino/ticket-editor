@@ -15,11 +15,25 @@ export function parseCounterId(value: unknown): number | null {
 }
 
 const counterId = parseCounterId(import.meta.env.VITE_YANDEX_METRIKA_ID);
+// Capture once so diagnostics survive navigation between SPA routes.
+const diagnosticsEnabled =
+  typeof window !== 'undefined' &&
+  (new URLSearchParams(window.location.search).get('codoc_metrics_debug') === '1' ||
+    new URLSearchParams(window.location.search).get('_ym_debug') === '2');
+
+function diagnostic(event: string, details: Record<string, unknown> = {}): void {
+  // eslint-disable-next-line no-console -- Explicit opt-in diagnostics; contains no document data.
+  if (diagnosticsEnabled) console.info('[CoDoc metrics]', event, { counterId, ...details });
+}
+
 let initialized = false;
 let previousPath: string | null = null;
 
 function initialize(): boolean {
-  if (!import.meta.env.PROD || !counterId) return false;
+  if (!import.meta.env.PROD || !counterId) {
+    diagnostic('disabled', { production: import.meta.env.PROD, configured: counterId !== null });
+    return false;
+  }
   if (initialized) return true;
   const queue: Metrika = function (...args: unknown[]) {
     (queue.a ??= []).push(args);
@@ -29,6 +43,14 @@ function initialize(): boolean {
   const script = document.createElement('script');
   script.async = true;
   script.src = `https://mc.yandex.ru/metrika/tag.js?id=${counterId}`;
+  script.onload = () => diagnostic('script_loaded');
+  script.onerror = () => diagnostic('script_blocked_or_unavailable');
+  if (diagnosticsEnabled)
+    document.addEventListener(
+      `yacounter${counterId}inited`,
+      () => diagnostic('counter_initialized'),
+      { once: true },
+    );
   document.head.append(script);
   // Do not record document contents, form values, resource IDs or query strings.
   window.ym(counterId, 'init', {
@@ -38,6 +60,7 @@ function initialize(): boolean {
     webvisor: false,
     accurateTrackBounce: true,
     sendTitle: false,
+    triggerEvent: true,
   });
   initialized = true;
   return true;
@@ -55,6 +78,7 @@ export function trackPage(path: string): void {
     referer: previousPath ? `${window.location.origin}${previousPath}` : '',
   });
   previousPath = safePath;
+  diagnostic('pageview_called', { path: safePath });
 }
 
 export function reachGoal(
@@ -73,8 +97,15 @@ export function reachGoal(
   params?: Record<string, string>,
 ): void {
   try {
-    if (initialize()) window.ym?.(counterId!, 'reachGoal', goal, params);
+    if (!initialize()) return;
+    diagnostic('goal_called', { goal, params });
+    if (diagnosticsEnabled) {
+      window.ym?.(counterId!, 'reachGoal', goal, params ?? {}, () =>
+        diagnostic('goal_callback', { goal }),
+      );
+    } else window.ym?.(counterId!, 'reachGoal', goal, params);
   } catch {
+    diagnostic('goal_exception', { goal });
     // Analytics must never turn a successful application action into an error.
   }
 }

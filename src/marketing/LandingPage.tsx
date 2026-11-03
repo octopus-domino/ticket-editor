@@ -27,6 +27,7 @@ export function LandingPage() {
         </Link>
         <nav aria-label="Основная навигация">
           <a href="#possibilities">Возможности</a>
+          <a href="#stamps">Штампы и печати</a>
           <a href="#workflow">Как это работает</a>
           <a href="#questions">Вопросы</a>
         </nav>
@@ -44,8 +45,8 @@ export function LandingPage() {
               Шаблон — <em>один.</em>
             </h1>
             <p className="codoc-lead">
-              Создавайте билеты, сертификаты и документы онлайн. Соберите макет, подставьте данные и
-              получите готовые PDF — без ручной правки каждого файла.
+              Создавайте билеты, сертификаты, штампы и печати онлайн. Соберите макет, подставьте
+              данные и получите готовые PDF — без ручной правки каждого файла.
             </p>
             <div className="codoc-actions">
               <Link className="codoc-button codoc-primary" to={startHref} onClick={cta('hero')}>
@@ -121,6 +122,50 @@ export function LandingPage() {
           <p className="codoc-caption">
             Примеры оформления. Соберите собственный макет в редакторе.
           </p>
+        </section>
+        <section className="codoc-section codoc-container codoc-stamps" id="stamps">
+          <div>
+            <p className="codoc-eyebrow">Свой оттиск — внутри вашего документа</p>
+            <h2>
+              Штампы и печати.
+              <br />
+              От надписи до собственного макета.
+            </h2>
+            <p className="codoc-lead">
+              Выберите штамп из библиотеки или соберите свой: рамки, текст по дуге, изображения и
+              цвет. Разместите его на бланке, билете или сертификате.
+            </p>
+            <ul>
+              <li>Круглые и прямоугольные композиции, прямой текст и надписи по дуге.</li>
+              <li>Редактирование слоёв, изображений, шрифтов и оформления.</li>
+              <li>
+                Сохранение собственного штампа в библиотеку браузера для повторного использования.
+              </li>
+              <li>Экспорт документа со штампом в PDF и SVG.</li>
+            </ul>
+            <div className="codoc-actions">
+              <Link className="codoc-button codoc-primary" to={startHref} onClick={cta('stamps')}>
+                Создать макет со штампом ↗
+              </Link>
+              <Link className="codoc-text-link" to="/stamps/">
+                Подробнее о конструкторе →
+              </Link>
+            </div>
+          </div>
+          <div className="codoc-stamp-examples" aria-label="Примеры оформления штампов">
+            <div className="codoc-stamp-round">
+              <span>ВАШ ТЕКСТ · ВАШ ДИЗАЙН</span>
+              <strong>CoDoc</strong>
+              <span>МАКЕТ ПЕЧАТИ</span>
+            </div>
+            <div className="codoc-stamp-rect">
+              <strong>СОГЛАСОВАНО</strong>
+              <span>Дата __________</span>
+            </div>
+            <p className="codoc-caption">
+              Иллюстрации оформления. Текст и композицию вы настраиваете в редакторе.
+            </p>
+          </div>
         </section>
         <section className="codoc-workflow" id="workflow">
           <div className="codoc-container">

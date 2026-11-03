@@ -693,3 +693,58 @@
 .codoc-footer-pages a:hover {
   text-decoration: underline;
 }
+.codoc-stamps {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 3rem;
+  align-items: center;
+}
+.codoc-stamps ul {
+  padding-left: 1.2rem;
+  line-height: 1.8;
+}
+.codoc-stamp-examples {
+  display: grid;
+  justify-items: center;
+  gap: 2rem;
+  padding: 2rem;
+  background: #f0f4fb;
+  border-radius: 24px;
+  color: #254c91;
+}
+.codoc-stamp-round {
+  width: 220px;
+  height: 220px;
+  border: 5px double currentColor;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  transform: rotate(-12deg);
+}
+.codoc-stamp-round strong {
+  font-size: 2.8rem;
+}
+.codoc-stamp-round span {
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+}
+.codoc-stamp-rect {
+  border: 4px double currentColor;
+  padding: 1rem 1.5rem;
+  display: grid;
+  gap: 0.7rem;
+  transform: rotate(4deg);
+}
+.codoc-stamp-rect strong {
+  font-size: 1.4rem;
+  letter-spacing: 0.05em;
+}
+@media (max-width: 760px) {
+  .codoc-stamps {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+}

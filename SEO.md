@@ -5,6 +5,7 @@
 | URL | Задача посетителя |
 | --- | --- |
 | `/` | Понять возможности конструктора шаблонов |
+| `/stamps/` | Создать штамп или макет печати и добавить его в документ |
 | `/certificates/` | Создать сертификат или серию персональных сертификатов в PDF |
 | `/tickets/` | Сделать билет, бейдж или пропуск с QR-кодом |
 | `/pdf-generator/` | Получить PDF из шаблона и своих данных |
@@ -36,6 +37,7 @@
 
 ```sh
 curl -I https://codoc.site/
+curl -I https://codoc.site/stamps/
 curl -I https://codoc.site/certificates/
 curl -I https://codoc.site/tickets/
 curl -I https://codoc.site/pdf-generator/

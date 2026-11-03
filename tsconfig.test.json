@@ -2,7 +2,6 @@
   "extends": "./tsconfig.app.json",
   "compilerOptions": {
     "noEmit": true,
-    "composite": false,
     "incremental": false,
     "types": [
       "vitest/globals",

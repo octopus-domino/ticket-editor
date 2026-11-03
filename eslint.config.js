@@ -43,8 +43,10 @@ export default defineConfig(
     },
   },
 
+    // 1. Vitest (Unit-тесты)
   {
     files: ['tests/**/*.ts', 'tests/**/*.tsx'],
+    ignores: ['tests/e2e/**/*.ts'], // <--- Исключаем E2E из этого правила
     languageOptions: {
       globals: { ...globals.browser, ...globals.node },
       parserOptions: {
@@ -56,6 +58,23 @@ export default defineConfig(
     rules: {
       complexity: 'off',
       'max-params': 'off',
+      '@typescript-eslint/no-explicit-any': 'off',
+    },
+  },
+
+  // 2. Playwright (E2E-тесты)
+  {
+    files: ['tests/e2e/**/*.ts'],
+    languageOptions: {
+      globals: { ...globals.browser, ...globals.node },
+      parserOptions: {
+        projectService: false,
+        project: './tsconfig.e2e.json', // <--- Указываем новый конфиг
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+    rules: {
+      'no-console': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
     },
   },

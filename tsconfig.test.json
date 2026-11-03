@@ -8,9 +8,7 @@
       "vitest/globals",
       "@testing-library/jest-dom",
       "node"
-    ],
-    "strict": true,
-    "skipLibCheck": true
+    ]
   },
   "include": ["src", "tests"],
   "exclude": ["node_modules", "dist", "coverage", "tests/e2e"]

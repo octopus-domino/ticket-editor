@@ -78,13 +78,12 @@ if (!globalThis.crypto.randomUUID) {
 
 /* ─────────────────────────────────────────────
    6. structuredClone — materializeSlide/Element
-      (в Node 20+ есть, но jsdom-окружение
-      vitest иногда теряет — подстраховка)
    ───────────────────────────────────────────── */
 if (typeof globalThis.structuredClone === 'undefined') {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { structuredClone } = require('node:util') as typeof import('node:util');
-  globalThis.structuredClone = structuredClone;
+  globalThis.structuredClone = <T>(obj: T): T => {
+    if (obj === null || typeof obj !== 'object') return obj;
+    return JSON.parse(JSON.stringify(obj));
+  };
 }
 
 /* ─────────────────────────────────────────────

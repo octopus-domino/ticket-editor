@@ -14,6 +14,7 @@ const mockData: DataRoot[] = [
         id: 'f2',
         name: 'items',
         type: 'array',
+        sample: '', // <--- ДОБАВИТЬ ВОТ ЭТУ СТРОКУ
         children: [
           { id: 'f3', name: 'price', type: 'number', sample: '1000' },
         ],

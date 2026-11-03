@@ -4,7 +4,7 @@
    NFR-OBS-02: prod-ошибки → logger (Sentry-хук подключается позже).
    ============================================================ */
 
-import React, { Component, type ErrorInfo, type ReactNode } from 'react';
+import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { logger } from '@/shared/logger';
 
 interface Props {

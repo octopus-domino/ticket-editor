@@ -28,7 +28,7 @@ export function parseHtmlToRuns(html: string, base: BaseStyle): TextRun[] {
     runs.push({ ...baseToRun(base), ...style, text: '\n\n' });
   };
 
-  const makeListMarker = (depth: number, ordered: boolean, index: number): string => {
+  const makeListMarker = (_depth: number, ordered: boolean, index: number): string => {
     const bullet = ordered ? `${index + 1}. ` : '• ';
     return bullet;
   };

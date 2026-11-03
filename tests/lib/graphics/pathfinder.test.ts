@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { applyPathfinder } from '../../../src/lib/graphics/pathfinder';
-import type { ShapeElement } from '../../../src/shared/types';
+import { applyPathfinder } from '@/lib/graphics/pathfinder';
+import type { ShapeElement } from '@/shared/types';
 
 const rect = (x: number, y: number, w: number, h: number): ShapeElement => ({
   id: 'r' + Math.random(), type: 'shape', shape: 'rect',
@@ -43,5 +43,31 @@ describe('lib/graphics/pathfinder', () => {
     const r = applyPathfinder([rect(0, 0, 100, 100), text], 'union');
     // 1 валидный operand < 2 → null
     expect(r).toBeNull();
+  });
+});
+
+describe('pathfinder - shape conversions', () => {
+  const baseShape: ShapeElement = {
+    id: '1', type: 'shape', shape: 'rect', x: 0, y: 0, width: 100, height: 100,
+    rotation: 0, fill: '#000', stroke: '#000', strokeWidth: 1, text: '', fontSize: 12, textFill: '#000'
+  };
+
+  it('handles circle', () => {
+    const circle = { ...baseShape, id: '2', shape: 'circle' } as ShapeElement;
+    const result = applyPathfinder([baseShape, circle], 'intersect');
+    expect(result).not.toBeNull();
+    expect(result?.shape).toBe('polygon');
+  });
+
+  it('handles triangle', () => {
+    const tri = { ...baseShape, id: '3', shape: 'triangle' } as ShapeElement;
+    const result = applyPathfinder([baseShape, tri], 'union');
+    expect(result).not.toBeNull();
+  });
+
+  it('handles star', () => {
+    const star = { ...baseShape, id: '4', shape: 'star' } as ShapeElement;
+    const result = applyPathfinder([baseShape, star], 'subtract');
+    expect(result).not.toBeNull();
   });
 });

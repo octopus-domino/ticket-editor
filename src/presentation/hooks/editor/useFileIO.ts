@@ -15,6 +15,7 @@ import { prepareQrForExport } from '@/lib/qr';
 import { CONFIG } from '@/shared/config';
 import { toast } from '@/presentation/components/toast';
 import { importElements } from '@/application/use-cases/importElements';
+import { measureEditorExport } from '@/shared/analytics/GenerationMetrics';
 
 /* ---------- helpers ---------- */
 
@@ -143,30 +144,32 @@ export function useFileIO() {
     const active = getActiveSlide();
     if (!active) return;
 
-    const [prepared] = await prepareQrForExport([active], '');
+    await measureEditorExport('svg', 'local', async () => {
+      const [prepared] = await prepareQrForExport([active], '');
 
-    const { serializeSlideToSvg } = await import('@/lib/svg/serialize');
-    const svg = serializeSlideToSvg(prepared);
-    const safeName = (active.name || 'slide').replace(/[^\w.-]+/g, '_');
-    triggerDownload(svg, `${safeName}.svg`, 'image/svg+xml');
+      const { serializeSlideToSvg } = await import('@/lib/svg/serialize');
+      const svg = serializeSlideToSvg(prepared);
+      const safeName = (active.name || 'slide').replace(/[^\w.-]+/g, '_');
+      triggerDownload(svg, `${safeName}.svg`, 'image/svg+xml');
+    });
   }, [getActiveSlide]);
 
   const exportSvgServer = useCallback(async () => {
     const active = getActiveSlide();
     if (!active) return;
-    await doExportSvgServer(active);
+    await measureEditorExport('svg', 'sync', () => doExportSvgServer(active));
   }, [getActiveSlide]);
 
   const exportPdfaServer = useCallback(async () => {
     const state = docStore.getState();
     if (!state.slides || state.slides.length === 0) return;
-    await doExportPdfaServer(state.slides);
+    await measureEditorExport('pdfa', 'sync', () => doExportPdfaServer(state.slides));
   }, [docStore]);
 
   const exportPdfServer = useCallback(async () => {
     const state = docStore.getState();
     if (!state.slides || state.slides.length === 0) return;
-    await doExportPdfServer(state.slides);
+    await measureEditorExport('pdf', 'sync', () => doExportPdfServer(state.slides));
   }, [docStore]);
 
   const addImage = useCallback(

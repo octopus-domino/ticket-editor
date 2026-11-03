@@ -1,0 +1,118 @@
+.template-new {
+  max-width: 760px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 36px 24px 60px;
+  overflow: auto;
+}
+.template-new > a {
+  color: var(--accent);
+  text-decoration: none;
+}
+.template-new h1 {
+  font-size: 28px;
+  letter-spacing: -0.7px;
+  margin: 12px 0;
+}
+.template-new > p {
+  color: var(--text-muted);
+  line-height: 1.7;
+}
+.template-new .template-eyebrow {
+  color: var(--accent);
+  margin-top: 32px;
+  font-size: 12px;
+}
+.template-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 25px;
+  padding: 25px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+.template-form label {
+  font-weight: 600;
+  margin-top: 5px;
+}
+.template-form label span {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+.template-form input,
+.template-form select {
+  font: inherit;
+  padding: 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 7px;
+  background: var(--panel);
+  color: var(--text);
+  width: 100%;
+}
+.template-form p {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  margin: 0 0 8px;
+}
+.template-form button {
+  padding: 13px;
+}
+.template-help {
+  margin-top: 24px;
+  padding: 20px;
+  background: var(--accent-light);
+  border-radius: 12px;
+  line-height: 1.8;
+}
+.template-help ol {
+  padding-left: 20px;
+  margin-bottom: 0;
+}
+.template-editor-frame {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+}
+.template-editor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+  font-size: 12px;
+}
+.template-editor-toolbar a {
+  color: var(--accent);
+  text-decoration: none;
+}
+.template-editor-toolbar strong {
+  margin-right: auto;
+}
+.template-editor-toolbar span {
+  color: var(--text-muted);
+}
+.template-editor-canvas {
+  flex: 1;
+  min-height: 0;
+}
+.template-next {
+  display: flex;
+  gap: 16px;
+  padding: 10px 16px;
+  background: var(--success-bg);
+  font-size: 12px;
+  flex-wrap: wrap;
+}
+.template-next a {
+  color: var(--accent);
+}
+.template-editor-canvas .editor-shell {
+  height: 100%;
+}

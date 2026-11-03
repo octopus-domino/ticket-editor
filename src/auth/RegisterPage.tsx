@@ -2,9 +2,12 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authStore } from './store';
 import './auth.css';
+import { AuthProductAside } from './AuthProductAside';
+import { useAuthDestination } from './useAuthDestination';
 
 export const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
+  const { destination, suffix } = useAuthDestination();
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
@@ -17,7 +20,7 @@ export const RegisterPage: React.FC = () => {
     setBusy(true);
     try {
       await authStore.register(email, password, name || undefined);
-      navigate('/app', { replace: true });
+      navigate(destination, { replace: true });
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -27,39 +30,16 @@ export const RegisterPage: React.FC = () => {
 
   return (
     <div className="auth-root">
-      <aside className="auth-left">
-        <Link to="/" className="auth-brand">
-          <span className="auth-brand-mark">T</span>
-          ticket-editor
-        </Link>
-
-        <div className="auth-quote">
-          <p className="auth-quote-text">
-            Первый шаблон — 10 минут.<br />
-            <em>Интеграция — день.</em>
-          </p>
-          <div className="auth-quote-author">
-            <div className="auth-quote-avatar">АК</div>
-            <div>
-              <div className="auth-quote-name">Алексей К.</div>
-              <div className="auth-quote-role">CTO, fintech.io</div>
-            </div>
-          </div>
-        </div>
-
-        <ul className="auth-features">
-          <li><span className="check">✓</span> 100 документов бесплатно, без карты</li>
-          <li><span className="check">✓</span> Неограниченно проектов на Pro</li>
-          <li><span className="check">✓</span> Отмена подписки в один клик</li>
-        </ul>
-      </aside>
+      <AuthProductAside />
 
       <main className="auth-right">
         <div className="auth-form-wrap">
-          <Link to="/" className="auth-back">← На главную</Link>
+          <Link to="/" className="auth-back">
+            ← На главную
+          </Link>
 
           <h1 className="auth-title">Создать аккаунт</h1>
-          <p className="auth-subtitle">Бесплатно. 100 документов в месяц. Без карты.</p>
+          <p className="auth-subtitle">Сохраните свои шаблоны и создавайте документы из данных.</p>
 
           <form className="auth-form" onSubmit={submit}>
             <div className="auth-field">
@@ -110,7 +90,7 @@ export const RegisterPage: React.FC = () => {
           </form>
 
           <p className="auth-footer">
-            Уже есть аккаунт? <Link to="/login">Войти</Link>
+            Уже есть аккаунт? <Link to={`/login${suffix}`}>Войти</Link>
           </p>
         </div>
       </main>

@@ -1,6 +1,7 @@
 import { SimpleStore } from '@/shared/store/store';
 import type { DataSchema, FieldDef } from '../domain/DataSchema';
 import { httpSchemaRepository } from '../api/HttpSchemaRepository';
+import { reachGoal } from '@/shared/analytics/metrika';
 
 export interface SchemaState {
   schemas: DataSchema[];
@@ -47,8 +48,9 @@ export class SchemaStore extends SimpleStore<SchemaState> {
     }
   }
 
-  setActive(id: string): void {
-    this.setSavedId(id);
+  setActive(id: string | null): void {
+    if (id) this.setSavedId(id);
+    else this.removeSavedId();
     this.setState((s) => ({ ...s, activeId: id }));
   }
 
@@ -86,6 +88,7 @@ export class SchemaStore extends SimpleStore<SchemaState> {
       schemas: [created, ...s.schemas],
       activeId: created.id,
     }));
+    reachGoal('schema_created', { field_count: String(created.fields.length) });
     return created;
   }
 

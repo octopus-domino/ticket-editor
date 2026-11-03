@@ -2,6 +2,7 @@ import { SimpleStore } from '@/shared/store/store';
 import type { TemplateRepository } from '../api/TemplateRepository';
 import { httpTemplateRepository } from '../api/HttpTemplateRepository';
 import type { SaveTemplateInput, Template, TemplateSummary } from '../domain/Template';
+import { reachGoal } from '@/shared/analytics/metrika';
 
 export interface TemplateState {
   readonly items: TemplateSummary[];
@@ -106,6 +107,10 @@ export class TemplateStore extends SimpleStore<TemplateState> {
         active: created,
         saving: false,
       }));
+      reachGoal('template_created', {
+        slide_count: String(created.slides.length),
+        has_schema: String(created.schemaId !== null),
+      });
       return created;
     } catch (e) {
       if (session !== this.sessionRevision) throw e;

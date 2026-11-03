@@ -129,7 +129,7 @@ test('saved template opens the template editor rather than a workspace document'
 }) => {
   await api(page);
   await page.goto('/app/templates');
-  await page.getByRole('button', { name: /Ticket template/ }).dblclick();
+  await page.locator('.ssl-row').filter({ hasText: 'Ticket template' }).dblclick();
   await expect(page).toHaveURL(/\/app\/templates\/T\/edit/);
   await expect(page.locator('canvas').first()).toBeVisible();
 });
@@ -152,7 +152,7 @@ test('dedicated generation route sends 101 models to async and offers the downlo
 test('recovers the newer owner-scoped template draft from IndexedDB', async ({ page }) => {
   const state = await api(page);
   await page.goto('/app/templates');
-  await expect(page.getByRole('button', { name: /Ticket template/ })).toBeVisible();
+  await expect(page.locator('.ssl-row').filter({ hasText: 'Ticket template' })).toBeVisible();
   await page.evaluate(
     async (snapshot) => {
       await new Promise<void>((resolve, reject) => {

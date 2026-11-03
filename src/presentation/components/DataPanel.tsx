@@ -179,11 +179,22 @@ export const DataPanel: React.FC = () => {
   if (loading) return <div className="dp-container"><div className="schema-hint">Загрузка…</div></div>;
   if (error) return <div className="dp-container"><div className="schema-error">{error}</div></div>;
 
-  if (schemas.length === 0) {
+  if (!activeSchema) {
     return (
       <div className="dp-container">
-        <div className="dp-section-title">Нет схем</div>
-        <p className="schema-hint">Создать можно из текущего документа (все {'{{...}}'}) или пустую.</p>
+        <div className="dp-section-title">Добавьте схему данных</div>
+        <p className="schema-hint">Выберите существующую схему или создайте новую прямо здесь.</p>
+        {schemas.length > 0 && (
+          <select
+            className="dp-select-model"
+            aria-label="Схема данных"
+            value=""
+            onChange={(event) => schemaStore.setActive(event.target.value)}
+          >
+            <option value="" disabled>Выберите схему</option>
+            {schemas.map((schema) => <option key={schema.id} value={schema.id}>{schema.name}</option>)}
+          </select>
+        )}
         {uiError && <div className="schema-error">{uiError}</div>}
         <button className="dp-btn-submit" onClick={() => void createFromDocument()}>
           ⤓ Создать из документа
@@ -193,13 +204,11 @@ export const DataPanel: React.FC = () => {
           onClick={() => void createEmpty()}
           style={{ marginTop: 8, width: '100%' }}
         >
-          + Пустая схема
+          + Создать схему
         </button>
       </div>
     );
   }
-
-  if (!activeSchema) return <div className="dp-container"><div className="schema-hint">Выберите схему</div></div>;
 
   const leafFields = flattenFields(activeSchema.fields).filter((f) => f.type !== 'object' && f.type !== 'array');
   const arrayFields = flattenFields(activeSchema.fields).filter((f) => f.type === 'array');
@@ -209,6 +218,7 @@ export const DataPanel: React.FC = () => {
       <div className="dp-toolbar" style={{ flexDirection: 'column', gap: 4 }}>
         <select
           className="dp-select-model"
+          aria-label="Схема данных"
           value={activeSchema.id}
           onChange={(e) => schemaStore.setActive(e.target.value)}
         >

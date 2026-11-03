@@ -3,6 +3,7 @@ import type { DataModel } from '../domain/DataModel';
 import type { DataModelRepository } from '../api/DataModelRepository';
 import { httpDataModelRepository } from '../api/HttpDataModelRepository';
 import { RevisionSaveQueue } from '@/application/use-cases/RevisionSaveQueue';
+import { reachGoal } from '@/shared/analytics/metrika';
 
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
@@ -115,6 +116,7 @@ export class ModelStore extends SimpleStore<ModelState> {
       models: [created, ...s.models],
       selectedId: created.id,
     }));
+    reachGoal('model_created', { source: 'manual', model_count: '1' });
     return created;
   }
 
@@ -168,6 +170,8 @@ export class ModelStore extends SimpleStore<ModelState> {
     if (this.repo.importMany) {
       const result = await this.repo.importMany(schemaId, items);
       if (session !== this.sessionVersion) return;
+      if (result.imported > 0)
+        reachGoal('model_created', { source: 'import', model_count: String(result.imported) });
       await this.load(schemaId);
       if (result.issues.length)
         throw new Error(
@@ -185,6 +189,7 @@ export class ModelStore extends SimpleStore<ModelState> {
       });
       if (session !== this.sessionVersion) return;
       this.setState((s) => ({ ...s, models: [created, ...s.models] }));
+      reachGoal('model_created', { source: 'import', model_count: '1' });
     }
   }
 

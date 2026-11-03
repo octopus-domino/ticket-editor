@@ -116,8 +116,11 @@ export const TemplatesPage: React.FC = () => {
             ))}
             {schemas.length === 0 && <option value="">— нет схем —</option>}
           </select>
-          <Link to="/app" className="schema-btn-fill">
-            + Новый (в редакторе)
+          <Link
+            to={`/app/templates/new${activeSchema ? `?schemaId=${encodeURIComponent(activeSchema.id)}` : ''}`}
+            className="schema-btn-fill"
+          >
+            + Создать шаблон
           </Link>
         </div>
       </div>
@@ -138,7 +141,7 @@ export const TemplatesPage: React.FC = () => {
         searchPlaceholder="Поиск по названию шаблона…"
         emptyText={
           items.length === 0
-            ? 'Шаблонов пока нет. Создайте документ в редакторе и сохраните.'
+            ? 'Шаблонов пока нет. Нажмите «Создать шаблон»: дайте название и соберите макет. Данные можно добавить позже.'
             : 'Ни один шаблон не подходит под запрос.'
         }
         loading={loading}

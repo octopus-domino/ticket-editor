@@ -386,13 +386,13 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave, documentId }) => {
         />
       )}
 
-      {onSave && (
+      {onSave && persistence.status !== 'saved' && (
         <div role="status" style={{ padding: '4px 12px' }}>
-          {persistence.status}
+          {persistence.status === 'saving' ? 'Сохранение…' : 'Не удалось сохранить'}
           {persistence.error && (
             <>
               : {persistence.error}{' '}
-              <button onClick={() => void persistence.retry()}>Retry save</button>
+              <button onClick={() => void persistence.retry()}>Повторить сохранение</button>
             </>
           )}
         </div>

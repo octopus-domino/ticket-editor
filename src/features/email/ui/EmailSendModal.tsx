@@ -19,7 +19,7 @@ export const EmailSendModal: React.FC = () => {
   const [bcc, setBcc] = useState('');
   const [from, setFrom] = useState('');
   const [replyTo, setReplyTo] = useState('');
-  const [subject, setSubject] = useState('Документ от ticket-editor');
+  const [subject, setSubject] = useState('Документ от CoDoc');
 
   useEffect(() => {
     if (modal !== 'send') return;
@@ -28,7 +28,7 @@ export const EmailSendModal: React.FC = () => {
     setBcc('');
     setFrom('');
     setReplyTo('');
-    setSubject('Документ от ticket-editor');
+    setSubject('Документ от CoDoc');
   }, [modal]);
 
   if (modal !== 'send' || !slides) return null;
@@ -36,7 +36,10 @@ export const EmailSendModal: React.FC = () => {
   const slideName = slides.length > 0 ? slides[0].name : 'без названия';
 
   const parseEmails = (v: string): string[] =>
-    v.split(/[,;\s]+/).map((s) => s.trim()).filter(Boolean);
+    v
+      .split(/[,;\s]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
 
   const submit = (e: React.FormEvent): void => {
     e.preventDefault();
@@ -74,15 +77,18 @@ export const EmailSendModal: React.FC = () => {
               Слайд: <b style={{ color: '#475569' }}>{slideName}</b>
             </div>
           </div>
-          <button className="email-modal-close" onClick={() => emailStore.close()} disabled={busy}>×</button>
+          <button className="email-modal-close" onClick={() => emailStore.close()} disabled={busy}>
+            ×
+          </button>
         </header>
 
         {done ? (
           <div className="email-send-done">
             <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
-            <h3 style={{ margin: '0 0 8px' }}>Письмо отправлено</h3>
+            <h3 style={{ margin: '0 0 8px' }}>Письмо передано почтовому серверу</h3>
             <p style={{ color: '#64748b', fontSize: 13, margin: '0 0 20px' }}>
-              Проверьте папку «Входящие» в Outlook. Дальше — «Переслать» или «Сохранить как черновик».
+              Доставка может занять некоторое время. Если письма нет у получателя, проверьте папку
+              «Спам».
             </p>
             <button className="toolbar-btn primary" onClick={() => emailStore.close()}>
               Готово
@@ -135,18 +141,18 @@ export const EmailSendModal: React.FC = () => {
 
             <div className="email-form-row">
               <label>
-                <span>От кого</span>
+                <span>От кого (необязательно)</span>
                 <input
-                  type="text"
+                  type="email"
                   value={from}
                   onChange={(e) => setFrom(e.target.value)}
-                  placeholder="noreply@company.ru"
+                  placeholder="Адрес по умолчанию"
                 />
               </label>
               <label>
-                <span>Reply-To</span>
+                <span>Адрес для ответа</span>
                 <input
-                  type="text"
+                  type="email"
                   value={replyTo}
                   onChange={(e) => setReplyTo(e.target.value)}
                   placeholder="support@company.ru"
@@ -157,7 +163,16 @@ export const EmailSendModal: React.FC = () => {
             {error && <div className="email-error">{error}</div>}
 
             {!activeModel && (
-              <div className="email-hint" style={{ color: '#d97706', padding: '8px 10px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 6 }}>
+              <div
+                className="email-hint"
+                style={{
+                  color: '#d97706',
+                  padding: '8px 10px',
+                  background: '#fffbeb',
+                  border: '1px solid #fde68a',
+                  borderRadius: 6,
+                }}
+              >
                 ⚠️ Модель не выбрана — плейсхолдеры <code>{'{{...}}'}</code> останутся в письме.
                 Выберите модель в панели «Данные», если хотите заполнить.
               </div>
@@ -178,8 +193,8 @@ export const EmailSendModal: React.FC = () => {
             </div>
 
             <p className="email-hint">
-              Письмо уйдёт через SMTP-сервер, настроенный в backend.
-              Если хотите сначала проверить — «Отмена» и «📥 Скачать .eml».
+              Если меняете отправителя, используйте адрес, разрешённый вашим почтовым сервисом. Для
+              ответов на другой ящик укажите «Адрес для ответа».
             </p>
           </form>
         )}

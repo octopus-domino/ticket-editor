@@ -69,9 +69,25 @@ export async function sendEmail(req: EmailRequest): Promise<EmailSendResult> {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(req),
+    // SMTP batches can exceed the shared API client's 30-second default.
+    signal: AbortSignal.timeout(180_000),
   });
   await ensureOk(res);
-  return res.json() as Promise<EmailSendResult>;
+  const result = (await res.json()) as EmailSendResult;
+  if (
+    !Number.isInteger(result.sent) ||
+    result.sent < 0 ||
+    !Number.isInteger(result.failed) ||
+    result.failed < 0 ||
+    result.sent + result.failed !== req.items.length ||
+    !Array.isArray(result.errors) ||
+    result.errors.length !== result.failed
+  ) {
+    throw new Error(
+      'Сервер вернул некорректный результат отправки. Проверьте статус перед повторной попыткой.',
+    );
+  }
+  return result;
 }
 
 export function downloadBlob(blob: Blob, filename: string): void {

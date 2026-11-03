@@ -23,7 +23,10 @@ const WorkspaceNav: React.FC = () => (
       📁 Проекты
     </NavLink>
     <NavLink to="/app/schemas" className={({ isActive }) => (isActive ? 'active' : '')}>
-      📋 Схемы
+      📋 Поля данных
+    </NavLink>
+    <NavLink to="/app/templates" className={({ isActive }) => (isActive ? 'active' : '')}>
+      🎨 Шаблоны
     </NavLink>
     <NavLink to="/app/data-models" className={({ isActive }) => (isActive ? 'active' : '')}>
       📊 Данные

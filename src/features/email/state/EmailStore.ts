@@ -106,6 +106,7 @@ export class EmailStore extends SimpleStore<EmailState> {
   }
 
   async send(req: EmailRequest): Promise<void> {
+    if (this.getState().sendBusy) return;
     const version = this.version;
     this.setState((s) => ({
       ...s,
@@ -126,7 +127,7 @@ export class EmailStore extends SimpleStore<EmailState> {
         sendBusy: false,
         sendDone: result.failed === 0,
         sendError: result.failed
-          ? `${result.sent} sent; ${result.failed} failed: ${result.errors.map((error) => `${error.to}: ${error.message}`).join('; ')}`
+          ? `Передано серверу: ${result.sent}. Не отправлено: ${result.failed}. ${result.errors.map((error) => `${error.to}: ${error.message}`).join('; ')}`
           : null,
       }));
     } catch (e) {

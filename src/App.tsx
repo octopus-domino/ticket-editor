@@ -17,6 +17,8 @@ import { ModelsPage } from '@/features/data-models/ui/ModelsPage';
 import { GenerationPage } from '@/features/generation/ui/GenerationPage';
 import { TemplatesPage } from '@/features/templates/ui/TemplatesPage';
 import { TemplateEditorPage } from '@/features/templates/ui/TemplateEditorPage';
+import { NewTemplatePage } from '@/features/templates/ui/NewTemplatePage';
+import { RouteMetadata } from './marketing/RouteMetadata';
 
 const App: React.FC = () => {
   const offline = useStore(authStore, (s) => s.offline);
@@ -32,6 +34,7 @@ const App: React.FC = () => {
       basename={basename}
       future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
     >
+      <RouteMetadata />
       {offline && <div className="offline-banner">⚠️ Бэкенд недоступен. Локальный режим.</div>}
       <div className="app-root" style={{ height: offline ? 'calc(100vh - 37px)' : '100vh' }}>
         <Routes>
@@ -56,6 +59,7 @@ const App: React.FC = () => {
             />
             <Route path="editor/:docId" element={<EditorPage />} />
             <Route path="templates" element={<TemplatesPage />} />
+            <Route path="templates/new" element={<NewTemplatePage />} />
             <Route path="templates/:templateId/edit" element={<TemplateEditorPage />} />
             <Route path="schemas" element={<SchemasPage />} />
             <Route path="schemas/new" element={<SchemaEditorPage />} />

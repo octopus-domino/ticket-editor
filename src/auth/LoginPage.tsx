@@ -3,9 +3,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import { authStore } from './store';
 import { useStore } from '@/shared/store/store';
 import './auth.css';
+import { AuthProductAside } from './AuthProductAside';
+import { useAuthDestination } from './useAuthDestination';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
+  const { destination, suffix, rememberOAuthDestination } = useAuthDestination();
   const offline = useStore(authStore, (s) => s.offline);
 
   const [email, setEmail] = useState('');
@@ -19,7 +22,7 @@ export const LoginPage: React.FC = () => {
     setBusy(true);
     try {
       await authStore.login(email, password);
-      navigate('/app', { replace: true });
+      navigate(destination, { replace: true });
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -29,44 +32,21 @@ export const LoginPage: React.FC = () => {
 
   return (
     <div className="auth-root">
-      <aside className="auth-left">
-        <Link to="/" className="auth-brand">
-          <span className="auth-brand-mark">T</span>
-          ticket-editor
-        </Link>
-
-        <div className="auth-quote">
-          <p className="auth-quote-text">
-            Клиент правит шаблон.<br />
-            <em>Вы не отвечаете на тикет.</em>
-          </p>
-          <div className="auth-quote-author">
-            <div className="auth-quote-avatar">МС</div>
-            <div>
-              <div className="auth-quote-name">Мария С.</div>
-              <div className="auth-quote-role">Операционный директор, LogiTrans</div>
-            </div>
-          </div>
-        </div>
-
-        <ul className="auth-features">
-          <li><span className="check">✓</span> Встраиваемый редактор — iframe или npm</li>
-          <li><span className="check">✓</span> PDF/A-2b из коробки, JSON на входе</li>
-          <li><span className="check">✓</span> Self-hosted для закрытого контура</li>
-        </ul>
-      </aside>
+      <AuthProductAside />
 
       <main className="auth-right">
         <div className="auth-form-wrap">
-          <Link to="/" className="auth-back">← На главную</Link>
+          <Link to="/" className="auth-back">
+            ← На главную
+          </Link>
 
           {offline ? (
             <div className="auth-offline">
               <div className="auth-offline-icon">📴</div>
               <h2>Сервер недоступен</h2>
               <p>
-                Связаться не удалось. Но вы можете работать в <b>локальном режиме</b> —
-                всё сохранится в этом браузере.
+                Связаться не удалось. Но вы можете работать в <b>локальном режиме</b> — всё
+                сохранится в этом браузере.
               </p>
               <div className="auth-offline-actions">
                 <button
@@ -90,12 +70,12 @@ export const LoginPage: React.FC = () => {
               <h1 className="auth-title">Вход</h1>
               <p className="auth-subtitle">Продолжите с Google или войдите по email.</p>
 
-              <a href="/oauth2/authorization/google" className="auth-google">
-                <img
-                  src="https://www.google.com/favicon.ico"
-                  alt=""
-                  referrerPolicy="no-referrer"
-                />
+              <a
+                href="/oauth2/authorization/google"
+                className="auth-google"
+                onClick={rememberOAuthDestination}
+              >
+                <img src="https://www.google.com/favicon.ico" alt="" referrerPolicy="no-referrer" />
                 Войти через Google
               </a>
 
@@ -137,7 +117,7 @@ export const LoginPage: React.FC = () => {
               </form>
 
               <p className="auth-footer">
-                Нет аккаунта? <Link to="/register">Зарегистрироваться</Link>
+                Нет аккаунта? <Link to={`/register${suffix}`}>Зарегистрироваться</Link>
               </p>
             </>
           )}

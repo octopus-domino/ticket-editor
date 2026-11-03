@@ -11,6 +11,7 @@ import { isFeatureEnabled } from '@/shared/flags';
 import { resolveBindings } from '@/features/bindings/domain/BindingResolver';
 import { materializeSlide } from '@/features/generation/ui/materializeSlide';
 import { modelStore } from '@/features/data-models/state/ModelStore';
+import { GenerationMetrics } from '@/shared/analytics/GenerationMetrics';
 
 export const Toolbar: React.FC = () => {
   const docStore = useDocumentStore();
@@ -56,8 +57,20 @@ export const Toolbar: React.FC = () => {
 
   const handleExportSvg = () => {
     if (!activeSlide) return;
-    const svgString = serializeSlideToSvg(activeSlide);
-    download(svgString, `slide-${activeSlide.id}.svg`, 'image/svg+xml');
+    const metrics = new GenerationMetrics({
+      source: 'editor_export',
+      mode: 'local',
+      format: 'svg',
+      requestedCount: 1,
+    });
+    try {
+      const svgString = serializeSlideToSvg(activeSlide);
+      download(svgString, `slide-${activeSlide.id}.svg`, 'image/svg+xml');
+      metrics.complete({ count: 1, failed: 0 });
+    } catch (error) {
+      metrics.fail('execution');
+      throw error;
+    }
   };
 
   const openSaveAs = () => {

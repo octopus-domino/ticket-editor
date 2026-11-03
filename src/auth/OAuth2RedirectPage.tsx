@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { authStore } from './store';
 import { authApi } from './api';
 import './auth.css';
+import { consumeOAuthDestination } from './useAuthDestination';
 
 export const OAuth2RedirectPage: React.FC = () => {
   const [params] = useSearchParams();
@@ -22,7 +23,7 @@ export const OAuth2RedirectPage: React.FC = () => {
     authApi.me()
       .then((user) => {
         authStore.setSession(token, user);
-        navigate('/app', { replace: true });
+        navigate(consumeOAuthDestination(), { replace: true });
       })
       .catch((err) => {
         console.error('OAuth2 me() failed:', err);

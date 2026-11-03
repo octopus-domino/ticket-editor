@@ -1,9 +1,10 @@
+// src/workspace/components/EditorPage.tsx
 import React, { useCallback, useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Editor } from '@/presentation/components/Editor';
 import { workspaceApi } from '../api';
 import type { DocumentFull } from '../types';
-import { hydrateDocument } from '../hydrateDocument';
+import { hydrateDocument, type HydratedDocument } from '../hydrateDocument';
 import { documentDrafts } from '@/presentation/hooks/editor/useDocumentPersistence';
 import { authStore } from '@/auth/store';
 import { schemaStore } from '@/features/schemas/state/SchemaStore';
@@ -17,87 +18,143 @@ const OFFLINE_KEY = 'ticket-editor:offline-doc';
 
 export const EditorPage: React.FC = () => {
   const { docId } = useParams<{ docId: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+
   const [doc, setDoc] = useState<DocumentFull | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const isLocal = docId === 'local';
+  const urlSchemaId = searchParams.get('schemaId');
+  const urlModelId = searchParams.get('modelId');
 
+  /* --- /app/editor/new?schemaId=X&tab=data → создаём документ, сохраняем query --- */
   useEffect(() => {
-    if (!docId) return;
+    if (docId !== 'new' || isLocal) return;
     let cancelled = false;
     setLoading(true);
     setError(null);
+
+    const search = window.location.search; // сохраняем ?schemaId=...&tab=data
+    void workspaceApi
+      .createDocument('Новый документ', null)
+      .then((newDoc) => {
+        if (cancelled) return;
+        navigate(`/app/editor/${newDoc.id}${search}`, { replace: true });
+      })
+      .catch((err: Error) => {
+        if (cancelled) return;
+        setError(err.message);
+        setLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [docId, isLocal, navigate]);
+
+  /* --- Загрузка обычного документа --- */
+  useEffect(() => {
+    if (!docId || docId === 'new') return;
+    let cancelled = false;
+
+    setLoading(true);
+    setError(null);
     setDoc(null);
-    const load = async () => {
-      const remote: DocumentFull = isLocal
-        ? {
-            id: 'local',
-            name: 'Local project',
-            folderId: null,
-            content: localStorage.getItem(OFFLINE_KEY) ?? '{}',
-            updatedAt: new Date(0).toISOString(),
+
+    const load = async (): Promise<void> => {
+      try {
+        const remote: DocumentFull = isLocal
+          ? {
+              id: 'local',
+              name: 'Локальный проект',
+              folderId: null,
+              content: localStorage.getItem(OFFLINE_KEY) ?? '{}',
+              updatedAt: new Date(0).toISOString(),
+            }
+          : await workspaceApi.getDocument(docId);
+
+        let initial: HydratedDocument = hydrateDocument(remote.content);
+
+        // черновик из IndexedDB
+        const owner = authStore.getState().user?.id ?? 'local';
+        const draft = await documentDrafts.read(`${owner}:${docId}`).catch(() => null);
+        if (draft && draft.savedAt > Date.parse(remote.updatedAt)) {
+          initial = { ...initial, ...draft.snapshot };
+        }
+
+        const checkpoint = async (): Promise<void> => {
+          const content = JSON.stringify({ version: '2.0', ...initial });
+          if (isLocal) localStorage.setItem(OFFLINE_KEY, content);
+          else await workspaceApi.saveDocument(docId, content);
+        };
+
+        // проброс схемы из URL (пришёл по крошке «Шаблон»)
+        if (urlSchemaId && initial.schemaId !== urlSchemaId) {
+          initial.schemaId = urlSchemaId;
+          await checkpoint();
+        }
+
+        // проброс модели из URL
+        if (urlModelId) {
+          await modelStore.load(urlSchemaId ?? initial.schemaId ?? '');
+          if (modelStore.getState().models.some((m) => m.id === urlModelId)) {
+            modelStore.select(urlModelId);
           }
-        : await workspaceApi.getDocument(docId);
-      let initial = hydrateDocument(remote.content);
-      const owner = authStore.getState().user?.id ?? 'local';
-      const draft = await documentDrafts.read(`${owner}:${docId}`).catch(() => null);
-      if (draft && draft.savedAt > Date.parse(remote.updatedAt))
-        initial = { ...initial, ...draft.snapshot };
-      const checkpoint = async () => {
-        const content = JSON.stringify({ version: '2.0', ...initial });
-        if (isLocal) localStorage.setItem(OFFLINE_KEY, content);
-        else await workspaceApi.saveDocument(docId, content);
-      };
-      if (!isLocal && initial.data.length > 0) {
-        if (!initial.schemaId) {
-          const inferred = schemaFromLegacyData(initial.data);
-          const schema = await schemaStore.create(inferred);
-          initial.schemaId = schema.id;
-          await checkpoint();
         }
-        if (!initial.legacyModelId) {
-          const model = await modelStore.create(
-            initial.schemaId,
-            'Imported sample',
-            modelFromLegacyData(initial.data),
-          );
-          initial.legacyModelId = model.id;
-          await checkpoint();
+
+        // легаси data → schema + model (только для серверных документов)
+        if (!isLocal && initial.data.length > 0) {
+          if (!initial.schemaId) {
+            const inferred = schemaFromLegacyData(initial.data);
+            const schema = await schemaStore.create(inferred);
+            initial.schemaId = schema.id;
+            await checkpoint();
+          }
+          if (!initial.legacyModelId) {
+            const model = await modelStore.create(
+              initial.schemaId,
+              'Imported sample',
+              modelFromLegacyData(initial.data),
+            );
+            initial.legacyModelId = model.id;
+            await checkpoint();
+          }
         }
-      }
-      if (initial.schemaId) schemaStore.setActive(initial.schemaId);
-      if (!cancelled) {
-        setDoc({ ...remote, content: JSON.stringify(initial) });
-        setLoading(false);
+
+        // активируем схему — панель «Данные» и крошки её подхватят
+        if (initial.schemaId) schemaStore.setActive(initial.schemaId);
+
+        if (!cancelled) {
+          setDoc({ ...remote, content: JSON.stringify(initial) });
+          setLoading(false);
+        }
+      } catch (reason) {
+        if (!cancelled) {
+          setError((reason as Error).message);
+          setLoading(false);
+        }
       }
     };
-    void load().catch((reason: Error) => {
-      if (!cancelled) {
-        setError(reason.message);
-        setLoading(false);
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [docId, isLocal]);
+
+    void load();
+    return () => { cancelled = true; };
+  }, [docId, isLocal, urlSchemaId, urlModelId]);
 
   const handleSave = useCallback(
-    async (state: import('../hydrateDocument').HydratedDocument) => {
-      state = {
+    async (state: HydratedDocument): Promise<void> => {
+      const toSave: HydratedDocument = {
         ...state,
         version: '2.0',
         schemaId: schemaStore.getState().activeId ?? undefined,
         legacyModelId: doc ? hydrateDocument(doc.content).legacyModelId : undefined,
-      } as import('../hydrateDocument').HydratedDocument;
+      } as HydratedDocument;
+
       if (isLocal) {
-        localStorage.setItem(OFFLINE_KEY, JSON.stringify(state));
+        localStorage.setItem(OFFLINE_KEY, JSON.stringify(toSave));
         return;
       }
       if (!docId) return;
-      await workspaceApi.saveDocument(docId, JSON.stringify(state));
+      await workspaceApi.saveDocument(docId, JSON.stringify(toSave));
     },
     [docId, isLocal, doc],
   );
@@ -109,14 +166,7 @@ export const EditorPage: React.FC = () => {
   const initial = hydrateDocument(doc.content);
 
   return (
-    <div
-      style={{
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        minHeight: 0,
-      }}
-    >
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
       <div
         style={{
           padding: 8,

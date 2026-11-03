@@ -5,22 +5,25 @@
 .DESCRIPTION
     Два режима:
       -Mode Include  (по умолчанию) — берём ТОЛЬКО файлы с перечисленными
-                     расширениями (реальный код). Нужно для репозиториев
-                     вроде jgraph/drawio, где тонет в bundled-libs и media.
+                     расширениями (реальный код).
       -Mode Exclude  — старая логика: берём всё, кроме Exclude.
+
+    ТЕСТЫ по умолчанию исключаются (папки test/tests/__tests__/spec/e2e/
+    cypress/playwright/... и файлы *Test.java, *.test.ts, *_test.go,
+    test_*.py, *_spec.rb и т.п.). Чтобы включить — запустите с -IncludeTests.
 
 .PARAMETER IncludePath
     Если непусто — оставляем только файлы, чей путь (относительно $Path)
-    содержит одну из этих подстрок. Пример для drawio:
-        -IncludePath 'src\main\java\', 'js\diagramly\'
-    Работает и в Include, и в Exclude режиме.
+    содержит одну из этих подстрок.
+
+.PARAMETER IncludeTests
+    Если указан — тесты НЕ исключаются (по умолчанию исключаются).
 
 .EXAMPLE
     .\dump.ps1 -Path C:\src\drawio -Output drawio-src.txt
 
 .EXAMPLE
-    .\dump.ps1 -Path C:\src\drawio -Output drawio-diagramly.txt `
-               -IncludePath 'js\diagramly\'
+    .\dump.ps1 -Path C:\src\drawio -Output drawio-with-tests.txt -IncludeTests
 #>
 
 param(
@@ -29,13 +32,13 @@ param(
 
     [string]$Output = "dump.txt",
 
-    # "Include" = whitelist по расширениям (рекомендуется для drawio),
-    # "Exclude" = старая логика (всё кроме $Exclude).
     [ValidateSet("Include", "Exclude")]
     [string]$Mode = "Include",
 
+    # Если указан — тесты НЕ исключаются. По умолчанию исключаются.
+    [switch]$IncludeTests,
+
     # Папки/файлы, которые пропускаем в любом режиме.
-    # Паттерн матчится через -like против "\<rel>\", т.е. как подстрока.
     [string[]]$Exclude = @(
         "\.git\",
         "\node_modules\",
@@ -57,56 +60,45 @@ param(
         "\.png\", "\.jpg\", "\.jpeg\", "\.gif\", "\.ico\",
         "\.webp\", "\.bmp\", "\.tiff\", "\.psd\",
         "\.woff\", "\.woff2\", "\.ttf\", "\.eot\", "\.otf\",
-	 "\.txt\"
+        "\.txt\"
     ),
 
     # Разрешённые расширения при $Mode = "Include".
-    # Только эти файлы попадут в дамп (плюс фильтры ниже).
     [string[]]$Include = @(
-        # исходный код
         ".java", ".kt", ".groovy", ".scala",
         ".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx", ".vue", ".svelte",
         ".c", ".cpp", ".cc", ".h", ".hpp",
         ".py", ".rb", ".go", ".rs", ".php",
-        # разметка и стили
         ".html", ".htm", ".xhtml",
         ".jsp", ".jspf", ".tag", ".ftl",
         ".css", ".scss", ".sass", ".less",
         ".xml", ".xsd", ".dtd", ".xsl", ".xslt",
-        # сборка и конфиги
         ".gradle", ".kts",
         ".properties",
         ".yml", ".yaml",
         ".toml", ".ini", ".cfg", ".conf",
         ".json",
-        # документация и скрипты (без .txt)
         ".md", ".sql",
         ".sh", ".bash", ".zsh",
         ".bat", ".cmd", ".ps1"
     ),
 
-    # Старое поведение: при $Mode = "Exclude" и непустом списке —
-    # фильтруем файлы по этим расширениям.
     [string[]]$Extensions = @(),
 
-    # Regex по ИМЕНИ файла. Совпало — выкидываем, даже если расширение в $Include.
+    # Regex по ИМЕНИ файла. Совпало — выкидываем.
     [string[]]$ExcludeNamePatterns = @(
-        # минифицированные / собранные бандлы
         "\.min\.js$",
         "\.min\.mjs$",
         "\.min\.css$",
         "\.bundle\.js$",
         "\.bundle\.css$",
         "-min\.js$",
-        # source maps
         "\.js\.map$",
         "\.css\.map$",
         "\.mjs\.map$",
         "\.map\.json$",
-        # TypeScript-декларации (генерируются)
         "\.d\.ts$",
         "\.d\.mts$",
-        # lock-файлы пакетных менеджеров
         "package-lock\.json$",
         "yarn\.lock$",
         "pnpm-lock\.yaml$",
@@ -114,20 +106,62 @@ param(
         "composer\.lock$",
         "Gemfile\.lock$",
         "\.lock$",
-        # drawio-specific: диаграммы — это данные, не код
         "\.drawio\.xml$",
         "\.drawio$",
-        # drawio-specific: локализации — десятки мегабайт словарей,
-        # не код. Лежат в js/diagramly/*.json, но фильтруем по имени.
         "^[A-Za-z]{2}(-[A-Za-z]{2,4})?\.json$"
     ),
 
-    # Если непусто — оставляем только файлы, чей rel-путь содержит
-    # одну из этих подстрок. Например: 'js\diagramly\', 'src\main\java\'.
     [string[]]$IncludePath = @(),
 
     [long]$MaxFileSize = 1MB
 )
+
+# ===============================================================
+#  ТЕСТЫ: паттерны, добавляемые при отсутствии -IncludeTests
+# ===============================================================
+if (-not $IncludeTests) {
+
+    $Exclude += @(
+        # --- директории с тестами ---
+        "\test\", "\tests\", "\__tests__\",
+        "\spec\", "\specs\", "\__specs__\",
+        "\testdata\", "\test-data\", "\test_data\", "\testing\",
+        "\src\test\", "\src\tests\", "\src\it\", "\src\testFixtures\",
+        "\src\androidTest\", "\src\integrationTest\", "\src\functionalTest\",
+        "\e2e\", "\cypress\", "\playwright\",
+        "\__mocks__\", "\__snapshots__\",
+        "\fixtures\"
+    )
+
+    $ExcludeNamePatterns += @(
+        # --- Java / Kotlin / Groovy / Scala / PHP: тестовые классы ---
+        "Tests?\.(java|kt|groovy|scala|php)$",
+        "Spec\.(scala|groovy)$",
+
+        # --- JS / TS: *.test.* и *.spec.* ---
+        "\.(test|spec)\.(js|mjs|cjs|ts|tsx|jsx|vue|svelte)$",
+
+        # --- Python: pytest/nose ---
+        "^test_.*\.py$",
+        "^.*_test\.py$",
+        "^conftest\.py$",
+
+        # --- Ruby: RSpec / Minitest ---
+        "_spec\.rb$",
+        "_test\.rb$",
+
+        # --- Go: *_test.go ---
+        "_test\.go$",
+
+        # --- C / C++: gtest / catch2 ---
+        "_test\.(c|cc|cpp)$",
+        "_unittest\.(c|cc|cpp)$",
+        "^test_.*\.(c|cc|cpp)$",
+
+        # --- bash test framework ---
+        "\.bats$"
+    )
+}
 
 $ErrorActionPreference = "Stop"
 
@@ -144,9 +178,6 @@ if (Test-Path $outFull) { Remove-Item -LiteralPath $outFull -Force }
 
 function Test-PathExcluded {
     param([string]$RelPath)
-
-    # Оборачиваем в бэкслеши, чтобы паттерны вида "\.git\" матчились
-    # и в начале, и в середине пути.
     $wrapped = "\" + $RelPath + "\"
     foreach ($ex in $Exclude) {
         if ($wrapped -like "*$ex*") { return $true }
@@ -156,7 +187,6 @@ function Test-PathExcluded {
 
 function Test-InIncludePath {
     param([string]$RelPath)
-
     if ($IncludePath.Count -eq 0) { return $true }
     $wrapped = "\" + $RelPath + "\"
     foreach ($p in $IncludePath) {
@@ -167,15 +197,12 @@ function Test-InIncludePath {
 
 function Test-FileAllowed {
     param([System.IO.FileInfo]$File)
-
     $rel = $File.FullName.Substring($root.Length).TrimStart('\')
-
     if (Test-PathExcluded  $rel) { return $false }
     if (-not (Test-InIncludePath $rel)) { return $false }
     if ($File.FullName -eq $outFull) { return $false }
 
     $ext = $File.Extension.ToLower()
-
     if ($Mode -eq "Include") {
         if ($Include -notcontains $ext) { return $false }
     } else {
@@ -189,14 +216,12 @@ function Test-FileAllowed {
     }
 
     if ($File.Length -gt $MaxFileSize) { return $false }
-
     return $true
 }
 
 function Test-DirAllowed {
     param([System.IO.DirectoryInfo]$Dir)
     $rel = $Dir.FullName.Substring($root.Length).TrimStart('\')
-
     if (Test-PathExcluded $rel) { return $false }
     if (-not (Test-InIncludePath $rel)) { return $false }
     return $true
@@ -208,7 +233,6 @@ function Test-DirAllowed {
 
 function Get-Tree {
     param([string]$Dir, [string]$Prefix = "")
-
     $items = Get-ChildItem -LiteralPath $Dir -Force |
              Where-Object { $_.Name -ne "." -and $_.Name -ne ".." } |
              Sort-Object { -not $_.PSIsContainer }, Name |
@@ -221,9 +245,7 @@ function Get-Tree {
         $item   = $items[$i]
         $last   = ($i -eq $items.Count - 1)
         $branch = if ($last) { "+-- " } else { "|-- " }
-
         "$Prefix$branch$($item.Name)"
-
         if ($item.PSIsContainer) {
             $np = $Prefix + $(if ($last) { "    " } else { "|   " })
             Get-Tree -Dir $item.FullName -Prefix $np
@@ -236,6 +258,7 @@ function Get-Tree {
 # ===============================================================
 
 Write-Host "Mode:        $Mode" -ForegroundColor Cyan
+Write-Host "Tests:       $(if ($IncludeTests) { 'INCLUDED' } else { 'EXCLUDED' })" -ForegroundColor Cyan
 Write-Host "Exclude:     $($Exclude.Count) patterns" -ForegroundColor DarkGray
 if ($Mode -eq "Include") {
     Write-Host "Include ext: $($Include -join ', ')" -ForegroundColor DarkGray
@@ -261,6 +284,7 @@ $sb = [System.Text.StringBuilder]::new()
 [void]$sb.AppendLine("FOLDER: $root")
 [void]$sb.AppendLine("DATE:   $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')")
 [void]$sb.AppendLine("MODE:   $Mode")
+[void]$sb.AppendLine("TESTS:  $(if ($IncludeTests) { 'included' } else { 'excluded' })")
 if ($IncludePath.Count -gt 0) {
     [void]$sb.AppendLine("ONLY:   $($IncludePath -join ', ')")
 }

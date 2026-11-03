@@ -7,14 +7,14 @@ const mockData: DataRoot[] = [
   {
     id: 'root1',
     name: 'event',
-    label: 'Событие',
+    // Убрали 'label', так как его нет в типе DataRoot
     fields: [
       { id: 'f1', name: 'title', type: 'string', sample: 'Концерт' },
       {
         id: 'f2',
         name: 'items',
         type: 'array',
-        sample: '', // <--- ДОБАВИТЬ ВОТ ЭТУ СТРОКУ
+        sample: '', // Добавили sample, так как он обязателен для DataField
         children: [
           { id: 'f3', name: 'price', type: 'number', sample: '1000' },
         ],

@@ -50,7 +50,7 @@ function resolveHost(
  * Возвращает patch для merge с исходным patch.
  */
 function recalcArc(
-  t: StampTextItem,
+  _t: StampTextItem,
   merged: StampTextItem,
   host: StampShapeItem,
   patch: Partial<StampTextItem>,

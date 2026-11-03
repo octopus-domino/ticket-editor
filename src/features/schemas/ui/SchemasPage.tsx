@@ -1,58 +1,112 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useCallback, useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useSchemas } from '../state/useSchemas';
 import { schemaStore } from '../state/SchemaStore';
+import type { DataSchema } from '../domain/DataSchema';
+import {
+  SearchSelectList,
+  type BulkAction,
+  type ListItemAdapter,
+} from '@/presentation/components/list';
+import { toast } from '@/presentation/components/toast';
+import { runBulk } from '@/shared/utils/bulk';
 
 export const SchemasPage: React.FC = () => {
   const { schemas, loading, error } = useSchemas();
-  const [actionError, setActionError] = useState<string | null>(null);
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const navigate = useNavigate();
 
-  const doDelete = async (id: string): Promise<void> => {
-    try {
-      await schemaStore.delete(id);
-      setConfirmDeleteId(null);
-      setActionError(null);
-    } catch (e) {
-      setActionError((e as Error).message);
-    }
-  };
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+
+  const adapter = useMemo<ListItemAdapter<DataSchema>>(
+    () => ({
+      getId: (s) => s.id,
+      getLabel: (s) => s.name,
+      getMeta: (s) => `${s.fields.length} полей`,
+      getSearchText: (s) => s.name,
+    }),
+    [],
+  );
+
+  const bulkActions = useMemo<BulkAction<DataSchema>[]>(
+    () => [
+      {
+        key: 'delete',
+        label: 'Удалить',
+        icon: '🗑',
+        variant: 'danger',
+        confirm: (ids) => ({
+          title: `Удалить ${ids.length} ${plural(ids.length)}?`,
+          description:
+            'Схемы, к которым привязаны модели данных, удалить нельзя — сначала удалите модели.',
+        }),
+        onRun: async (ids) => {
+          const result = await runBulk(ids, (id) => schemaStore.delete(id));
+          if (result.ok > 0) {
+            toast.success(`Удалено: ${result.ok} ${plural(result.ok)}`);
+          }
+          if (result.failed.length > 0) {
+            toast.error(
+              `Не удалось удалить: ${result.failed.length}`,
+              result.failed[0].message,
+            );
+          }
+          setSelectedIds((prev) => {
+            const next = new Set(prev);
+            ids.forEach((id) => next.delete(id));
+            return next;
+          });
+        },
+      },
+    ],
+    [],
+  );
+
+  const onItemClick = useCallback(
+    (s: DataSchema) => navigate(`/app/schemas/${s.id}`),
+    [navigate],
+  );
 
   return (
-    <div className="schema-page">
+    <div
+      className="schema-page"
+      style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 12 }}
+    >
       <div className="schema-fields-header">
         <h2>Схемы данных</h2>
-        <Link to="/schemas/new" className="schema-btn-fill">+ Новая схема</Link>
+        <Link to="/app/schemas/new" className="schema-btn-fill">
+          + Новая схема
+        </Link>
       </div>
-      {loading && <div className="schema-hint">Загрузка…</div>}
-      {error && <div className="schema-error">{error}</div>}
-      {actionError && <div className="schema-error">{actionError}</div>}
-      {schemas.length === 0 && !loading && (
-        <p className="schema-hint">Схем нет. Создайте первую.</p>
+
+      {error && (
+        <div className="schema-error" role="alert">
+          {error}
+        </div>
       )}
-      <div className="schema-fields-list">
-        {schemas.map((s) => (
-          <div key={s.id} className="schema-root-card">
-            <div className="schema-root-head">
-              <Link to={`/schemas/${s.id}`} className="schema-root-name">{s.name}</Link>
-              <span className="schema-hint">{s.fields.length} полей</span>
-              {confirmDeleteId === s.id ? (
-                <span className="inline-confirm">
-                  Удалить?{' '}
-                  <button type="button" onClick={() => void doDelete(s.id)}>Да</button>{' '}
-                  <button type="button" onClick={() => setConfirmDeleteId(null)}>Нет</button>
-                </span>
-              ) : (
-                <button
-                  className="schema-btn-remove"
-                  onClick={() => setConfirmDeleteId(s.id)}
-                  title="Удалить схему"
-                >×</button>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
+
+      <SearchSelectList<DataSchema>
+        items={schemas}
+        adapter={adapter}
+        selectedIds={selectedIds}
+        onSelectionChange={setSelectedIds}
+        onItemClick={onItemClick}
+        bulkActions={bulkActions}
+        searchPlaceholder="Поиск по названию схемы…"
+        emptyText={
+          schemas.length === 0
+            ? 'Схем пока нет. Создайте первую.'
+            : 'Ни одна схема не подходит под запрос.'
+        }
+        loading={loading}
+      />
     </div>
   );
 };
+
+function plural(n: number): string {
+  const m10 = n % 10;
+  const m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return 'схему';
+  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return 'схемы';
+  return 'схем';
+}

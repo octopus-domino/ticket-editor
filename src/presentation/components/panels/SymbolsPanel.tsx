@@ -1,17 +1,19 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useStore } from '@/shared/store/store';
 import {
   useDocumentStore, useSelectionStore, useGraphicsStore,
 } from '../../providers/EditorProvider';
 import { useSymbols } from '../../hooks/editor/useSymbols';
 import type { SymbolDef } from '@/shared/types';
+import { ConfirmDialog } from '@/presentation/components/dialog';
+import { InlineTextPrompt } from './InlineTextPrompt';
 
 function previewIcon(sym: SymbolDef): string {
   const p = sym.prototype;
   if (p.type === 'shape') {
     if (p.shape === 'circle') return '○';
     if (p.shape === 'triangle') return '△';
-    if (p.shape === 'star') return '☆';
+    if (p.shape === 'star') return '★';
     if (p.shape === 'polygon') return '⬡';
     return '▭';
   }
@@ -25,33 +27,49 @@ export const SymbolsPanel: React.FC = () => {
   const docStore = useDocumentStore();
   const selStore = useSelectionStore();
   const graphicsStore = useGraphicsStore();
-  const symbols = useStore(graphicsStore, s => s.symbols);
-  const selectedIds = useStore(selStore, s => s.selectedIds);
+  const symbols = useStore(graphicsStore, (s) => s.symbols);
+  const selectedIds = useStore(selStore, (s) => s.selectedIds);
   const { createFromSelection, instantiate } = useSymbols(docStore, selStore, graphicsStore);
 
-  const handleCreate = () => {
-    const name = prompt('Название символа:', `Символ ${symbols.length + 1}`);
-    if (!name) return;
+  const [creating, setCreating] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  const handleCreate = (name: string): void => {
     createFromSelection(name);
+    setCreating(false);
   };
+
+  const confirmDeleteSym = symbols.find((s) => s.id === confirmDeleteId) ?? null;
 
   return (
     <div>
-      <button
-        type="button"
-        disabled={!selectedIds.length}
-        onClick={handleCreate}
-        style={{
-          width: '100%', padding: '7px 10px',
-          background: selectedIds.length ? '#6366f1' : '#e2e8f0',
-          color: selectedIds.length ? '#fff' : '#94a3b8',
-          border: 'none', borderRadius: 5, fontWeight: 600,
-          cursor: selectedIds.length ? 'pointer' : 'not-allowed',
-          marginBottom: 8,
-        }}
-      >
-        + Создать из выделенного
-      </button>
+      {!creating && (
+        <button
+          type="button"
+          disabled={!selectedIds.length}
+          onClick={() => setCreating(true)}
+          style={{
+            width: '100%', padding: '7px 10px',
+            background: selectedIds.length ? '#6366f1' : '#e2e8f0',
+            color: selectedIds.length ? '#fff' : '#94a3b8',
+            border: 'none', borderRadius: 5, fontWeight: 600,
+            cursor: selectedIds.length ? 'pointer' : 'not-allowed',
+            marginBottom: 8,
+          }}
+        >
+          + Создать из выделенного
+        </button>
+      )}
+
+      {creating && (
+        <div style={{ marginBottom: 8 }}>
+          <InlineTextPrompt
+            placeholder={`Символ ${symbols.length + 1}`}
+            onSave={handleCreate}
+            onCancel={() => setCreating(false)}
+          />
+        </div>
+      )}
 
       {symbols.length === 0 && (
         <p style={{ fontSize: 11, color: '#94a3b8', lineHeight: 1.5 }}>
@@ -59,7 +77,7 @@ export const SymbolsPanel: React.FC = () => {
         </p>
       )}
 
-      {symbols.map(sym => (
+      {symbols.map((sym) => (
         <div key={sym.id} style={{
           display: 'flex', alignItems: 'center', gap: 6,
           padding: '6px 8px', background: '#f8fafc',
@@ -100,11 +118,7 @@ export const SymbolsPanel: React.FC = () => {
           <button
             type="button"
             title="Удалить символ"
-            onClick={() => {
-              if (confirm(`Удалить символ «${sym.name}»?\n\nСуществующие экземпляры на холсте станут обычными элементами.`)) {
-                graphicsStore.removeSymbol(sym.id);
-              }
-            }}
+            onClick={() => setConfirmDeleteId(sym.id)}
             style={{
               background: 'transparent', border: 'none',
               color: '#dc2626', cursor: 'pointer', fontSize: 16,
@@ -115,6 +129,19 @@ export const SymbolsPanel: React.FC = () => {
           </button>
         </div>
       ))}
+
+      <ConfirmDialog
+        isOpen={!!confirmDeleteId}
+        title={`Удалить символ «${confirmDeleteSym?.name ?? ''}»?`}
+        description="Существующие экземпляры на холсте станут обычными элементами."
+        variant="danger"
+        confirmLabel="Удалить"
+        onConfirm={() => {
+          if (confirmDeleteId) graphicsStore.removeSymbol(confirmDeleteId);
+          setConfirmDeleteId(null);
+        }}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
     </div>
   );
 };

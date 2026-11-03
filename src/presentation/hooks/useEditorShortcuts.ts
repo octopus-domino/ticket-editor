@@ -100,8 +100,22 @@ export function useEditorShortcuts({ docStore, selStore, modalsStore, clipboardA
       return slide.elements.filter((e) => ids.includes(e.id));
     };
 
+    const selectAllOnSlide = (): void => {
+      const state = docStore.getState();
+      const slide = state.slides.find((x) => x.id === state.activeId);
+      if (!slide) return;
+      const ids = slide.elements
+        .filter((el) => el.type !== 'connector' && el.type !== 'fill')
+        .map((el) => el.id);
+      selStore.setIds(ids);
+    };
+
     const handlers: Handler[] = [
       { spec: { key: 'Escape' }, handle: () => selStore.clear() },
+      {
+        spec: { code: 'KeyA', ctrl: true },
+        handle: (e) => { e.preventDefault(); selectAllOnSlide(); },
+      },
       {
         spec: { key: 'Delete' },
         handle: (e) => {
@@ -160,17 +174,12 @@ export function useEditorShortcuts({ docStore, selStore, modalsStore, clipboardA
       const ms = modalsStore.getState();
       if (ms.stampEditorTarget || ms.diagramEditorTarget) return;
 
-      // Если фокус находится в любом поле ввода, TipTap или Inline-редакторе,
-      // мы НЕ перехватываем горячие клавиши (Ctrl+C, Ctrl+V, Delete и т.д.),
-      // позволяя браузеру и встроенным редакторам обработать их нативно.
       if (isEditable(e.target)) {
         return;
       }
 
       const isCtrl = e.ctrlKey || e.metaKey;
 
-      // === Undo/Redo приоритетнее всего ===
-      // Работает даже если фокус остался в поле панели свойств.
       if (isCtrl && e.code === 'KeyZ' && !ms.editing) {
         e.preventDefault();
         if (e.shiftKey) docStore.redo();
@@ -183,7 +192,6 @@ export function useEditorShortcuts({ docStore, selStore, modalsStore, clipboardA
         return;
       }
 
-      // === Остальные шорткаты ===
       for (const h of handlers) {
         if (matches(e, h.spec)) {
           h.handle(e);

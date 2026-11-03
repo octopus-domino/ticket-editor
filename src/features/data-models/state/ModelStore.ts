@@ -46,9 +46,19 @@ export class ModelStore extends SimpleStore<ModelState> {
   select(id: string | null): void { this.setState((s) => ({ ...s, selectedId: id })); }
 
   async create(schemaId: string, name: string, values: Record<string, unknown> = {}): Promise<DataModel> {
-    const created = await this.repo.create({ schemaId, name, values });
+    const uniqueName = this.uniqueName(schemaId, name);
+    const created = await this.repo.create({ schemaId, name: uniqueName, values });
     this.setState((s) => ({ ...s, models: [created, ...s.models], selectedId: created.id }));
     return created;
+  }
+
+  /** «Новая модель», «Новая модель (2)», «Новая модель (3)»… */
+  private uniqueName(schemaId: string, base: string): string {
+    const existing = this.getState().models.filter((m) => m.schemaId === schemaId);
+    if (!existing.some((m) => m.name === base)) return base;
+    let i = 2;
+    while (existing.some((m) => m.name === `${base} (${i})`)) i++;
+    return `${base} (${i})`;
   }
 
   patch(id: string, patch: { name?: string; values?: Record<string, unknown> }): void {
@@ -79,7 +89,8 @@ export class ModelStore extends SimpleStore<ModelState> {
 
   async importMany(schemaId: string, items: { name: string; values: Record<string, unknown> }[]): Promise<void> {
     for (const item of items) {
-      const created = await this.repo.create({ schemaId, name: item.name, values: item.values });
+      const uniqueName = this.uniqueName(schemaId, item.name);
+      const created = await this.repo.create({ schemaId, name: uniqueName, values: item.values });
       this.setState((s) => ({ ...s, models: [created, ...s.models] }));
     }
   }

@@ -1,202 +1,281 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useStore } from '@/shared/store/store';
-import type { DataSchema } from '@/features/schemas/domain/DataSchema';
-import { httpSchemaRepository } from '@/features/schemas/api/HttpSchemaRepository';
+import { templateStore } from '@/features/templates/state/TemplateStore';
+import { useSchemas } from '@/features/schemas/state/useSchemas';
+import { modelStore } from '@/features/data-models/state/ModelStore';
 import type { DataModel } from '@/features/data-models/domain/DataModel';
-import { httpDataModelRepository } from '@/features/data-models/api/HttpDataModelRepository';
-import { resolveBindings } from '@/features/bindings/domain/BindingResolver';
-import { validateGeneration } from '../domain/GenerationValidator';
-import { generationStore } from '../state/GenerationStore';
+import { httpGenerationClient } from '../api/HttpGenerationClient';
+import type {
+  GenerationRequest,
+  GenerationResult,
+} from '../api/GenerationClient';
+import {
+  SearchSelectList,
+  type ListItemAdapter,
+} from '@/presentation/components/list';
+import { toast } from '@/presentation/components/toast';
 
 const SUPPORTED = ['pdfa', 'pdf', 'svg'] as const;
 type Format = (typeof SUPPORTED)[number];
 
-interface Autosave {
-  slides?: unknown[];
-}
-
-/** Читает slides из autosave-ключа редактора. */
-function readSlidesFromAutosave(): unknown[] {
-  try {
-    const raw = localStorage.getItem('ticket-editor:autosave');
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as Autosave;
-    return Array.isArray(parsed.slides) ? parsed.slides : [];
-  } catch {
-    return [];
-  }
-}
-
-/** Приводит unknown[] → Slide[] для валидатора (он ожидает Slide[]). */
-function asSlidesForBinding(slides: unknown[]): never[] {
-  return slides as never[];
+function downloadBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
 
 export const GenerationPage: React.FC = () => {
   const [params, setParams] = useSearchParams();
+  const { activeSchema } = useSchemas();
 
-  const [schema, setSchema] = useState<DataSchema | null>(null);
-  const [models, setModels] = useState<DataModel[]>([]);
-  const [slides, setSlides] = useState<unknown[]>([]);
-  const [pickedIds, setPickedIds] = useState<Set<string>>(new Set());
-  const [bootError, setBootError] = useState<string | null>(null);
+  const templates = useStore(templateStore, (s) => s.items);
+  const activeTemplateId = useStore(templateStore, (s) => s.activeId);
+  const activeTemplate = useStore(templateStore, (s) => s.active);
+  const templatesLoading = useStore(templateStore, (s) => s.loading);
+  const templatesError = useStore(templateStore, (s) => s.error);
 
-  const format = (params.get('format') as Format) ?? 'pdfa';
-  const packAs = (params.get('packAs') as 'zip' | 'single') ?? 'zip';
-  const filenamePattern = params.get('fn') ?? 'ticket-{{name}}';
+  const models = useStore(modelStore, (s) => s.models);
+  const modelsLoading = useStore(modelStore, (s) => s.loading);
+  const modelsError = useStore(modelStore, (s) => s.error);
+  const saveStatus = useStore(modelStore, (s) => s.saveStatus);
 
-  const phase = useStore(generationStore, (s) => s.phase);
-  const result = useStore(generationStore, (s) => s.result);
-  const job = useStore(generationStore, (s) => s.job);
-  const err = useStore(generationStore, (s) => s.error);
+  const urlTemplateId = params.get('templateId');
+  const formatFromUrl = (params.get('format') as Format | null) ?? 'pdfa';
+  const packFromUrl = (params.get('packAs') as 'zip' | 'single' | null) ?? 'zip';
+  const filenameFromUrl = params.get('fn') ?? 'document-{{name}}';
+  const idsFromUrl = params.get('models') ?? '';
+
+  const format: Format = SUPPORTED.includes(formatFromUrl) ? formatFromUrl : 'pdfa';
+  const packAs: 'zip' | 'single' = packFromUrl === 'single' ? 'single' : 'zip';
+  const filenamePattern = filenameFromUrl;
+
+  const [pickedIds, setPickedIds] = useState<Set<string>>(
+    () => new Set(idsFromUrl.split(',').filter(Boolean)),
+  );
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<GenerationResult | null>(null);
 
   useEffect(() => {
-    setSlides(readSlidesFromAutosave());
-  }, []);
-
-  useEffect(() => {
-    void (async () => {
-      const raw = localStorage.getItem('ticket-editor:schemaId');
-      if (!raw) {
-        setBootError('Нет выбранной схемы. Откройте редактор и выберите схему в панели «Данные».');
-        return;
-      }
-      try {
-        const s = await httpSchemaRepository.get(raw);
-        setSchema(s);
-        const list = await httpDataModelRepository.list(s.id);
-        setModels(list);
-        const fromUrl = params.get('ids');
-        if (fromUrl) setPickedIds(new Set(fromUrl.split(',').filter(Boolean)));
-      } catch (e) {
-        setBootError((e as Error).message);
-      }
-    })();
+    void templateStore.loadAll(activeSchema?.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [activeSchema?.id]);
 
   useEffect(() => {
-    params.set('format', format);
-    params.set('packAs', packAs);
-    params.set('fn', filenamePattern);
-    params.set('ids', Array.from(pickedIds).join(','));
-    setParams(params, { replace: true });
+    if (activeSchema) void modelStore.load(activeSchema.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [format, packAs, filenamePattern, pickedIds]);
+  }, [activeSchema?.id]);
+
+  useEffect(() => {
+    const targetId = urlTemplateId ?? activeTemplateId;
+    if (targetId && targetId !== activeTemplateId) {
+      void templateStore.select(targetId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlTemplateId]);
+
+  useEffect(() => {
+    if (!activeTemplateId) return;
+    const next = new URLSearchParams(params);
+    next.set('templateId', activeTemplateId);
+    setParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTemplateId]);
+
+  const updateUrl = useCallback(
+    (patch: Record<string, string | null>) => {
+      const next = new URLSearchParams(params);
+      for (const [k, v] of Object.entries(patch)) {
+        if (v === null || v === '') next.delete(k);
+        else next.set(k, v);
+      }
+      setParams(next, { replace: true });
+    },
+    [params, setParams],
+  );
+
+  useEffect(() => {
+    updateUrl({
+      models: Array.from(pickedIds).join(','),
+      format,
+      packAs,
+      fn: filenamePattern,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pickedIds, format, packAs, filenamePattern]);
+
+  // When packAs=single, auto-trim to first selected — same as previous behavior
+  useEffect(() => {
+    if (packAs === 'single' && pickedIds.size > 1) {
+      const first = Array.from(pickedIds)[0];
+      setPickedIds(new Set([first]));
+    }
+  }, [packAs, pickedIds]);
+
+  const modelAdapter = useMemo<ListItemAdapter<DataModel>>(
+    () => ({
+      getId: (m) => m.id,
+      getLabel: (m) => m.name,
+      getMeta: (m) => `${Object.keys(m.values).length} полей`,
+      getSearchText: (m) => m.name,
+    }),
+    [],
+  );
 
   const pickedModels = useMemo(
     () => models.filter((m) => pickedIds.has(m.id)),
     [models, pickedIds],
   );
 
-  const validationIssues = useMemo(
-    () =>
-      schema
-        ? validateGeneration({
-            schema,
-            bindings: resolveBindings(asSlidesForBinding(slides)),
-            selectedModels: pickedModels,
-            format,
-            supportedFormats: [...SUPPORTED],
-          })
-        : [],
-    [schema, slides, pickedModels, format],
-  );
+  const canRun =
+    !!activeTemplate &&
+    !!activeTemplate.slides?.length &&
+    pickedModels.length > 0 &&
+    !busy;
 
-  const canRun = validationIssues.length === 0 && pickedModels.length > 0 && slides.length > 0;
-  const useAsync = pickedModels.length > 100;
+  const blockingReasons = useMemo(() => {
+    const out: string[] = [];
+    if (!activeTemplate) out.push('Шаблон не выбран');
+    else if (!activeTemplate.slides?.length) out.push('Шаблон пуст');
+    if (pickedModels.length === 0) out.push('Выберите хотя бы одну модель');
+    if (packAs === 'single' && pickedModels.length > 1) {
+      out.push('Для «Один файл» нужна ровно одна модель');
+    }
+    return out;
+  }, [activeTemplate, pickedModels.length, packAs]);
 
-  const togglePick = (id: string): void => {
-    setPickedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
+  const run = useCallback(async (): Promise<void> => {
+    if (!canRun || !activeTemplate) return;
+    setBusy(true);
+    setError(null);
+    setResult(null);
 
-  const run = async (): Promise<void> => {
-    if (!schema || !canRun) return;
-    const req = {
-      inlineSlides: slides,
-      items: pickedModels.map((m) => ({ dataModelId: m.id })),
+    const req: GenerationRequest = {
+      inlineSlides: activeTemplate.slides,
+      items: pickedModels.map((m) => ({ inlineValues: m.values })),
       format,
       packAs,
       filenamePattern,
     };
-    if (useAsync) {
-      await generationStore.runAsync(req);
-    } else {
-      const r = await generationStore.runSync(req);
+
+    try {
+      const r = await httpGenerationClient.generateSync(req);
+      setResult(r);
       downloadBlob(r.blob, r.filename);
+    } catch (e) {
+      setError((e as Error).message);
+      toast.error('Генерация не удалась', (e as Error).message);
+    } finally {
+      setBusy(false);
     }
-  };
+  }, [canRun, activeTemplate, pickedModels, format, packAs, filenamePattern]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === 'Enter') {
+        e.preventDefault();
+        if (canRun) void run();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [run, canRun]);
 
   return (
     <div className="gen-page">
       <main className="gen-main">
         <h2 className="gen-title">Генерация документов</h2>
         <p className="gen-subtitle">
-          Схема: <b>{schema?.name ?? '—'}</b>. Моделей: {models.length}. Слайдов: {slides.length}.
+          Шаблон × модели данных → документы. Формат: <b>{format.toUpperCase()}</b>,
+          упаковка: <b>{packAs}</b>.
         </p>
 
-        {bootError && <div className="schema-error">{bootError}</div>}
+        {templatesLoading && <div className="schema-hint">Загрузка шаблонов…</div>}
+        {templatesError && <div className="schema-error">{templatesError}</div>}
+        {modelsLoading && <div className="schema-hint">Загрузка моделей…</div>}
+        {modelsError && <div className="schema-error">{modelsError}</div>}
 
-        {!bootError && slides.length === 0 && (
-          <div className="schema-error">
-            Нет активного документа. Откройте редактор, дождитесь автосохранения и вернитесь сюда.
+        {activeTemplate && (
+          <div className="gen-preview">
+            <div style={{ fontWeight: 600 }}>📄 {activeTemplate.name}</div>
+            <div className="schema-hint">
+              Слайдов: {activeTemplate.slides.length} · Моделей: {models.length} · Выбрано:{' '}
+              {pickedModels.length}
+            </div>
           </div>
         )}
 
-        {!bootError && models.length === 0 && (
-          <p className="gen-empty">
-            Моделей нет. Создайте их в разделе{' '}
-            <a href="/data-models" style={{ color: '#4f46e5' }}>Данные</a>.
+        {blockingReasons.length > 0 && (
+          <div className="gen-warning">
+            {blockingReasons.map((r, i) => <div key={i}>⚠ {r}</div>)}
+          </div>
+        )}
+
+        {error && <div className="schema-error" style={{ marginTop: 12 }}>{error}</div>}
+
+        {result && (
+          <div className="gen-status done" style={{ marginTop: 12 }}>
+            Готово: {result.count} документ(ов), ошибок: {result.failed}.{' '}
+            <button className="dp-btn" onClick={() => downloadBlob(result.blob, result.filename)}>
+              Скачать снова
+            </button>
+          </div>
+        )}
+
+        {!activeTemplate && (
+          <p className="gen-empty" style={{ marginTop: 16 }}>
+            Нет выбранного шаблона. Откройте{' '}
+            <Link to="/app" style={{ color: 'var(--accent)' }}>список проектов</Link>{' '}
+            или создайте документ в редакторе и сохраните.
           </p>
         )}
-
-        <h3 className="gen-section-title">Выберите модели</h3>
-        <div className="gen-model-list">
-          {models.map((m) => (
-            <label key={m.id} className={`gen-model-item ${pickedIds.has(m.id) ? 'checked' : ''}`}>
-              <input
-                className="gen-model-checkbox"
-                type="checkbox"
-                checked={pickedIds.has(m.id)}
-                onChange={() => togglePick(m.id)}
-              />
-              <span>{m.name}</span>
-            </label>
-          ))}
-        </div>
-
-        {validationIssues.length > 0 && (
-          <div className="schema-error" style={{ marginTop: 16 }}>
-            {validationIssues.slice(0, 10).map((i, k) => (
-              <div key={k}>⚠ {i.message}</div>
-            ))}
-          </div>
-        )}
-
-        {phase === 'async-running' && job && (
-          <div className="gen-progress">
-            <div>
-              Прогресс: {job.progress.completed} / {job.progress.total} (failed: {job.progress.failed})
-            </div>
-            <progress value={job.progress.completed} max={job.progress.total} />
-          </div>
-        )}
-        {phase === 'async-done' && result && (
-          <div className="gen-status done">
-            Готово: {result.count} документ(ов).{' '}
-            <button onClick={() => downloadBlob(result.blob, result.filename)}>Скачать</button>
-          </div>
-        )}
-        {err && <div className="schema-error" style={{ marginTop: 16 }}>{err}</div>}
       </main>
 
       <aside className="gen-sidebar">
+        <h3 className="gen-section-title">Шаблон</h3>
+        <select
+          className="gen-select"
+          value={activeTemplateId ?? ''}
+          onChange={(e) => void templateStore.select(e.target.value || null)}
+        >
+          <option value="" disabled>— выберите шаблон —</option>
+          {templates.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.name} ({t.slideCount} слайд.)
+            </option>
+          ))}
+        </select>
+
+        <h3 className="gen-section-title">Модели данных</h3>
+
+        <SearchSelectList<DataModel>
+          items={models}
+          adapter={modelAdapter}
+          selectedIds={pickedIds}
+          onSelectionChange={setPickedIds}
+          rowClickTogglesSelection={true}
+          bulkActions={[]}
+          searchPlaceholder="Поиск по названию модели…"
+          emptyText={
+            <span>
+              Моделей нет. Создайте в{' '}
+              <Link to="/app/data-models">Данные</Link>.
+            </span>
+          }
+          maxHeight={300}
+          minHeight={160}
+        />
+
+        {saveStatus === 'saving' && (
+          <div className="schema-hint">💾 сохранение модели…</div>
+        )}
+
         <h3 className="gen-section-title">Параметры</h3>
 
         <label className="gen-label">
@@ -204,10 +283,7 @@ export const GenerationPage: React.FC = () => {
           <select
             className="gen-select"
             value={format}
-            onChange={(e) => {
-              params.set('format', e.target.value);
-              setParams(params);
-            }}
+            onChange={(e) => updateUrl({ format: e.target.value })}
           >
             <option value="pdfa">PDF/A-2b</option>
             <option value="pdf">PDF</option>
@@ -220,13 +296,10 @@ export const GenerationPage: React.FC = () => {
           <select
             className="gen-select"
             value={packAs}
-            onChange={(e) => {
-              params.set('packAs', e.target.value);
-              setParams(params);
-            }}
+            onChange={(e) => updateUrl({ packAs: e.target.value })}
           >
             <option value="zip">ZIP</option>
-            <option value="single">Один файл</option>
+            <option value="single">Один файл (1 модель)</option>
           </select>
         </label>
 
@@ -235,41 +308,20 @@ export const GenerationPage: React.FC = () => {
           <input
             className="gen-input"
             value={filenamePattern}
-            onChange={(e) => {
-              params.set('fn', e.target.value);
-              setParams(params);
-            }}
+            onChange={(e) => updateUrl({ fn: e.target.value })}
           />
         </label>
 
-        <div className="gen-subtitle" style={{ marginTop: 16 }}>
-          Выбрано моделей: {pickedIds.size}
-          {useAsync && ' (async)'}
-        </div>
-
         <button
-          className="gen-btn-generate"
+          className="dp-btn-submit"
           onClick={() => void run()}
-          disabled={!canRun || phase === 'async-running' || phase === 'sync-running'}
+          disabled={!canRun}
+          title="Ctrl+Enter"
+          style={{ marginTop: 16 }}
         >
-          {phase === 'sync-running'
-            ? 'Генерация…'
-            : phase === 'async-running'
-              ? 'В очереди…'
-              : 'Сгенерировать'}
+          {busy ? 'Генерация…' : 'Сгенерировать (Ctrl+Enter)'}
         </button>
       </aside>
     </div>
   );
 };
-
-function downloadBlob(blob: Blob, filename: string): void {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}

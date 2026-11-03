@@ -3,18 +3,21 @@ import { useStore } from '@/shared/store/store';
 import { useDocumentStore, useSelectionStore } from '../../providers/EditorProvider';
 import { usePathfinder } from '../../hooks/editor/usePathfinder';
 import { PATHFINDER_OPS } from '@/domain/arrange/pathfinder';
+import { toast } from '@/presentation/components/toast';
 
 export const PathfinderPanel: React.FC = () => {
   const docStore = useDocumentStore();
   const selStore = useSelectionStore();
-  const selectedIds = useStore(selStore, s => s.selectedIds);
+  const selectedIds = useStore(selStore, (s) => s.selectedIds);
   const { run, busy } = usePathfinder(docStore, selStore);
 
   const disabled = busy || selectedIds.length < 2;
 
-  const handleClick = (op: typeof PATHFINDER_OPS[number]['op']) => {
+  const handleClick = (op: typeof PATHFINDER_OPS[number]['op']): void => {
     const result = run(op);
-    if (!result.ok) alert(result.error);
+    if (!result.ok) {
+      toast.error('Pathfinder не выполнен', result.error);
+    }
   };
 
   return (

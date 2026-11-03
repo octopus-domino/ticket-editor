@@ -1604,6 +1604,16 @@ input, select, textarea { font-family: inherit; }
   background: #fff;
   overflow: hidden;
 }
+.schema-root-card.is-highlighted {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-light);
+  animation: pulse-highlight 1.6s ease-out;
+}
+@keyframes pulse-highlight {
+  0%   { box-shadow: 0 0 0 0 var(--accent-light); }
+  40%  { box-shadow: 0 0 0 8px var(--accent-light); }
+  100% { box-shadow: 0 0 0 3px var(--accent-light); }
+}
 .schema-root-head {
   display: flex;
   align-items: center;
@@ -1864,6 +1874,7 @@ input, select, textarea { font-family: inherit; }
   border-radius: 6px;
   padding: 6px;
   background: #fff;
+  overflow-y: auto;
 }
 .gen-model-item {
   display: flex;
@@ -2097,7 +2108,6 @@ input, select, textarea { font-family: inherit; }
    ADDITIONS for v11
    ============================================================ */
 
-/* GenerationPanel: preview шаблона */
 .gen-preview {
   padding: 10px 12px;
   background: var(--accent-light);
@@ -2107,7 +2117,6 @@ input, select, textarea { font-family: inherit; }
   font-size: 12px;
 }
 
-/* GenerationPanel: мягкое предупреждение */
 .gen-warning {
   padding: 8px 10px;
   background: var(--warn-bg);
@@ -2118,7 +2127,6 @@ input, select, textarea { font-family: inherit; }
   line-height: 1.5;
 }
 
-/* GenerationPanel: async-детали ошибок */
 .gen-progress details summary {
   cursor: pointer;
   font-size: 11px;
@@ -2126,14 +2134,12 @@ input, select, textarea { font-family: inherit; }
   margin-top: 4px;
 }
 
-/* DataPanel: ссылки на схему/связи */
 .dp-container a {
   text-decoration: none;
 }
 .dp-container a:hover {
   text-decoration: underline;
 }
-/* GenerationPanel: radio/checkbox в списке моделей */
 .gen-model-list label.gen-model-item {
   display: flex;
   align-items: center;
@@ -2153,7 +2159,6 @@ input, select, textarea { font-family: inherit; }
    P0/P1 additions
    ============================================================ */
 
-/* Undo/Redo toolbar в ModelValuesEditor */
 .mv-toolbar {
   display: flex;
   gap: 4px;
@@ -2165,7 +2170,6 @@ input, select, textarea { font-family: inherit; }
   font-size: 11px;
 }
 
-/* Inline confirmation вместо confirm() */
 .inline-confirm {
   font-size: 11px;
   color: var(--text-muted);
@@ -2190,7 +2194,6 @@ input, select, textarea { font-family: inherit; }
   background: var(--danger-light);
 }
 
-/* Drag-and-drop зона импортера */
 .dm-importer.drag-over {
   outline: 2px dashed var(--accent);
   outline-offset: -4px;
@@ -2207,7 +2210,6 @@ input, select, textarea { font-family: inherit; }
   transition: background 0.15s;
 }
 
-/* Toast — inline уведомление (заменяет alert) */
 .toast {
   position: fixed;
   bottom: 24px;
@@ -2238,7 +2240,6 @@ input, select, textarea { font-family: inherit; }
   font-weight: 600;
 }
 
-/* Горизонтальный скролл таблиц массива в узкой панели */
 .mv-table-scroll {
   overflow-x: auto;
   overflow-y: visible;

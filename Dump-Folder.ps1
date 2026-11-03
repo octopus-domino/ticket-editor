@@ -56,7 +56,8 @@ param(
         "\img\",
         "\.png\", "\.jpg\", "\.jpeg\", "\.gif\", "\.ico\",
         "\.webp\", "\.bmp\", "\.tiff\", "\.psd\",
-        "\.woff\", "\.woff2\", "\.ttf\", "\.eot\", "\.otf\"
+        "\.woff\", "\.woff2\", "\.ttf\", "\.eot\", "\.otf\",
+	 "\.txt\"
     ),
 
     # Разрешённые расширения при $Mode = "Include".

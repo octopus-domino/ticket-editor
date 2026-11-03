@@ -29,6 +29,10 @@ export const FLAGS = {
   /** MIG-UI-02: кнопка «переключиться на старую версию». */
   FEATURE_SHOW_ROLLBACK_BUTTON:
     import.meta.env.VITE_FEATURE_SHOW_ROLLBACK_BUTTON === 'true',
+
+  /** F-EMAIL-01: превью, скачивание .eml и отправка писем. */
+  FEATURE_EMAIL:
+    import.meta.env.VITE_FEATURE_EMAIL === 'true',
 } as const;
 
 export type FeatureFlag = keyof typeof FLAGS;

@@ -5,9 +5,9 @@ import { useStore } from '@/shared/store/store';
 import { useDocumentStore, useSelectionStore, useModalsStore } from '../providers/EditorProvider';
 import { StampLibraryPanel } from './StampLibraryPanel';
 import { changeFormat, changeOrientation } from '@/domain/slide/operations';
-import { 
-  newText, newSimpleText, newFooter, newTable, newLine, newShape, 
-  newPath, newChart, newDiagram 
+import {
+  newText, newSimpleText, newFooter, newTable, newLine, newShape,
+  newPath, newChart, newDiagram,
 } from '@/lib/factories';
 import { TYPICAL_LAYOUTS, BUNDLES } from '../../templates';
 import { useFileIO } from '../hooks/editor/useFileIO';
@@ -18,8 +18,14 @@ import { StylesPanel } from './panels/StylesPanel';
 import { SymbolsPanel } from './panels/SymbolsPanel';
 import { QrModal } from './QrModal';
 import { generateId } from '@/shared/utils/id';
+import { toast } from '@/presentation/components/toast';
 
-const Section: React.FC<{ title: string; icon?: string; defaultOpen?: boolean; children: React.ReactNode }> = ({ title, icon, defaultOpen = false, children }) => {
+const Section: React.FC<{
+  title: string;
+  icon?: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}> = ({ title, icon, defaultOpen = false, children }) => {
   const [open, setOpen] = useState(defaultOpen);
   return (
     <div className={`tool-section ${open ? 'open' : ''}`}>
@@ -35,14 +41,21 @@ const Section: React.FC<{ title: string; icon?: string; defaultOpen?: boolean; c
 
 const PaddingEditor: React.FC<{ value: Padding; onChange: (p: Padding) => void }> = ({ value, onChange }) => {
   const keys: Array<{ k: keyof Padding; label: string }> = [
-    { k: 'top', label: 'Верх' }, { k: 'bottom', label: 'Низ' }, { k: 'left', label: 'Лево' }, { k: 'right', label: 'Право' },
+    { k: 'top', label: 'Верх' }, { k: 'bottom', label: 'Низ' },
+    { k: 'left', label: 'Лево' }, { k: 'right', label: 'Право' },
   ];
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
       {keys.map(({ k, label }) => (
         <label key={k} className="field-label">
           {label}
-          <input type="number" min={0} value={value[k]} onChange={(e) => onChange({ ...value, [k]: +e.target.value })} className="field" />
+          <input
+            type="number"
+            min={0}
+            value={value[k]}
+            onChange={(e) => onChange({ ...value, [k]: +e.target.value })}
+            className="field"
+          />
         </label>
       ))}
     </div>
@@ -59,7 +72,6 @@ export const LeftPanel: React.FC = () => {
   const fillMode = useStore(modalsStore, (s) => s.fillMode);
   const fillColor = useStore(modalsStore, (s) => s.fillColor);
   const showGrid = useStore(modalsStore, (s) => s.showGrid);
-  
   const editorMode = useStore(modalsStore, (s) => s.editorMode);
 
   const canUndo = docStore.canUndo;
@@ -72,11 +84,19 @@ export const LeftPanel: React.FC = () => {
   if (!activeSlide) return null;
 
   const add = (el: CanvasElement) => {
-    docStore.commit((draft) => { const s = draft.slides.find((x) => x.id === draft.activeId); if (s) s.elements.push(el); }, 'add-element');
+    docStore.commit((draft) => {
+      const s = draft.slides.find((x) => x.id === draft.activeId);
+      if (s) s.elements.push(el);
+    }, 'add-element');
     selStore.select(el.id);
   };
 
-  const resetAfterLoad = () => { selStore.clear(); modalsStore.closeEditor(); modalsStore.setFloatingPos(null); modalsStore.setFillPoints([]); };
+  const resetAfterLoad = () => {
+    selStore.clear();
+    modalsStore.closeEditor();
+    modalsStore.setFloatingPos(null);
+    modalsStore.setFillPoints([]);
+  };
 
   const handleFormat = (format: DocFormat) => {
     if (format === activeSlide.format) return;
@@ -99,14 +119,17 @@ export const LeftPanel: React.FC = () => {
   };
 
   const updatePadding = (padding: Padding) => {
-    docStore.commit((draft) => { const s = draft.slides.find((x) => x.id === draft.activeId); if (s) s.padding = padding; }, 'padding');
+    docStore.commit((draft) => {
+      const s = draft.slides.find((x) => x.id === draft.activeId);
+      if (s) s.padding = padding;
+    }, 'padding');
   };
 
   const updateBackground = (color: string) => {
     if (activeSlide.background === color) return;
-    docStore.commit((draft) => { 
-      const s = draft.slides.find((x) => x.id === draft.activeId); 
-      if (s) s.background = color; 
+    docStore.commit((draft) => {
+      const s = draft.slides.find((x) => x.id === draft.activeId);
+      if (s) s.background = color;
     }, 'bg-color');
   };
 
@@ -117,7 +140,8 @@ export const LeftPanel: React.FC = () => {
       if (!s) return;
       const newW = s.orientation === 'portrait' ? w : h;
       const newH = s.orientation === 'portrait' ? h : w;
-      s.width = newW; s.height = newH;
+      s.width = newW;
+      s.height = newH;
     }, 'custom-size');
   };
 
@@ -126,7 +150,8 @@ export const LeftPanel: React.FC = () => {
     if (!layout) return;
     docStore.commit((draft) => {
       const slide = layout.build();
-      draft.slides = [slide]; draft.activeId = slide.id;
+      draft.slides = [slide];
+      draft.activeId = slide.id;
     }, 'apply-layout');
     resetAfterLoad();
   };
@@ -136,7 +161,9 @@ export const LeftPanel: React.FC = () => {
     if (!bundle) return;
     const { slide, data: bundleData } = bundle.build();
     docStore.commit((draft) => {
-      draft.slides = [slide]; draft.activeId = slide.id; draft.data = bundleData;
+      draft.slides = [slide];
+      draft.activeId = slide.id;
+      draft.data = bundleData;
     }, 'apply-bundle');
     resetAfterLoad();
   };
@@ -147,7 +174,7 @@ export const LeftPanel: React.FC = () => {
     try {
       await fileIO.exportSvgServer();
     } catch (err) {
-      alert(`Не удалось получить SVG с сервера: ${(err as Error).message}`);
+      toast.error('Не удалось получить SVG с сервера', (err as Error).message);
     } finally {
       setSvgBusy(false);
     }
@@ -159,7 +186,7 @@ export const LeftPanel: React.FC = () => {
     try {
       await fileIO.exportPdfaServer();
     } catch (err) {
-      alert(`Не удалось получить PDF/A с сервера: ${(err as Error).message}`);
+      toast.error('Не удалось получить PDF/A с сервера', (err as Error).message);
     } finally {
       setPdfBusy(false);
     }
@@ -201,8 +228,6 @@ export const LeftPanel: React.FC = () => {
         <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'chart-bar')} onClick={() => add(newChart('bar'))}><span className="tile-ico">📊</span><span>Bar</span></button>
         <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'chart-donut')} onClick={() => add(newChart('donut'))}><span className="tile-ico">◎</span><span>Donut</span></button>
         <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'qr')} onClick={() => setQrModalOpen(true)}><span className="tile-ico">🔳</span><span>QR-код</span></button>
-        
-        {/* НОВАЯ КНОПКА: Диаграмма (drawio) */}
         <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'diagram')} onClick={() => add(newDiagram())}>
           <span className="tile-ico">🖼</span>
           <span>Диаграмма</span>
@@ -213,29 +238,36 @@ export const LeftPanel: React.FC = () => {
 
   return (
     <aside className="left-panel">
-      
-      <div style={{ 
-        display: 'flex', gap: 4, padding: 4, background: '#e2e8f0', borderRadius: 8, marginBottom: 12, border: '2px solid #6366f1'
+      <div style={{
+        display: 'flex',
+        gap: 4,
+        padding: 4,
+        background: '#e2e8f0',
+        borderRadius: 8,
+        marginBottom: 12,
+        border: '2px solid #6366f1',
       }}>
-        <button 
+        <button
           type="button"
-          style={{ 
-            flex: 1, padding: '8px 0', borderRadius: 6, border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: 13,
+          style={{
+            flex: 1, padding: '8px 0', borderRadius: 6, border: 'none',
+            cursor: 'pointer', fontWeight: 'bold', fontSize: 13,
             background: editorMode === 'print' ? '#fff' : 'transparent',
             color: editorMode === 'print' ? '#4f46e5' : '#64748b',
-            boxShadow: editorMode === 'print' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+            boxShadow: editorMode === 'print' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
           }}
           onClick={() => modalsStore.setEditorMode('print')}
         >
           🖨 Полиграфия
         </button>
-        <button 
+        <button
           type="button"
-          style={{ 
-            flex: 1, padding: '8px 0', borderRadius: 6, border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: 13,
+          style={{
+            flex: 1, padding: '8px 0', borderRadius: 6, border: 'none',
+            cursor: 'pointer', fontWeight: 'bold', fontSize: 13,
             background: editorMode === 'schema' ? '#fff' : 'transparent',
             color: editorMode === 'schema' ? '#4f46e5' : '#64748b',
-            boxShadow: editorMode === 'schema' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+            boxShadow: editorMode === 'schema' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
           }}
           onClick={() => modalsStore.setEditorMode('schema')}
         >
@@ -260,13 +292,29 @@ export const LeftPanel: React.FC = () => {
         <>
           <Section title="Макеты" icon="🎨">
             {TYPICAL_LAYOUTS.map((l) => (
-              <button key={l.id} type="button" className="tool-btn" title={l.description} onClick={() => applyLayout(l.id)}>{l.icon} {l.name}</button>
+              <button
+                key={l.id}
+                type="button"
+                className="tool-btn"
+                title={l.description}
+                onClick={() => applyLayout(l.id)}
+              >
+                {l.icon} {l.name}
+              </button>
             ))}
           </Section>
 
           <Section title="Документы" icon="📄">
             {BUNDLES.map((b) => (
-              <button key={b.id} type="button" className="tool-btn" title={b.description} onClick={() => applyBundle(b.id)}>{b.icon} {b.name}</button>
+              <button
+                key={b.id}
+                type="button"
+                className="tool-btn"
+                title={b.description}
+                onClick={() => applyBundle(b.id)}
+              >
+                {b.icon} {b.name}
+              </button>
             ))}
           </Section>
         </>
@@ -274,36 +322,86 @@ export const LeftPanel: React.FC = () => {
 
       <Section title="Формат" icon="📐" defaultOpen>
         <label className="field-label">Размер</label>
-        <select className="field" value={activeSlide.format} onChange={(e) => handleFormat(e.target.value as DocFormat)}>
-          {Object.entries(FORMATS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+        <select
+          className="field"
+          value={activeSlide.format}
+          onChange={(e) => handleFormat(e.target.value as DocFormat)}
+        >
+          {Object.entries(FORMATS).map(([k, v]) => (
+            <option key={k} value={k}>{v.label}</option>
+          ))}
         </select>
 
         <label className="field-label">Ориентация</label>
         <div className="segmented">
-          <button type="button" className={activeSlide.orientation === 'portrait' ? 'active' : ''} onClick={() => handleOrientation('portrait')}>Книжная</button>
-          <button type="button" className={activeSlide.orientation === 'landscape' ? 'active' : ''} onClick={() => handleOrientation('landscape')}>Альбомная</button>
+          <button
+            type="button"
+            className={activeSlide.orientation === 'portrait' ? 'active' : ''}
+            onClick={() => handleOrientation('portrait')}
+          >
+            Книжная
+          </button>
+          <button
+            type="button"
+            className={activeSlide.orientation === 'landscape' ? 'active' : ''}
+            onClick={() => handleOrientation('landscape')}
+          >
+            Альбомная
+          </button>
         </div>
 
         <label className="field-label">Цвет фона</label>
-        <input type="color" className="field" value={activeSlide.background} onChange={(e) => updateBackground(e.target.value)} />
+        <input
+          type="color"
+          className="field"
+          value={activeSlide.background}
+          onChange={(e) => updateBackground(e.target.value)}
+        />
 
         {activeSlide.format === 'custom' && (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginTop: 8 }}>
-            <label className="field-label">Ширина<input className="field" type="number" min={50} value={activeSlide.width} onChange={(e) => changeCustomSize(+e.target.value, activeSlide.height)} /></label>
-            <label className="field-label">Высота<input className="field" type="number" min={50} value={activeSlide.height} onChange={(e) => changeCustomSize(activeSlide.width, +e.target.value)} /></label>
+            <label className="field-label">
+              Ширина
+              <input
+                className="field"
+                type="number"
+                min={50}
+                value={activeSlide.width}
+                onChange={(e) => changeCustomSize(+e.target.value, activeSlide.height)}
+              />
+            </label>
+            <label className="field-label">
+              Высота
+              <input
+                className="field"
+                type="number"
+                min={50}
+                value={activeSlide.height}
+                onChange={(e) => changeCustomSize(activeSlide.width, +e.target.value)}
+              />
+            </label>
           </div>
         )}
 
         <div className="hint-sm">{activeSlide.width} × {activeSlide.height} px</div>
 
-        <h4 style={{ margin: '10px 0 4px', fontSize: 11, color: '#666', textTransform: 'uppercase' }}>Отступы страницы</h4>
+        <h4 style={{ margin: '10px 0 4px', fontSize: 11, color: '#666', textTransform: 'uppercase' }}>
+          Отступы страницы
+        </h4>
         <PaddingEditor value={activeSlide.padding} onChange={updatePadding} />
       </Section>
 
       <Section title="Изображения" icon="🖼">
         <button type="button" className="tool-btn" onClick={() => fileIO.addImage({ centered: true })}>🖼 Добавить картинку</button>
         <button type="button" className="tool-btn" onClick={fileIO.setBackgroundImage}>🖼 Установить фон</button>
-        <button type="button" className="tool-btn danger" onClick={fileIO.removeBackgroundImage} disabled={!activeSlide.backgroundImage}>✕ Убрать фон</button>
+        <button
+          type="button"
+          className="tool-btn danger"
+          onClick={fileIO.removeBackgroundImage}
+          disabled={!activeSlide.backgroundImage}
+        >
+          ✕ Убрать фон
+        </button>
       </Section>
 
       <Section title="Элементы" icon="🧩" defaultOpen>
@@ -320,25 +418,48 @@ export const LeftPanel: React.FC = () => {
       )}
 
       <Section title="Компоновка" icon="🎯"><ArrangePanel /></Section>
-      
+
       {editorMode === 'print' && (
         <Section title="Pathfinder" icon="⚡"><PathfinderPanel /></Section>
       )}
-      
+
       <Section title="Стили" icon="🎨"><StylesPanel /></Section>
       <Section title="Символы" icon="🔗"><SymbolsPanel /></Section>
 
       {editorMode === 'print' && (
         <Section title="Заливка" icon="🎨">
-          <label className="check-row"><input type="checkbox" checked={fillMode} onChange={(e) => modalsStore.setFillMode(e.target.checked)} /><span>Режим заливки</span></label>
+          <label className="check-row">
+            <input
+              type="checkbox"
+              checked={fillMode}
+              onChange={(e) => modalsStore.setFillMode(e.target.checked)}
+            />
+            <span>Режим заливки</span>
+          </label>
           <label className="field-label">Цвет заливки</label>
-          <input type="color" className="field" value={fillColor} onChange={(e) => modalsStore.setFillColor(e.target.value)} />
-          <p className="hint-sm">Клик по фигуре — залить область.<br />Клик по пустому месту — добавить точку.<br />Esc — отменить.</p>
+          <input
+            type="color"
+            className="field"
+            value={fillColor}
+            onChange={(e) => modalsStore.setFillColor(e.target.value)}
+          />
+          <p className="hint-sm">
+            Клик по фигуре — залить область.<br />
+            Клик по пустому месту — добавить точку.<br />
+            Esc — отменить.
+          </p>
         </Section>
       )}
 
       <Section title="Вид" icon="👁">
-        <label className="check-row"><input type="checkbox" checked={showGrid} onChange={(e) => modalsStore.setShowGrid(e.target.checked)} /><span>Показать сетку</span></label>
+        <label className="check-row">
+          <input
+            type="checkbox"
+            checked={showGrid}
+            onChange={(e) => modalsStore.setShowGrid(e.target.checked)}
+          />
+          <span>Показать сетку</span>
+        </label>
         <div className="row-2">
           <button type="button" className="tool-btn" onClick={() => docStore.undo()} disabled={!canUndo}>↶ Отменить</button>
           <button type="button" className="tool-btn" onClick={() => docStore.redo()} disabled={!canRedo}>↷ Повторить</button>

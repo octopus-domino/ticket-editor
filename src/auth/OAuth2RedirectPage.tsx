@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { authStore } from './store';
 import { authApi } from './api';
+import './auth.css';
 
 export const OAuth2RedirectPage: React.FC = () => {
   const [params] = useSearchParams();
@@ -16,14 +17,12 @@ export const OAuth2RedirectPage: React.FC = () => {
       return;
     }
 
-    // Сохраняем токен в стор ДО вызова me()
-    authStore.setSession(token, { id: '', email: '', name: 'Загрузка...' });
+    authStore.setSession(token, { id: '', email: '', name: 'Загрузка…' });
 
-    // Теперь authFetch подхватит этот токен
     authApi.me()
       .then((user) => {
         authStore.setSession(token, user);
-        navigate('/', { replace: true });
+        navigate('/app', { replace: true });
       })
       .catch((err) => {
         console.error('OAuth2 me() failed:', err);
@@ -33,13 +32,34 @@ export const OAuth2RedirectPage: React.FC = () => {
       });
   }, [params, navigate]);
 
-  if (error) {
-    return <div style={{ padding: 40, textAlign: 'center', color: '#dc2626' }}>{error}</div>;
-  }
-
   return (
-    <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>
-      Завершаем вход через Google…
+    <div
+      className="auth-root"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 24,
+        gridTemplateColumns: 'unset',
+      }}
+    >
+      <div style={{ textAlign: 'center', maxWidth: 400 }}>
+        <Link to="/" className="auth-brand" style={{ marginBottom: 32, justifyContent: 'center' }}>
+          <span className="auth-brand-mark">T</span>
+          ticket-editor
+        </Link>
+
+        {error ? (
+          <div className="auth-error" style={{ marginTop: 24 }}>{error}</div>
+        ) : (
+          <>
+            <h1 className="auth-title" style={{ fontSize: 22, marginTop: 24 }}>
+              Завершаем вход…
+            </h1>
+            <p className="auth-subtitle">Пара секунд.</p>
+          </>
+        )}
+      </div>
     </div>
   );
 };

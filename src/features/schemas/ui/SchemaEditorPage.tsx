@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import type { FieldDef, FieldType } from '../domain/DataSchema';
 import { FIELD_TYPE_LABEL } from '../domain/DataSchema';
 import { schemaStore } from '../state/SchemaStore';
@@ -8,6 +8,34 @@ import { inferFieldsFromSlides } from '../domain/SchemaInference';
 interface DraftField extends FieldDef {
   key: string;
   children?: DraftField[];
+}
+
+interface LastSlidesPayload {
+  slides?: unknown[];
+  savedAt?: string;
+}
+
+const LAST_SLIDES_KEY = 'ticket-editor:last-slides';
+const AUTOSAVE_KEY = 'ticket-editor:autosave';
+
+function readSlidesFromLocalStorage(): unknown[] {
+  try {
+    const raw = localStorage.getItem(AUTOSAVE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as LastSlidesPayload;
+      if (Array.isArray(parsed.slides) && parsed.slides.length > 0) return parsed.slides;
+    }
+  } catch { /* ignore */ }
+
+  try {
+    const raw = localStorage.getItem(LAST_SLIDES_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as LastSlidesPayload;
+      if (Array.isArray(parsed.slides) && parsed.slides.length > 0) return parsed.slides;
+    }
+  } catch { /* ignore */ }
+
+  return [];
 }
 
 function makeDraft(): DraftField {
@@ -19,14 +47,12 @@ const TYPES: FieldType[] = ['string', 'number', 'date', 'boolean', 'image', 'obj
 function unflattenFields(flat: readonly FieldDef[]): DraftField[] {
   const byFullPath = new Map<string, DraftField>();
   const result: DraftField[] = [];
-
   const sorted = [...flat].sort((a, b) => a.path.localeCompare(b.path));
 
   for (const f of sorted) {
     const parts = f.path.split('.');
     const parentPath = parts.slice(0, -1).join('.');
     const ownName = parts[parts.length - 1];
-
     const parent = parentPath ? byFullPath.get(parentPath) : undefined;
     const canNest = !!parent && (parent.type === 'array' || parent.type === 'object');
 
@@ -45,7 +71,6 @@ function unflattenFields(flat: readonly FieldDef[]): DraftField[] {
     } else {
       result.push(draft);
     }
-
     byFullPath.set(f.path, draft);
   }
   return result;
@@ -53,7 +78,6 @@ function unflattenFields(flat: readonly FieldDef[]): DraftField[] {
 
 function stripDraft(fields: DraftField[]): FieldDef[] {
   const out: FieldDef[] = [];
-
   const walk = (arr: DraftField[], prefix: string): void => {
     for (const f of arr) {
       const own = f.path.trim();
@@ -66,12 +90,9 @@ function stripDraft(fields: DraftField[]): FieldDef[] {
         label: f.label || own,
         defaultValue: f.defaultValue,
       });
-      if (f.children && f.children.length > 0) {
-        walk(f.children, fullPath);
-      }
+      if (f.children && f.children.length > 0) walk(f.children, fullPath);
     }
   };
-
   walk(fields, '');
   return out;
 }
@@ -79,6 +100,14 @@ function stripDraft(fields: DraftField[]): FieldDef[] {
 export const SchemaEditorPage: React.FC = () => {
   const { schemaId } = useParams<{ schemaId?: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Куда вернуться после сохранения/«Назад».
+  // Приоритет: location.state.from (передан из DataPanel / BindingMatrix),
+  // fallback — список схем.
+  const fromState = (location.state as { from?: string } | null)?.from;
+  const backPath = fromState || '/app/schemas';
+
   const [name, setName] = useState('Схема');
   const [fields, setFields] = useState<DraftField[]>([makeDraft()]);
   const [busy, setBusy] = useState(false);
@@ -103,17 +132,21 @@ export const SchemaEditorPage: React.FC = () => {
 
   const fillFromDocument = (): void => {
     try {
-      const raw = localStorage.getItem('ticket-editor:autosave');
-      if (!raw) { setError('Нет autosave. Откройте редактор и вернитесь.'); return; }
-      const parsed = JSON.parse(raw) as { slides?: unknown[] };
-      if (!Array.isArray(parsed.slides) || parsed.slides.length === 0) {
-        setError('Нет слайдов в документе.'); return;
+      const slides = readSlidesFromLocalStorage();
+      if (slides.length === 0) {
+        setError('Не вижу активного документа. Откройте редактор и вернитесь сюда — слайды подтянутся автоматически.');
+        return;
       }
-      const inferred = inferFieldsFromSlides(parsed.slides);
-      if (inferred.length === 0) { setError('Не найдено {{...}} или fieldPath'); return; }
+      const inferred = inferFieldsFromSlides(slides);
+      if (inferred.length === 0) {
+        setError('В документе нет {{...}} и плейсхолдеров. Добавьте их на холст и вернитесь.');
+        return;
+      }
       setFields(unflattenFields(inferred));
       setError(null);
-    } catch (e) { setError((e as Error).message); }
+    } catch (e) {
+      setError((e as Error).message);
+    }
   };
 
   const submit = async (): Promise<void> => {
@@ -124,18 +157,32 @@ export const SchemaEditorPage: React.FC = () => {
     try {
       if (schemaId) {
         await schemaStore.update(schemaId, { name: name.trim(), fields: out });
+        navigate(backPath);
       } else {
         const created = await schemaStore.create({ name: name.trim(), fields: out });
-        navigate(`/schemas/${created.id}`);
-        return;
+        // Для новой схемы возвращаемся туда, откуда пришли, если есть from;
+        // иначе — в редактор новой схемы (чтобы пользователь мог продолжить).
+        if (fromState) {
+          navigate(fromState);
+        } else {
+          navigate(`/app/schemas/${created.id}`, { replace: true });
+        }
       }
-      navigate('/schemas');
     } catch (e) { setError((e as Error).message); }
     finally { setBusy(false); }
   };
 
   return (
     <div className="schema-page">
+      <button
+        type="button"
+        className="schema-btn-add"
+        onClick={() => navigate(backPath)}
+        style={{ alignSelf: 'flex-start', marginBottom: 16 }}
+      >
+        ← Назад
+      </button>
+
       <h2>{schemaId ? 'Редактирование схемы' : 'Создание схемы'}</h2>
       <p>Схема — список полей. Массивы и объекты поддерживаются: задайте тип и добавьте дочерние поля.</p>
       <div className="schema-form">

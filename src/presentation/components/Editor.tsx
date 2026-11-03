@@ -29,7 +29,7 @@ import {
   useSelectionStore,
 } from '../providers/EditorProvider';
 import { useAutoFitZoom } from '../hooks/useAutoFitZoom';
-import { useAutoSave, loadAutoSave, clearAutoSave } from '../hooks/useAutoSave';
+import { useAutoSave, loadAutoSave, clearAutoSave, type AutoSaveData } from '../hooks/useAutoSave';
 import { useEditorShortcuts } from '../hooks/useEditorShortcuts';
 import { useEditingCommit } from '../hooks/editor/useEditingCommit';
 import { useStampCommit } from '../hooks/editor/useStampCommit';
@@ -47,6 +47,7 @@ import { ContextMenu } from './ContextMenu';
 import { FloatingProps } from './FloatingProps';
 import { ErrorBoundary } from './ErrorBoundary';
 import { MigrationBanner } from './MigrationBanner';
+import { ConfirmDialog } from '@/presentation/components/dialog';
 import { isFeatureEnabled } from '@/shared/flags';
 import type { TextStylePatch } from './TextToolbar';
 import { generateIdWithPrefix } from '@/shared/utils/id';
@@ -166,37 +167,53 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave }) => {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(1);
   const [liveMessage, setLiveMessage] = useState('');
+  const [pendingRestore, setPendingRestore] = useState<AutoSaveData | null>(null);
 
-  const [toast, setToast] = useState<string | null>(null);
+  // last-slides: fallback для SchemaEditorPage «Заполнить из документа»
   useEffect(() => {
-    if (!toast) return;
-    const t = window.setTimeout(() => setToast(null), 3500);
+    try {
+      localStorage.setItem(
+        'ticket-editor:last-slides',
+        JSON.stringify({ slides, savedAt: new Date().toISOString() }),
+      );
+    } catch {
+      /* quota / disabled storage */
+    }
+  }, [slides]);
+
+  // P1.4 — inline toast вместо alert()
+  const [toastText, setToastText] = useState<string | null>(null);
+  useEffect(() => {
+    if (!toastText) return;
+    const t = window.setTimeout(() => setToastText(null), 3500);
     return () => window.clearTimeout(t);
-  }, [toast]);
+  }, [toastText]);
 
   useEffect(() => {
     if (onSave) return;
     const saved = loadAutoSave();
-    if (
-      saved &&
-      window.confirm(
-        `Восстановить сессию от ${new Date(saved.savedAt).toLocaleString()}?`,
-      )
-    ) {
-      docStore.commit((draft) => {
-        draft.slides = saved.slides;
-        draft.activeId = saved.activeSlideId || saved.slides[0].id;
-        draft.data = saved.data;
+    if (saved) setPendingRestore(saved);
+  }, [onSave]);
 
-        for (const slide of draft.slides) {
-          fixGroupBoundsInPlace(slide.elements as any[]);
-        }
-      }, 'restore-autosave');
-      clearAutoSave();
-    } else if (saved) {
-      clearAutoSave();
-    }
-  }, [docStore, onSave]);
+  const handleRestoreConfirm = useCallback(() => {
+    if (!pendingRestore) return;
+    docStore.commit((draft) => {
+      draft.slides = pendingRestore.slides;
+      draft.activeId = pendingRestore.activeSlideId || pendingRestore.slides[0].id;
+      draft.data = pendingRestore.data;
+
+      for (const slide of draft.slides) {
+        fixGroupBoundsInPlace(slide.elements as any[]);
+      }
+    }, 'restore-autosave');
+    clearAutoSave();
+    setPendingRestore(null);
+  }, [docStore, pendingRestore]);
+
+  const handleRestoreCancel = useCallback(() => {
+    clearAutoSave();
+    setPendingRestore(null);
+  }, []);
 
   useEffect(() => {
     docStore.fixAllGroupBounds();
@@ -483,7 +500,7 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave }) => {
           onCopyAsJson={() => { copyAsJson(contextSelected); closeContextMenu(); }}
           onPasteFromJson={() => {
             const res = pasteFromJson();
-            if (!res.ok) setToast(res.error || 'Не удалось вставить JSON');
+            if (!res.ok) setToastText(res.error || 'Не удалось вставить JSON');
             closeContextMenu();
           }}
           canPasteJson={canPasteJson}
@@ -551,7 +568,21 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave }) => {
         </ErrorBoundary>
       )}
 
-      {toast && <div className="toast">{toast}</div>}
+      {toastText && <div className="toast">{toastText}</div>}
+
+      <ConfirmDialog
+        isOpen={!!pendingRestore}
+        title="Восстановить незавершённую сессию?"
+        description={
+          pendingRestore
+            ? `Сессия от ${new Date(pendingRestore.savedAt).toLocaleString()}`
+            : undefined
+        }
+        confirmLabel="Восстановить"
+        cancelLabel="Отклонить"
+        onConfirm={handleRestoreConfirm}
+        onCancel={handleRestoreCancel}
+      />
 
       <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
         {liveMessage}
@@ -577,9 +608,7 @@ export const Editor: React.FC<EditorProps> = ({ documentId, initialDoc, onSave }
     [documentId],
   );
 
-  // H6: при unmount редактора (или смене документа) гасим fill-worker и
-  // чистим его кэш (32 MB). Иначе worker остаётся жить — при HMR и при
-  // смене документа копятся экземпляры.
+  // При unmount редактора (или смене документа) гасим fill-worker и чистим его кэш
   useEffect(() => {
     return () => {
       resetFillRasterizer();

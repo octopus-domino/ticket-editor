@@ -7,10 +7,16 @@ import { modelStore } from '@/features/data-models/state/ModelStore';
 import { ModelValuesEditor } from '@/features/data-models/ui/ModelValuesEditor';
 import { JsonImporterPanel } from '@/features/data-models/ui/JsonImporterPanel';
 import { modelIO } from '@/features/data-models/api/ModelIO';
+import type { DataModel } from '@/features/data-models/domain/DataModel';
 import { resolveBindings } from '@/features/bindings/domain/BindingResolver';
 import { validateGeneration } from '../domain/GenerationValidator';
 import { generationStore } from '../state/GenerationStore';
 import { materializeSlide } from './materializeSlide';
+import {
+  SearchSelectList,
+  type ListItemAdapter,
+} from '@/presentation/components/list';
+import { toast } from '@/presentation/components/toast';
 
 const SUPPORTED = ['pdfa', 'pdf', 'svg'] as const;
 type Format = (typeof SUPPORTED)[number];
@@ -42,12 +48,23 @@ export const GenerationPanel: React.FC = () => {
 
   useEffect(() => {
     if (activeSchema) void modelStore.load(activeSchema.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSchema?.id]);
 
   const activeModel = models.find((m) => m.id === selectedId);
   const pickedModels = useMemo(
     () => models.filter((m) => pickedIds.has(m.id)),
     [models, pickedIds],
+  );
+
+  const modelAdapter = useMemo<ListItemAdapter<DataModel>>(
+    () => ({
+      getId: (m) => m.id,
+      getLabel: (m) => m.name,
+      getMeta: (m) => `${Object.keys(m.values).length}`,
+      getSearchText: (m) => m.name,
+    }),
+    [],
   );
 
   const updateParams = useCallback(
@@ -86,7 +103,12 @@ export const GenerationPanel: React.FC = () => {
         ? validateGeneration({
             schema: activeSchema,
             bindings: resolveBindings(slides),
-            selectedModels: pickedModels.length > 0 ? pickedModels : (activeModel ? [activeModel] : []),
+            selectedModels:
+              pickedModels.length > 0
+                ? pickedModels
+                : activeModel
+                  ? [activeModel]
+                  : [],
             format,
             supportedFormats: [...SUPPORTED],
           })
@@ -101,29 +123,12 @@ export const GenerationPanel: React.FC = () => {
     return [];
   }, [packAs, pickedModels.length]);
 
-  const blockingIssues = [...validationIssues, ...packAsIssues].filter((i) => i.kind !== 'model');
+  const blockingIssues = [...validationIssues, ...packAsIssues].filter(
+    (i) => i.kind !== 'model',
+  );
   const warnings = validationIssues.filter((i) => i.kind === 'model');
   const canRun = blockingIssues.length === 0;
   const useAsync = pickedModels.length > 100;
-
-  const togglePick = (id: string): void => {
-    setPickedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  const selectSingle = (id: string | null): void => {
-    if (id) {
-      setPickedIds(new Set([id]));
-      modelStore.select(id);
-    } else {
-      setPickedIds(new Set());
-      modelStore.select(null);
-    }
-  };
 
   const run = useCallback(async (): Promise<void> => {
     if (!activeSchema || !canRun) return;
@@ -133,31 +138,21 @@ export const GenerationPanel: React.FC = () => {
         ? pickedModels
         : activeModel
           ? [activeModel]
-          : [{ id: '__empty__', name: 'empty', values: {}, schemaId: activeSchema.id, createdAt: '', updatedAt: '' }];
+          : [
+              {
+                id: '__empty__',
+                name: 'empty',
+                values: {},
+                schemaId: activeSchema.id,
+                createdAt: '',
+                updatedAt: '',
+              },
+            ];
 
-    // Для одной модели — материализуем на фронте и шлём один item.
-    // Для N моделей — материализуем per-model: каждому item уходят свои слайды.
     const baseItems = modelsToRender.map((m) => {
-      // Материализуем слайды с этим моделью
       const materialized = slides.map((s) => materializeSlide(s, m.values));
-      return {
-        // inlineValues (для бэкенда как fallback; материализация уже есть)
-        inlineValues: m.values,
-        // inlineSlides на каждый item — N копий.
-        _materializedSlides: materialized,
-      };
+      return { inlineValues: m.values, _materializedSlides: materialized };
     });
-
-    // Каждый item содержит свои слайды → отправляем per-item generate
-    // Для сохранения ZIP-поведения объединяем: N запросов, N файлов.
-    // Но проще: один запрос с N items, у каждого свои inlineValues + slides.
-    // Апи поддерживает только один набор inlineSlides.
-    //
-    // Решение: слайды материализуем для ПЕРВОЙ модели и передаём как inlineSlides.
-    // Остальные модели идут через inlineValues — бэкенд заполнит из шаблона.
-    //
-    // Если бэкенд не заполняет (баг) — для multi-model остаётся проблема.
-    // Для single-model — работает всегда.
 
     const materialized = baseItems[0]._materializedSlides;
     const items = baseItems.map((b) => ({ inlineValues: b.inlineValues }));
@@ -170,15 +165,6 @@ export const GenerationPanel: React.FC = () => {
       filenamePattern,
     };
 
-    // Диагностика
-    // eslint-disable-next-line no-console
-    console.log('[generation] sending', {
-      slideCount: materialized.length,
-      itemCount: items.length,
-      firstSlideSample: (materialized[0] as any)?.elements?.slice(0, 3),
-      firstValuesKeys: Object.keys(items[0]?.inlineValues ?? {}),
-    });
-
     try {
       if (useAsync) {
         await generationStore.runAsync(req);
@@ -187,7 +173,6 @@ export const GenerationPanel: React.FC = () => {
         downloadBlob(r.blob, r.filename);
       }
     } catch (e) {
-      // eslint-disable-next-line no-console
       console.error('[generation] failed', e);
     }
   }, [activeSchema, canRun, pickedModels, activeModel, slides, format, packAs, filenamePattern, useAsync]);
@@ -203,16 +188,25 @@ export const GenerationPanel: React.FC = () => {
     return () => window.removeEventListener('keydown', onKey);
   }, [run, canRun]);
 
-  const importModels = async (items: { name: string; values: Record<string, unknown> }[]): Promise<void> => {
+  const importModels = async (
+    items: { name: string; values: Record<string, unknown> }[],
+  ): Promise<void> => {
     if (!activeSchema) return;
-    await modelStore.importMany(activeSchema.id, items);
-    setImporterOpen(false);
+    try {
+      await modelStore.importMany(activeSchema.id, items);
+      setImporterOpen(false);
+      toast.success(`Импортировано моделей: ${items.length}`);
+    } catch (e) {
+      toast.error('Не удалось импортировать', (e as Error).message);
+    }
   };
 
   if (!activeSchema) {
     return (
       <div className="dp-container">
-        <div className="schema-error">Схема не выбрана. Откройте вкладку «Данные» и выберите схему.</div>
+        <div className="schema-error">
+          Схема не выбрана. Откройте вкладку «Данные» и выберите схему.
+        </div>
       </div>
     );
   }
@@ -226,69 +220,50 @@ export const GenerationPanel: React.FC = () => {
         </div>
       </div>
 
-      <div className="dp-section-title" style={{ display: 'flex', justifyContent: 'space-between' }}>
+      <div
+        className="dp-section-title"
+        style={{ display: 'flex', justifyContent: 'space-between' }}
+      >
         <span>Модели</span>
         <span style={{ display: 'flex', gap: 4 }}>
-          <button className="dp-btn" onClick={() => setImporterOpen((v) => !v)} title="Импорт JSON">📥</button>
-          <button className="dp-btn" onClick={() => modelIO.download(models, `${activeSchema.name}-models.json`)} title="Экспорт JSON">📤</button>
+          <button
+            className="dp-btn"
+            onClick={() => setImporterOpen((v) => !v)}
+            title="Импорт JSON"
+          >
+            📥
+          </button>
+          <button
+            className="dp-btn"
+            onClick={() =>
+              modelIO.download(models, `${activeSchema.name}-models.json`)
+            }
+            title="Экспорт JSON"
+          >
+            📤
+          </button>
         </span>
       </div>
 
       {importerOpen && <JsonImporterPanel onImport={importModels} />}
 
-      {packAs === 'single' ? (
-        <div className="gen-model-list" style={{ maxHeight: 160 }}>
-          <label className={`gen-model-item ${pickedIds.size === 0 && !activeModel ? 'checked' : ''}`}>
-            <input
-              className="gen-model-checkbox"
-              type="radio"
-              name="model-select"
-              checked={pickedIds.size === 0 && !activeModel}
-              onChange={() => selectSingle(null)}
-            />
-            <span>Без модели (как на холсте)</span>
-          </label>
-          {models.map((m) => (
-            <label
-              key={m.id}
-              className={`gen-model-item ${pickedIds.has(m.id) ? 'checked' : ''}`}
-            >
-              <input
-                className="gen-model-checkbox"
-                type="radio"
-                name="model-select"
-                checked={pickedIds.has(m.id)}
-                onChange={() => selectSingle(m.id)}
-              />
-              <span>{m.name}</span>
-            </label>
-          ))}
-        </div>
-      ) : (
-        <div className="gen-model-list" style={{ maxHeight: 160 }}>
-          {models.map((m) => (
-            <div
-              key={m.id}
-              className={`gen-model-item ${pickedIds.has(m.id) ? 'checked' : ''}`}
-              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 8px' }}
-            >
-              <input
-                className="gen-model-checkbox"
-                type="checkbox"
-                checked={pickedIds.has(m.id)}
-                onChange={() => togglePick(m.id)}
-              />
-              <span
-                style={{ flex: 1, cursor: 'pointer', fontWeight: selectedId === m.id ? 600 : 400 }}
-                onClick={() => modelStore.select(m.id)}
-              >
-                {m.name}
-              </span>
-              <span style={{ fontSize: 10, color: '#94a3b8' }}>{selectedId === m.id ? '✎' : ''}</span>
-            </div>
-          ))}
-        </div>
-      )}
+      <SearchSelectList<DataModel>
+        items={models}
+        adapter={modelAdapter}
+        selectedIds={pickedIds}
+        onSelectionChange={setPickedIds}
+        activeId={selectedId}
+        onItemClick={(m) => modelStore.select(m.id)}
+        bulkActions={[]}
+        searchPlaceholder="Поиск по названию модели…"
+        emptyText={
+          <span>
+            Моделей нет. Создайте в разделе «Данные» или нажмите 📥 для импорта.
+          </span>
+        }
+        maxHeight={260}
+        minHeight={140}
+      />
 
       {blockingIssues.length > 0 && (
         <div className="schema-error" style={{ marginTop: 12 }}>
@@ -305,7 +280,10 @@ export const GenerationPanel: React.FC = () => {
 
       {activeModel && (
         <div style={{ marginTop: 12 }}>
-          <div className="dp-section-title" style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <div
+            className="dp-section-title"
+            style={{ display: 'flex', justifyContent: 'space-between' }}
+          >
             <span>Поля: {activeModel.name}</span>
             {saveStatus === 'saving' && <span style={{ fontSize: 10, color: '#94a3b8' }}>💾...</span>}
             {saveStatus === 'saved' && <span style={{ fontSize: 10, color: '#16a34a' }}>✓ сохранено</span>}
@@ -323,7 +301,11 @@ export const GenerationPanel: React.FC = () => {
 
       <label className="gen-label">
         Формат
-        <select className="gen-select" value={format} onChange={(e) => updateParams({ format: e.target.value })}>
+        <select
+          className="gen-select"
+          value={format}
+          onChange={(e) => updateParams({ format: e.target.value })}
+        >
           <option value="pdfa">PDF/A-2b</option>
           <option value="pdf">PDF</option>
           <option value="svg">SVG</option>
@@ -332,7 +314,11 @@ export const GenerationPanel: React.FC = () => {
 
       <label className="gen-label">
         Упаковка
-        <select className="gen-select" value={packAs} onChange={(e) => updateParams({ packAs: e.target.value })}>
+        <select
+          className="gen-select"
+          value={packAs}
+          onChange={(e) => updateParams({ packAs: e.target.value })}
+        >
           <option value="zip">ZIP</option>
           <option value="single">Один файл (если 1 модель)</option>
         </select>
@@ -340,7 +326,11 @@ export const GenerationPanel: React.FC = () => {
 
       <label className="gen-label">
         Шаблон имени
-        <input className="gen-input" value={filenamePattern} onChange={(e) => updateParams({ fn: e.target.value })} />
+        <input
+          className="gen-input"
+          value={filenamePattern}
+          onChange={(e) => updateParams({ fn: e.target.value })}
+        />
       </label>
 
       <button
@@ -350,7 +340,11 @@ export const GenerationPanel: React.FC = () => {
         style={{ marginTop: 16 }}
         title="Ctrl+Enter"
       >
-        {phase === 'sync-running' ? 'Генерация…' : phase === 'async-running' ? 'В очереди…' : 'Сгенерировать (Ctrl+Enter)'}
+        {phase === 'sync-running'
+          ? 'Генерация…'
+          : phase === 'async-running'
+            ? 'В очереди…'
+            : 'Сгенерировать (Ctrl+Enter)'}
       </button>
 
       {phase === 'async-running' && job && (
@@ -360,14 +354,19 @@ export const GenerationPanel: React.FC = () => {
           {job.errors.length > 0 && (
             <details style={{ marginTop: 8 }}>
               <summary>Ошибок: {job.errors.length}</summary>
-              {job.errors.slice(0, 5).map((e, k) => <div key={k} style={{ fontSize: 11 }}>#{e.index}: {e.message}</div>)}
+              {job.errors.slice(0, 5).map((e, k) => (
+                <div key={k} style={{ fontSize: 11 }}>#{e.index}: {e.message}</div>
+              ))}
             </details>
           )}
         </div>
       )}
       {phase === 'async-done' && result && (
         <div className="gen-status done" style={{ marginTop: 12 }}>
-          Готово: {result.count}. <button className="dp-btn" onClick={() => downloadBlob(result.blob, result.filename)}>Скачать</button>
+          Готово: {result.count}.{' '}
+          <button className="dp-btn" onClick={() => downloadBlob(result.blob, result.filename)}>
+            Скачать
+          </button>
         </div>
       )}
       {err && <div className="schema-error" style={{ marginTop: 12 }}>{err}</div>}

@@ -1,4 +1,4 @@
-﻿import React from 'react';
+﻿import React, { useState } from 'react';
 import type { CanvasElement } from '@/shared/types';
 import { useStore } from '@/shared/store/store';
 import {
@@ -7,12 +7,15 @@ import {
 import { useSelectedElement } from '../hooks/useSelectedElement';
 import { getElementStrategy } from './elements/registry';
 import { Group, L, inputStyle } from './elements/properties/ui';
+import { ConfirmDialog } from '@/presentation/components/dialog';
 
-/* ---------- Секция символа для инстанса ---------- */
+/* ---------- Symbol section for instances ---------- */
 
 const SymbolSection: React.FC<{ el: CanvasElement }> = ({ el }) => {
   const docStore = useDocumentStore();
   const graphicsStore = useGraphicsStore();
+  const [confirmUpdate, setConfirmUpdate] = useState(false);
+
   const symbol = useStore(
     graphicsStore,
     React.useCallback(
@@ -23,8 +26,13 @@ const SymbolSection: React.FC<{ el: CanvasElement }> = ({ el }) => {
 
   if (!symbol) return null;
 
-  const handleUpdateFromThis = () => {
-    if (!confirm(`Обновить символ «${symbol.name}» из текущего элемента?\n\nВсе экземпляры на холсте будут изменены.`)) return;
+  const handleUpdateFromThis = (): void => {
+    setConfirmUpdate(true);
+  };
+
+  const doUpdateFromThis = (): void => {
+    setConfirmUpdate(false);
+    if (!symbol) return;
     const prototype: CanvasElement = {
       ...JSON.parse(JSON.stringify(el)),
       id: '',
@@ -35,7 +43,7 @@ const SymbolSection: React.FC<{ el: CanvasElement }> = ({ el }) => {
     graphicsStore.updateSymbol(symbol.id, prototype);
   };
 
-  const handleDetach = () => {
+  const handleDetach = (): void => {
     docStore.commit((draft) => {
       const s = draft.slides.find(x => x.id === draft.activeId);
       const target = s?.elements.find(x => x.id === el.id);
@@ -78,11 +86,20 @@ const SymbolSection: React.FC<{ el: CanvasElement }> = ({ el }) => {
           Отсоединить
         </button>
       </div>
+
+      <ConfirmDialog
+        isOpen={confirmUpdate}
+        title={`Обновить символ «${symbol.name}»?`}
+        description="Все экземпляры на холсте будут изменены."
+        confirmLabel="Обновить"
+        onConfirm={doUpdateFromThis}
+        onCancel={() => setConfirmUpdate(false)}
+      />
     </div>
   );
 };
 
-/* ---------- Панель свойств ---------- */
+/* ---------- Properties panel ---------- */
 
 export const PropertiesPanel: React.FC = () => {
   const docStore = useDocumentStore();

@@ -71,15 +71,12 @@ export const EditorPage: React.FC = () => {
     return () => { cancelled = true; };
   }, [docId, isLocal]);
 
-  // P0.3 — Legacy migration: DataRoot[] → Schema + Model (однократно, при первом открытии)
   useEffect(() => {
     if (!doc || migratedRef.current) return;
     migratedRef.current = true;
 
     const initial = parseContent(doc.content);
     if (initial.data.length === 0) return;
-
-    // если схема уже выбрана — миграция не нужна
     if (localStorage.getItem(SCHEMA_KEY)) return;
 
     void (async () => {
@@ -113,14 +110,14 @@ export const EditorPage: React.FC = () => {
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-      <div style={{ padding: 8, borderBottom: '1px solid #e2e8f0', display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+      <div style={{ padding: 8, borderBottom: '1px solid var(--border)', display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
         <button
-          onClick={() => navigate('/')}
-          style={{ border: '1px solid #cbd5e1', background: '#fff', padding: '4px 10px', borderRadius: 4, cursor: 'pointer' }}
+          onClick={() => navigate('/app')}
+          style={{ border: '1px solid var(--border-strong)', background: 'var(--panel)', padding: '4px 10px', borderRadius: 4, cursor: 'pointer', fontSize: 13, color: 'var(--text)' }}
         >
           ← К списку
         </button>
-        <span style={{ fontSize: 13, color: '#64748b' }}>
+        <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
           {doc.name} {isLocal && '(Сохранено локально)'}
         </span>
       </div>

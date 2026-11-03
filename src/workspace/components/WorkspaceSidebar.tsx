@@ -18,15 +18,18 @@ function findPathToNode(tree: TreeNode[], targetId: string): string[] | null {
 }
 
 const WorkspaceNav: React.FC = () => (
-  <nav className="workspace-nav" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
-    <NavLink to="/" end className={({ isActive }) => (isActive ? 'active' : '')}>
+  <nav className="workspace-nav" style={{ gridTemplateColumns: '1fr 1fr' }}>
+    <NavLink to="/app" end className={({ isActive }) => (isActive ? 'active' : '')}>
       📁 Проекты
     </NavLink>
-    <NavLink to="/schemas" className={({ isActive }) => (isActive ? 'active' : '')}>
+    <NavLink to="/app/schemas" className={({ isActive }) => (isActive ? 'active' : '')}>
       📋 Схемы
     </NavLink>
-    <NavLink to="/data-models" className={({ isActive }) => (isActive ? 'active' : '')}>
+    <NavLink to="/app/data-models" className={({ isActive }) => (isActive ? 'active' : '')}>
       📊 Данные
+    </NavLink>
+    <NavLink to="/app/generate" className={({ isActive }) => (isActive ? 'active' : '')}>
+      ⚡ Генерация
     </NavLink>
   </nav>
 );
@@ -68,7 +71,7 @@ const InlineInput: React.FC<{
         placeholder={placeholder}
         style={{
           width: '100%', padding: '4px 6px', fontSize: 13,
-          border: '1px solid #6366f1', borderRadius: 4, outline: 'none',
+          border: '1px solid var(--accent)', borderRadius: 4, outline: 'none',
         }}
       />
     </div>
@@ -91,7 +94,8 @@ const TreeItem: React.FC<{
   const isActiveFolder = isFolder && node.id === activeFolderId;
   const isActiveDoc = !isFolder && node.id === currentDocId;
 
-  const open = useStore(workspaceStore, (s) => isFolder && s.expandedFolders.includes(node.id));
+  const open = useStore(workspaceStore, (s) =>
+    isFolder && s.expandedFolders.includes(node.id));
 
   const handleCreateChild = async (type: 'folder' | 'document', name: string): Promise<void> => {
     if (offline) { setCreatingChild(null); return; }
@@ -102,7 +106,7 @@ const TreeItem: React.FC<{
         const doc = await workspaceApi.createDocument(name, node.id);
         await workspaceStore.refresh();
         setCreatingChild(null);
-        navigate(`/editor/${doc.id}`);
+        navigate(`/app/editor/${doc.id}`);
         return;
       }
       await workspaceStore.refresh();
@@ -164,12 +168,12 @@ const TreeItem: React.FC<{
         style={{
           display: 'flex', alignItems: 'center', padding: '4px 8px',
           marginLeft: depth * 12, cursor: 'pointer',
-          background: isActiveDoc ? '#eef2ff' : isActiveFolder ? '#f8fafc' : 'transparent',
+          background: isActiveDoc ? 'var(--accent-light)' : isActiveFolder ? '#f8fafc' : 'transparent',
           borderRadius: 4, fontSize: 13,
           fontWeight: isFolder ? 600 : 400,
-          color: isActiveDoc ? '#4f46e5' : '#0f172a',
+          color: isActiveDoc ? 'var(--accent-hover)' : 'var(--text)',
         }}
-        onClick={() => { if (isFolder) handleToggleFolder(); else navigate(`/editor/${node.id}`); }}
+        onClick={() => { if (isFolder) handleToggleFolder(); else navigate(`/app/editor/${node.id}`); }}
         onDoubleClick={() => { if (!offline) setRenaming(true); }}
       >
         {isFolder ? (
@@ -185,19 +189,42 @@ const TreeItem: React.FC<{
           <div style={{ display: 'flex', gap: 4, marginLeft: 8 }} onClick={(e) => e.stopPropagation()}>
             {isFolder && (
               <>
-                <button title="Новый документ" onClick={() => { setCreatingChild('document'); workspaceStore.expandFolders([node.id]); workspaceStore.setActiveFolder(node.id); }} style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 12, padding: 2 }}>📄+</button>
-                <button title="Новая папка" onClick={() => { setCreatingChild('folder'); workspaceStore.expandFolders([node.id]); workspaceStore.setActiveFolder(node.id); }} style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 12, padding: 2 }}>📁+</button>
+                <button
+                  title="Новый документ"
+                  onClick={() => { setCreatingChild('document'); workspaceStore.expandFolders([node.id]); workspaceStore.setActiveFolder(node.id); }}
+                  style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 12, padding: 2, color: 'inherit' }}
+                >📄+</button>
+                <button
+                  title="Новая папка"
+                  onClick={() => { setCreatingChild('folder'); workspaceStore.expandFolders([node.id]); workspaceStore.setActiveFolder(node.id); }}
+                  style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 12, padding: 2, color: 'inherit' }}
+                >📁+</button>
               </>
             )}
-            <button title="Переименовать" onClick={() => setRenaming(true)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 12, padding: 2 }}>✏️</button>
-            <button title="Удалить" onClick={() => void handleDelete()} style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 12, padding: 2 }}>🗑️</button>
+            <button
+              title="Переименовать"
+              onClick={() => setRenaming(true)}
+              style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 12, padding: 2, color: 'inherit' }}
+            >✏️</button>
+            <button
+              title="Удалить"
+              onClick={() => void handleDelete()}
+              style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 12, padding: 2, color: 'inherit' }}
+            >🗑️</button>
           </div>
         )}
       </div>
       {isFolder && open && (
         <>
           {node.children.map((child) => (
-            <TreeItem key={child.id} node={child} depth={depth + 1} currentDocId={currentDocId} activeFolderId={activeFolderId} offline={offline} />
+            <TreeItem
+              key={child.id}
+              node={child}
+              depth={depth + 1}
+              currentDocId={currentDocId}
+              activeFolderId={activeFolderId}
+              offline={offline}
+            />
           ))}
           {creatingChild && (
             <InlineInput
@@ -245,7 +272,7 @@ export const WorkspaceSidebar: React.FC = () => {
         const doc = await workspaceApi.createDocument(name, activeFolderId);
         await workspaceStore.refresh();
         setCreatingRoot(null);
-        navigate(`/editor/${doc.id}`);
+        navigate(`/app/editor/${doc.id}`);
         return;
       }
       await workspaceStore.refresh();
@@ -262,22 +289,35 @@ export const WorkspaceSidebar: React.FC = () => {
   };
 
   return (
-    <aside style={{ width: 280, borderRight: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', height: '100%', background: '#fff' }}>
-      <div style={{ padding: 12, borderBottom: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <div style={{ fontSize: 13, color: '#64748b', fontWeight: 500, marginBottom: 4 }}>
+    <aside style={{ width: 280, borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--panel)' }}>
+      <div style={{ padding: 12, borderBottom: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <a
+          href="/"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text-muted)', textDecoration: 'none', marginBottom: 4 }}
+          title="На главную"
+        >
+          ← На главную
+        </a>
+        <div style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 500 }}>
           {user?.name || user?.email || 'Гость'}
         </div>
         <WorkspaceNav />
         {!offline && (
           <div style={{ display: 'flex', gap: 4 }}>
-            <button onClick={() => { setCreatingRoot('document'); workspaceStore.setActiveFolder(null); }} style={{ flex: 1, padding: '6px 0', background: '#6366f1', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}>+ Документ</button>
-            <button onClick={() => { setCreatingRoot('folder'); workspaceStore.setActiveFolder(null); }} style={{ flex: 1, padding: '6px 0', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}>+ Папка</button>
+            <button
+              onClick={() => { setCreatingRoot('document'); workspaceStore.setActiveFolder(null); }}
+              style={{ flex: 1, padding: '6px 0', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
+            >+ Документ</button>
+            <button
+              onClick={() => { setCreatingRoot('folder'); workspaceStore.setActiveFolder(null); }}
+              style={{ flex: 1, padding: '6px 0', background: 'var(--panel-alt)', border: '1px solid var(--border-strong)', borderRadius: 4, cursor: 'pointer', fontSize: 12, color: 'var(--text)' }}
+            >+ Папка</button>
           </div>
         )}
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: 8 }}>
-        {loading && !offline && <div style={{ fontSize: 12, color: '#94a3b8', padding: 8 }}>Загрузка…</div>}
+        {loading && !offline && <div style={{ fontSize: 12, color: 'var(--text-soft)', padding: 8 }}>Загрузка…</div>}
         {!offline && creatingRoot && (
           <InlineInput
             placeholder={creatingRoot === 'folder' ? 'Название папки…' : 'Название документа…'}
@@ -289,12 +329,12 @@ export const WorkspaceSidebar: React.FC = () => {
         {offline && (
           <div style={{ padding: '4px 8px' }}>
             <div
-              onClick={() => navigate('/editor/local')}
+              onClick={() => navigate('/app/editor/local')}
               style={{
                 display: 'flex', alignItems: 'center', padding: '4px 8px', cursor: 'pointer',
-                background: currentDocId === 'local' ? '#eef2ff' : 'transparent',
+                background: currentDocId === 'local' ? 'var(--accent-light)' : 'transparent',
                 borderRadius: 4, fontSize: 13,
-                color: currentDocId === 'local' ? '#4f46e5' : '#0f172a',
+                color: currentDocId === 'local' ? 'var(--accent-hover)' : 'var(--text)',
               }}
             >
               <span style={{ width: 16 }} />
@@ -304,17 +344,27 @@ export const WorkspaceSidebar: React.FC = () => {
           </div>
         )}
         {!offline && !loading && tree.length === 0 && !creatingRoot && (
-          <div style={{ fontSize: 12, color: '#94a3b8', padding: 8, textAlign: 'center' }}>
+          <div style={{ fontSize: 12, color: 'var(--text-soft)', padding: 8, textAlign: 'center' }}>
             Пусто. Создайте папку или документ.
           </div>
         )}
         {!offline && tree.map((n) => (
-          <TreeItem key={n.id} node={n} depth={0} currentDocId={currentDocId} activeFolderId={activeFolderId} offline={offline} />
+          <TreeItem
+            key={n.id}
+            node={n}
+            depth={0}
+            currentDocId={currentDocId}
+            activeFolderId={activeFolderId}
+            offline={offline}
+          />
         ))}
       </div>
 
-      <button onClick={() => void logout()} style={{ padding: 12, border: 'none', borderTop: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer', color: '#dc2626', fontSize: 13 }}>
-        {offline ? 'Выйти' : 'Выйти'}
+      <button
+        onClick={() => void logout()}
+        style={{ padding: 12, border: 'none', borderTop: '1px solid var(--border)', background: 'var(--panel)', cursor: 'pointer', color: '#dc2626', fontSize: 13 }}
+      >
+        Выйти
       </button>
     </aside>
   );

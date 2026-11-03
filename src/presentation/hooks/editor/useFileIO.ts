@@ -11,6 +11,7 @@ import {
 } from '@/lib/serverExport';
 import { prepareQrForExport } from '@/lib/qr';
 import { CONFIG } from '@/shared/config';
+import { toast } from '@/presentation/components/toast';
 
 /* ---------- helpers ---------- */
 
@@ -94,7 +95,7 @@ export function useFileIO() {
 
       if (file.size > CONFIG.MAX_IMPORT_SIZE) {
         const mb = (CONFIG.MAX_IMPORT_SIZE / 1024 / 1024).toFixed(0);
-        alert(`Файл слишком большой (макс. ${mb} MB)`);
+        toast.error('Файл слишком большой', `Максимум ${mb} MB`);
         return;
       }
 
@@ -123,6 +124,7 @@ export function useFileIO() {
           }, 'import-element');
           clearUiState();
           selStore.setIds([String(el.id)]);
+          toast.success('Элемент импортирован');
           return;
         }
 
@@ -146,6 +148,7 @@ export function useFileIO() {
           }, 'import-elements');
           clearUiState();
           selStore.setIds(ids);
+          toast.success(`Импортировано элементов: ${ids.length}`);
           return;
         }
 
@@ -161,8 +164,9 @@ export function useFileIO() {
         }, 'import-json');
 
         clearUiState();
+        toast.success('Документ импортирован');
       } catch (err) {
-        alert(`Ошибка импорта: ${(err as Error).message}`);
+        toast.error('Ошибка импорта', (err as Error).message);
       }
     };
     input.click();
@@ -172,8 +176,6 @@ export function useFileIO() {
     const active = getActiveSlide();
     if (!active) return;
 
-    // Подтягиваем QR-картинки с сервера. Если /api/qr недоступен — toSvgQr
-    // нарисует пунктирную рамку-заглушку вместо картинки.
     const [prepared] = await prepareQrForExport([active], '');
 
     const { serializeSlideToSvg } = await import('@/lib/svg/serialize');
@@ -243,7 +245,7 @@ export function useFileIO() {
           }
         }, 'add-image');
       } catch (err) {
-        alert(`Не удалось загрузить картинку: ${(err as Error).message}`);
+        toast.error('Не удалось загрузить картинку', (err as Error).message);
       }
     };
     input.click();
@@ -263,7 +265,7 @@ export function useFileIO() {
           if (s) s.backgroundImage = src;
         }, 'set-bg');
       } catch (err) {
-        alert(`Не удалось установить фон: ${(err as Error).message}`);
+        toast.error('Не удалось установить фон', (err as Error).message);
       }
     };
     input.click();

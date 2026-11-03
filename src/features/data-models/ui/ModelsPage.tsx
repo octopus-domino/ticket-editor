@@ -1,23 +1,28 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useStore } from '@/shared/store/store';
-import type { DataSchema } from '@/features/schemas/domain/DataSchema';
 import { useSchemas } from '@/features/schemas/state/useSchemas';
 import { schemaStore } from '@/features/schemas/state/SchemaStore';
 import { modelStore } from '../state/ModelStore';
 import { modelIO } from '../api/ModelIO';
-import { ModelList } from './ModelList';
+import type { DataModel } from '../domain/DataModel';
 import { ModelValuesEditor } from './ModelValuesEditor';
 import { JsonImporterPanel } from './JsonImporterPanel';
+import {
+  SearchSelectList,
+  type BulkAction,
+  type ListItemAdapter,
+} from '@/presentation/components/list';
+import { toast } from '@/presentation/components/toast';
+import { runBulk } from '@/shared/utils/bulk';
 
 export const ModelsPage: React.FC = () => {
   const { schemas, activeSchema, loading: schemasLoading } = useSchemas();
   const [importerOpen, setImporterOpen] = useState(false);
-  const [checkedForExport, setCheckedForExport] = useState<Set<string>>(new Set());
-  const [actionError, setActionError] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
 
   const models = useStore(modelStore, (s) => s.models);
-  const selectedId = useStore(modelStore, (s) => s.selectedId);
+  const activeModelId = useStore(modelStore, (s) => s.selectedId);
   const saveStatus = useStore(modelStore, (s) => s.saveStatus);
   const saveError = useStore(modelStore, (s) => s.saveError);
   const lastSavedAt = useStore(modelStore, (s) => s.lastSavedAt);
@@ -26,54 +31,99 @@ export const ModelsPage: React.FC = () => {
 
   useEffect(() => {
     if (activeSchema) void modelStore.load(activeSchema.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSchema?.id]);
+
+  useEffect(() => {
+    setSelectedIds(new Set());
   }, [activeSchema?.id]);
 
   const activeModel = useMemo(
-    () => models.find((m) => m.id === selectedId) ?? null,
-    [models, selectedId],
+    () => models.find((m) => m.id === activeModelId) ?? null,
+    [models, activeModelId],
   );
 
-  const create = async (): Promise<void> => {
+  const adapter = useMemo<ListItemAdapter<DataModel>>(
+    () => ({
+      getId: (m) => m.id,
+      getLabel: (m) => m.name,
+      getMeta: (m) => `${Object.keys(m.values).length} полей`,
+      getSearchText: (m) => m.name,
+    }),
+    [],
+  );
+
+  const bulkActions = useMemo<BulkAction<DataModel>[]>(
+    () => [
+      {
+        key: 'export',
+        label: 'Экспорт',
+        icon: '📤',
+        onRun: async (ids) => {
+          const toExport = models.filter((m) => ids.includes(m.id));
+          if (toExport.length === 0) return;
+          modelIO.download(
+            toExport,
+            `${activeSchema?.name ?? 'models'}-models.json`,
+          );
+          toast.success(`Экспортировано: ${toExport.length}`);
+        },
+      },
+      {
+        key: 'delete',
+        label: 'Удалить',
+        icon: '🗑',
+        variant: 'danger',
+        confirm: (ids) => ({
+          title: `Удалить ${ids.length} ${plural(ids.length)}?`,
+          description: 'Действие необратимо.',
+        }),
+        onRun: async (ids) => {
+          const result = await runBulk(ids, (id) => modelStore.remove(id));
+          if (result.ok > 0) {
+            toast.success(`Удалено: ${result.ok} ${plural(result.ok)}`);
+          }
+          if (result.failed.length > 0) {
+            toast.error(
+              `Не удалось удалить: ${result.failed.length}`,
+              result.failed[0].message,
+            );
+          }
+          setSelectedIds((prev) => {
+            const next = new Set(prev);
+            ids.forEach((id) => next.delete(id));
+            return next;
+          });
+        },
+      },
+    ],
+    [models, activeSchema?.name],
+  );
+
+  const create = useCallback(async (): Promise<void> => {
     if (!activeSchema) return;
     try {
       await modelStore.create(activeSchema.id, 'Новая модель', {});
     } catch (e) {
-      setActionError((e as Error).message);
+      toast.error('Не удалось создать модель', (e as Error).message);
     }
-  };
+  }, [activeSchema]);
 
-  const importModels = async (items: { name: string; values: Record<string, unknown> }[]): Promise<void> => {
-    if (!activeSchema) return;
-    try {
-      await modelStore.importMany(activeSchema.id, items);
-      setImporterOpen(false);
-      setActionError(null);
-    } catch (e) {
-      setActionError((e as Error).message);
-    }
-  };
-
-  const exportModels = (mode: 'all' | 'selected'): void => {
-    if (!activeSchema) return;
-    const toExport = mode === 'all'
-      ? models
-      : models.filter((m) => checkedForExport.has(m.id));
-    if (toExport.length === 0) {
-      setActionError('Нечего экспортировать: выберите модели или используйте «все».');
-      return;
-    }
-    setActionError(null);
-    modelIO.download(toExport, `${activeSchema.name}-models.json`);
-  };
-
-  const toggleCheck = (id: string): void => {
-    setCheckedForExport((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
+  const importModels = useCallback(
+    async (
+      items: { name: string; values: Record<string, unknown> }[],
+    ): Promise<void> => {
+      if (!activeSchema) return;
+      try {
+        await modelStore.importMany(activeSchema.id, items);
+        setImporterOpen(false);
+        toast.success(`Импортировано моделей: ${items.length}`);
+      } catch (e) {
+        toast.error('Не удалось импортировать', (e as Error).message);
+      }
+    },
+    [activeSchema],
+  );
 
   const saveStatusText = (): string => {
     if (saveStatus === 'saving') return '💾 Сохранение…';
@@ -92,7 +142,9 @@ export const ModelsPage: React.FC = () => {
       <div className="schema-page">
         <h2>Модели данных</h2>
         <p>Модели данных привязаны к схеме. Сначала создайте схему.</p>
-        <Link to="/schemas/new" className="schema-btn-submit">+ Создать первую схему</Link>
+        <Link to="/app/schemas/new" className="schema-btn-submit">
+          + Создать первую схему
+        </Link>
       </div>
     );
   }
@@ -108,42 +160,46 @@ export const ModelsPage: React.FC = () => {
             value={activeSchema.id}
             onChange={(e) => schemaStore.setActive(e.target.value)}
           >
-            {schemas.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            {schemas.map((s) => (
+              <option key={s.id} value={s.id}>{s.name}</option>
+            ))}
           </select>
           <div className="dm-sidebar-actions">
-            <button className="dm-btn-primary" disabled={!activeSchema} onClick={() => void create()}>
+            <button
+              className="dm-btn-primary"
+              disabled={!activeSchema}
+              onClick={() => void create()}
+            >
               + Новая
             </button>
-            <button className="dm-btn-icon" onClick={() => setImporterOpen((v) => !v)} title="Импорт JSON">📥</button>
             <button
               className="dm-btn-icon"
-              onClick={() => exportModels('selected')}
-              disabled={checkedForExport.size === 0}
-              title={`Экспорт выбранных (${checkedForExport.size})`}
-            >📤</button>
+              onClick={() => setImporterOpen((v) => !v)}
+              title="Импорт JSON"
+            >
+              📥
+            </button>
           </div>
-          {checkedForExport.size > 0 && (
-            <button
-              className="dp-btn"
-              onClick={() => exportModels('all')}
-              style={{ marginTop: 4 }}
-              title="Экспортировать все модели"
-            >📤 Экспорт всех</button>
-          )}
         </div>
 
         {importerOpen && <JsonImporterPanel onImport={importModels} />}
-        {loading && <div className="schema-hint" style={{ padding: 12 }}>Загрузка…</div>}
-        {loadError && <div className="schema-error">{loadError}</div>}
-        {actionError && <div className="schema-error">{actionError}</div>}
+        {loadError && (
+          <div className="schema-error" role="alert">
+            {loadError}
+          </div>
+        )}
 
-        <ModelList
-          models={models}
-          selectedId={selectedId}
-          checkedForExport={checkedForExport}
-          onSelect={(id) => modelStore.select(id)}
-          onToggleCheck={toggleCheck}
-          onRemove={(id) => void modelStore.remove(id)}
+        <SearchSelectList<DataModel>
+          items={models}
+          adapter={adapter}
+          selectedIds={selectedIds}
+          onSelectionChange={setSelectedIds}
+          activeId={activeModelId}
+          onItemClick={(m) => modelStore.select(m.id)}
+          bulkActions={bulkActions}
+          searchPlaceholder="Поиск по названию модели…"
+          emptyText="Моделей нет. Создайте новую или импортируйте JSON."
+          loading={loading}
         />
       </aside>
 
@@ -154,15 +210,21 @@ export const ModelsPage: React.FC = () => {
               <input
                 className="dm-editor-name"
                 value={activeModel.name}
-                onChange={(e) => modelStore.patch(activeModel.id, { name: e.target.value })}
+                onChange={(e) =>
+                  modelStore.patch(activeModel.id, { name: e.target.value })
+                }
               />
-              <span className={`dm-save-status dm-status-${saveStatus}`}>{saveStatusText()}</span>
+              <span className={`dm-save-status dm-status-${saveStatus}`}>
+                {saveStatusText()}
+              </span>
             </div>
             <ModelValuesEditor
               modelId={activeModel.id}
               schema={activeSchema}
               values={activeModel.values}
-              onChange={(values) => modelStore.patch(activeModel.id, { values })}
+              onChange={(values) =>
+                modelStore.patch(activeModel.id, { values })
+              }
             />
           </div>
         ) : (
@@ -172,3 +234,11 @@ export const ModelsPage: React.FC = () => {
     </div>
   );
 };
+
+function plural(n: number): string {
+  const m10 = n % 10;
+  const m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return 'модель';
+  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return 'модели';
+  return 'моделей';
+}

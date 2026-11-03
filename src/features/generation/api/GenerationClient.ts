@@ -1,3 +1,5 @@
+import type { Slide } from '@/shared/types';
+import type { Binding } from '@/features/bindings/domain/Binding';
 export interface GenerationItem {
   dataModelId?: string;
   inlineValues?: Record<string, unknown>;
@@ -5,7 +7,10 @@ export interface GenerationItem {
 }
 
 export interface GenerationRequest {
-  inlineSlides: unknown[];
+  inlineSlides: Slide[];
+  templateId?: string;
+  schemaId?: string;
+  bindings?: Binding[];
   items: GenerationItem[];
   format: 'svg' | 'pdf' | 'pdfa';
   packAs: 'zip' | 'single';
@@ -18,6 +23,7 @@ export interface GenerationResult {
   filename: string;
   count: number;
   failed: number;
+  errors?: { index: number; message: string }[];
 }
 
 export interface GenerationJobStatus {

@@ -4,6 +4,8 @@ import type { FieldDef, FieldType } from '../domain/DataSchema';
 import { FIELD_TYPE_LABEL } from '../domain/DataSchema';
 import { schemaStore } from '../state/SchemaStore';
 import { inferFieldsFromSlides } from '../domain/SchemaInference';
+import { documentPreview } from '@/application/use-cases/DocumentPreview';
+import { authStore } from '@/auth/store';
 
 interface DraftField extends FieldDef {
   key: string;
@@ -19,13 +21,17 @@ const LAST_SLIDES_KEY = 'ticket-editor:last-slides';
 const AUTOSAVE_KEY = 'ticket-editor:autosave';
 
 function readSlidesFromLocalStorage(): unknown[] {
+  const current = documentPreview.read(authStore.getState().user?.id ?? 'local');
+  if (current.length) return current;
   try {
     const raw = localStorage.getItem(AUTOSAVE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as LastSlidesPayload;
       if (Array.isArray(parsed.slides) && parsed.slides.length > 0) return parsed.slides;
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   try {
     const raw = localStorage.getItem(LAST_SLIDES_KEY);
@@ -33,13 +39,22 @@ function readSlidesFromLocalStorage(): unknown[] {
       const parsed = JSON.parse(raw) as LastSlidesPayload;
       if (Array.isArray(parsed.slides) && parsed.slides.length > 0) return parsed.slides;
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   return [];
 }
 
 function makeDraft(): DraftField {
-  return { key: crypto.randomUUID(), path: '', type: 'string', required: true, label: '', children: [] };
+  return {
+    key: crypto.randomUUID(),
+    path: '',
+    type: 'string',
+    required: true,
+    label: '',
+    children: [],
+  };
 }
 
 const TYPES: FieldType[] = ['string', 'number', 'date', 'boolean', 'image', 'object', 'array'];
@@ -134,7 +149,9 @@ export const SchemaEditorPage: React.FC = () => {
     try {
       const slides = readSlidesFromLocalStorage();
       if (slides.length === 0) {
-        setError('Не вижу активного документа. Откройте редактор и вернитесь сюда — слайды подтянутся автоматически.');
+        setError(
+          'Не вижу активного документа. Откройте редактор и вернитесь сюда — слайды подтянутся автоматически.',
+        );
         return;
       }
       const inferred = inferFieldsFromSlides(slides);
@@ -151,15 +168,24 @@ export const SchemaEditorPage: React.FC = () => {
 
   const submit = async (): Promise<void> => {
     const out = stripDraft(fields).filter((f) => f.path.trim());
-    if (!name.trim()) { setError('Название схемы'); return; }
-    if (out.length === 0) { setError('Хотя бы одно поле'); return; }
+    if (!name.trim()) {
+      setError('Название схемы');
+      return;
+    }
+    if (out.length === 0) {
+      setError('Хотя бы одно поле');
+      return;
+    }
     setBusy(true);
     try {
       if (schemaId) {
         await schemaStore.update(schemaId, { name: name.trim(), fields: out });
         navigate(backPath);
       } else {
-        const created = await schemaStore.create({ name: name.trim(), fields: out });
+        const created = await schemaStore.create({
+          name: name.trim(),
+          fields: out,
+        });
         // Для новой схемы возвращаемся туда, откуда пришли, если есть from;
         // иначе — в редактор новой схемы (чтобы пользователь мог продолжить).
         if (fromState) {
@@ -168,8 +194,11 @@ export const SchemaEditorPage: React.FC = () => {
           navigate(`/app/schemas/${created.id}`, { replace: true });
         }
       }
-    } catch (e) { setError((e as Error).message); }
-    finally { setBusy(false); }
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -184,7 +213,10 @@ export const SchemaEditorPage: React.FC = () => {
       </button>
 
       <h2>{schemaId ? 'Редактирование схемы' : 'Создание схемы'}</h2>
-      <p>Схема — список полей. Массивы и объекты поддерживаются: задайте тип и добавьте дочерние поля.</p>
+      <p>
+        Схема — список полей. Массивы и объекты поддерживаются: задайте тип и добавьте дочерние
+        поля.
+      </p>
       <div className="schema-form">
         <label className="schema-label">
           <span>Название</span>
@@ -236,7 +268,9 @@ const FieldTree: React.FC<{
   };
   const remove = (key: string): void => {
     const walk = (arr: DraftField[]): DraftField[] =>
-      arr.filter((f) => f.key !== key).map((f) => (f.children ? { ...f, children: walk(f.children) } : f));
+      arr
+        .filter((f) => f.key !== key)
+        .map((f) => (f.children ? { ...f, children: walk(f.children) } : f));
     onChange(walk(fields));
   };
   const addChild = (key: string): void => {
@@ -266,7 +300,11 @@ const FieldTree: React.FC<{
                 value={f.type}
                 onChange={(e) => update(f.key, { type: e.target.value as FieldType })}
               >
-                {TYPES.map((t) => <option key={t} value={t}>{FIELD_TYPE_LABEL[t]}</option>)}
+                {TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {FIELD_TYPE_LABEL[t]}
+                  </option>
+                ))}
               </select>
               <label>
                 <input
@@ -276,7 +314,9 @@ const FieldTree: React.FC<{
                 />
                 обяз.
               </label>
-              <button className="schema-btn-remove" onClick={() => remove(f.key)}>×</button>
+              <button className="schema-btn-remove" onClick={() => remove(f.key)}>
+                ×
+              </button>
             </div>
             {isContainer && (
               <>

@@ -51,10 +51,14 @@ export const FontSize = Extension.create({
   },
   addCommands() {
     return {
-      setFontSize: (fontSize: string) => ({ chain }: CommandProps) =>
-        chain().setMark('textStyle', { fontSize }).run(),
-      unsetFontSize: () => ({ chain }: CommandProps) =>
-        chain().setMark('textStyle', { fontSize: null }).removeEmptyTextStyle().run(),
+      setFontSize:
+        (fontSize: string) =>
+        ({ chain }: CommandProps) =>
+          chain().setMark('textStyle', { fontSize }).run(),
+      unsetFontSize:
+        () =>
+        ({ chain }: CommandProps) =>
+          chain().setMark('textStyle', { fontSize: null }).removeEmptyTextStyle().run(),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any;
   },
@@ -91,8 +95,7 @@ const CELL_COMMON_ATTRIBUTES = {
   },
 };
 
-const SIDES = ['Top', 'Right', 'Bottom', 'Left'] as const;
-type SideCap = typeof SIDES[number];
+type SideCap = 'Top' | 'Right' | 'Bottom' | 'Left';
 
 /**
  * ВАЖНО: у border-атрибутов заданы дефолты (#cbd5e1 / 1px / solid).
@@ -196,32 +199,36 @@ export const Indent = Extension.create({
   },
   addCommands() {
     return {
-      indent: () => ({ tr, state, dispatch }: CommandProps) => {
-        const { selection } = state;
-        const { from, to } = selection;
-        state.doc.nodesBetween(from, to, (node, pos) => {
-          if (this.options.types.includes(node.type.name)) {
-            const current = typeof node.attrs.indent === 'number' ? node.attrs.indent : 0;
-            const next = Math.min(current + 1, 10);
-            tr.setNodeMarkup(pos, undefined, { ...node.attrs, indent: next });
-          }
-        });
-        if (dispatch) dispatch(tr);
-        return true;
-      },
-      outdent: () => ({ tr, state, dispatch }: CommandProps) => {
-        const { selection } = state;
-        const { from, to } = selection;
-        state.doc.nodesBetween(from, to, (node, pos) => {
-          if (this.options.types.includes(node.type.name)) {
-            const current = typeof node.attrs.indent === 'number' ? node.attrs.indent : 0;
-            const next = Math.max(current - 1, 0);
-            tr.setNodeMarkup(pos, undefined, { ...node.attrs, indent: next });
-          }
-        });
-        if (dispatch) dispatch(tr);
-        return true;
-      },
+      indent:
+        () =>
+        ({ tr, state, dispatch }: CommandProps) => {
+          const { selection } = state;
+          const { from, to } = selection;
+          state.doc.nodesBetween(from, to, (node, pos) => {
+            if (this.options.types.includes(node.type.name)) {
+              const current = typeof node.attrs.indent === 'number' ? node.attrs.indent : 0;
+              const next = Math.min(current + 1, 10);
+              tr.setNodeMarkup(pos, undefined, { ...node.attrs, indent: next });
+            }
+          });
+          if (dispatch) dispatch(tr);
+          return true;
+        },
+      outdent:
+        () =>
+        ({ tr, state, dispatch }: CommandProps) => {
+          const { selection } = state;
+          const { from, to } = selection;
+          state.doc.nodesBetween(from, to, (node, pos) => {
+            if (this.options.types.includes(node.type.name)) {
+              const current = typeof node.attrs.indent === 'number' ? node.attrs.indent : 0;
+              const next = Math.max(current - 1, 0);
+              tr.setNodeMarkup(pos, undefined, { ...node.attrs, indent: next });
+            }
+          });
+          if (dispatch) dispatch(tr);
+          return true;
+        },
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any;
   },

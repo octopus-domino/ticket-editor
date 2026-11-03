@@ -9,7 +9,7 @@ import globals from 'globals';
 export default defineConfig(
   {
     ignores: [
-      'dist/**', 'node_modules/**', 'coverage/**', 'scripts/**',
+      'dist/**', 'node_modules/**', 'coverage/**', 'scripts/**', 'src/.*.cjs',
       '.imports-backup/**', '**/.imports-backup/**', 'src/.imports-backup/**',
       'eslint.config.js', 'vite.config.ts', 'vitest.config.ts',
       'playwright.config.ts', '.dependency-cruiser.cjs',

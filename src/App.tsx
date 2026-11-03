@@ -16,11 +16,14 @@ import { SchemaEditorPage } from '@/features/schemas/ui/SchemaEditorPage';
 import { ModelsPage } from '@/features/data-models/ui/ModelsPage';
 import { GenerationPage } from '@/features/generation/ui/GenerationPage';
 import { TemplatesPage } from '@/features/templates/ui/TemplatesPage';
+import { TemplateEditorPage } from '@/features/templates/ui/TemplateEditorPage';
 
 const App: React.FC = () => {
   const offline = useStore(authStore, (s) => s.offline);
 
-  useEffect(() => { void authStore.bootstrap(); }, []);
+  useEffect(() => {
+    void authStore.bootstrap();
+  }, []);
 
   const basename = import.meta.env.BASE_URL;
 
@@ -29,15 +32,8 @@ const App: React.FC = () => {
       basename={basename}
       future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
     >
-      {offline && (
-        <div className="offline-banner">
-          ⚠️ Бэкенд недоступен. Локальный режим.
-        </div>
-      )}
-      <div
-        className="app-root"
-        style={{ height: offline ? 'calc(100vh - 37px)' : '100vh' }}
-      >
+      {offline && <div className="offline-banner">⚠️ Бэкенд недоступен. Локальный режим.</div>}
+      <div className="app-root" style={{ height: offline ? 'calc(100vh - 37px)' : '100vh' }}>
         <Routes>
           {/* Публичные страницы */}
           <Route path="/" element={<LandingPage />} />
@@ -48,18 +44,19 @@ const App: React.FC = () => {
           {/* Защищённая часть */}
           <Route
             path="/app"
-            element={<ProtectedRoute><WorkspaceLayout /></ProtectedRoute>}
+            element={
+              <ProtectedRoute>
+                <WorkspaceLayout />
+              </ProtectedRoute>
+            }
           >
             <Route
               index
-              element={
-                offline
-                  ? <Navigate to="/app/editor/local" replace />
-                  : <WorkspaceHome />
-              }
+              element={offline ? <Navigate to="/app/editor/local" replace /> : <WorkspaceHome />}
             />
             <Route path="editor/:docId" element={<EditorPage />} />
             <Route path="templates" element={<TemplatesPage />} />
+            <Route path="templates/:templateId/edit" element={<TemplateEditorPage />} />
             <Route path="schemas" element={<SchemasPage />} />
             <Route path="schemas/new" element={<SchemaEditorPage />} />
             <Route path="schemas/:schemaId" element={<SchemaEditorPage />} />

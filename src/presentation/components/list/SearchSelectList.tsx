@@ -1,9 +1,4 @@
-import React, {
-  useCallback,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { ConfirmDialog } from '@/presentation/components/dialog';
 import { toast } from '@/presentation/components/toast';
 import type { BulkAction, ListItemAdapter, ListItemRenderer } from './types';
@@ -57,9 +52,7 @@ interface PendingConfirm<T> {
   readonly resolve: (ok: boolean) => void;
 }
 
-export function SearchSelectList<T>(
-  props: SearchSelectListProps<T>,
-): React.ReactElement {
+export function SearchSelectList<T>(props: SearchSelectListProps<T>): React.ReactElement {
   const {
     items,
     adapter,
@@ -113,10 +106,7 @@ export function SearchSelectList<T>(
       try {
         await action.onRun(Array.from(selectedIds), selection.selectedItems);
       } catch (e) {
-        toast.error(
-          `Не удалось выполнить «${action.label}»`,
-          (e as Error).message,
-        );
+        toast.error(`Не удалось выполнить «${action.label}»`, (e as Error).message);
       } finally {
         setBulkBusy(false);
       }
@@ -149,11 +139,7 @@ export function SearchSelectList<T>(
         }
         return;
       }
-      if (
-        (e.key === 'ArrowDown' || e.key === 'ArrowUp') &&
-        !inField &&
-        visibleIds.length > 0
-      ) {
+      if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && !inField && visibleIds.length > 0) {
         const idx = rowRefs.current.findIndex((el) => el === document.activeElement);
         let next: number;
         if (idx === -1) next = e.key === 'ArrowDown' ? 0 : visibleIds.length - 1;
@@ -187,6 +173,11 @@ export function SearchSelectList<T>(
       : undefined;
 
   const rootClass = ['ssl-root', className].filter(Boolean).join(' ');
+  const confirmation =
+    confirm &&
+    (typeof confirm.action.confirm === 'function'
+      ? confirm.action.confirm(Array.from(selectedIds))
+      : confirm.action.confirm);
   const rootStyle: React.CSSProperties =
     maxHeight !== undefined
       ? {
@@ -225,17 +216,10 @@ export function SearchSelectList<T>(
         bulkBusy={bulkBusy}
       />
 
-      <div
-        className="ssl-list"
-        role="listbox"
-        aria-multiselectable="true"
-        style={listStyle}
-      >
+      <div className="ssl-list" role="listbox" aria-multiselectable="true" style={listStyle}>
         {loading && <div className="ssl-empty">Загрузка…</div>}
 
-        {!loading && filtered.length === 0 && (
-          <div className="ssl-empty">{emptyText}</div>
-        )}
+        {!loading && filtered.length === 0 && <div className="ssl-empty">{emptyText}</div>}
 
         {!loading &&
           filtered.map((item, i) => {
@@ -243,7 +227,9 @@ export function SearchSelectList<T>(
             return (
               <ListRow
                 key={id}
-                ref={(el) => { rowRefs.current[i] = el; }}
+                ref={(el) => {
+                  rowRefs.current[i] = el;
+                }}
                 item={item}
                 adapter={adapter}
                 isActive={activeId === id}
@@ -258,17 +244,9 @@ export function SearchSelectList<T>(
 
       <ConfirmDialog
         isOpen={confirm !== null}
-        title={
-          confirm
-            ? typeof confirm.action.confirm === 'string'
-              ? confirm.action.confirm
-              : confirm.action.confirm?.title ?? ''
-            : ''
-        }
+        title={typeof confirmation === 'string' ? confirmation : (confirmation?.title ?? '')}
         description={
-          confirm && typeof confirm.action.confirm === 'object'
-            ? confirm.action.confirm.description
-            : undefined
+          confirmation && typeof confirmation === 'object' ? confirmation.description : undefined
         }
         variant={confirm?.action.variant === 'danger' ? 'danger' : 'default'}
         confirmLabel={confirm?.action.label}

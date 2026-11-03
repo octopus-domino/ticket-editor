@@ -3,9 +3,20 @@
    ============================================================ */
 
 import type {
-  TextElement, ShapeElement, LineElement, TableElement, ImageElement,
-  FooterElement, PlaceholderElement, FillElement, ConnectorElement,
-  DiagramElement, StampElement, PathElement, ChartElement, CanvasElement,
+  TextElement,
+  ShapeElement,
+  LineElement,
+  TableElement,
+  ImageElement,
+  FooterElement,
+  PlaceholderElement,
+  FillElement,
+  ConnectorElement,
+  DiagramElement,
+  StampElement,
+  PathElement,
+  ChartElement,
+  CanvasElement,
   QrElement,
 } from '@/shared/types';
 import { escapeXml } from './escape';
@@ -29,7 +40,7 @@ function wrapTransform(el: CanvasElement, content: string): string {
   const rot = el.rotation || 0;
   const flipX = el.flipX ? -1 : 1;
   const flipY = el.flipY ? -1 : 1;
-  
+
   const tx = x + (el.flipX ? el.width : 0);
   const ty = y + (el.flipY ? el.height : 0);
 
@@ -38,7 +49,7 @@ function wrapTransform(el: CanvasElement, content: string): string {
   const transforms = [`translate(${tx}, ${ty})`];
   if (rot) transforms.push(`rotate(${rot})`);
   if (flipX !== 1 || flipY !== 1) transforms.push(`scale(${flipX}, ${flipY})`);
-  
+
   return `<g transform="${transforms.join(' ')}">${content}</g>`;
 }
 
@@ -51,23 +62,31 @@ function isSideVisible(side: BorderSide | undefined): side is BorderSide {
 function sideDash(style: string | undefined): string {
   if (!style) return '';
   switch (style.toLowerCase()) {
-    case 'dashed': return ' stroke-dasharray="4,4"';
-    case 'dotted': return ' stroke-dasharray="2,3"';
-    default: return '';
+    case 'dashed':
+      return ' stroke-dasharray="4,4"';
+    case 'dotted':
+      return ' stroke-dasharray="2,3"';
+    default:
+      return '';
   }
 }
 
 function appendSide(
   out: string,
   side: BorderSide | undefined,
-  x1: number, y1: number, x2: number, y2: number,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
 ): string {
   if (!isSideVisible(side)) return out;
   const color = side.color || '#000000';
   const width = side.width ?? 1;
-  return out
-    + `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" `
-    + `stroke="${escapeXml(color)}" stroke-width="${width}"${sideDash(side.style)}/>`;
+  return (
+    out +
+    `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" ` +
+    `stroke="${escapeXml(color)}" stroke-width="${width}"${sideDash(side.style)}/>`
+  );
 }
 
 /* ---------- Appearance defs ---------- */
@@ -100,54 +119,14 @@ export function collectClipDefs(elements: CanvasElement[]): string {
 }
 
 function shapeOutlineToSvg(el: ShapeElement): string {
-  const { width: w, height: h } = el;
-  switch (el.shape) {
-    case 'rect':
-    case 'roundRect': {
-      const rx = el.shape === 'roundRect' ? (el.radius ?? 16) : 0;
-      return wrapTransform(el, `<rect x="0" y="0" width="${w}" height="${h}"${rx ? ` rx="${rx}"` : ''} />`);
-    }
-    case 'circle':
-      return wrapTransform(el, `<circle cx="${w / 2}" cy="${h / 2}" r="${Math.min(w, h) / 2}" />`);
-    case 'triangle':
-      return wrapTransform(el, `<polygon points="${w / 2},0 ${w},${h} 0,${h}" />`);
-    case 'star': {
-      const cx = w / 2, cy = h / 2;
-      const outerR = Math.min(w, h) / 2;
-      const innerR = outerR / 2.4;
-      const pts: string[] = [];
-      for (let i = 0; i < 10; i++) {
-        const a = -Math.PI / 2 + (i * Math.PI) / 5;
-        const r = i % 2 === 0 ? outerR : innerR;
-        pts.push(`${cx + Math.cos(a) * r},${cy + Math.sin(a) * r}`);
-      }
-      return wrapTransform(el, `<polygon points="${pts.join(' ')}" />`);
-    }
-    case 'polygon': {
-      const subpaths = el.polygonSubpaths || (el.polygonPoints ? [el.polygonPoints] : []);
-      if (!subpaths.length) return '';
-      const d = subpaths.map((ring) => {
-        if (ring.length < 6) return '';
-        const pts: string[] = [];
-        for (let i = 0; i < ring.length; i += 2) pts.push(`${ring[i]},${ring[i + 1]}`);
-        return `M ${pts.join(' L ')} Z`;
-      }).join(' ');
-      return wrapTransform(el, `<path d="${d}" fill-rule="evenodd" />`);
-    }
-    case 'arc': {
-      const d = arcToSvgPathLocal(el);
-      return d ? wrapTransform(el, `<path d="${d}" fill-rule="evenodd" />`) : '';
-    }
-    default:
-      return '';
-  }
+  return wrapTransform(el, shapePrimitiveLocal(el, '', '', ''));
 }
 
 function arcToSvgPathLocal(el: ShapeElement): string {
   const { width: w, height: h } = el;
   const cx = w / 2;
   const cy = h / 2;
-  const outerR = Math.min(w, h) / 2 * (el.arcOuterRadius ?? 1);
+  const outerR = (Math.min(w, h) / 2) * (el.arcOuterRadius ?? 1);
   const innerR = outerR * (el.arcInnerRadius ?? 0.5);
   const a0 = ((el.arcStartAngle ?? 0) * Math.PI) / 180;
   const a1 = ((el.arcEndAngle ?? 90) * Math.PI) / 180;
@@ -199,20 +178,31 @@ function shapePrimitiveLocal(
     case 'polygon': {
       const subpaths = el.polygonSubpaths || (el.polygonPoints ? [el.polygonPoints] : []);
       if (subpaths.length === 0) return '';
-      const d = subpaths.map((ring) => {
-        if (ring.length < 6) return '';
-        const pts: string[] = [];
-        for (let i = 0; i < ring.length; i += 2) pts.push(`${ring[i]},${ring[i + 1]}`);
-        return `M ${pts.join(' L ')} Z`;
-      }).join(' ');
+      const d = subpaths
+        .map((ring) => {
+          if (ring.length < 6) return '';
+          const pts: string[] = [];
+          for (let i = 0; i < ring.length; i += 2) pts.push(`${ring[i]},${ring[i + 1]}`);
+          return `M ${pts.join(' L ')} Z`;
+        })
+        .join(' ');
       return `<path d="${d}" fill-rule="evenodd"${common} />`;
     }
     case 'arc': {
       const d = arcToSvgPathLocal(el);
       return d ? `<path d="${d}" fill-rule="evenodd"${common} />` : '';
     }
-    case 'star':
+    case 'star': {
+      const radius = Math.min(w, h) / 2;
+      const points = Array.from({ length: 10 }, (_, index) => {
+        const angle = -Math.PI / 2 + (index * Math.PI) / 5;
+        const r = index % 2 ? radius * (el.innerRadiusRatio ?? 1 / 2.4) : radius;
+        return `${w / 2 + Math.cos(angle) * r},${h / 2 + Math.sin(angle) * r}`;
+      });
+      return `<polygon points="${points.join(' ')}"${common} />`;
+    }
     case 'arrow':
+      return `<polygon points="0,${h / 2} ${w - 20},${h / 2} ${w - 20},${h / 2 - 15} ${w},${h / 2} ${w - 20},${h / 2 + 15} ${w - 20},${h / 2}"${common} />`;
     default:
       return `<rect x="0" y="0" width="${w}" height="${h}"${common} />`;
   }
@@ -226,7 +216,8 @@ export function toSvgShape(el: ShapeElement): string {
   const hasAppearanceStrokes = appearance?.strokes && appearance.strokes.length > 0;
 
   if (!hasAppearanceFills && !hasAppearanceStrokes) {
-    const fillAttr = (!el.fill || el.fill === 'transparent' || el.fill === '') ? 'none' : escapeXml(el.fill);
+    const fillAttr =
+      !el.fill || el.fill === 'transparent' || el.fill === '' ? 'none' : escapeXml(el.fill);
     const strokeAttrsStr =
       el.stroke && el.stroke !== 'transparent' && el.strokeWidth > 0
         ? ` stroke="${escapeXml(el.stroke)}" stroke-width="${el.strokeWidth}"`
@@ -234,18 +225,42 @@ export function toSvgShape(el: ShapeElement): string {
     svg += shapePrimitiveLocal(el, ` fill="${fillAttr}"`, '', strokeAttrsStr);
   } else {
     for (const fill of appearance?.fills ?? []) {
-      const { fillAttr, opacityAttr } = fillToSvg(fill, { width: el.width, height: el.height });
+      const { fillAttr, opacityAttr } = fillToSvg(fill, {
+        width: el.width,
+        height: el.height,
+      });
       svg += shapePrimitiveLocal(el, ` fill="${fillAttr}"`, opacityAttr, '');
     }
     for (const stroke of appearance?.strokes ?? []) {
-      const s = strokeToSvg(stroke);
-      svg += shapePrimitiveLocal(el, ' fill="none"', '', `${s.strokeAttr}${s.strokeWidthAttr}${s.dashAttr}`);
+      const aligned = stroke.align === 'inside' || stroke.align === 'outside';
+      const s = strokeToSvg({
+        ...stroke,
+        width: aligned ? stroke.width * 2 : stroke.width,
+      });
+      const primitive = shapePrimitiveLocal(
+        el,
+        ' fill="none"',
+        '',
+        `${s.strokeAttr}${s.strokeWidthAttr}${s.dashAttr}`,
+      );
+      if (!aligned) svg += primitive;
+      else {
+        const id = `stroke-${el.id}-${stroke.id}`.replace(/[^a-zA-Z0-9_-]/g, '_');
+        const inside = stroke.align === 'inside';
+        const background = inside
+          ? ''
+          : '<rect x="-100000" y="-100000" width="200000" height="200000" fill="white"/>';
+        const contour = shapePrimitiveLocal(el, ` fill="${inside ? 'white' : 'black'}"`, '', '');
+        svg += `<defs><mask id="${id}" x="-200%" y="-200%" width="500%" height="500%">${background}${contour}</mask></defs><g mask="url(#${id})">${primitive}</g>`;
+      }
     }
   }
 
   if (el.text) {
-    const anchor = el.textAlign === 'center' ? 'middle' : el.textAlign === 'right' ? 'end' : 'start';
-    const tx = el.textAlign === 'center' ? el.width / 2 : el.textAlign === 'right' ? el.width - 8 : 8;
+    const anchor =
+      el.textAlign === 'center' ? 'middle' : el.textAlign === 'right' ? 'end' : 'start';
+    const tx =
+      el.textAlign === 'center' ? el.width / 2 : el.textAlign === 'right' ? el.width - 8 : 8;
     const ty = el.height / 2 + (el.fontSize || 18) / 2;
     svg += `<text x="${tx}" y="${ty}" font-size="${el.fontSize || 18}" font-family="Arial" fill="${escapeXml(el.textFill || '#000')}" text-anchor="${anchor}">${escapeXml(el.text)}</text>`;
   }
@@ -254,10 +269,12 @@ export function toSvgShape(el: ShapeElement): string {
 }
 
 export function toSvgPath(el: PathElement): string {
-  const fill = (!el.fill || el.fill === 'transparent' || el.fill === '') ? 'none' : escapeXml(el.fill);
-  const stroke = el.stroke && el.stroke !== 'transparent' && el.strokeWidth > 0
-    ? ` stroke="${escapeXml(el.stroke)}" stroke-width="${el.strokeWidth}"`
-    : '';
+  const fill =
+    !el.fill || el.fill === 'transparent' || el.fill === '' ? 'none' : escapeXml(el.fill);
+  const stroke =
+    el.stroke && el.stroke !== 'transparent' && el.strokeWidth > 0
+      ? ` stroke="${escapeXml(el.stroke)}" stroke-width="${el.strokeWidth}"`
+      : '';
   const inner = `<path d="${escapeXml(el.d)}" fill="${fill}"${stroke} />`;
   return wrapTransform(el, inner);
 }
@@ -269,7 +286,9 @@ export function toSvgChart(el: ChartElement): string {
 
   if (el.chartKind === 'bar') {
     const bars = computeBarGeometry(values, el.width, el.height, {
-      barWidth: el.barWidth, gap: el.gap, palette,
+      barWidth: el.barWidth,
+      gap: el.gap,
+      palette,
     });
     inner += `<line x1="40" y1="${el.height - 40}" x2="${el.width - 10}" y2="${el.height - 40}" stroke="#cbd5e1" stroke-width="2" />`;
     inner += `<line x1="40" y1="20" x2="40" y2="${el.height - 40}" stroke="#cbd5e1" stroke-width="2" />`;
@@ -278,7 +297,8 @@ export function toSvgChart(el: ChartElement): string {
     }
   } else {
     const donut = computeDonutGeometry(values, el.width, el.height, {
-      innerRatio: el.donutInnerRatio, palette,
+      innerRatio: el.donutInnerRatio,
+      palette,
     });
     for (const d of donut) {
       inner += `<path d="${d.path}" fill="${escapeXml(d.fill)}" stroke="#ffffff" stroke-width="2" />`;
@@ -322,7 +342,14 @@ export function toSvgText(el: TextElement): string {
         line.forEach((run) => {
           const rx = padding.left + lineOffsetX + run.x;
           const ry = cursorY + run.y + run.actualFontSize;
-          const textDecoration = run.underline && run.strike ? 'underline line-through' : run.underline ? 'underline' : run.strike ? 'line-through' : 'none';
+          const textDecoration =
+            run.underline && run.strike
+              ? 'underline line-through'
+              : run.underline
+                ? 'underline'
+                : run.strike
+                  ? 'line-through'
+                  : 'none';
           svgContent += `<text x="${rx}" y="${ry}" font-size="${run.actualFontSize}" font-family="${escapeXml(run.fontFamily || el.fontFamily)}" font-style="${run.italic ? 'italic' : 'normal'}" font-weight="${run.bold ? 'bold' : 'normal'}" fill="${escapeXml(run.color || el.fill || '#000')}" text-decoration="${textDecoration}">${escapeXml(run.text)}</text>`;
         });
       });
@@ -335,36 +362,58 @@ export function toSvgText(el: TextElement): string {
       block.data.cells.forEach((cell) => {
         const cellX = tableX + layout.colOffsets[cell.colIndex];
         const cellY = tableY + layout.rowOffsets[cell.rowIndex];
-        const cellW = layout.colOffsets[Math.min(cell.colIndex + cell.colspan, layout.colOffsets.length - 1)] - layout.colOffsets[cell.colIndex];
-        const cellH = layout.rowOffsets[Math.min(cell.rowIndex + cell.rowspan, layout.rowOffsets.length - 1)] - layout.rowOffsets[cell.rowIndex];
+        const cellW =
+          layout.colOffsets[Math.min(cell.colIndex + cell.colspan, layout.colOffsets.length - 1)] -
+          layout.colOffsets[cell.colIndex];
+        const cellH =
+          layout.rowOffsets[Math.min(cell.rowIndex + cell.rowspan, layout.rowOffsets.length - 1)] -
+          layout.rowOffsets[cell.rowIndex];
 
-        const bg = cell.bgColor === 'transparent'
-          ? 'none'
-          : cell.bgColor || (cell.isHeader ? '#f1f5f9' : '#ffffff');
+        const bg =
+          cell.bgColor === 'transparent'
+            ? 'none'
+            : cell.bgColor || (cell.isHeader ? '#f1f5f9' : '#ffffff');
         if (bg !== 'none') {
           svgContent += `<rect x="${cellX}" y="${cellY}" width="${cellW}" height="${cellH}" fill="${escapeXml(bg)}"/>`;
         }
 
-        const hasSide = isSideVisible(cell.borderTop)
-          || isSideVisible(cell.borderRight)
-          || isSideVisible(cell.borderBottom)
-          || isSideVisible(cell.borderLeft);
-        const explicit = cell.borderTop !== undefined
-          || cell.borderRight !== undefined
-          || cell.borderBottom !== undefined
-          || cell.borderLeft !== undefined;
+        const hasSide =
+          isSideVisible(cell.borderTop) ||
+          isSideVisible(cell.borderRight) ||
+          isSideVisible(cell.borderBottom) ||
+          isSideVisible(cell.borderLeft);
+        const explicit =
+          cell.borderTop !== undefined ||
+          cell.borderRight !== undefined ||
+          cell.borderBottom !== undefined ||
+          cell.borderLeft !== undefined;
 
         if (hasSide) {
-          svgContent = appendSide(svgContent, cell.borderTop,    cellX,         cellY,         cellX + cellW, cellY);
-          svgContent = appendSide(svgContent, cell.borderRight,  cellX + cellW, cellY,         cellX + cellW, cellY + cellH);
-          svgContent = appendSide(svgContent, cell.borderBottom, cellX,         cellY + cellH, cellX + cellW, cellY + cellH);
-          svgContent = appendSide(svgContent, cell.borderLeft,   cellX,         cellY,         cellX,         cellY + cellH);
+          svgContent = appendSide(svgContent, cell.borderTop, cellX, cellY, cellX + cellW, cellY);
+          svgContent = appendSide(
+            svgContent,
+            cell.borderRight,
+            cellX + cellW,
+            cellY,
+            cellX + cellW,
+            cellY + cellH,
+          );
+          svgContent = appendSide(
+            svgContent,
+            cell.borderBottom,
+            cellX,
+            cellY + cellH,
+            cellX + cellW,
+            cellY + cellH,
+          );
+          svgContent = appendSide(svgContent, cell.borderLeft, cellX, cellY, cellX, cellY + cellH);
         } else if (!explicit) {
           const color = cell.borderColor || '#cbd5e1';
           const bw = cell.borderWidth ?? 1;
-          svgContent += `<rect x="${cellX}" y="${cellY}" width="${cellW}" height="${cellH}" `
-            + `fill="none" stroke="${escapeXml(color)}" stroke-width="${bw}"`
-            + `${sideDash(cell.borderStyle)}/>`;
+          svgContent +=
+            `<rect x="${cellX}" y="${cellY}" width="${cellW}" height="${cellH}" ` +
+            `fill="none" stroke="${escapeXml(color)}" stroke-width="${bw}"` +
+            `${sideDash(cell.borderStyle)}/>`;
         }
 
         const items = layout.cellItems.get(cell);
@@ -397,7 +446,8 @@ export function toSvgText(el: TextElement): string {
 
 export function toSvgLine(el: LineElement): string {
   const pointsStr: string[] = [];
-  for (let i = 0; i < el.points.length; i += 2) pointsStr.push(`${el.points[i]},${el.points[i + 1]}`);
+  for (let i = 0; i < el.points.length; i += 2)
+    pointsStr.push(`${el.points[i]},${el.points[i + 1]}`);
   const inner = `<polyline points="${pointsStr.join(' ')}" fill="none" stroke="${escapeXml(el.stroke)}" stroke-width="${el.strokeWidth}" />`;
   return wrapTransform(el, inner);
 }
@@ -445,7 +495,8 @@ export function toSvgPlaceholder(el: PlaceholderElement): string {
 
 export function toSvgFill(el: FillElement): string {
   const pointsStr: string[] = [];
-  for (let i = 0; i < el.points.length; i += 2) pointsStr.push(`${el.points[i]},${el.points[i + 1]}`);
+  for (let i = 0; i < el.points.length; i += 2)
+    pointsStr.push(`${el.points[i]},${el.points[i + 1]}`);
   const inner = `<polygon points="${pointsStr.join(' ')}" fill="${escapeXml(el.fill)}" opacity="${el.opacity || 0.6}" />`;
   return wrapTransform(el, inner);
 }
@@ -453,8 +504,14 @@ export function toSvgFill(el: FillElement): string {
 export function toSvgConnector(el: ConnectorElement, allElements: CanvasElement[]): string {
   const { from, to } = resolveConnectorEnds(el, allElements);
   if (!from || !to) return '';
-  const obstacles = allElements.filter((e) =>
-    e.id !== el.fromId && e.id !== el.toId && e.type !== 'connector' && e.type !== 'fill' && e.type !== 'line' && !e.locked
+  const obstacles = allElements.filter(
+    (e) =>
+      e.id !== el.fromId &&
+      e.id !== el.toId &&
+      e.type !== 'connector' &&
+      e.type !== 'fill' &&
+      e.type !== 'line' &&
+      !e.locked,
   );
   const points = routeConnector(from, el.fromAnchor, to, el.toAnchor, el.routing, obstacles);
   const pointsStr: string[] = [];
@@ -462,15 +519,20 @@ export function toSvgConnector(el: ConnectorElement, allElements: CanvasElement[
   let svg = `<polyline points="${pointsStr.join(' ')}" fill="none" stroke="${escapeXml(el.stroke)}" stroke-width="${el.strokeWidth}" />`;
   if (el.isArrow) {
     const n = points.length;
-    const x1 = points[n - 4], y1 = points[n - 3];
-    const x2 = points[n - 2], y2 = points[n - 1];
+    const x1 = points[n - 4],
+      y1 = points[n - 3];
+    const x2 = points[n - 2],
+      y2 = points[n - 1];
     const angle = Math.atan2(y2 - y1, x2 - x1);
     const len = 12;
     const spread = 0.45;
     const arrowHead = [
-      x2 + len * Math.cos(angle + Math.PI - spread), y2 + len * Math.sin(angle + Math.PI - spread),
-      x2, y2,
-      x2 + len * Math.cos(angle + Math.PI + spread), y2 + len * Math.sin(angle + Math.PI + spread),
+      x2 + len * Math.cos(angle + Math.PI - spread),
+      y2 + len * Math.sin(angle + Math.PI - spread),
+      x2,
+      y2,
+      x2 + len * Math.cos(angle + Math.PI + spread),
+      y2 + len * Math.sin(angle + Math.PI + spread),
     ];
     svg += `<polyline points="${arrowHead.join(' ')}" fill="none" stroke="${escapeXml(el.stroke)}" stroke-width="${el.strokeWidth}" stroke-linecap="round" stroke-linejoin="round" />`;
   }

@@ -34,38 +34,65 @@ const INITIAL: EmailState = {
 };
 
 export class EmailStore extends SimpleStore<EmailState> {
+  private requestId = crypto.randomUUID();
+  private requestBody: string | null = null;
+  private version = 0;
   constructor() {
     super(INITIAL);
   }
 
   async openPreview(slides: Slide[]): Promise<void> {
+    const version = ++this.version;
     if (slides.length === 0) {
-      this.setState((s) => ({ ...s, modal: 'preview', previewHtml: null,
-        previewError: 'Нет слайдов', slides }));
+      this.setState((s) => ({
+        ...s,
+        modal: 'preview',
+        previewHtml: null,
+        previewError: 'Нет слайдов',
+        slides,
+      }));
       return;
     }
     this.setState((s) => ({
-      ...s, modal: 'preview', slides,
-      previewHtml: null, previewLoading: true, previewError: null,
+      ...s,
+      modal: 'preview',
+      slides,
+      previewHtml: null,
+      previewLoading: true,
+      previewError: null,
     }));
     try {
       const html = await fetchPreviewHtml(slides[0]);
-      this.setState((s) => ({ ...s, previewHtml: html, previewLoading: false }));
-    } catch (e) {
+      if (version !== this.version) return;
       this.setState((s) => ({
-        ...s, previewLoading: false, previewError: (e as Error).message,
+        ...s,
+        previewHtml: html,
+        previewLoading: false,
+      }));
+    } catch (e) {
+      if (version !== this.version) return;
+      this.setState((s) => ({
+        ...s,
+        previewLoading: false,
+        previewError: (e as Error).message,
       }));
     }
   }
 
   openSend(slides: Slide[]): void {
+    this.version++;
+    this.requestBody = null;
     this.setState((s) => ({
-      ...s, modal: 'send', slides,
-      sendError: null, sendDone: false,
+      ...s,
+      modal: 'send',
+      slides,
+      sendError: null,
+      sendDone: false,
     }));
   }
 
   close(): void {
+    this.version++;
     this.setState(() => ({ ...INITIAL }));
   }
 
@@ -79,13 +106,35 @@ export class EmailStore extends SimpleStore<EmailState> {
   }
 
   async send(req: EmailRequest): Promise<void> {
-    this.setState((s) => ({ ...s, sendBusy: true, sendError: null, sendDone: false }));
+    const version = this.version;
+    this.setState((s) => ({
+      ...s,
+      sendBusy: true,
+      sendError: null,
+      sendDone: false,
+    }));
     try {
-      await sendEmail(req);
-      this.setState((s) => ({ ...s, sendBusy: false, sendDone: true }));
-    } catch (e) {
+      const body = JSON.stringify(req);
+      if (body !== this.requestBody) {
+        this.requestId = crypto.randomUUID();
+        this.requestBody = body;
+      }
+      const result = await sendEmail({ ...req, requestId: this.requestId });
+      if (version !== this.version) return;
       this.setState((s) => ({
-        ...s, sendBusy: false, sendError: (e as Error).message,
+        ...s,
+        sendBusy: false,
+        sendDone: result.failed === 0,
+        sendError: result.failed
+          ? `${result.sent} sent; ${result.failed} failed: ${result.errors.map((error) => `${error.to}: ${error.message}`).join('; ')}`
+          : null,
+      }));
+    } catch (e) {
+      if (version !== this.version) return;
+      this.setState((s) => ({
+        ...s,
+        sendBusy: false,
+        sendError: (e as Error).message,
       }));
     }
   }

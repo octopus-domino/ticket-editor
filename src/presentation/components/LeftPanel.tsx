@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import type { DocFormat, Orientation, Padding, CanvasElement } from '@/shared/types';
 import { FORMATS } from '@/shared/constants';
 import { useStore } from '@/shared/store/store';
@@ -6,8 +6,15 @@ import { useDocumentStore, useSelectionStore, useModalsStore } from '../provider
 import { StampLibraryPanel } from './StampLibraryPanel';
 import { changeFormat, changeOrientation } from '@/domain/slide/operations';
 import {
-  newText, newSimpleText, newFooter, newTable, newLine, newShape,
-  newPath, newChart, newDiagram,
+  newText,
+  newSimpleText,
+  newFooter,
+  newTable,
+  newLine,
+  newShape,
+  newPath,
+  newChart,
+  newDiagram,
 } from '@/lib/factories';
 import { TYPICAL_LAYOUTS, BUNDLES } from '../../templates';
 import { useFileIO } from '../hooks/editor/useFileIO';
@@ -17,7 +24,6 @@ import { GraphToolPanel } from './panels/GraphToolPanel';
 import { StylesPanel } from './panels/StylesPanel';
 import { SymbolsPanel } from './panels/SymbolsPanel';
 import { QrModal } from './QrModal';
-import { generateId } from '@/shared/utils/id';
 import { toast } from '@/presentation/components/toast';
 
 const Section: React.FC<{
@@ -39,10 +45,15 @@ const Section: React.FC<{
   );
 };
 
-const PaddingEditor: React.FC<{ value: Padding; onChange: (p: Padding) => void }> = ({ value, onChange }) => {
+const PaddingEditor: React.FC<{
+  value: Padding;
+  onChange: (p: Padding) => void;
+}> = ({ value, onChange }) => {
   const keys: Array<{ k: keyof Padding; label: string }> = [
-    { k: 'top', label: 'Верх' }, { k: 'bottom', label: 'Низ' },
-    { k: 'left', label: 'Лево' }, { k: 'right', label: 'Право' },
+    { k: 'top', label: 'Верх' },
+    { k: 'bottom', label: 'Низ' },
+    { k: 'left', label: 'Лево' },
+    { k: 'right', label: 'Право' },
   ];
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
@@ -193,7 +204,10 @@ export const LeftPanel: React.FC = () => {
   };
 
   const startDragNew = (e: React.DragEvent, elementType: string) => {
-    e.dataTransfer.setData('application/json', JSON.stringify({ kind: 'new-element', elementType }));
+    e.dataTransfer.setData(
+      'application/json',
+      JSON.stringify({ kind: 'new-element', elementType }),
+    );
     e.dataTransfer.effectAllowed = 'copy';
   };
 
@@ -201,34 +215,242 @@ export const LeftPanel: React.FC = () => {
     if (editorMode === 'schema') {
       return (
         <>
-          <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'simple-text')} onClick={() => add(newSimpleText())}><span className="tile-ico">A</span><span>Текст</span></button>
-          <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'rect')} onClick={() => add(newShape('rect'))}><span className="tile-ico">▭</span><span>Блок</span></button>
-          <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'roundRect')} onClick={() => add(newShape('roundRect'))}><span className="tile-ico">▢</span><span>Блок (R)</span></button>
-          <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'circle')} onClick={() => add(newShape('circle'))}><span className="tile-ico">○</span><span>Круг</span></button>
-          <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'triangle')} onClick={() => add(newShape('triangle'))}><span className="tile-ico">△</span><span>Треуг.</span></button>
-          <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'line')} onClick={() => add(newLine())}><span className="tile-ico">╱</span><span>Линия</span></button>
-          <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'line-arrow')} onClick={() => { const l = newLine(); l.isArrow = true; add(l); }}><span className="tile-ico">➔</span><span>Стрелка</span></button>
+          <button
+            type="button"
+            className="tool-tile"
+            draggable
+            onDragStart={(e) => startDragNew(e, 'simple-text')}
+            onClick={() => add(newSimpleText())}
+          >
+            <span className="tile-ico">A</span>
+            <span>Текст</span>
+          </button>
+          <button
+            type="button"
+            className="tool-tile"
+            draggable
+            onDragStart={(e) => startDragNew(e, 'rect')}
+            onClick={() => add(newShape('rect'))}
+          >
+            <span className="tile-ico">▭</span>
+            <span>Блок</span>
+          </button>
+          <button
+            type="button"
+            className="tool-tile"
+            draggable
+            onDragStart={(e) => startDragNew(e, 'roundRect')}
+            onClick={() => add(newShape('roundRect'))}
+          >
+            <span className="tile-ico">▢</span>
+            <span>Блок (R)</span>
+          </button>
+          <button
+            type="button"
+            className="tool-tile"
+            draggable
+            onDragStart={(e) => startDragNew(e, 'circle')}
+            onClick={() => add(newShape('circle'))}
+          >
+            <span className="tile-ico">○</span>
+            <span>Круг</span>
+          </button>
+          <button
+            type="button"
+            className="tool-tile"
+            draggable
+            onDragStart={(e) => startDragNew(e, 'triangle')}
+            onClick={() => add(newShape('triangle'))}
+          >
+            <span className="tile-ico">△</span>
+            <span>Треуг.</span>
+          </button>
+          <button
+            type="button"
+            className="tool-tile"
+            draggable
+            onDragStart={(e) => startDragNew(e, 'line')}
+            onClick={() => add(newLine())}
+          >
+            <span className="tile-ico">╱</span>
+            <span>Линия</span>
+          </button>
+          <button
+            type="button"
+            className="tool-tile"
+            draggable
+            onDragStart={(e) => startDragNew(e, 'line-arrow')}
+            onClick={() => {
+              const l = newLine();
+              l.isArrow = true;
+              add(l);
+            }}
+          >
+            <span className="tile-ico">➔</span>
+            <span>Стрелка</span>
+          </button>
         </>
       );
     }
     return (
       <>
-        <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'simple-text')} onClick={() => add(newSimpleText())}><span className="tile-ico">A</span><span>Текст</span></button>
-        <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'text')} onClick={() => add(newText())}><span className="tile-ico">📝</span><span>Rich</span></button>
-        <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'footer')} onClick={() => add(newFooter(activeSlide))}><span className="tile-ico">¬</span><span>Футер</span></button>
-        <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'table')} onClick={() => add(newTable())}><span className="tile-ico">▦</span><span>Таблица</span></button>
-        <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'line')} onClick={() => add(newLine())}><span className="tile-ico">╱</span><span>Линия</span></button>
-        <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'rect')} onClick={() => add(newShape('rect'))}><span className="tile-ico">▭</span><span>Прямоуг.</span></button>
-        <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'roundRect')} onClick={() => add(newShape('roundRect'))}><span className="tile-ico">▢</span><span>Округл.</span></button>
-        <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'circle')} onClick={() => add(newShape('circle'))}><span className="tile-ico">○</span><span>Круг</span></button>
-        <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'triangle')} onClick={() => add(newShape('triangle'))}><span className="tile-ico">△</span><span>Треуг.</span></button>
-        <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'star')} onClick={() => add(newShape('star'))}><span className="tile-ico">☆</span><span>Звезда</span></button>
-        <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'arc')} onClick={() => add(newShape('arc'))}><span className="tile-ico">◔</span><span>Дуга</span></button>
-        <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'path')} onClick={() => add(newPath())}><span className="tile-ico">✎</span><span>Path</span></button>
-        <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'chart-bar')} onClick={() => add(newChart('bar'))}><span className="tile-ico">📊</span><span>Bar</span></button>
-        <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'chart-donut')} onClick={() => add(newChart('donut'))}><span className="tile-ico">◎</span><span>Donut</span></button>
-        <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'qr')} onClick={() => setQrModalOpen(true)}><span className="tile-ico">🔳</span><span>QR-код</span></button>
-        <button type="button" className="tool-tile" draggable onDragStart={(e) => startDragNew(e, 'diagram')} onClick={() => add(newDiagram())}>
+        <button
+          type="button"
+          className="tool-tile"
+          draggable
+          onDragStart={(e) => startDragNew(e, 'simple-text')}
+          onClick={() => add(newSimpleText())}
+        >
+          <span className="tile-ico">A</span>
+          <span>Текст</span>
+        </button>
+        <button
+          type="button"
+          className="tool-tile"
+          draggable
+          onDragStart={(e) => startDragNew(e, 'text')}
+          onClick={() => add(newText())}
+        >
+          <span className="tile-ico">📝</span>
+          <span>Rich</span>
+        </button>
+        <button
+          type="button"
+          className="tool-tile"
+          draggable
+          onDragStart={(e) => startDragNew(e, 'footer')}
+          onClick={() => add(newFooter(activeSlide))}
+        >
+          <span className="tile-ico">¬</span>
+          <span>Футер</span>
+        </button>
+        <button
+          type="button"
+          className="tool-tile"
+          draggable
+          onDragStart={(e) => startDragNew(e, 'table')}
+          onClick={() => add(newTable())}
+        >
+          <span className="tile-ico">▦</span>
+          <span>Таблица</span>
+        </button>
+        <button
+          type="button"
+          className="tool-tile"
+          draggable
+          onDragStart={(e) => startDragNew(e, 'line')}
+          onClick={() => add(newLine())}
+        >
+          <span className="tile-ico">╱</span>
+          <span>Линия</span>
+        </button>
+        <button
+          type="button"
+          className="tool-tile"
+          draggable
+          onDragStart={(e) => startDragNew(e, 'rect')}
+          onClick={() => add(newShape('rect'))}
+        >
+          <span className="tile-ico">▭</span>
+          <span>Прямоуг.</span>
+        </button>
+        <button
+          type="button"
+          className="tool-tile"
+          draggable
+          onDragStart={(e) => startDragNew(e, 'roundRect')}
+          onClick={() => add(newShape('roundRect'))}
+        >
+          <span className="tile-ico">▢</span>
+          <span>Округл.</span>
+        </button>
+        <button
+          type="button"
+          className="tool-tile"
+          draggable
+          onDragStart={(e) => startDragNew(e, 'circle')}
+          onClick={() => add(newShape('circle'))}
+        >
+          <span className="tile-ico">○</span>
+          <span>Круг</span>
+        </button>
+        <button
+          type="button"
+          className="tool-tile"
+          draggable
+          onDragStart={(e) => startDragNew(e, 'triangle')}
+          onClick={() => add(newShape('triangle'))}
+        >
+          <span className="tile-ico">△</span>
+          <span>Треуг.</span>
+        </button>
+        <button
+          type="button"
+          className="tool-tile"
+          draggable
+          onDragStart={(e) => startDragNew(e, 'star')}
+          onClick={() => add(newShape('star'))}
+        >
+          <span className="tile-ico">☆</span>
+          <span>Звезда</span>
+        </button>
+        <button
+          type="button"
+          className="tool-tile"
+          draggable
+          onDragStart={(e) => startDragNew(e, 'arc')}
+          onClick={() => add(newShape('arc'))}
+        >
+          <span className="tile-ico">◔</span>
+          <span>Дуга</span>
+        </button>
+        <button
+          type="button"
+          className="tool-tile"
+          draggable
+          onDragStart={(e) => startDragNew(e, 'path')}
+          onClick={() => add(newPath())}
+        >
+          <span className="tile-ico">✎</span>
+          <span>Path</span>
+        </button>
+        <button
+          type="button"
+          className="tool-tile"
+          draggable
+          onDragStart={(e) => startDragNew(e, 'chart-bar')}
+          onClick={() => add(newChart('bar'))}
+        >
+          <span className="tile-ico">📊</span>
+          <span>Bar</span>
+        </button>
+        <button
+          type="button"
+          className="tool-tile"
+          draggable
+          onDragStart={(e) => startDragNew(e, 'chart-donut')}
+          onClick={() => add(newChart('donut'))}
+        >
+          <span className="tile-ico">◎</span>
+          <span>Donut</span>
+        </button>
+        <button
+          type="button"
+          className="tool-tile"
+          draggable
+          onDragStart={(e) => startDragNew(e, 'qr')}
+          onClick={() => setQrModalOpen(true)}
+        >
+          <span className="tile-ico">🔳</span>
+          <span>QR-код</span>
+        </button>
+        <button
+          type="button"
+          className="tool-tile"
+          draggable
+          onDragStart={(e) => startDragNew(e, 'diagram')}
+          onClick={() => add(newDiagram())}
+        >
           <span className="tile-ico">🖼</span>
           <span>Диаграмма</span>
         </button>
@@ -238,20 +460,27 @@ export const LeftPanel: React.FC = () => {
 
   return (
     <aside className="left-panel">
-      <div style={{
-        display: 'flex',
-        gap: 4,
-        padding: 4,
-        background: '#e2e8f0',
-        borderRadius: 8,
-        marginBottom: 12,
-        border: '2px solid #6366f1',
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          gap: 4,
+          padding: 4,
+          background: '#e2e8f0',
+          borderRadius: 8,
+          marginBottom: 12,
+          border: '2px solid #6366f1',
+        }}
+      >
         <button
           type="button"
           style={{
-            flex: 1, padding: '8px 0', borderRadius: 6, border: 'none',
-            cursor: 'pointer', fontWeight: 'bold', fontSize: 13,
+            flex: 1,
+            padding: '8px 0',
+            borderRadius: 6,
+            border: 'none',
+            cursor: 'pointer',
+            fontWeight: 'bold',
+            fontSize: 13,
             background: editorMode === 'print' ? '#fff' : 'transparent',
             color: editorMode === 'print' ? '#4f46e5' : '#64748b',
             boxShadow: editorMode === 'print' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
@@ -263,8 +492,13 @@ export const LeftPanel: React.FC = () => {
         <button
           type="button"
           style={{
-            flex: 1, padding: '8px 0', borderRadius: 6, border: 'none',
-            cursor: 'pointer', fontWeight: 'bold', fontSize: 13,
+            flex: 1,
+            padding: '8px 0',
+            borderRadius: 6,
+            border: 'none',
+            cursor: 'pointer',
+            fontWeight: 'bold',
+            fontSize: 13,
             background: editorMode === 'schema' ? '#fff' : 'transparent',
             color: editorMode === 'schema' ? '#4f46e5' : '#64748b',
             boxShadow: editorMode === 'schema' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
@@ -276,14 +510,30 @@ export const LeftPanel: React.FC = () => {
       </div>
 
       <Section title="Файл" icon="📁" defaultOpen>
-        <button type="button" className="tool-btn" onClick={fileIO.importJson}>📥 Импорт JSON</button>
-        <button type="button" className="tool-btn" onClick={fileIO.exportJson}>📤 Экспорт JSON</button>
+        <button type="button" className="tool-btn" onClick={fileIO.importJson}>
+          📥 Импорт JSON
+        </button>
+        <button type="button" className="tool-btn" onClick={fileIO.exportJson}>
+          📤 Экспорт JSON
+        </button>
         <div style={{ height: 8 }} />
-        <button type="button" className="tool-btn" onClick={fileIO.exportSvgLocal}>🖼 SVG (локально)</button>
-        <button type="button" className="tool-btn" onClick={handleExportSvgServer} disabled={svgBusy}>
+        <button type="button" className="tool-btn" onClick={fileIO.exportSvgLocal}>
+          🖼 SVG (локально)
+        </button>
+        <button
+          type="button"
+          className="tool-btn"
+          onClick={handleExportSvgServer}
+          disabled={svgBusy}
+        >
           {svgBusy ? '⏳ SVG (сервер)…' : '🖼 SVG (сервер)'}
         </button>
-        <button type="button" className="tool-btn primary" onClick={handleExportPdfaServer} disabled={pdfBusy}>
+        <button
+          type="button"
+          className="tool-btn primary"
+          onClick={handleExportPdfaServer}
+          disabled={pdfBusy}
+        >
           {pdfBusy ? '⏳ PDF/A (сервер)…' : '📄 PDF/A (сервер)'}
         </button>
       </Section>
@@ -328,7 +578,9 @@ export const LeftPanel: React.FC = () => {
           onChange={(e) => handleFormat(e.target.value as DocFormat)}
         >
           {Object.entries(FORMATS).map(([k, v]) => (
-            <option key={k} value={k}>{v.label}</option>
+            <option key={k} value={k}>
+              {v.label}
+            </option>
           ))}
         </select>
 
@@ -359,7 +611,14 @@ export const LeftPanel: React.FC = () => {
         />
 
         {activeSlide.format === 'custom' && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginTop: 8 }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: 6,
+              marginTop: 8,
+            }}
+          >
             <label className="field-label">
               Ширина
               <input
@@ -383,17 +642,34 @@ export const LeftPanel: React.FC = () => {
           </div>
         )}
 
-        <div className="hint-sm">{activeSlide.width} × {activeSlide.height} px</div>
+        <div className="hint-sm">
+          {activeSlide.width} × {activeSlide.height} px
+        </div>
 
-        <h4 style={{ margin: '10px 0 4px', fontSize: 11, color: '#666', textTransform: 'uppercase' }}>
+        <h4
+          style={{
+            margin: '10px 0 4px',
+            fontSize: 11,
+            color: '#666',
+            textTransform: 'uppercase',
+          }}
+        >
           Отступы страницы
         </h4>
         <PaddingEditor value={activeSlide.padding} onChange={updatePadding} />
       </Section>
 
       <Section title="Изображения" icon="🖼">
-        <button type="button" className="tool-btn" onClick={() => fileIO.addImage({ centered: true })}>🖼 Добавить картинку</button>
-        <button type="button" className="tool-btn" onClick={fileIO.setBackgroundImage}>🖼 Установить фон</button>
+        <button
+          type="button"
+          className="tool-btn"
+          onClick={() => fileIO.addImage({ centered: true })}
+        >
+          🖼 Добавить картинку
+        </button>
+        <button type="button" className="tool-btn" onClick={fileIO.setBackgroundImage}>
+          🖼 Установить фон
+        </button>
         <button
           type="button"
           className="tool-btn danger"
@@ -405,26 +681,36 @@ export const LeftPanel: React.FC = () => {
       </Section>
 
       <Section title="Элементы" icon="🧩" defaultOpen>
-        <div className="tool-grid">
-          {renderElementTiles()}
-        </div>
+        <div className="tool-grid">{renderElementTiles()}</div>
       </Section>
 
       {editorMode === 'print' && (
         <>
-          <Section title="Штампы" icon="🔖"><StampLibraryPanel /></Section>
-          <Section title="Графы" icon="📊"><GraphToolPanel /></Section>
+          <Section title="Штампы" icon="🔖">
+            <StampLibraryPanel />
+          </Section>
+          <Section title="Графы" icon="📊">
+            <GraphToolPanel />
+          </Section>
         </>
       )}
 
-      <Section title="Компоновка" icon="🎯"><ArrangePanel /></Section>
+      <Section title="Компоновка" icon="🎯">
+        <ArrangePanel />
+      </Section>
 
       {editorMode === 'print' && (
-        <Section title="Pathfinder" icon="⚡"><PathfinderPanel /></Section>
+        <Section title="Pathfinder" icon="⚡">
+          <PathfinderPanel />
+        </Section>
       )}
 
-      <Section title="Стили" icon="🎨"><StylesPanel /></Section>
-      <Section title="Символы" icon="🔗"><SymbolsPanel /></Section>
+      <Section title="Стили" icon="🎨">
+        <StylesPanel />
+      </Section>
+      <Section title="Символы" icon="🔗">
+        <SymbolsPanel />
+      </Section>
 
       {editorMode === 'print' && (
         <Section title="Заливка" icon="🎨">
@@ -444,8 +730,10 @@ export const LeftPanel: React.FC = () => {
             onChange={(e) => modalsStore.setFillColor(e.target.value)}
           />
           <p className="hint-sm">
-            Клик по фигуре — залить область.<br />
-            Клик по пустому месту — добавить точку.<br />
+            Клик по фигуре — залить область.
+            <br />
+            Клик по пустому месту — добавить точку.
+            <br />
             Esc — отменить.
           </p>
         </Section>
@@ -461,8 +749,22 @@ export const LeftPanel: React.FC = () => {
           <span>Показать сетку</span>
         </label>
         <div className="row-2">
-          <button type="button" className="tool-btn" onClick={() => docStore.undo()} disabled={!canUndo}>↶ Отменить</button>
-          <button type="button" className="tool-btn" onClick={() => docStore.redo()} disabled={!canRedo}>↷ Повторить</button>
+          <button
+            type="button"
+            className="tool-btn"
+            onClick={() => docStore.undo()}
+            disabled={!canUndo}
+          >
+            ↶ Отменить
+          </button>
+          <button
+            type="button"
+            className="tool-btn"
+            onClick={() => docStore.redo()}
+            disabled={!canRedo}
+          >
+            ↷ Повторить
+          </button>
         </div>
       </Section>
 

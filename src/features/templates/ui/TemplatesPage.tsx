@@ -27,7 +27,6 @@ export const TemplatesPage: React.FC = () => {
 
   useEffect(() => {
     void templateStore.loadAll(activeSchema?.id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSchema?.id]);
 
   useEffect(() => {
@@ -70,10 +69,7 @@ export const TemplatesPage: React.FC = () => {
             toast.success(`Удалено: ${result.ok} ${plural(result.ok)}`);
           }
           if (result.failed.length > 0) {
-            toast.error(
-              `Не удалось удалить: ${result.failed.length}`,
-              result.failed[0].message,
-            );
+            toast.error(`Не удалось удалить: ${result.failed.length}`, result.failed[0].message);
           }
           setSelectedIds((prev) => {
             const next = new Set(prev);
@@ -87,14 +83,19 @@ export const TemplatesPage: React.FC = () => {
   );
 
   const onItemClick = useCallback(
-    (t: TemplateSummary) => navigate(`/app/editor/${t.id}`),
+    (t: TemplateSummary) => navigate(`/app/templates/${t.id}/edit`),
     [navigate],
   );
 
   return (
     <div
       className="schema-page"
-      style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 12 }}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        gap: 12,
+      }}
     >
       <div className="schema-fields-header">
         <h2>Шаблоны</h2>
@@ -109,7 +110,9 @@ export const TemplatesPage: React.FC = () => {
             }}
           >
             {schemas.map((s) => (
-              <option key={s.id} value={s.id}>{s.name}</option>
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
             ))}
             {schemas.length === 0 && <option value="">— нет схем —</option>}
           </select>

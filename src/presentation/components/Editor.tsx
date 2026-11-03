@@ -1,21 +1,11 @@
-﻿// src/presentation/components/Editor.tsx
-import React, {
-  Suspense,
-  lazy,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+// src/presentation/components/Editor.tsx
+import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
   CanvasElement,
   FooterElement,
   ShapeElement,
   TextElement,
   GroupElement,
-  Slide,
-  DataRoot,
 } from '@/shared/types';
 import { useStore } from '@/shared/store/store';
 import { DocumentStore, type InitialDocument } from '@/infra/state/DocumentStore';
@@ -36,7 +26,6 @@ import { useStampCommit } from '../hooks/editor/useStampCommit';
 import { useDiagramCommit } from '../hooks/editor/useDiagramCommit';
 import { useClipboardActions } from '../hooks/editor/useClipboardActions';
 import { useStyleClipboard } from '../hooks/editor/useStyleClipboard';
-import { useModelSync } from '@/features/data-models/state/useModelSync';
 import { Canvas } from './Canvas';
 import { LeftPanel } from './LeftPanel';
 import { RightPanel } from './RightPanel';
@@ -52,6 +41,8 @@ import { isFeatureEnabled } from '@/shared/flags';
 import type { TextStylePatch } from './TextToolbar';
 import { generateIdWithPrefix } from '@/shared/utils/id';
 import { fixGroupBoundsInPlace } from '@/lib/migrations';
+import { useDocumentPersistence } from '../hooks/editor/useDocumentPersistence';
+import { authStore } from '@/auth/store';
 import { resetFillRasterizer } from '@/lib/stamps/fillRasterizer';
 
 const InlineEditorHost = lazy(() =>
@@ -63,15 +54,10 @@ const StampEditorHost = lazy(() =>
 const DiagramEditorHost = lazy(() =>
   import('./DiagramEditorHost').then((m) => ({ default: m.DiagramEditorHost })),
 );
-const TextToolbar = lazy(() =>
-  import('./TextToolbar').then((m) => ({ default: m.TextToolbar })),
-);
+const TextToolbar = lazy(() => import('./TextToolbar').then((m) => ({ default: m.TextToolbar })));
 
-export interface EditorInitialDoc {
-  slides: Slide[];
-  data: DataRoot[];
-  activeId: string;
-}
+export type { EditorInitialDoc } from '@/shared/types/document';
+import type { EditorInitialDoc } from '@/shared/types/document';
 
 export interface EditorProps {
   documentId?: string;
@@ -108,55 +94,27 @@ function buildShapePatch(patch: TextStylePatch): Partial<ShapeElement> {
   return out;
 }
 
-function applyTextStylePatch(
-  el: CanvasElement,
-  patch: TextStylePatch,
-): Partial<CanvasElement> {
+function applyTextStylePatch(el: CanvasElement, patch: TextStylePatch): Partial<CanvasElement> {
   if (el.type === 'text') return buildTextPatch(patch);
   if (el.type === 'footer') return buildFooterPatch(patch);
   if (el.type === 'shape') return buildShapePatch(patch);
   return {};
 }
 
-function useBackendAutoSave(
-  slides: Slide[],
-  data: DataRoot[],
-  activeId: string,
-  onSave?: (state: EditorInitialDoc) => Promise<void>,
-): void {
-  const timerRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    if (!onSave) return;
-    if (timerRef.current) window.clearTimeout(timerRef.current);
-
-    timerRef.current = window.setTimeout(() => {
-      void onSave({ slides, data, activeId }).catch((e) => {
-        // eslint-disable-next-line no-console
-        console.warn('backend autosave failed:', e);
-      });
-    }, 1500);
-
-    return () => {
-      if (timerRef.current) window.clearTimeout(timerRef.current);
-    };
-  }, [slides, data, activeId, onSave]);
-}
-
 interface EditorLayoutProps {
+  documentId: string;
   onSave?: (state: EditorInitialDoc) => Promise<void>;
 }
 
-const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave }) => {
+const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave, documentId }) => {
   const docStore = useDocumentStore();
   const selStore = useSelectionStore();
   const modalsStore = useModalsStore();
 
-  useModelSync();
-
   const slides = useStore(docStore, (s) => s.slides);
   const activeId = useStore(docStore, (s) => s.activeId);
   const data = useStore(docStore, (s) => s.data);
+  const bindings = useStore(docStore, (s) => s.bindings);
   const selectedIds = useStore(selStore, (s) => s.selectedIds);
   const editing = useStore(modalsStore, (s) => s.editing);
   const floatingPos = useStore(modalsStore, (s) => s.floatingPos);
@@ -168,18 +126,6 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave }) => {
   const [zoom, setZoom] = useState(1);
   const [liveMessage, setLiveMessage] = useState('');
   const [pendingRestore, setPendingRestore] = useState<AutoSaveData | null>(null);
-
-  // last-slides: fallback для SchemaEditorPage «Заполнить из документа»
-  useEffect(() => {
-    try {
-      localStorage.setItem(
-        'ticket-editor:last-slides',
-        JSON.stringify({ slides, savedAt: new Date().toISOString() }),
-      );
-    } catch {
-      /* quota / disabled storage */
-    }
-  }, [slides]);
 
   // P1.4 — inline toast вместо alert()
   const [toastText, setToastText] = useState<string | null>(null);
@@ -229,22 +175,23 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave }) => {
     setZoom,
   });
 
-  useAutoSave(
-    onSave ? [] : slides,
-    onSave ? [] : data,
-    onSave ? null : (activeId ?? null),
-  );
+  useAutoSave(slides, data, activeId ?? null, !onSave);
 
-  useBackendAutoSave(slides, data, activeId, onSave);
+  const persistence = useDocumentPersistence(
+    `${authStore.getState().user?.id ?? 'local'}:${documentId}`,
+    { slides, data, activeId, bindings },
+    onSave,
+  );
 
   const commitEditing = useEditingCommit(docStore);
   const commitStamp = useStampCommit(docStore);
   const commitDiagram = useDiagramCommit(docStore);
 
-  const {
-    copy, cut, paste, duplicate,
-    copyAsJson, pasteFromJson,
-  } = useClipboardActions(docStore, selStore, modalsStore);
+  const { copy, cut, paste, duplicate, copyAsJson, pasteFromJson } = useClipboardActions(
+    docStore,
+    selStore,
+    modalsStore,
+  );
 
   const { copyStyle, applyStyle } = useStyleClipboard(docStore, selStore, modalsStore);
 
@@ -274,7 +221,9 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave }) => {
         ...(patch.fontSize !== undefined && { fontSize: patch.fontSize }),
         ...(patch.fontFamily !== undefined && { fontFamily: patch.fontFamily }),
         ...(patch.fontStyle !== undefined && { fontStyle: patch.fontStyle }),
-        ...(patch.textDecoration !== undefined && { textDecoration: patch.textDecoration }),
+        ...(patch.textDecoration !== undefined && {
+          textDecoration: patch.textDecoration,
+        }),
         ...(patch.fill !== undefined && { fill: patch.fill }),
         ...(patch.align !== undefined && { align: patch.align }),
       });
@@ -338,17 +287,20 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave }) => {
       const group: GroupElement = {
         id: generateIdWithPrefix('group'),
         type: 'group',
-        x: minX, y: minY,
+        x: minX,
+        y: minY,
         width: Math.max(1, maxX - minX),
         height: Math.max(1, maxY - minY),
-        rotation: 0, children: ids,
+        rotation: 0,
+        children: ids,
       };
       s.elements.push(group);
     }, 'group');
 
     setTimeout(() => {
-      const newGroup = docStore.getState().slides
-        .find((x) => x.id === docStore.getState().activeId)
+      const newGroup = docStore
+        .getState()
+        .slides.find((x) => x.id === docStore.getState().activeId)
         ?.elements.slice(-1)[0];
       if (newGroup) selStore.setIds([newGroup.id]);
     }, 0);
@@ -397,8 +349,11 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave }) => {
       if (!s) return;
       s.elements = s.elements.filter((el) => {
         if (selectedIds.includes(el.id)) return false;
-        if (el.type === 'connector' &&
-            (selectedIds.includes(el.fromId) || selectedIds.includes(el.toId))) return false;
+        if (
+          el.type === 'connector' &&
+          (selectedIds.includes(el.fromId) || selectedIds.includes(el.toId))
+        )
+          return false;
         return true;
       });
     }, 'delete');
@@ -415,9 +370,12 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave }) => {
     }, `update-${selectedElement.id}`);
   };
 
-  const simpleTextEditing = !!editing && !editing.isRich && (editing.kind === 'text' || editing.kind === 'shape');
-  const showStampEditor = !!stampElement && stampElement.type === 'stamp' && isFeatureEnabled('FEATURE_STAMP_EDITOR');
-  const showDiagramEditor = !!diagramElement && diagramElement.type === 'diagram' && isFeatureEnabled('FEATURE_DIAGRAM');
+  const simpleTextEditing =
+    !!editing && !editing.isRich && (editing.kind === 'text' || editing.kind === 'shape');
+  const showStampEditor =
+    !!stampElement && stampElement.type === 'stamp' && isFeatureEnabled('FEATURE_STAMP_EDITOR');
+  const showDiagramEditor =
+    !!diagramElement && diagramElement.type === 'diagram' && isFeatureEnabled('FEATURE_DIAGRAM');
   const showPlainInlineEditor = !!editing && !editing.isRich;
 
   return (
@@ -428,6 +386,17 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave }) => {
         />
       )}
 
+      {onSave && (
+        <div role="status" style={{ padding: '4px 12px' }}>
+          {persistence.status}
+          {persistence.error && (
+            <>
+              : {persistence.error}{' '}
+              <button onClick={() => void persistence.retry()}>Retry save</button>
+            </>
+          )}
+        </div>
+      )}
       <Toolbar />
       <div className="editor-layout">
         <ErrorBoundary fallback={<div style={{ padding: 20 }}>Ошибка в левой панели</div>}>
@@ -482,30 +451,80 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave }) => {
           elementId={contextMenu.elementId}
           selectedElements={contextSelected}
           onClose={closeContextMenu}
-          onCut={() => { cut(contextSelected); closeContextMenu(); }}
-          onCopy={() => { copy(contextSelected); closeContextMenu(); }}
-          onPaste={() => { paste(); closeContextMenu(); }}
-          onDuplicate={() => { duplicate(contextSelected); closeContextMenu(); }}
+          onCut={() => {
+            cut(contextSelected);
+            closeContextMenu();
+          }}
+          onCopy={() => {
+            copy(contextSelected);
+            closeContextMenu();
+          }}
+          onPaste={() => {
+            paste();
+            closeContextMenu();
+          }}
+          onDuplicate={() => {
+            duplicate(contextSelected);
+            closeContextMenu();
+          }}
           onDelete={deleteSelected}
-          onBringToFront={() => { moveLayer('front', contextMenu.elementId || undefined); closeContextMenu(); }}
-          onBringForward={() => { moveLayer('forward', contextMenu.elementId || undefined); closeContextMenu(); }}
-          onSendBackward={() => { moveLayer('backward', contextMenu.elementId || undefined); closeContextMenu(); }}
-          onSendToBack={() => { moveLayer('back', contextMenu.elementId || undefined); closeContextMenu(); }}
-          onCopyStyle={() => { if (selectedElement) copyStyle(selectedElement); closeContextMenu(); }}
-          onApplyStyle={() => { applyStyle(); closeContextMenu(); }}
+          onBringToFront={() => {
+            moveLayer('front', contextMenu.elementId || undefined);
+            closeContextMenu();
+          }}
+          onBringForward={() => {
+            moveLayer('forward', contextMenu.elementId || undefined);
+            closeContextMenu();
+          }}
+          onSendBackward={() => {
+            moveLayer('backward', contextMenu.elementId || undefined);
+            closeContextMenu();
+          }}
+          onSendToBack={() => {
+            moveLayer('back', contextMenu.elementId || undefined);
+            closeContextMenu();
+          }}
+          onCopyStyle={() => {
+            if (selectedElement) copyStyle(selectedElement);
+            closeContextMenu();
+          }}
+          onApplyStyle={() => {
+            applyStyle();
+            closeContextMenu();
+          }}
           onGroup={groupSelected}
           onUngroup={ungroupSelected}
           canPaste={canPaste}
           hasStyleCopied={hasStyleCopied}
-          onCopyAsJson={() => { copyAsJson(contextSelected); closeContextMenu(); }}
+          onCopyAsJson={() => {
+            copyAsJson(contextSelected);
+            closeContextMenu();
+          }}
           onPasteFromJson={() => {
             const res = pasteFromJson();
             if (!res.ok) setToastText(res.error || 'Не удалось вставить JSON');
             closeContextMenu();
           }}
           canPasteJson={canPasteJson}
-          onApplyClipByTop={undefined}
-          onRemoveClip={undefined}
+          onApplyClipByTop={() =>
+            docStore.commit((draft) => {
+              const slide = draft.slides.find((item) => item.id === draft.activeId);
+              const selected = slide?.elements.filter((element) =>
+                selectedIds.includes(element.id),
+              );
+              if (!selected || selected.length < 2) return;
+              const clipper = selected[selected.length - 1];
+              if (clipper.type !== 'shape') return;
+              for (const element of selected.slice(0, -1)) element.clipPathId = clipper.id;
+            })
+          }
+          onRemoveClip={() =>
+            docStore.commit((draft) => {
+              for (const slide of draft.slides)
+                for (const element of slide.elements)
+                  if (selectedIds.includes(element.id)) element.clipPathId = null;
+            })
+          }
           canClip={false}
           canRemoveClip={false}
         />
@@ -595,7 +614,12 @@ export const Editor: React.FC<EditorProps> = ({ documentId, initialDoc, onSave }
   const stores = useMemo(
     () => {
       const initial: InitialDocument | undefined = initialDoc
-        ? { slides: initialDoc.slides, data: initialDoc.data, activeId: initialDoc.activeId }
+        ? {
+            slides: initialDoc.slides,
+            data: initialDoc.data,
+            activeId: initialDoc.activeId,
+            bindings: initialDoc.bindings,
+          }
         : undefined;
       return {
         document: new DocumentStore(initial),
@@ -617,7 +641,7 @@ export const Editor: React.FC<EditorProps> = ({ documentId, initialDoc, onSave }
 
   return (
     <EditorProvider stores={stores}>
-      <EditorLayout onSave={onSave} />
+      <EditorLayout documentId={documentId ?? 'local'} onSave={onSave} />
     </EditorProvider>
   );
 };

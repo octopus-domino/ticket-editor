@@ -1,4 +1,4 @@
-﻿/* ============================================================
+/* ============================================================
    DiagramEditor.tsx
 
    F-DG-01..11, F-ERR-02.
@@ -130,7 +130,8 @@ export const DiagramEditor: React.FC<DiagramEditorProps> = ({
 
     const handleMessage = (event: MessageEvent) => {
       if (event.origin !== DRAWIO_ORIGIN && event.origin !== 'null') return;
-      if (iframeRef.current?.contentWindow && event.source !== iframeRef.current.contentWindow) return;
+      if (iframeRef.current?.contentWindow && event.source !== iframeRef.current.contentWindow)
+        return;
 
       let msg: Record<string, unknown>;
       try {
@@ -276,7 +277,7 @@ export const DiagramEditor: React.FC<DiagramEditorProps> = ({
                 onClick={() => {
                   setLoadError(null);
                   setIsLoading(true);
-                  if (iframeRef.current) iframeRef.current.src = iframeRef.current.src;
+                  if (iframeRef.current) iframeRef.current.src = iframeSrc;
                 }}
               >
                 Попробовать снова

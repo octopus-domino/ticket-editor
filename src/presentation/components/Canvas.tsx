@@ -12,8 +12,13 @@ import { RichTextInlineEditor } from './richText/RichTextInlineEditor';
 import { useEditingCommit } from '../hooks/editor/useEditingCommit';
 import { useCanvasViewport } from '@/ui/hooks/canvas/useCanvasViewport';
 import {
-  useCanvasDrag, useCanvasRubberBand, useCanvasFillMode,
-  useCanvasConnectorDraft, useCanvasDrop, useCanvasHoverAnchor, useCanvasDblClick,
+  useCanvasDrag,
+  useCanvasRubberBand,
+  useCanvasFillMode,
+  useCanvasConnectorDraft,
+  useCanvasDrop,
+  useCanvasHoverAnchor,
+  useCanvasDblClick,
 } from '@/ui/hooks/canvas';
 import type { ElementSelectEvent } from './elements/types';
 
@@ -91,65 +96,77 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
     };
   }, [selectedIds, slide.elements]);
 
-  const handleStartDraft = useCallback((id: string, side: AnchorSide, _clientX: number, _clientY: number) => {
-    if (viewport.isPanning) return;
-    const stage = stageRef.current;
-    if (!stage) return;
-    const pointer = stage.getPointerPosition();
-    if (!pointer) return;
-    draft.startDraft(id, side, pointer.x / zoom, pointer.y / zoom);
-  }, [zoom, draft, viewport.isPanning]);
+  const handleStartDraft = useCallback(
+    (id: string, side: AnchorSide, _clientX: number, _clientY: number) => {
+      if (viewport.isPanning) return;
+      const stage = stageRef.current;
+      if (!stage) return;
+      const pointer = stage.getPointerPosition();
+      if (!pointer) return;
+      draft.startDraft(id, side, pointer.x / zoom, pointer.y / zoom);
+    },
+    [zoom, draft, viewport.isPanning],
+  );
 
-  const onStageDown = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
-    if (editing?.isRich) return;
+  const onStageDown = useCallback(
+    (e: Konva.KonvaEventObject<MouseEvent>) => {
+      if (editing?.isRich) return;
 
-    isDraggingRef.current = false;
-    if (viewport.isPanning) {
-      viewport.handleMouseDown(e.evt);
-      return;
-    }
-    const stage = e.target.getStage();
-    const isStage = e.target === stage;
-    const p = stage?.getPointerPosition();
-    if (!p) return;
+      isDraggingRef.current = false;
+      if (viewport.isPanning) {
+        viewport.handleMouseDown(e.evt);
+        return;
+      }
+      const stage = e.target.getStage();
+      const isStage = e.target === stage;
+      const p = stage?.getPointerPosition();
+      if (!p) return;
 
-    const wx = p.x / zoom;
-    const wy = p.y / zoom;
+      const wx = p.x / zoom;
+      const wy = p.y / zoom;
 
-    if (fillMode) {
-      if (isStage) fill.applyFill(wx, wy);
-      return;
-    }
+      if (fillMode) {
+        if (isStage) fill.applyFill(wx, wy);
+        return;
+      }
 
-    if (isStage) {
-      selStore.clear();
-      modalsStore.setFloatingPos(null);
-      rubber.begin(wx, wy);
-    }
-  }, [editing, zoom, fillMode, fill, selStore, modalsStore, rubber, viewport]);
+      if (isStage) {
+        selStore.clear();
+        modalsStore.setFloatingPos(null);
+        rubber.begin(wx, wy);
+      }
+    },
+    [editing, zoom, fillMode, fill, selStore, modalsStore, rubber, viewport],
+  );
 
-  const onStageMove = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
-    if (viewport.isPanning) return;
-    if (isDraggingRef.current) return;
-    const stage = e.target.getStage();
-    const p = stage?.getPointerPosition();
-    if (!p) return;
-    const wx = p.x / zoom;
-    const wy = p.y / zoom;
-    draft.update(wx, wy);
-    rubber.update(wx, wy);
-    hover.update(e, wx, wy);
-  }, [zoom, draft, rubber, hover, viewport.isPanning]);
-
-  const onStageUp = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
-    if (viewport.isPanning) return;
-    if (draft.isDrafting()) {
+  const onStageMove = useCallback(
+    (e: Konva.KonvaEventObject<MouseEvent>) => {
+      if (viewport.isPanning) return;
+      if (isDraggingRef.current) return;
       const stage = e.target.getStage();
       const p = stage?.getPointerPosition();
-      if (p) draft.commit(p.x / zoom, p.y / zoom);
-    }
-    if (rubber.isActive()) rubber.finish(slide.elements);
-  }, [zoom, draft, rubber, slide.elements, viewport.isPanning]);
+      if (!p) return;
+      const wx = p.x / zoom;
+      const wy = p.y / zoom;
+      draft.update(wx, wy);
+      rubber.update(wx, wy);
+      hover.update(e, wx, wy);
+    },
+    [zoom, draft, rubber, hover, viewport.isPanning],
+  );
+
+  const onStageUp = useCallback(
+    (e: Konva.KonvaEventObject<MouseEvent>) => {
+      if (viewport.isPanning) return;
+      if (draft.isDrafting()) {
+        const stage = e.target.getStage();
+        const p = stage?.getPointerPosition();
+        if (p) draft.commit(p.x / zoom, p.y / zoom);
+      }
+      if (rubber.isActive()) rubber.finish(slide.elements);
+    },
+    [zoom, draft, rubber, slide.elements, viewport.isPanning],
+  );
 
   const handleSelect = (el: CanvasElement, e?: ElementSelectEvent) => {
     if (viewport.isPanning) return;
@@ -166,14 +183,20 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
     if (!current.includes(el.id)) {
       selStore.setIds([el.id]);
     }
+    if (el.type !== 'text' && el.type !== 'footer' && nativeEvt instanceof MouseEvent) {
+      modalsStore.setFloatingPos({
+        x: nativeEvt.clientX,
+        y: nativeEvt.clientY,
+      });
+    }
   };
 
   const editingRichElement =
     editing && editing.isRich
-      ? slide.elements.find(
+      ? (slide.elements.find(
           (e): e is Extract<CanvasElement, { type: 'text' }> =>
             e.id === editing.id && e.type === 'text',
-        ) ?? null
+        ) ?? null)
       : null;
 
   return (
@@ -198,9 +221,15 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
         onContextMenu={(e) => {
           if (e.target !== e.target.getStage()) return;
           e.evt.preventDefault();
-          modalsStore.setContextMenu({ x: e.evt.clientX, y: e.evt.clientY, elementId: null });
+          modalsStore.setContextMenu({
+            x: e.evt.clientX,
+            y: e.evt.clientY,
+            elementId: null,
+          });
         }}
-        style={{ cursor: viewport.isPanning ? 'grab' : fillMode ? 'crosshair' : 'default' }}
+        style={{
+          cursor: viewport.isPanning ? 'grab' : fillMode ? 'crosshair' : 'default',
+        }}
       >
         <Layer listening={false}>
           <Rect x={0} y={0} width={slide.width} height={slide.height} fill={slide.background} />
@@ -245,11 +274,17 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
                 const clientY = 'clientY' in evt ? evt.clientY : 0;
                 const rect = stage.container().getBoundingClientRect();
                 dbl.handle(el, {
-                  viewportLeft: rect.left, viewportTop: rect.top, clientX, clientY,
+                  viewportLeft: rect.left,
+                  viewportTop: rect.top,
+                  clientX,
+                  clientY,
                 });
               }}
               onDragStart={(e) => {
-                if (draft.isDrafting() || viewport.isPanning) { e.target.stopDrag(); return; }
+                if (draft.isDrafting() || viewport.isPanning) {
+                  e.target.stopDrag();
+                  return;
+                }
                 drag.onDragStart(el, e);
                 isDraggingRef.current = true;
               }}
@@ -264,7 +299,9 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
                 const current = selStore.getState().selectedIds;
                 if (!current.includes(el.id)) selStore.setIds([el.id]);
                 modalsStore.setContextMenu({
-                  x: ev.evt.clientX, y: ev.evt.clientY, elementId: el.id,
+                  x: ev.evt.clientX,
+                  y: ev.evt.clientY,
+                  elementId: el.id,
                 });
               }}
             />
@@ -279,7 +316,10 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
             flipEnabled={false}
             keepRatio={false}
             draggable={false}
-            rotationSnaps={[0, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165, 180, 195, 210, 225, 240, 255, 270, 285, 300, 315, 330, 345]}
+            rotationSnaps={[
+              0, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165, 180, 195, 210, 225, 240, 255, 270,
+              285, 300, 315, 330, 345,
+            ]}
             rotationSnapTolerance={6}
             borderStroke="#f59e0b"
             anchorStroke="#f59e0b"
@@ -330,7 +370,10 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
                     }
                   }
                 } else {
-                  if (target.type === 'shape' && (target.shape === 'polygon' || target.shape === 'triangle')) {
+                  if (
+                    target.type === 'shape' &&
+                    (target.shape === 'polygon' || target.shape === 'triangle')
+                  ) {
                     const shape = target;
                     if (Array.isArray(shape.polygonPoints) && shape.polygonPoints.length > 0) {
                       const pts = shape.polygonPoints;

@@ -18,6 +18,7 @@ export interface EmailItem {
 }
 
 export interface EmailRequest {
+  requestId?: string;
   templateId?: string;
   inlineSlides?: Slide[];
   items: EmailItem[];
@@ -58,13 +59,19 @@ export async function downloadEml(req: EmailRequest): Promise<{ blob: Blob; file
   };
 }
 
-export async function sendEmail(req: EmailRequest): Promise<void> {
+export interface EmailSendResult {
+  sent: number;
+  failed: number;
+  errors: { index: number; to: string; message: string }[];
+}
+export async function sendEmail(req: EmailRequest): Promise<EmailSendResult> {
   const res = await authFetch('/api/email/send', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(req),
   });
   await ensureOk(res);
+  return res.json() as Promise<EmailSendResult>;
 }
 
 export function downloadBlob(blob: Blob, filename: string): void {

@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useStore } from '@/shared/store/store';
 import { useDocumentStore } from '../providers/EditorProvider';
@@ -8,6 +8,7 @@ import { templateStore } from '@/features/templates/state/TemplateStore';
 import { schemaStore } from '@/features/schemas/state/SchemaStore';
 import { emailStore } from '@/features/email';
 import { isFeatureEnabled } from '@/shared/flags';
+import { resolveBindings } from '@/features/bindings/domain/BindingResolver';
 import { materializeSlide } from '@/features/generation/ui/materializeSlide';
 import { modelStore } from '@/features/data-models/state/ModelStore';
 
@@ -27,7 +28,10 @@ export const Toolbar: React.FC = () => {
   const [saveAsBusy, setSaveAsBusy] = useState(false);
   const [saveAsError, setSaveAsError] = useState<string | null>(null);
 
-  const [savedTemplate, setSavedTemplate] = useState<{ id: string; name: string } | null>(null);
+  const [savedTemplate, setSavedTemplate] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   const toastTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -37,8 +41,17 @@ export const Toolbar: React.FC = () => {
   }, []);
 
   const handleExportJson = () => {
-    const payload = { version: '2.0', exportedAt: new Date().toISOString(), slides, data };
-    download(JSON.stringify(payload, null, 2), `ticket-editor-${Date.now()}.json`, 'application/json');
+    const payload = {
+      version: '2.0',
+      exportedAt: new Date().toISOString(),
+      slides,
+      data,
+    };
+    download(
+      JSON.stringify(payload, null, 2),
+      `ticket-editor-${Date.now()}.json`,
+      'application/json',
+    );
   };
 
   const handleExportSvg = () => {
@@ -60,7 +73,12 @@ export const Toolbar: React.FC = () => {
     setSaveAsError(null);
     try {
       const schemaId = schemaStore.getState().activeId;
-      const created = await templateStore.create({ schemaId, name, slides, bindings: [] });
+      const created = await templateStore.create({
+        schemaId,
+        name,
+        slides,
+        bindings: resolveBindings(slides, docStore.getState().bindings),
+      });
       setSaveAsOpen(false);
       setSaveAsName('');
       setSavedTemplate({ id: created.id, name: created.name });
@@ -91,33 +109,61 @@ export const Toolbar: React.FC = () => {
     <header className="toolbar" style={{ position: 'relative' }}>
       <h1>Редактор шаблонов</h1>
       <div className="toolbar-actions">
-        <button className="toolbar-btn" onClick={() => docStore.undo()} disabled={!canUndo}>↶</button>
-        <button className="toolbar-btn" onClick={() => docStore.redo()} disabled={!canRedo}>↷</button>
+        <button className="toolbar-btn" onClick={() => docStore.undo()} disabled={!canUndo}>
+          ↶
+        </button>
+        <button className="toolbar-btn" onClick={() => docStore.redo()} disabled={!canRedo}>
+          ↷
+        </button>
         <div style={{ width: 8 }} />
-        <button className="toolbar-btn" onClick={openSaveAs}>💾 Сохранить как шаблон</button>
+        <button className="toolbar-btn" onClick={openSaveAs}>
+          💾 Сохранить как шаблон
+        </button>
         {isFeatureEnabled('FEATURE_EMAIL') && (
           <button
             className="toolbar-btn"
             onClick={openEmail}
-            title={activeSlide ? `Отправить слайд «${activeSlide.name}» по email` : 'Превью, .eml, отправка'}
+            title={
+              activeSlide
+                ? `Отправить слайд «${activeSlide.name}» по email`
+                : 'Превью, .eml, отправка'
+            }
           >
             📧 Email
           </button>
         )}
-        <button className="toolbar-btn" onClick={handleExportSvg}>🖼 SVG</button>
-        <button className="toolbar-btn primary" onClick={handleExportJson}>📥 JSON</button>
+        <button className="toolbar-btn" onClick={handleExportSvg}>
+          🖼 SVG
+        </button>
+        <button className="toolbar-btn primary" onClick={handleExportJson}>
+          📥 JSON
+        </button>
       </div>
 
       {saveAsOpen && (
         <div
           style={{
-            position: 'absolute', top: '100%', right: 16, marginTop: 6,
-            background: '#fff', border: '1px solid var(--border)', borderRadius: 8,
-            padding: 12, boxShadow: '0 8px 24px rgba(15,23,42,.15)', zIndex: 50,
+            position: 'absolute',
+            top: '100%',
+            right: 16,
+            marginTop: 6,
+            background: '#fff',
+            border: '1px solid var(--border)',
+            borderRadius: 8,
+            padding: 12,
+            boxShadow: '0 8px 24px rgba(15,23,42,.15)',
+            zIndex: 50,
             width: 320,
           }}
         >
-          <label style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>
+          <label
+            style={{
+              display: 'block',
+              fontSize: 11,
+              color: 'var(--text-muted)',
+              marginBottom: 4,
+            }}
+          >
             Имя шаблона
           </label>
           <input
@@ -135,7 +181,11 @@ export const Toolbar: React.FC = () => {
             <div style={{ fontSize: 11, color: '#dc2626', marginBottom: 8 }}>{saveAsError}</div>
           )}
           <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-            <button className="toolbar-btn" onClick={() => setSaveAsOpen(false)} disabled={saveAsBusy}>
+            <button
+              className="toolbar-btn"
+              onClick={() => setSaveAsOpen(false)}
+              disabled={saveAsBusy}
+            >
               Отмена
             </button>
             <button
@@ -152,7 +202,10 @@ export const Toolbar: React.FC = () => {
       {savedTemplate && (
         <div
           style={{
-            position: 'absolute', top: '100%', right: 16, marginTop: 6,
+            position: 'absolute',
+            top: '100%',
+            right: 16,
+            marginTop: 6,
             background: '#f0fdf4',
             border: '1px solid #86efac',
             borderRadius: 8,
@@ -172,7 +225,12 @@ export const Toolbar: React.FC = () => {
           <span>✅ Шаблон «{savedTemplate.name}» сохранён.</span>
           <Link
             to={`/app/templates?highlight=${encodeURIComponent(savedTemplate.id)}`}
-            style={{ color: '#166534', fontWeight: 600, textDecoration: 'underline', whiteSpace: 'nowrap' }}
+            style={{
+              color: '#166534',
+              fontWeight: 600,
+              textDecoration: 'underline',
+              whiteSpace: 'nowrap',
+            }}
           >
             Открыть в списке →
           </Link>
@@ -181,8 +239,13 @@ export const Toolbar: React.FC = () => {
             onClick={() => setSavedTemplate(null)}
             aria-label="Скрыть"
             style={{
-              background: 'none', border: 'none', color: '#166534',
-              cursor: 'pointer', fontSize: 18, padding: 0, lineHeight: 1,
+              background: 'none',
+              border: 'none',
+              color: '#166534',
+              cursor: 'pointer',
+              fontSize: 18,
+              padding: 0,
+              lineHeight: 1,
             }}
           >
             ×

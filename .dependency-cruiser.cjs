@@ -71,7 +71,9 @@ module.exports = {
       severity: 'error',
       comment: 'ARC-LAYER-04: infrastructure не импортирует ui/application.',
       from: { path: '^src/infrastructure/' },
-      to: { path: '^src/(application|presentation|App\\.tsx|main\\.tsx)' },
+      to: {
+        path: '^src/(application/(?!ports/)|presentation|App\\.tsx|main\\.tsx)',
+      },
     },
 
     /* presentation — не тянет app-entrypoint. */

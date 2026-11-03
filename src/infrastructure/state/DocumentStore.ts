@@ -5,6 +5,7 @@
 import { produce, type Draft } from 'immer';
 import { SimpleStore } from '@/shared/store/store';
 import type { Slide, DataRoot } from '@/shared/types';
+import type { DocumentBinding } from '@/shared/types/document';
 import { createSlide } from '@/domain/slide/operations';
 import { fixGroupBoundsInPlace } from '@/lib/migrations';
 import { getByPath } from '@/lib/path';
@@ -14,11 +15,13 @@ export interface DocumentState {
   activeId: string;
   data: DataRoot[];
   historyVersion: number;
+  bindings: DocumentBinding[];
 }
 
 export type Mutator = (draft: Draft<DocumentState>) => void;
 
 export interface InitialDocument {
+  bindings?: DocumentBinding[];
   slides: Slide[];
   data: DataRoot[];
   activeId: string;
@@ -35,16 +38,15 @@ const MAX_HISTORY = 100;
 const MAX_HISTORY_BYTES = 80 * 1024 * 1024;
 const MERGE_TIMEOUT_MS = 600;
 
-function estimateBytes(state: DocumentState): number {
-  let total = 1024;
-  for (const slide of state.slides) {
-    total += 512;
-    total += slide.elements.length * 512;
-  }
-  for (const root of state.data) {
-    total += 128;
-  }
-  return total;
+function estimateBytes(value: unknown, seen = new WeakSet<object>()): number {
+  if (typeof value === 'string') return value.length * 2;
+  if (!value || typeof value !== 'object') return 8;
+  if (seen.has(value)) return 0;
+  seen.add(value);
+  return Object.entries(value).reduce(
+    (bytes, [key, child]) => bytes + key.length * 2 + estimateBytes(child, seen),
+    32,
+  );
 }
 
 export class DocumentStore extends SimpleStore<DocumentState> {
@@ -56,9 +58,12 @@ export class DocumentStore extends SimpleStore<DocumentState> {
     if (initial && initial.slides.length > 0) {
       super({
         slides: initial.slides,
-        activeId: initial.activeId || initial.slides[0].id,
+        activeId: initial.slides.some((slide) => slide.id === initial.activeId)
+          ? initial.activeId
+          : initial.slides[0].id,
         data: initial.data || [],
         historyVersion: 0,
+        bindings: initial.bindings ?? [],
       });
       this.fixAllGroupBounds();
     } else {
@@ -68,6 +73,7 @@ export class DocumentStore extends SimpleStore<DocumentState> {
         activeId: slide.id,
         data: [],
         historyVersion: 0,
+        bindings: [],
       });
     }
     this.pushHistory();
@@ -75,7 +81,9 @@ export class DocumentStore extends SimpleStore<DocumentState> {
 
   commit(mutator: Mutator, mergeKey?: string): void {
     const prev = this.getState();
-    const next = produce(prev, (draft) => { mutator(draft); });
+    const next = produce(prev, (draft) => {
+      mutator(draft);
+    });
     if (next === prev) return;
     this.setState(next);
     this.pushHistory(mergeKey);
@@ -91,9 +99,7 @@ export class DocumentStore extends SimpleStore<DocumentState> {
         for (const el of slide.elements) {
           if (el.type !== 'placeholder') continue;
           const v = getByPath(values, el.fieldPath);
-          if (v !== undefined && v !== null) {
-            el.sample = String(v);
-          }
+          el.sample = v === undefined || v === null ? '' : String(v);
         }
       }
     }, 'apply-model');
@@ -109,7 +115,7 @@ export class DocumentStore extends SimpleStore<DocumentState> {
   fixAllGroupBounds(): void {
     this.setStateForDrag((draft) => {
       for (const slide of draft.slides) {
-        fixGroupBoundsInPlace(slide.elements as any[]);
+        fixGroupBoundsInPlace(slide.elements);
       }
     });
   }
@@ -123,7 +129,12 @@ export class DocumentStore extends SimpleStore<DocumentState> {
     const last = this.history[this.historyIndex];
     const approxBytes = 4096;
 
-    if (mergeKey && last?.mergeKey === mergeKey && now - last.timestamp < MERGE_TIMEOUT_MS) {
+    if (
+      this.historyIndex === this.history.length - 1 &&
+      mergeKey &&
+      last?.mergeKey === mergeKey &&
+      now - last.timestamp < MERGE_TIMEOUT_MS
+    ) {
       this.history[this.historyIndex] = {
         state: this.getState(),
         bytes: approxBytes,
@@ -147,11 +158,9 @@ export class DocumentStore extends SimpleStore<DocumentState> {
       const removed = this.history.shift();
       if (removed) {
         this.historyBytes -= removed.bytes;
-        this.historyIndex--;
       }
-    } else {
-      this.historyIndex++;
     }
+    this.historyIndex = this.history.length - 1;
     this.bumpHistoryVersion();
     setTimeout(() => this.recalculateHistoryBytes(), 0);
   }
@@ -178,7 +187,10 @@ export class DocumentStore extends SimpleStore<DocumentState> {
   }
 
   private bumpHistoryVersion(): void {
-    this.setState((prev) => ({ ...prev, historyVersion: prev.historyVersion + 1 }));
+    this.setState((prev) => ({
+      ...prev,
+      historyVersion: prev.historyVersion + 1,
+    }));
   }
 
   undo(): void {
@@ -199,6 +211,10 @@ export class DocumentStore extends SimpleStore<DocumentState> {
     });
   }
 
-  get canUndo(): boolean { return this.historyIndex > 0; }
-  get canRedo(): boolean { return this.historyIndex < this.history.length - 1; }
+  get canUndo(): boolean {
+    return this.historyIndex > 0;
+  }
+  get canRedo(): boolean {
+    return this.historyIndex < this.history.length - 1;
+  }
 }

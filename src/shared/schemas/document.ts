@@ -24,7 +24,15 @@ const OrientationSchema = z.enum(['portrait', 'landscape']);
 const TextAlignSchema = z.enum(['left', 'center', 'right', 'justify']);
 const TextVerticalAlignSchema = z.enum(['top', 'middle', 'bottom']);
 const DashTypeSchema = z.enum(['solid', 'dashed', 'dotted', 'dashdot', 'longdash']);
-const DataFieldTypeSchema = z.enum(['string', 'number', 'date', 'boolean', 'image', 'object', 'array']);
+const DataFieldTypeSchema = z.enum([
+  'string',
+  'number',
+  'date',
+  'boolean',
+  'image',
+  'object',
+  'array',
+]);
 const AnchorSideSchema = z.enum(['top', 'right', 'bottom', 'left']);
 const ConnectorRoutingSchema = z.enum(['straight', 'orthogonal']);
 const ChartKindSchema = z.enum(['bar', 'donut']);
@@ -54,28 +62,34 @@ const AppearanceStrokeSchema = z.object({
   align: StrokeAlignSchema.optional(),
 });
 
-const AppearanceSchema = z.object({
-  fills: z.array(AppearanceFillSchema).optional(),
-  strokes: z.array(AppearanceStrokeSchema).optional(),
-}).passthrough();
+const AppearanceSchema = z
+  .object({
+    fills: z.array(AppearanceFillSchema).optional(),
+    strokes: z.array(AppearanceStrokeSchema).optional(),
+  })
+  .passthrough();
 
 export const DataFieldSchema: z.ZodType<unknown> = z.lazy(() =>
-  z.object({
-    id: z.string(),
-    name: z.string(),
-    type: DataFieldTypeSchema,
-    sample: z.string().default(''),
-    children: z.array(DataFieldSchema).optional(),
-    sampleCount: z.number().int().positive().max(SCHEMA_LIMITS.MAX_ARRAY_SAMPLE_COUNT).optional(),
-    sampleValues: z.array(z.number()).optional(),
-  }).passthrough(),
+  z
+    .object({
+      id: z.string(),
+      name: z.string(),
+      type: DataFieldTypeSchema,
+      sample: z.string().default(''),
+      children: z.array(DataFieldSchema).optional(),
+      sampleCount: z.number().int().positive().max(SCHEMA_LIMITS.MAX_ARRAY_SAMPLE_COUNT).optional(),
+      sampleValues: z.array(z.number()).optional(),
+    })
+    .passthrough(),
 );
 
-export const DataRootSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  fields: z.array(DataFieldSchema).default([]),
-}).passthrough();
+export const DataRootSchema = z
+  .object({
+    id: z.string(),
+    name: z.string(),
+    fields: z.array(DataFieldSchema).default([]),
+  })
+  .passthrough();
 
 const BaseElementFields = {
   id: z.string(),
@@ -91,190 +105,234 @@ const BaseElementFields = {
   clipPathId: z.string().nullable().optional(),
 };
 
-export const TextElementSchema = z.object({
-  ...BaseElementFields,
-  type: z.literal('text'),
-  text: z.string(),
-  html: z.string().optional(),
-  richText: z.boolean().optional(),
-  fontSize: z.number().positive(),
-  fontFamily: z.string(),
-  fill: z.string(),
-  fontStyle: z.string().default('normal'),
-  textDecoration: z.string().default(''),
-  align: TextAlignSchema.default('left'),
-  verticalAlign: TextVerticalAlignSchema.default('top'),
-  lineHeight: z.number().positive().default(1.5),
-  padding: PaddingSchema.default({ top: 8, right: 8, bottom: 8, left: 8 }),
-  background: z.string().default('transparent'),
-  textMode: z.enum(['straight', 'arc']).optional(),
-  arcRadius: z.number().optional(),
-  arcStartAngle: z.number().optional(),
-  arcEndAngle: z.number().optional(),
-  arcFlip: z.boolean().optional(),
-}).passthrough();
+export const TextElementSchema = z
+  .object({
+    ...BaseElementFields,
+    type: z.literal('text'),
+    text: z.string(),
+    html: z.string().optional(),
+    richText: z.boolean().optional(),
+    fontSize: z.number().positive(),
+    fontFamily: z.string(),
+    fill: z.string(),
+    fontStyle: z.string().default('normal'),
+    textDecoration: z.string().default(''),
+    align: TextAlignSchema.default('left'),
+    verticalAlign: TextVerticalAlignSchema.default('top'),
+    lineHeight: z.number().positive().default(1.5),
+    padding: PaddingSchema.default({ top: 8, right: 8, bottom: 8, left: 8 }),
+    background: z.string().default('transparent'),
+    textMode: z.enum(['straight', 'arc']).optional(),
+    arcRadius: z.number().optional(),
+    arcStartAngle: z.number().optional(),
+    arcEndAngle: z.number().optional(),
+    arcFlip: z.boolean().optional(),
+  })
+  .passthrough();
 
-export const ImageElementSchema = z.object({
-  ...BaseElementFields,
-  type: z.literal('image'),
-  src: z.string(),
-}).passthrough();
-
-export const ShapeElementSchema = z.object({
-  ...BaseElementFields,
-  type: z.literal('shape'),
-  shape: z.enum(['rect', 'roundRect', 'circle', 'triangle', 'star', 'arrow', 'polygon', 'arc']),
-  fill: z.string(),
-  stroke: z.string(),
-  strokeWidth: z.number().nonnegative(),
-  text: z.string().default(''),
-  fontSize: z.number().positive().default(16),
-  textFill: z.string().default('#111'),
-  radius: z.number().nonnegative().optional(),
-  textAlign: TextAlignSchema.optional(),
-  textVerticalAlign: TextVerticalAlignSchema.optional(),
-  textPadding: PaddingSchema.optional(),
-  textFontFamily: z.string().optional(),
-  textLineHeight: z.number().positive().optional(),
-  textFontStyle: z.string().optional(),
-  textDecoration: z.string().optional(),
-  polygonPoints: z.array(z.number()).optional(),
-  polygonSubpaths: z.array(z.array(z.number())).optional(),
-  arcStartAngle: z.number().optional(),
-  arcEndAngle: z.number().optional(),
-  arcInnerRadius: z.number().min(0).max(1).optional(),
-  arcOuterRadius: z.number().min(0).max(1).optional(),
-  rasterFill: z.object({
+export const ImageElementSchema = z
+  .object({
+    ...BaseElementFields,
+    type: z.literal('image'),
     src: z.string(),
-    relX: z.number(),
-    relY: z.number(),
-    relW: z.number(),
-    relH: z.number(),
-  }).optional(),
-}).passthrough();
+  })
+  .passthrough();
 
-export const PathElementSchema = z.object({
-  ...BaseElementFields,
-  type: z.literal('path'),
-  d: z.string(),
-  fill: z.string(),
-  stroke: z.string(),
-  strokeWidth: z.number().nonnegative(),
-}).passthrough();
+export const ShapeElementSchema = z
+  .object({
+    ...BaseElementFields,
+    type: z.literal('shape'),
+    shape: z.enum(['rect', 'roundRect', 'circle', 'triangle', 'star', 'arrow', 'polygon', 'arc']),
+    fill: z.string(),
+    stroke: z.string(),
+    strokeWidth: z.number().nonnegative(),
+    text: z.string().default(''),
+    fontSize: z.number().positive().default(16),
+    textFill: z.string().default('#111'),
+    radius: z.number().nonnegative().optional(),
+    textAlign: TextAlignSchema.optional(),
+    textVerticalAlign: TextVerticalAlignSchema.optional(),
+    textPadding: PaddingSchema.optional(),
+    textFontFamily: z.string().optional(),
+    textLineHeight: z.number().positive().optional(),
+    textFontStyle: z.string().optional(),
+    textDecoration: z.string().optional(),
+    polygonPoints: z.array(z.number()).optional(),
+    polygonSubpaths: z.array(z.array(z.number())).optional(),
+    arcStartAngle: z.number().optional(),
+    arcEndAngle: z.number().optional(),
+    arcInnerRadius: z.number().min(0).max(1).optional(),
+    arcOuterRadius: z.number().min(0).max(1).optional(),
+    rasterFill: z
+      .object({
+        src: z.string(),
+        relX: z.number(),
+        relY: z.number(),
+        relW: z.number(),
+        relH: z.number(),
+      })
+      .optional(),
+  })
+  .passthrough();
 
-export const ChartElementSchema = z.object({
-  ...BaseElementFields,
-  type: z.literal('chart'),
-  chartKind: ChartKindSchema,
-  dataPath: z.string().nullable().optional(),
-  values: z.array(z.number()).default([]),
-  palette: z.array(z.string()).default([]),
-  barWidth: z.number().positive().default(40),
-  gap: z.number().nonnegative().default(12),
-  donutInnerRatio: z.number().min(0).max(1).default(0.5),
-}).passthrough();
+export const PathElementSchema = z
+  .object({
+    ...BaseElementFields,
+    type: z.literal('path'),
+    d: z.string(),
+    fill: z.string(),
+    stroke: z.string(),
+    strokeWidth: z.number().nonnegative(),
+  })
+  .passthrough();
 
-export const LineElementSchema = z.object({
-  ...BaseElementFields,
-  type: z.literal('line'),
-  points: z.array(z.number()).min(4),
-  stroke: z.string(),
-  strokeWidth: z.number().nonnegative(),
-  dash: DashTypeSchema.default('solid'),
-  isArrow: z.boolean().default(false),
-}).passthrough();
+export const ChartElementSchema = z
+  .object({
+    ...BaseElementFields,
+    type: z.literal('chart'),
+    chartKind: ChartKindSchema,
+    dataPath: z.string().nullable().optional(),
+    values: z.array(z.number()).default([]),
+    palette: z.array(z.string()).default([]),
+    barWidth: z.number().positive().default(40),
+    gap: z.number().nonnegative().default(12),
+    donutInnerRatio: z.number().min(0).max(1).default(0.5),
+  })
+  .passthrough();
 
-export const TableElementSchema = z.object({
-  ...BaseElementFields,
-  type: z.literal('table'),
-  rows: z.number().int().positive(),
-  cols: z.number().int().positive(),
-  data: z.array(z.array(z.string())),
-  borderColor: z.string(),
-  headerBg: z.string(),
-  fontSize: z.number().positive(),
-}).passthrough();
+export const LineElementSchema = z
+  .object({
+    ...BaseElementFields,
+    type: z.literal('line'),
+    points: z.array(z.number()).min(4),
+    stroke: z.string(),
+    strokeWidth: z.number().nonnegative(),
+    dash: DashTypeSchema.default('solid'),
+    isArrow: z.boolean().default(false),
+  })
+  .passthrough();
 
-export const FooterElementSchema = z.object({
-  ...BaseElementFields,
-  type: z.literal('footer'),
-  text: z.string(),
-  html: z.string().optional(),
-  fill: z.string(),
-  bgColor: z.string(),
-  fontSize: z.number().positive(),
-}).passthrough();
+export const TableElementSchema = z
+  .object({
+    ...BaseElementFields,
+    type: z.literal('table'),
+    rows: z.number().int().positive(),
+    cols: z.number().int().positive(),
+    data: z.array(z.array(z.string())),
+    borderColor: z.string(),
+    headerBg: z.string(),
+    fontSize: z.number().positive(),
+  })
+  .passthrough();
 
-export const PlaceholderElementSchema = z.object({
-  ...BaseElementFields,
-  type: z.literal('placeholder'),
-  fieldPath: z.string(),
-  fieldType: DataFieldTypeSchema,
-  sample: z.string().default(''),
-  label: z.string().default(''),
-  inline: z.boolean().optional(),
-  fontSize: z.number().positive(),
-  fontFamily: z.string(),
-  fill: z.string(),
-  fontStyle: z.string().default('normal'),
-  textDecoration: z.string().default(''),
-  align: TextAlignSchema.default('left'),
-  verticalAlign: TextVerticalAlignSchema.default('top'),
-  lineHeight: z.number().positive().default(1.2),
-  padding: PaddingSchema.default({ top: 4, right: 4, bottom: 4, left: 4 }),
-  background: z.string().default('transparent'),
-  imageMode: z.enum(['fit', 'fill']).optional(),
-  html: z.string().optional(),
-}).passthrough();
+export const FooterElementSchema = z
+  .object({
+    ...BaseElementFields,
+    type: z.literal('footer'),
+    text: z.string(),
+    html: z.string().optional(),
+    fill: z.string(),
+    bgColor: z.string(),
+    fontSize: z.number().positive(),
+  })
+  .passthrough();
 
-export const FillElementSchema = z.object({
-  ...BaseElementFields,
-  type: z.literal('fill'),
-  points: z.array(z.number()).min(6),
-  fill: z.string(),
-  stroke: z.string().default(''),
-  strokeWidth: z.number().nonnegative().default(0),
-  opacity: z.number().min(0).max(1).default(1),
-}).passthrough();
+export const PlaceholderElementSchema = z
+  .object({
+    ...BaseElementFields,
+    type: z.literal('placeholder'),
+    fieldPath: z.string(),
+    fieldType: DataFieldTypeSchema,
+    sample: z.string().default(''),
+    label: z.string().default(''),
+    inline: z.boolean().optional(),
+    fontSize: z.number().positive(),
+    fontFamily: z.string(),
+    fill: z.string(),
+    fontStyle: z.string().default('normal'),
+    textDecoration: z.string().default(''),
+    align: TextAlignSchema.default('left'),
+    verticalAlign: TextVerticalAlignSchema.default('top'),
+    lineHeight: z.number().positive().default(1.2),
+    padding: PaddingSchema.default({ top: 4, right: 4, bottom: 4, left: 4 }),
+    background: z.string().default('transparent'),
+    imageMode: z.enum(['fit', 'fill']).optional(),
+    html: z.string().optional(),
+  })
+  .passthrough();
 
-export const DiagramElementSchema = z.object({
-  ...BaseElementFields,
-  type: z.literal('diagram'),
-  svg: z.string(),
-  xml: z.string(),
-}).passthrough();
+export const FillElementSchema = z
+  .object({
+    ...BaseElementFields,
+    type: z.literal('fill'),
+    points: z.array(z.number()).min(6),
+    fill: z.string(),
+    stroke: z.string().default(''),
+    strokeWidth: z.number().nonnegative().default(0),
+    opacity: z.number().min(0).max(1).default(1),
+  })
+  .passthrough();
 
-export const ConnectorElementSchema = z.object({
-  ...BaseElementFields,
-  type: z.literal('connector'),
-  fromId: z.string(),
-  fromAnchor: AnchorSideSchema,
-  toId: z.string(),
-  toAnchor: AnchorSideSchema,
-  stroke: z.string(),
-  strokeWidth: z.number().nonnegative(),
-  dash: DashTypeSchema.default('solid'),
-  isArrow: z.boolean().default(true),
-  routing: ConnectorRoutingSchema.default('orthogonal'),
-  label: z.string().optional(),
-  labelFontSize: z.number().positive().optional(),
-  labelFill: z.string().optional(),
-  labelOffsetX: z.number().optional(),
-  labelOffsetY: z.number().optional(),
-}).passthrough();
+export const DiagramElementSchema = z
+  .object({
+    ...BaseElementFields,
+    type: z.literal('diagram'),
+    svg: z.string(),
+    xml: z.string(),
+  })
+  .passthrough();
 
-export const StampElementSchema = z.object({
-  ...BaseElementFields,
-  type: z.literal('stamp'),
-}).passthrough();
+export const ConnectorElementSchema = z
+  .object({
+    ...BaseElementFields,
+    type: z.literal('connector'),
+    fromId: z.string(),
+    fromAnchor: AnchorSideSchema,
+    toId: z.string(),
+    toAnchor: AnchorSideSchema,
+    stroke: z.string(),
+    strokeWidth: z.number().nonnegative(),
+    dash: DashTypeSchema.default('solid'),
+    isArrow: z.boolean().default(true),
+    routing: ConnectorRoutingSchema.default('orthogonal'),
+    label: z.string().optional(),
+    labelFontSize: z.number().positive().optional(),
+    labelFill: z.string().optional(),
+    labelOffsetX: z.number().optional(),
+    labelOffsetY: z.number().optional(),
+  })
+  .passthrough();
 
-export const GroupElementSchema = z.object({
-  ...BaseElementFields,
-  type: z.literal('group'),
-  children: z.array(z.string()),
-}).passthrough();
+export const StampElementSchema = z
+  .object({
+    ...BaseElementFields,
+    type: z.literal('stamp'),
+  })
+  .passthrough();
+
+export const GroupElementSchema = z
+  .object({
+    ...BaseElementFields,
+    type: z.literal('group'),
+    children: z.array(z.string()),
+  })
+  .passthrough();
+
+export const QrElementSchema = z
+  .object({
+    ...BaseElementFields,
+    type: z.literal('qr'),
+    text: z.string().default(''),
+    format: z.enum(['QR', 'DATA_MATRIX', 'AZTEC', 'PDF_417']).default('QR'),
+    fgColor: z.string().default('#000000'),
+    bgColor: z.string().default('#ffffff'),
+    margin: z.number().int().min(0).max(100).default(4),
+    ecc: z.enum(['L', 'M', 'Q', 'H']).default('M'),
+  })
+  .passthrough();
 
 export const CanvasElementSchema = z.discriminatedUnion('type', [
+  QrElementSchema,
   TextElementSchema,
   ImageElementSchema,
   ShapeElementSchema,
@@ -291,35 +349,59 @@ export const CanvasElementSchema = z.discriminatedUnion('type', [
   GroupElementSchema,
 ]);
 
-export const SlideSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  format: DocFormatSchema.default('a4'),
-  orientation: OrientationSchema.default('portrait'),
-  width: z.number().positive(),
-  height: z.number().positive(),
-  background: z.string().default('#ffffff'),
-  backgroundImage: z.string().optional(),
-  padding: PaddingSchema.default({ top: 20, right: 20, bottom: 20, left: 20 }),
-  elements: z.array(CanvasElementSchema).max(SCHEMA_LIMITS.MAX_ELEMENTS_PER_SLIDE).default([]),
-}).passthrough();
+export const SlideSchema = z
+  .object({
+    id: z.string(),
+    name: z.string(),
+    format: DocFormatSchema.default('a4'),
+    orientation: OrientationSchema.default('portrait'),
+    width: z.number().positive(),
+    height: z.number().positive(),
+    background: z.string().default('#ffffff'),
+    backgroundImage: z.string().optional(),
+    padding: PaddingSchema.default({
+      top: 20,
+      right: 20,
+      bottom: 20,
+      left: 20,
+    }),
+    elements: z.array(CanvasElementSchema).max(SCHEMA_LIMITS.MAX_ELEMENTS_PER_SLIDE).default([]),
+  })
+  .passthrough();
 
-export const DocumentSchema = z.object({
-  version: z.string().regex(/^\d+\.\d+$/, 'version must be "N.N"').default('2.0'),
-  exportedAt: z.string().optional(),
-  slides: z.array(SlideSchema).min(1).max(SCHEMA_LIMITS.MAX_SLIDES),
-  data: z.array(DataRootSchema).default([]),
-  activeSlideId: z.string().optional(),
-}).passthrough();
+export const DocumentSchema = z
+  .object({
+    version: z
+      .string()
+      .regex(/^\d+\.\d+$/, 'version must be "N.N"')
+      .default('2.0'),
+    exportedAt: z.string().optional(),
+    slides: z.array(SlideSchema).min(1).max(SCHEMA_LIMITS.MAX_SLIDES),
+    data: z.array(DataRootSchema).default([]),
+    activeSlideId: z.string().optional(),
+    bindings: z
+      .array(
+        z.object({
+          elementId: z.string(),
+          elementLabel: z.string().default(''),
+          inferred: z.string().default(''),
+          placeholder: z.string(),
+          schemaPath: z.string(),
+          source: z.enum(['auto', 'legacy', 'manual']),
+          status: z.enum(['linked', 'missing', 'invalid-type', 'ignored']),
+          expectedType: z.string().optional(),
+        }),
+      )
+      .default([]),
+  })
+  .passthrough();
 
 export type ValidatedDocument = z.infer<typeof DocumentSchema>;
 export type ValidatedSlide = z.infer<typeof SlideSchema>;
 export type ValidatedCanvasElement = z.infer<typeof CanvasElementSchema>;
 export type ValidatedDataRoot = z.infer<typeof DataRootSchema>;
 
-export type ValidationResult<T> =
-  | { ok: true; value: T }
-  | { ok: false; issues: z.ZodIssue[] };
+export type ValidationResult<T> = { ok: true; value: T } | { ok: false; issues: z.ZodIssue[] };
 
 export function validateDocument(raw: unknown): ValidationResult<ValidatedDocument> {
   const result = DocumentSchema.safeParse(raw);

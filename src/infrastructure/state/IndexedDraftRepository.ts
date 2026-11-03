@@ -1,0 +1,47 @@
+import type { Draft, DraftRepository } from '@/application/ports/DraftRepository';
+
+/** IndexedDB performs structured persistence without synchronous JSON/localStorage writes. */
+export class IndexedDraftRepository<T> implements DraftRepository<T> {
+  private database: Promise<IDBDatabase> | null = null;
+  private open(): Promise<IDBDatabase> {
+    return (this.database ??= new Promise((resolve, reject) => {
+      const request = indexedDB.open('ticket-editor-drafts', 1);
+      request.onupgradeneeded = () => request.result.createObjectStore('drafts');
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    }));
+  }
+  private async transaction<R>(
+    mode: IDBTransactionMode,
+    operation: (store: IDBObjectStore) => IDBRequest<R>,
+  ): Promise<R> {
+    const database = await this.open();
+    return new Promise((resolve, reject) => {
+      const transaction = database.transaction('drafts', mode);
+      const request = operation(transaction.objectStore('drafts'));
+      transaction.oncomplete = () => resolve(request.result);
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () =>
+        reject(transaction.error ?? new Error('Draft transaction aborted'));
+    });
+  }
+  async read(id: string): Promise<Draft<T> | null> {
+    return (await this.transaction('readonly', (store) => store.get(id))) ?? null;
+  }
+  async write(id: string, draft: Draft<T>): Promise<void> {
+    await this.transaction('readwrite', (store) => store.put(draft, id));
+  }
+  async remove(id: string, revision?: string): Promise<void> {
+    const database = await this.open();
+    await new Promise<void>((resolve, reject) => {
+      const transaction = database.transaction('drafts', 'readwrite');
+      const store = transaction.objectStore('drafts');
+      const request = store.get(id);
+      request.onsuccess = () => {
+        if (!revision || request.result?.revision === revision) store.delete(id);
+      };
+      transaction.oncomplete = () => resolve();
+      transaction.onabort = transaction.onerror = () => reject(transaction.error);
+    });
+  }
+}

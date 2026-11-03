@@ -20,13 +20,15 @@ export interface GenerationInput {
 
 export function validateGeneration(input: GenerationInput): GenerationIssue[] {
   const issues: GenerationIssue[] = [];
+  if (input.selectedModels.length === 0)
+    issues.push({ kind: 'model', message: 'Выберите хотя бы одну модель' });
 
   if (!input.schema) {
     issues.push({ kind: 'schema', message: 'Схема не выбрана' });
   } else {
     const bindingIssues = validateBindings(input.bindings, input.schema);
     for (const i of bindingIssues) {
-      if (i.kind === 'missing') {
+      if (i.kind === 'missing' || i.kind === 'invalid-type') {
         issues.push({ kind: 'binding', message: i.message });
       }
     }
@@ -34,14 +36,22 @@ export function validateGeneration(input: GenerationInput): GenerationIssue[] {
 
   if (input.schema && !input.allowEmpty) {
     for (const m of input.selectedModels) {
+      if (m.schemaId !== input.schema.id)
+        issues.push({ kind: 'schema', message: `${m.name}: другая схема` });
       for (const e of validateModel(m, input.schema)) {
-        issues.push({ kind: 'model', message: `${m.name}: ${e.message} (${e.path})` });
+        issues.push({
+          kind: 'model',
+          message: `${m.name}: ${e.message} (${e.path})`,
+        });
       }
     }
   }
 
   if (!input.supportedFormats.includes(input.format)) {
-    issues.push({ kind: 'format', message: `Формат ${input.format} не поддерживается` });
+    issues.push({
+      kind: 'format',
+      message: `Формат ${input.format} не поддерживается`,
+    });
   }
 
   return issues;

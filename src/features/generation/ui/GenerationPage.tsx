@@ -5,15 +5,11 @@ import { templateStore } from '@/features/templates/state/TemplateStore';
 import { useSchemas } from '@/features/schemas/state/useSchemas';
 import { modelStore } from '@/features/data-models/state/ModelStore';
 import type { DataModel } from '@/features/data-models/domain/DataModel';
-import { httpGenerationClient } from '../api/HttpGenerationClient';
-import type {
-  GenerationRequest,
-  GenerationResult,
-} from '../api/GenerationClient';
-import {
-  SearchSelectList,
-  type ListItemAdapter,
-} from '@/presentation/components/list';
+import { generationStore } from '../state/GenerationStore';
+import { validateGeneration } from '../domain/GenerationValidator';
+import { resolveBindings } from '@/features/bindings/domain/BindingResolver';
+import type { GenerationRequest } from '../api/GenerationClient';
+import { SearchSelectList, type ListItemAdapter } from '@/presentation/components/list';
 import { toast } from '@/presentation/components/toast';
 
 const SUPPORTED = ['pdfa', 'pdf', 'svg'] as const;
@@ -60,11 +56,16 @@ export const GenerationPage: React.FC = () => {
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<GenerationResult | null>(null);
+  const result = useStore(generationStore, (state) => state.result);
+  const phase = useStore(generationStore, (state) => state.phase);
+  const job = useStore(generationStore, (state) => state.job);
+  const jobError = useStore(generationStore, (state) => state.error);
+  useEffect(() => {
+    generationStore.resumeSaved();
+  }, []);
 
   useEffect(() => {
     void templateStore.loadAll(activeSchema?.id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSchema?.id]);
 
   useEffect(() => {
@@ -133,30 +134,28 @@ export const GenerationPage: React.FC = () => {
     [models, pickedIds],
   );
 
-  const canRun =
-    !!activeTemplate &&
-    !!activeTemplate.slides?.length &&
-    pickedModels.length > 0 &&
-    !busy;
-
   const blockingReasons = useMemo(() => {
-    const out: string[] = [];
-    if (!activeTemplate) out.push('Шаблон не выбран');
-    else if (!activeTemplate.slides?.length) out.push('Шаблон пуст');
-    if (pickedModels.length === 0) out.push('Выберите хотя бы одну модель');
-    if (packAs === 'single' && pickedModels.length > 1) {
-      out.push('Для «Один файл» нужна ровно одна модель');
-    }
-    return out;
-  }, [activeTemplate, pickedModels.length, packAs]);
+    if (!activeTemplate) return ['Template required'];
+    return validateGeneration({
+      schema: activeSchema,
+      bindings: activeTemplate.bindings.length
+        ? activeTemplate.bindings
+        : resolveBindings(activeTemplate.slides),
+      selectedModels: pickedModels,
+      format,
+      supportedFormats: [...SUPPORTED],
+    }).map((issue) => issue.message);
+  }, [activeTemplate, activeSchema, pickedModels, format]);
+  const canRun = blockingReasons.length === 0 && !busy && !phase.endsWith('running');
 
   const run = useCallback(async (): Promise<void> => {
     if (!canRun || !activeTemplate) return;
     setBusy(true);
     setError(null);
-    setResult(null);
 
     const req: GenerationRequest = {
+      templateId: activeTemplate.id,
+      schemaId: activeTemplate.schemaId ?? undefined,
       inlineSlides: activeTemplate.slides,
       items: pickedModels.map((m) => ({ inlineValues: m.values })),
       format,
@@ -165,9 +164,8 @@ export const GenerationPage: React.FC = () => {
     };
 
     try {
-      const r = await httpGenerationClient.generateSync(req);
-      setResult(r);
-      downloadBlob(r.blob, r.filename);
+      const r = await generationStore.run(req);
+      if (r) downloadBlob(r.blob, r.filename);
     } catch (e) {
       setError((e as Error).message);
       toast.error('Генерация не удалась', (e as Error).message);
@@ -192,8 +190,8 @@ export const GenerationPage: React.FC = () => {
       <main className="gen-main">
         <h2 className="gen-title">Генерация документов</h2>
         <p className="gen-subtitle">
-          Шаблон × модели данных → документы. Формат: <b>{format.toUpperCase()}</b>,
-          упаковка: <b>{packAs}</b>.
+          Шаблон × модели данных → документы. Формат: <b>{format.toUpperCase()}</b>, упаковка:{' '}
+          <b>{packAs}</b>.
         </p>
 
         {templatesLoading && <div className="schema-hint">Загрузка шаблонов…</div>}
@@ -213,12 +211,25 @@ export const GenerationPage: React.FC = () => {
 
         {blockingReasons.length > 0 && (
           <div className="gen-warning">
-            {blockingReasons.map((r, i) => <div key={i}>⚠ {r}</div>)}
+            {blockingReasons.map((r, i) => (
+              <div key={i}>⚠ {r}</div>
+            ))}
           </div>
         )}
 
-        {error && <div className="schema-error" style={{ marginTop: 12 }}>{error}</div>}
+        {error && (
+          <div className="schema-error" style={{ marginTop: 12 }}>
+            {error}
+          </div>
+        )}
 
+        {job && (
+          <div role="status">
+            {job.status}: {job.progress.completed} / {job.progress.total}{' '}
+            <button onClick={() => void generationStore.cancel()}>Cancel</button>
+          </div>
+        )}
+        {jobError && <div role="alert">{jobError}</div>}
         {result && (
           <div className="gen-status done" style={{ marginTop: 12 }}>
             Готово: {result.count} документ(ов), ошибок: {result.failed}.{' '}
@@ -231,7 +242,9 @@ export const GenerationPage: React.FC = () => {
         {!activeTemplate && (
           <p className="gen-empty" style={{ marginTop: 16 }}>
             Нет выбранного шаблона. Откройте{' '}
-            <Link to="/app" style={{ color: 'var(--accent)' }}>список проектов</Link>{' '}
+            <Link to="/app" style={{ color: 'var(--accent)' }}>
+              список проектов
+            </Link>{' '}
             или создайте документ в редакторе и сохраните.
           </p>
         )}
@@ -244,7 +257,9 @@ export const GenerationPage: React.FC = () => {
           value={activeTemplateId ?? ''}
           onChange={(e) => void templateStore.select(e.target.value || null)}
         >
-          <option value="" disabled>— выберите шаблон —</option>
+          <option value="" disabled>
+            — выберите шаблон —
+          </option>
           {templates.map((t) => (
             <option key={t.id} value={t.id}>
               {t.name} ({t.slideCount} слайд.)
@@ -264,17 +279,14 @@ export const GenerationPage: React.FC = () => {
           searchPlaceholder="Поиск по названию модели…"
           emptyText={
             <span>
-              Моделей нет. Создайте в{' '}
-              <Link to="/app/data-models">Данные</Link>.
+              Моделей нет. Создайте в <Link to="/app/data-models">Данные</Link>.
             </span>
           }
           maxHeight={300}
           minHeight={160}
         />
 
-        {saveStatus === 'saving' && (
-          <div className="schema-hint">💾 сохранение модели…</div>
-        )}
+        {saveStatus === 'saving' && <div className="schema-hint">💾 сохранение модели…</div>}
 
         <h3 className="gen-section-title">Параметры</h3>
 

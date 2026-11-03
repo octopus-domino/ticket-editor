@@ -16,7 +16,11 @@ export interface BulkAction<T> {
   readonly disabled?: boolean;
   readonly confirm?:
     | string
-    | { readonly title: string; readonly description?: string };
+    | { readonly title: string; readonly description?: string }
+    | ((ids: readonly string[]) => {
+        readonly title: string;
+        readonly description?: string;
+      });
   readonly onRun: (
     selectedIds: readonly string[],
     selectedItems: readonly T[],

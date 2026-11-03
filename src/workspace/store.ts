@@ -33,6 +33,18 @@ function writeExpanded(ids: string[]): void {
 }
 
 export class WorkspaceStore extends SimpleStore<WorkspaceState> {
+  private revision = 0;
+  reset(): void {
+    this.revision++;
+    this.setState({
+      tree: [],
+      activeFolderId: null,
+      expandedFolders: [],
+      loading: false,
+      error: null,
+    });
+  }
+
   constructor() {
     super({
       tree: [],
@@ -54,9 +66,7 @@ export class WorkspaceStore extends SimpleStore<WorkspaceState> {
   toggleFolder(id: string) {
     this.setState((s) => {
       const has = s.expandedFolders.includes(id);
-      const next = has
-        ? s.expandedFolders.filter((x) => x !== id)
-        : [...s.expandedFolders, id];
+      const next = has ? s.expandedFolders.filter((x) => x !== id) : [...s.expandedFolders, id];
       writeExpanded(next);
       return { ...s, expandedFolders: next };
     });
@@ -85,11 +95,14 @@ export class WorkspaceStore extends SimpleStore<WorkspaceState> {
   }
 
   async refresh(): Promise<void> {
+    const revision = ++this.revision;
     this.setState((s) => ({ ...s, loading: true, error: null }));
     try {
       const tree = await workspaceApi.tree();
+      if (revision !== this.revision) return;
       this.setState((s) => ({ ...s, tree, loading: false, error: null }));
     } catch (e) {
+      if (revision !== this.revision) return;
       this.setState((s) => ({ ...s, loading: false, error: (e as Error).message }));
     }
   }

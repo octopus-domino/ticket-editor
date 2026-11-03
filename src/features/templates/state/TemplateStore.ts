@@ -1,11 +1,7 @@
 import { SimpleStore } from '@/shared/store/store';
 import type { TemplateRepository } from '../api/TemplateRepository';
 import { httpTemplateRepository } from '../api/HttpTemplateRepository';
-import type {
-  SaveTemplateInput,
-  Template,
-  TemplateSummary,
-} from '../domain/Template';
+import type { SaveTemplateInput, Template, TemplateSummary } from '../domain/Template';
 
 export interface TemplateState {
   readonly items: TemplateSummary[];
@@ -26,6 +22,9 @@ const INITIAL: TemplateState = {
 };
 
 export class TemplateStore extends SimpleStore<TemplateState> {
+  private revision = 0;
+  private sessionRevision = 0;
+  private loadRevision = 0;
 
   private readonly repo: TemplateRepository;
 
@@ -35,15 +34,14 @@ export class TemplateStore extends SimpleStore<TemplateState> {
   }
 
   async loadAll(schemaId?: string): Promise<void> {
+    const revision = ++this.loadRevision;
     this.setState((s) => ({ ...s, loading: true, error: null }));
     try {
       const items = await this.repo.list(schemaId);
+      if (revision !== this.loadRevision) return;
       const prevActiveId = this.getState().activeId;
-      const activeStillExists = prevActiveId !== null
-        && items.some((it) => it.id === prevActiveId);
-      const nextActiveId = activeStillExists
-        ? prevActiveId
-        : (items[0]?.id ?? null);
+      const activeStillExists = prevActiveId !== null && items.some((it) => it.id === prevActiveId);
+      const nextActiveId = activeStillExists ? prevActiveId : (items[0]?.id ?? null);
 
       this.setState((s) => ({
         ...s,
@@ -58,11 +56,17 @@ export class TemplateStore extends SimpleStore<TemplateState> {
         this.setState((s) => ({ ...s, active: null }));
       }
     } catch (e) {
-      this.setState((s) => ({ ...s, loading: false, error: (e as Error).message }));
+      if (revision !== this.loadRevision) return;
+      this.setState((s) => ({
+        ...s,
+        loading: false,
+        error: (e as Error).message,
+      }));
     }
   }
 
   async select(id: string | null): Promise<void> {
+    const revision = ++this.revision;
     if (id === null) {
       this.setState((s) => ({ ...s, activeId: null, active: null }));
       return;
@@ -70,16 +74,24 @@ export class TemplateStore extends SimpleStore<TemplateState> {
     this.setState((s) => ({ ...s, activeId: id }));
     try {
       const t = await this.repo.get(id);
+      if (revision !== this.revision) return;
       this.setState((s) => ({ ...s, active: t, error: null }));
     } catch (e) {
-      this.setState((s) => ({ ...s, active: null, error: (e as Error).message }));
+      if (revision !== this.revision) return;
+      this.setState((s) => ({
+        ...s,
+        active: null,
+        error: (e as Error).message,
+      }));
     }
   }
 
   async create(input: SaveTemplateInput): Promise<Template> {
+    const session = this.sessionRevision;
     this.setState((s) => ({ ...s, saving: true, error: null }));
     try {
       const created = await this.repo.create(input);
+      if (session !== this.sessionRevision) return created;
       const summary: TemplateSummary = {
         id: created.id,
         schemaId: created.schemaId,
@@ -96,15 +108,22 @@ export class TemplateStore extends SimpleStore<TemplateState> {
       }));
       return created;
     } catch (e) {
-      this.setState((s) => ({ ...s, saving: false, error: (e as Error).message }));
+      if (session !== this.sessionRevision) throw e;
+      this.setState((s) => ({
+        ...s,
+        saving: false,
+        error: (e as Error).message,
+      }));
       throw e;
     }
   }
 
   async update(id: string, input: SaveTemplateInput): Promise<Template> {
+    const session = this.sessionRevision;
     this.setState((s) => ({ ...s, saving: true, error: null }));
     try {
       const updated = await this.repo.update(id, input);
+      if (session !== this.sessionRevision) return updated;
       const summary: TemplateSummary = {
         id: updated.id,
         schemaId: updated.schemaId,
@@ -120,13 +139,20 @@ export class TemplateStore extends SimpleStore<TemplateState> {
       }));
       return updated;
     } catch (e) {
-      this.setState((s) => ({ ...s, saving: false, error: (e as Error).message }));
+      if (session !== this.sessionRevision) throw e;
+      this.setState((s) => ({
+        ...s,
+        saving: false,
+        error: (e as Error).message,
+      }));
       throw e;
     }
   }
 
   async rename(id: string, name: string): Promise<void> {
+    const session = this.sessionRevision;
     const updated = await this.repo.rename(id, name);
+    if (session !== this.sessionRevision) return;
     this.setState((s) => ({
       ...s,
       items: s.items.map((it) => (it.id === id ? { ...it, name: updated.name } : it)),
@@ -135,7 +161,9 @@ export class TemplateStore extends SimpleStore<TemplateState> {
   }
 
   async delete(id: string): Promise<void> {
+    const session = this.sessionRevision;
     await this.repo.delete(id);
+    if (session !== this.sessionRevision) return;
     this.setState((s) => {
       const items = s.items.filter((it) => it.id !== id);
       const wasActive = s.activeId === id;
@@ -146,6 +174,12 @@ export class TemplateStore extends SimpleStore<TemplateState> {
         active: wasActive ? null : s.active,
       };
     });
+  }
+  reset(): void {
+    this.sessionRevision++;
+    this.revision++;
+    this.loadRevision++;
+    this.setState({ ...INITIAL });
   }
 }
 

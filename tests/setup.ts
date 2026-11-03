@@ -1,6 +1,7 @@
 /* Минимальный setup для jsdom: не тянем реальные Konva/DOM-зависимости. */
 import { vi } from 'vitest';
 import '@testing-library/jest-dom/vitest';
+Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
 // jsdom не реализует ResizeObserver — заглушим.
 class ResizeObserverStub {
@@ -19,8 +20,12 @@ if (typeof window !== 'undefined' && !window.localStorage) {
   const store = new Map<string, string>();
   const stub = {
     getItem: (k: string) => store.get(k) ?? null,
-    setItem: (k: string, v: string) => { store.set(k, v); },
-    removeItem: (k: string) => { store.delete(k); },
+    setItem: (k: string, v: string) => {
+      store.set(k, v);
+    },
+    removeItem: (k: string) => {
+      store.delete(k);
+    },
     clear: () => store.clear(),
     key: () => null,
     length: 0,

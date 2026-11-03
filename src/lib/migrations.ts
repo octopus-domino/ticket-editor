@@ -1,6 +1,7 @@
 ﻿// src/lib/migrations.ts
 import { DocumentSchema } from '@/shared/schemas';
 import type { Slide, DataRoot } from '@/shared/types';
+import type { DocumentBinding } from '@/shared/types/document';
 
 export const CURRENT_VERSION = '2.0';
 
@@ -8,6 +9,7 @@ export interface MigratedDocument {
   slides: Slide[];
   data: DataRoot[];
   activeSlideId?: string;
+  bindings: DocumentBinding[];
 }
 
 /**
@@ -30,7 +32,10 @@ export function fixGroupBoundsInPlace(elements: any[]): void {
         continue;
       }
 
-      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      let minX = Infinity,
+        minY = Infinity,
+        maxX = -Infinity,
+        maxY = -Infinity;
       for (const cid of el.children) {
         const child = byId.get(cid);
         if (!child) continue;
@@ -170,5 +175,6 @@ export function migrateDocument(raw: unknown): MigratedDocument {
     slides: result.data.slides as unknown as Slide[],
     data: result.data.data as unknown as DataRoot[],
     activeSlideId: result.data.activeSlideId,
+    bindings: result.data.bindings,
   };
 }

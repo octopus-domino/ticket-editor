@@ -1,7 +1,7 @@
 import type { Slide } from '@/shared/types';
 import type { Binding } from './Binding';
 
-const PH_RE = /\{\{\s*([\w.\[\]]+)\s*\}\}/g;
+const PH_RE = /\{\{\s*([\w.[\]]+)\s*\}\}/g;
 const ARRAY_PH_RE = /\{\{\s*([\w.]+)\[\d+\]/g;
 
 /**
@@ -13,7 +13,10 @@ const ARRAY_PH_RE = /\{\{\s*([\w.]+)\[\d+\]/g;
  *  - ImageElement.src              — каждое {{...}}
  *  - TableElement.data[i][j]       — по базе массива из {{base[N].field}}
  */
-export function resolveBindings(slides: readonly Slide[]): Binding[] {
+export function resolveBindings(
+  slides: readonly Slide[],
+  overrides: readonly Binding[] = [],
+): Binding[] {
   const out = new Map<string, Binding>();
 
   const add = (
@@ -36,11 +39,7 @@ export function resolveBindings(slides: readonly Slide[]): Binding[] {
     });
   };
 
-  const scanSources = (
-    elementId: string,
-    label: string,
-    sources: (string | undefined)[],
-  ): void => {
+  const scanSources = (elementId: string, label: string, sources: (string | undefined)[]): void => {
     for (const source of sources) {
       if (typeof source !== 'string' || !source) continue;
       PH_RE.lastIndex = 0;
@@ -100,5 +99,23 @@ export function resolveBindings(slides: readonly Slide[]): Binding[] {
       }
     }
   }
-  return Array.from(out.values());
+  for (const binding of overrides) {
+    const key = `${binding.elementId}|${binding.placeholder}`;
+    if (out.has(key)) out.set(key, binding);
+  }
+  const elements = new Map(
+    slides.flatMap((slide) => slide.elements.map((element) => [element.id, element] as const)),
+  );
+  return Array.from(out.values()).map((binding) => {
+    const element = elements.get(binding.elementId);
+    const expectedType =
+      element?.type === 'image'
+        ? 'image'
+        : element?.type === 'table'
+          ? 'array'
+          : element?.type === 'placeholder'
+            ? element.fieldType
+            : 'string';
+    return { ...binding, expectedType };
+  });
 }

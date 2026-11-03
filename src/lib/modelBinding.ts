@@ -5,8 +5,8 @@ import { getByPath } from '@/lib/path';
 
 export { getByPath };
 
-/** ВАЖНО: [\w.\[\]] — поддерживает array-index: {{event.items[0].code}}. */
-const PH_RE = /\{\{\s*([\w.\[\]]+)\s*\}\}/g;
+/** ВАЖНО: [\w.[\]] — поддерживает array-index: {{event.items[0].code}}. */
+const PH_RE = /\{\{\s*([\w.[\]]+)\s*\}\}/g;
 
 export function resolveWithValues(
   text: string | undefined,
@@ -44,17 +44,21 @@ export function appendPlaceholderPatch(
   if (el.type === 'footer') {
     const raw = (el as { text?: string }).text ?? '';
     if (isEmptyText(raw)) return { text: token };
-    const isTop = opts?.localY !== undefined
-      && opts.localY < ((el as { height?: number }).height ?? 0) / 2;
-    return { text: isTop ? `${token} ${raw}` : `${raw}${raw.endsWith(' ') ? '' : ' '}${token}` };
+    const isTop =
+      opts?.localY !== undefined && opts.localY < ((el as { height?: number }).height ?? 0) / 2;
+    return {
+      text: isTop ? `${token} ${raw}` : `${raw}${raw.endsWith(' ') ? '' : ' '}${token}`,
+    };
   }
 
   if (el.type === 'shape') {
     const raw = (el as { text?: string }).text ?? '';
     if (isEmptyText(raw)) return { text: token };
-    const isTop = opts?.localY !== undefined
-      && opts.localY < ((el as { height?: number }).height ?? 0) / 2;
-    return { text: isTop ? `${token} ${raw}` : `${raw}${raw.endsWith(' ') ? '' : ' '}${token}` };
+    const isTop =
+      opts?.localY !== undefined && opts.localY < ((el as { height?: number }).height ?? 0) / 2;
+    return {
+      text: isTop ? `${token} ${raw}` : `${raw}${raw.endsWith(' ') ? '' : ' '}${token}`,
+    };
   }
 
   // Text
@@ -64,7 +68,9 @@ export function appendPlaceholderPatch(
 
   if (hasRealHtml) {
     const htmlIndex = findBlockInsertIndex(
-      rawHtml, opts?.localY ?? 0, (el as { height?: number }).height ?? 0,
+      rawHtml,
+      opts?.localY ?? 0,
+      (el as { height?: number }).height ?? 0,
     );
     const before = rawHtml.slice(0, htmlIndex);
     const after = rawHtml.slice(htmlIndex);
@@ -90,8 +96,11 @@ function findPlainInsertPos(
 ): number | null {
   if (localX === undefined || localY === undefined) return null;
 
-  const padding = (el as { padding?: { top: number; right: number; bottom: number; left: number } })
-    .padding ?? { top: 0, right: 0, bottom: 0, left: 0 };
+  const padding = (
+    el as {
+      padding?: { top: number; right: number; bottom: number; left: number };
+    }
+  ).padding ?? { top: 0, right: 0, bottom: 0, left: 0 };
   const width = (el as { width?: number }).width ?? 0;
   const innerWidth = Math.max(1, width - padding.left - padding.right);
 
@@ -101,8 +110,12 @@ function findPlainInsertPos(
 
   const run = {
     text,
-    bold: false, italic: false, underline: false, strike: false,
-    fontSize, fontFamily,
+    bold: false,
+    italic: false,
+    underline: false,
+    strike: false,
+    fontSize,
+    fontFamily,
   };
   const layout = layoutRuns([run] as never[], innerWidth, lineHeight);
   if (layout.lines.length === 0) return 0;

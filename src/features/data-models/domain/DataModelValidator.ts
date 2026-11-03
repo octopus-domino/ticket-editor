@@ -37,6 +37,17 @@ export function validateModel(
     if (f.required && (v === undefined || v === null || String(v).trim() === '')) {
       issues.push({ path: f.path, message: 'Обязательное поле не заполнено' });
     }
+    if (v !== undefined && v !== null && String(v).trim() !== '') {
+      const valid =
+        f.type === 'number'
+          ? Number.isFinite(Number(v))
+          : f.type === 'boolean'
+            ? typeof v === 'boolean' || v === 'true' || v === 'false'
+            : f.type === 'date'
+              ? /^\d{4}-\d{2}-\d{2}$/.test(String(v)) && !Number.isNaN(Date.parse(String(v)))
+              : typeof v === 'string';
+      if (!valid) issues.push({ path: f.path, message: `Неверный тип: ${f.type}` });
+    }
   }
 
   // 2. Элементы массивов
@@ -45,7 +56,11 @@ export function validateModel(
 
     const arr = getByPath(model.values, f.path);
     if (arr === undefined || arr === null) {
-      if (f.required) issues.push({ path: f.path, message: 'Обязательный массив не заполнен' });
+      if (f.required)
+        issues.push({
+          path: f.path,
+          message: 'Обязательный массив не заполнен',
+        });
       continue;
     }
     if (!Array.isArray(arr)) {
@@ -65,7 +80,10 @@ export function validateModel(
       for (const child of children) {
         if (!child.required) continue;
         const childName = child.path.slice(prefix.length);
-        const val = (item as Record<string, unknown>)[childName];
+        const val =
+          item && typeof item === 'object'
+            ? (item as Record<string, unknown>)[childName]
+            : undefined;
         if (val === undefined || val === null || String(val).trim() === '') {
           issues.push({
             path: `${f.path}[${idx}].${childName}`,
@@ -80,7 +98,5 @@ export function validateModel(
 }
 
 export function leafFieldsOf(schema: DataSchema): FieldDef[] {
-  return flattenFields(schema.fields).filter(
-    (f) => f.type !== 'object' && f.type !== 'array',
-  );
+  return flattenFields(schema.fields).filter((f) => f.type !== 'object' && f.type !== 'array');
 }

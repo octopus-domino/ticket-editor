@@ -1,5 +1,5 @@
 import type { DataField, DataRoot } from '@/shared/types';
-import type { DataSchema, FieldDef, FieldType } from './DataSchema';
+import type { FieldDef, FieldType } from './DataSchema';
 
 const PH_RE = /\{\{\s*([\w.]+)\s*\}\}/g;
 
@@ -80,7 +80,10 @@ export function flattenFields(fields: readonly FieldDef[]): FieldDef[] {
  * Из старого `document.data` (DataRoot[]) собирает плоскую схему `FieldDef[]`.
  * Arrays/objects разворачиваются рекурсивно: `event.items.name`, `event.items.price`.
  */
-export function schemaFromLegacyData(data: DataRoot[]): { name: string; fields: FieldDef[] } {
+export function schemaFromLegacyData(data: DataRoot[]): {
+  name: string;
+  fields: FieldDef[];
+} {
   const fields: FieldDef[] = [];
 
   const walk = (prefix: string, fs: readonly DataField[]): void => {
@@ -88,9 +91,16 @@ export function schemaFromLegacyData(data: DataRoot[]): { name: string; fields: 
       const path = prefix ? `${prefix}.${f.name}` : f.name;
       fields.push({
         path,
-        type: (f.type === 'string' || f.type === 'number' || f.type === 'date'
-          || f.type === 'boolean' || f.type === 'image' || f.type === 'object'
-          || f.type === 'array') ? f.type : 'string',
+        type:
+          f.type === 'string' ||
+          f.type === 'number' ||
+          f.type === 'date' ||
+          f.type === 'boolean' ||
+          f.type === 'image' ||
+          f.type === 'object' ||
+          f.type === 'array'
+            ? f.type
+            : 'string',
         required: false,
         label: f.name,
       });

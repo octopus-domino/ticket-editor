@@ -62,10 +62,7 @@ export const ModelsPage: React.FC = () => {
         onRun: async (ids) => {
           const toExport = models.filter((m) => ids.includes(m.id));
           if (toExport.length === 0) return;
-          modelIO.download(
-            toExport,
-            `${activeSchema?.name ?? 'models'}-models.json`,
-          );
+          modelIO.download(toExport, `${activeSchema?.name ?? 'models'}-models.json`);
           toast.success(`Экспортировано: ${toExport.length}`);
         },
       },
@@ -84,10 +81,7 @@ export const ModelsPage: React.FC = () => {
             toast.success(`Удалено: ${result.ok} ${plural(result.ok)}`);
           }
           if (result.failed.length > 0) {
-            toast.error(
-              `Не удалось удалить: ${result.failed.length}`,
-              result.failed[0].message,
-            );
+            toast.error(`Не удалось удалить: ${result.failed.length}`, result.failed[0].message);
           }
           setSelectedIds((prev) => {
             const next = new Set(prev);
@@ -110,9 +104,7 @@ export const ModelsPage: React.FC = () => {
   }, [activeSchema]);
 
   const importModels = useCallback(
-    async (
-      items: { name: string; values: Record<string, unknown> }[],
-    ): Promise<void> => {
+    async (items: { name: string; values: Record<string, unknown> }[]): Promise<void> => {
       if (!activeSchema) return;
       try {
         await modelStore.importMany(activeSchema.id, items);
@@ -161,7 +153,9 @@ export const ModelsPage: React.FC = () => {
             onChange={(e) => schemaStore.setActive(e.target.value)}
           >
             {schemas.map((s) => (
-              <option key={s.id} value={s.id}>{s.name}</option>
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
             ))}
           </select>
           <div className="dm-sidebar-actions">
@@ -182,7 +176,7 @@ export const ModelsPage: React.FC = () => {
           </div>
         </div>
 
-        {importerOpen && <JsonImporterPanel onImport={importModels} />}
+        {importerOpen && <JsonImporterPanel schemaId={activeSchema?.id} onImport={importModels} />}
         {loadError && (
           <div className="schema-error" role="alert">
             {loadError}
@@ -210,21 +204,15 @@ export const ModelsPage: React.FC = () => {
               <input
                 className="dm-editor-name"
                 value={activeModel.name}
-                onChange={(e) =>
-                  modelStore.patch(activeModel.id, { name: e.target.value })
-                }
+                onChange={(e) => modelStore.patch(activeModel.id, { name: e.target.value })}
               />
-              <span className={`dm-save-status dm-status-${saveStatus}`}>
-                {saveStatusText()}
-              </span>
+              <span className={`dm-save-status dm-status-${saveStatus}`}>{saveStatusText()}</span>
             </div>
             <ModelValuesEditor
               modelId={activeModel.id}
               schema={activeSchema}
               values={activeModel.values}
-              onChange={(values) =>
-                modelStore.patch(activeModel.id, { values })
-              }
+              onChange={(values) => modelStore.patch(activeModel.id, { values })}
             />
           </div>
         ) : (

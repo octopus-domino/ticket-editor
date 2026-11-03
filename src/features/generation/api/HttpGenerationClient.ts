@@ -1,13 +1,20 @@
 import { authFetch } from '@/shared/api/client';
 import type {
-  GenerationClient, GenerationRequest, GenerationResult, GenerationJobStatus,
+  GenerationClient,
+  GenerationRequest,
+  GenerationResult,
+  GenerationJobStatus,
 } from './GenerationClient';
 
 export class HttpGenerationClient implements GenerationClient {
   async generateSync(req: GenerationRequest): Promise<GenerationResult> {
     const res = await authFetch('/api/generate/sync', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        templateId: req.templateId,
+        schemaId: req.schemaId,
+        bindings: req.bindings,
         inlineSlides: req.inlineSlides,
         items: req.items,
         format: req.format,
@@ -25,10 +32,16 @@ export class HttpGenerationClient implements GenerationClient {
 
   async startJob(req: GenerationRequest): Promise<{ jobId: string; total: number }> {
     const res = await authFetch('/api/generate', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        inlineSlides: req.inlineSlides, items: req.items,
-        format: req.format, packAs: req.packAs,
+        templateId: req.templateId,
+        schemaId: req.schemaId,
+        bindings: req.bindings,
+        inlineSlides: req.inlineSlides,
+        items: req.items,
+        format: req.format,
+        packAs: req.packAs,
         filenamePattern: req.filenamePattern ?? 'document-{{name}}',
         options: req.options ?? {},
       }),
@@ -50,7 +63,9 @@ export class HttpGenerationClient implements GenerationClient {
   }
 
   async cancelJob(jobId: string): Promise<void> {
-    await authFetch(`/api/generate/${encodeURIComponent(jobId)}`, { method: 'DELETE' });
+    await authFetch(`/api/generate/${encodeURIComponent(jobId)}`, {
+      method: 'DELETE',
+    });
   }
 
   private async readResult(res: Response): Promise<GenerationResult> {
@@ -58,10 +73,21 @@ export class HttpGenerationClient implements GenerationClient {
     const m = /filename="([^"]+)"/.exec(disposition);
     return {
       blob: await res.blob(),
+      errors: this.readErrors(res.headers.get('X-Generation-Errors')),
       filename: m ? m[1] : 'documents.zip',
       count: Number(res.headers.get('X-Generation-Count') ?? 0),
       failed: Number(res.headers.get('X-Generation-Failed') ?? 0),
     };
+  }
+  private readErrors(encoded: string | null): { index: number; message: string }[] {
+    if (!encoded) return [];
+    try {
+      return JSON.parse(
+        new TextDecoder().decode(Uint8Array.from(atob(encoded), (char) => char.charCodeAt(0))),
+      );
+    } catch {
+      return [];
+    }
   }
 }
 

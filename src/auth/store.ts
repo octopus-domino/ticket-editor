@@ -1,6 +1,7 @@
 import { SimpleStore } from '@/shared/store/store';
 import type { User } from './types';
 import { authApi } from './api';
+import { configureHttpSession } from '@/shared/api/session';
 
 export interface AuthState {
   user: User | null;
@@ -23,11 +24,11 @@ const INITIAL: AuthState = {
  * На них bootstrap() сразу уходит в offline-режим, не делая запросов к /api.
  */
 const STATIC_HOST_PATTERNS: RegExp[] = [
-  /\.github\.io$/i,          // GitHub Pages
-  /\.gitlab\.io$/i,          // GitLab Pages
-  /\.netlify\.app$/i,        // Netlify
-  /\.vercel\.app$/i,         // Vercel
-  /\.surge\.sh$/i,           // Surge
+  /\.github\.io$/i, // GitHub Pages
+  /\.gitlab\.io$/i, // GitLab Pages
+  /\.netlify\.app$/i, // Netlify
+  /\.vercel\.app$/i, // Vercel
+  /\.surge\.sh$/i, // Surge
 ];
 
 function isStaticHost(): boolean {
@@ -42,20 +43,35 @@ export class AuthStore extends SimpleStore<AuthState> {
   }
 
   setSession(accessToken: string, user: User): void {
-    this.setState({ user, accessToken, booting: false, error: null, offline: false });
+    this.setState({
+      user,
+      accessToken,
+      booting: false,
+      error: null,
+      offline: false,
+    });
   }
 
   clear(): void {
-    this.setState({ user: null, accessToken: null, booting: false, error: null, offline: false });
+    this.setState({
+      user: null,
+      accessToken: null,
+      booting: false,
+      error: null,
+      offline: false,
+    });
   }
 
   async bootstrap(): Promise<void> {
     // Хостинг статики (GH Pages и т.п.) — бэкенда нет by design.
     // Не стучимся в /api, сразу локальный режим.
     if (isStaticHost()) {
-      console.info('[bootstrap] static host detected, skipping API — offline mode');
       this.setState({
-        user: { id: 'offline', email: 'offline@local', name: 'Локальный режим' },
+        user: {
+          id: 'offline',
+          email: 'offline@local',
+          name: 'Локальный режим',
+        },
         accessToken: null,
         booting: false,
         error: null,
@@ -82,7 +98,11 @@ export class AuthStore extends SimpleStore<AuthState> {
       if (isNetworkError || isMissingApi) {
         console.warn('[bootstrap] backend unavailable, switching to offline mode:', e);
         this.setState({
-          user: { id: 'offline', email: 'offline@local', name: 'Локальный режим' },
+          user: {
+            id: 'offline',
+            email: 'offline@local',
+            name: 'Локальный режим',
+          },
           accessToken: null,
           booting: false,
           error: null,
@@ -123,6 +143,22 @@ export class AuthStore extends SimpleStore<AuthState> {
 }
 
 export const authStore = new AuthStore();
+configureHttpSession({
+  token: () => authStore.getState().accessToken,
+  clear: () => authStore.clear(),
+  refresh: async () => {
+    const previous = authStore.getState();
+    try {
+      const session = await authApi.refresh();
+      if (authStore.getState() !== previous) return authStore.getState().accessToken !== null;
+      if (!session) return false;
+      authStore.setSession(session.accessToken, session.user);
+      return true;
+    } catch {
+      return false;
+    }
+  },
+});
 export const useAuthStore = {
   getState: () => authStore.getState(),
   subscribe: authStore.subscribe,

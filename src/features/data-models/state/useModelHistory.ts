@@ -1,86 +1,74 @@
-import { useCallback, useEffect, useReducer, useRef } from 'react';
+import { useCallback, useReducer, useRef } from 'react';
 
 interface Entry {
   values: Record<string, unknown>;
   mergeKey?: string;
   timestamp: number;
 }
-
-const MAX_HISTORY = 30;
-const MERGE_TIMEOUT_MS = 600;
-
+interface History {
+  entries: Entry[];
+  index: number;
+}
 export interface ModelHistoryApi {
   readonly canUndo: boolean;
   readonly canRedo: boolean;
-  /** Записать новое состояние. mergeKey — склеивает быстрые изменения одного поля. */
-  push: (values: Record<string, unknown>, mergeKey?: string) => void;
-  /** Вернуть предыдущее состояние (или null). */
-  undo: () => Record<string, unknown> | null;
-  /** Вернуть следующее состояние (или null). */
-  redo: () => Record<string, unknown> | null;
+  push(values: Record<string, unknown>, mergeKey?: string): void;
+  undo(): Record<string, unknown> | null;
+  redo(): Record<string, unknown> | null;
 }
 
-/**
- * Микро-история правок одной модели данных.
- * Живёт в памяти компонента: смена modelId → сброс.
- * Автоматически склеивает правки одного и того же поля (mergeKey = path).
- */
+/** Each model keeps its own bounded history while this editor is mounted. */
 export function useModelHistory(
   modelId: string,
   initialValues: Record<string, unknown>,
 ): ModelHistoryApi {
-  const entriesRef = useRef<Entry[]>([
-    { values: initialValues, timestamp: Date.now() },
-  ]);
-  const indexRef = useRef(0);
-  const [, forceUpdate] = useReducer((x: number) => x + 1, 0);
-
-  // Смена модели — сброс истории
-  useEffect(() => {
-    entriesRef.current = [{ values: initialValues, timestamp: Date.now() }];
-    indexRef.current = 0;
-    forceUpdate();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [modelId]);
-
-  const push = useCallback((values: Record<string, unknown>, mergeKey?: string) => {
-    const now = Date.now();
-    const entries = entriesRef.current;
-    const idx = indexRef.current;
-    const last = entries[idx];
-
-    // Merge по ключу: если пользователь быстро печатает в том же поле
-    if (mergeKey && last?.mergeKey === mergeKey && now - last.timestamp < MERGE_TIMEOUT_MS) {
-      entries[idx] = { values, mergeKey, timestamp: now };
-      forceUpdate();
-      return;
-    }
-
-    const next = entries.slice(0, idx + 1);
-    next.push({ values, mergeKey, timestamp: now });
-    while (next.length > MAX_HISTORY) next.shift();
-    entriesRef.current = next;
-    indexRef.current = next.length - 1;
-    forceUpdate();
-  }, []);
-
-  const undo = useCallback((): Record<string, unknown> | null => {
-    if (indexRef.current <= 0) return null;
-    indexRef.current -= 1;
-    forceUpdate();
-    return entriesRef.current[indexRef.current].values;
-  }, []);
-
-  const redo = useCallback((): Record<string, unknown> | null => {
-    if (indexRef.current >= entriesRef.current.length - 1) return null;
-    indexRef.current += 1;
-    forceUpdate();
-    return entriesRef.current[indexRef.current].values;
-  }, []);
-
+  const histories = useRef(new Map<string, History>());
+  if (!histories.current.has(modelId)) {
+    if (histories.current.size >= 30)
+      histories.current.delete(histories.current.keys().next().value!);
+    histories.current.set(modelId, {
+      entries: [{ values: initialValues, timestamp: Date.now() }],
+      index: 0,
+    });
+  }
+  const history = histories.current.get(modelId)!;
+  const [, render] = useReducer((value: number) => value + 1, 0);
+  const push = useCallback(
+    (values: Record<string, unknown>, mergeKey?: string) => {
+      const now = Date.now(),
+        last = history.entries[history.index];
+      if (
+        history.index === history.entries.length - 1 &&
+        mergeKey &&
+        last.mergeKey === mergeKey &&
+        now - last.timestamp < 600
+      ) {
+        history.entries[history.index] = { values, mergeKey, timestamp: now };
+      } else {
+        history.entries = history.entries.slice(0, history.index + 1);
+        history.entries.push({ values, mergeKey, timestamp: now });
+        if (history.entries.length > 30) history.entries.shift();
+        history.index = history.entries.length - 1;
+      }
+      render();
+    },
+    [history],
+  );
+  const undo = useCallback(() => {
+    if (!history.index) return null;
+    history.index--;
+    render();
+    return history.entries[history.index].values;
+  }, [history]);
+  const redo = useCallback(() => {
+    if (history.index >= history.entries.length - 1) return null;
+    history.index++;
+    render();
+    return history.entries[history.index].values;
+  }, [history]);
   return {
-    canUndo: indexRef.current > 0,
-    canRedo: indexRef.current < entriesRef.current.length - 1,
+    canUndo: history.index > 0,
+    canRedo: history.index < history.entries.length - 1,
     push,
     undo,
     redo,

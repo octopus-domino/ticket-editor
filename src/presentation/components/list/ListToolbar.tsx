@@ -34,7 +34,7 @@ export interface ListToolbarProps<T> {
   readonly searchQuery: string;
   readonly onSearchChange: (v: string) => void;
   readonly searchPlaceholder: string;
-  readonly searchRef?: React.RefObject<HTMLInputElement | null>;
+  readonly searchRef?: React.RefObject<HTMLInputElement>;
 
   readonly visibleCount: number;
   readonly totalCount: number;
@@ -66,8 +66,7 @@ export function ListToolbar<T>({
   onRunBulk,
   bulkBusy,
 }: ListToolbarProps<T>): React.ReactElement {
-  const showFilteredHint =
-    searchQuery.trim().length > 0 && visibleCount !== totalCount;
+  const showFilteredHint = searchQuery.trim().length > 0 && visibleCount !== totalCount;
 
   return (
     <div className="ssl-toolbar">
@@ -77,19 +76,15 @@ export function ListToolbar<T>({
             checked={allVisibleSelected}
             indeterminate={someVisibleSelected}
             onChange={onToggleAll}
-            title={
-              allVisibleSelected
-                ? 'Снять выбор со всех'
-                : 'Выбрать всех в списке'
-            }
+            title={allVisibleSelected ? 'Снять выбор со всех' : 'Выбрать всех в списке'}
           />
-          <span>
-            {selectedCount > 0 ? `Выбрано: ${selectedCount}` : 'Выбрать все'}
-          </span>
+          <span>{selectedCount > 0 ? `Выбрано: ${selectedCount}` : 'Выбрать все'}</span>
         </label>
 
         <div className="ssl-search">
-          <span className="ssl-search-icon" aria-hidden>🔍</span>
+          <span className="ssl-search-icon" aria-hidden>
+            🔍
+          </span>
           <input
             ref={searchRef}
             type="text"

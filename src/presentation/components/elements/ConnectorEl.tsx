@@ -4,7 +4,10 @@ import type { ConnectorElement, CanvasElement } from '@/shared/types';
 import type { CommonProps } from './types';
 import { STAMP_DASH_MAP } from '@/lib/stamps/render';
 import {
-  routeConnector, midpointOfPath, resolveConnectorEnds, findNearestAnchor,
+  routeConnector,
+  midpointOfPath,
+  resolveConnectorEnds,
+  findNearestAnchor,
 } from '@/lib/connectors';
 import { dragLiveStore } from '../../stores/DragLiveStore';
 
@@ -15,31 +18,40 @@ interface Props extends CommonProps<ConnectorElement> {
 }
 
 export const ConnectorEl: React.FC<Props> = ({
-  el, elements, onSelect, onContextMenu, isSelected, onUpdate,
+  el,
+  elements,
+  onSelect,
+  onContextMenu,
+  isSelected,
+  onUpdate,
 }) => {
-  useSyncExternalStore(
-    dragLiveStore.subscribe,
-    () => {
-      const a = dragLiveStore.get(el.fromId);
-      const b = dragLiveStore.get(el.toId);
-      if (!a && !b) return '';
-      return `${a?.x ?? ''},${a?.y ?? ''}|${b?.x ?? ''},${b?.y ?? ''}`;
-    },
-  );
+  useSyncExternalStore(dragLiveStore.subscribe, () => {
+    const a = dragLiveStore.get(el.fromId);
+    const b = dragLiveStore.get(el.toId);
+    if (!a && !b) return '';
+    return `${a?.x ?? ''},${a?.y ?? ''}|${b?.x ?? ''},${b?.y ?? ''}`;
+  });
 
-  const { from, to } = useMemo(
-    () => resolveConnectorEnds(el, elements),
-    [el.fromId, el.toId, elements],
-  );
+  const { from, to } = useMemo(() => resolveConnectorEnds(el, elements), [el, elements]);
 
   const obstacles = useMemo(
-    () => elements.filter((e) =>
-      e.type !== 'connector' && e.type !== 'fill' && e.type !== 'line' && e.type !== 'group' && !e.locked
-    ),
+    () =>
+      elements.filter(
+        (e) =>
+          e.type !== 'connector' &&
+          e.type !== 'fill' &&
+          e.type !== 'line' &&
+          e.type !== 'group' &&
+          !e.locked,
+      ),
     [elements],
   );
 
-  const [dragState, setDragState] = useState<{ endpoint: 'from' | 'to'; x: number; y: number } | null>(null);
+  const [dragState, setDragState] = useState<{
+    endpoint: 'from' | 'to';
+    x: number;
+    y: number;
+  } | null>(null);
 
   const liveFrom = dragLiveStore.get(el.fromId);
   const liveTo = dragLiveStore.get(el.toId);
@@ -47,45 +59,42 @@ export const ConnectorEl: React.FC<Props> = ({
   const fromEff = liveFrom && from ? { ...from, ...liveFrom } : from;
   const toEff = liveTo && to ? { ...to, ...liveTo } : to;
 
-  const fromX = fromEff?.x;
-  const fromY = fromEff?.y;
-  const fromW = fromEff?.width;
-  const fromH = fromEff?.height;
-
-  const toX = toEff?.x;
-  const toY = toEff?.y;
-  const toW = toEff?.width;
-  const toH = toEff?.height;
-
-  const points = useMemo(() => {
+  const points = (() => {
     if (!fromEff || !toEff) return null;
 
     let pts = routeConnector(fromEff, el.fromAnchor, toEff, el.toAnchor, el.routing, obstacles);
     if (dragState) {
       pts = [...pts];
-      if (dragState.endpoint === 'from') { pts[0] = dragState.x; pts[1] = dragState.y; }
-      else { pts[pts.length - 2] = dragState.x; pts[pts.length - 1] = dragState.y; }
+      if (dragState.endpoint === 'from') {
+        pts[0] = dragState.x;
+        pts[1] = dragState.y;
+      } else {
+        pts[pts.length - 2] = dragState.x;
+        pts[pts.length - 1] = dragState.y;
+      }
     }
     return pts;
-  }, [
-    fromX, fromY, fromW, fromH,
-    toX, toY, toW, toH,
-    el.routing, el.fromAnchor, el.toAnchor, obstacles, dragState,
-  ]);
+  })();
 
   const arrowHead = useMemo(() => {
     if (!el.isArrow || !points) return null;
     const n = points.length;
-    const x2 = points[n - 2], y2 = points[n - 1];
+    const x2 = points[n - 2],
+      y2 = points[n - 1];
     let i = n - 4;
     while (i > 0 && Math.hypot(x2 - points[i], y2 - points[i + 1]) < 2) i -= 2;
-    const x1 = points[i], y1 = points[i + 1];
+    const x1 = points[i],
+      y1 = points[i + 1];
     const angle = Math.atan2(y2 - y1, x2 - x1);
-    const len = 14, spread = 0.4;
+    const len = 14,
+      spread = 0.4;
     return [
-      x2 + len * Math.cos(angle + Math.PI - spread), y2 + len * Math.sin(angle + Math.PI - spread),
-      x2, y2,
-      x2 + len * Math.cos(angle + Math.PI + spread), y2 + len * Math.sin(angle + Math.PI + spread),
+      x2 + len * Math.cos(angle + Math.PI - spread),
+      y2 + len * Math.sin(angle + Math.PI - spread),
+      x2,
+      y2,
+      x2 + len * Math.cos(angle + Math.PI + spread),
+      y2 + len * Math.sin(angle + Math.PI + spread),
     ];
   }, [el.isArrow, points]);
 
@@ -98,8 +107,10 @@ export const ConnectorEl: React.FC<Props> = ({
   if (!points || !fromEff || !toEff) return null;
 
   const dashArr = STAMP_DASH_MAP[el.dash];
-  const startX = points[0], startY = points[1];
-  const endX = points[points.length - 2], endY = points[points.length - 1];
+  const startX = points[0],
+    startY = points[1];
+  const endX = points[points.length - 2],
+    endY = points[points.length - 1];
 
   const handleDragMove = (endpoint: 'from' | 'to', e: any) => {
     setDragState({ endpoint, x: e.target.x(), y: e.target.y() });
@@ -109,13 +120,24 @@ export const ConnectorEl: React.FC<Props> = ({
     const stage = e.target.getStage();
     if (!stage) return;
     const pointer = stage.getPointerPosition();
-    if (!pointer) { setDragState(null); return; }
+    if (!pointer) {
+      setDragState(null);
+      return;
+    }
     const transform = stage.getAbsoluteTransform().copy().invert();
     const pos = transform.point(pointer);
-    const wx = pos.x, wy = pos.y;
+    const wx = pos.x,
+      wy = pos.y;
     const targetEl = elements.find(
-      (e) => e.id !== (endpoint === 'from' ? el.toId : el.fromId) && e.type !== 'connector' && e.type !== 'group' && !e.locked &&
-      wx >= e.x && wx <= e.x + e.width && wy >= e.y && wy <= e.y + e.height
+      (e) =>
+        e.id !== (endpoint === 'from' ? el.toId : el.fromId) &&
+        e.type !== 'connector' &&
+        e.type !== 'group' &&
+        !e.locked &&
+        wx >= e.x &&
+        wx <= e.x + e.width &&
+        wy >= e.y &&
+        wy <= e.y + e.height,
     );
     if (targetEl) {
       const nearest = findNearestAnchor(targetEl, wx, wy);
@@ -128,21 +150,92 @@ export const ConnectorEl: React.FC<Props> = ({
   };
 
   return (
-    <Group id={el.id} name="element" onMouseDown={(e) => { e.cancelBubble = true; onSelect(e); }} onContextMenu={onContextMenu}>
-      <Line points={points} stroke="rgba(0,0,0,0.001)" strokeWidth={20} lineCap="round" lineJoin="round" listening />
-      <Line points={points} stroke={el.stroke} strokeWidth={el.strokeWidth} dash={dashArr} lineCap="round" lineJoin="round" listening={false} perfectDrawEnabled={false} strokeScaleEnabled={false} />
-      {arrowHead && <Line points={arrowHead} stroke={el.stroke} strokeWidth={el.strokeWidth} lineCap="round" lineJoin="round" listening={false} perfectDrawEnabled={false} strokeScaleEnabled={false} />}
+    <Group
+      id={el.id}
+      name="element"
+      onMouseDown={(e) => {
+        e.cancelBubble = true;
+        onSelect(e);
+      }}
+      onContextMenu={onContextMenu}
+    >
+      <Line
+        points={points}
+        stroke="rgba(0,0,0,0.001)"
+        strokeWidth={20}
+        lineCap="round"
+        lineJoin="round"
+        listening
+      />
+      <Line
+        points={points}
+        stroke={el.stroke}
+        strokeWidth={el.strokeWidth}
+        dash={dashArr}
+        lineCap="round"
+        lineJoin="round"
+        listening={false}
+        perfectDrawEnabled={false}
+        strokeScaleEnabled={false}
+      />
+      {arrowHead && (
+        <Line
+          points={arrowHead}
+          stroke={el.stroke}
+          strokeWidth={el.strokeWidth}
+          lineCap="round"
+          lineJoin="round"
+          listening={false}
+          perfectDrawEnabled={false}
+          strokeScaleEnabled={false}
+        />
+      )}
       {labelPos && el.label && (
-        <KonvaText x={labelPos.x} y={labelPos.y} text={el.label} fontSize={el.labelFontSize || 12} fontFamily="Arial" fill={el.labelFill || el.stroke} offsetX={el.label.length * (el.labelFontSize || 12) * 0.3} offsetY={(el.labelFontSize || 12) / 2} listening={false} perfectDrawEnabled={false} />
+        <KonvaText
+          x={labelPos.x}
+          y={labelPos.y}
+          text={el.label}
+          fontSize={el.labelFontSize || 12}
+          fontFamily="Arial"
+          fill={el.labelFill || el.stroke}
+          offsetX={el.label.length * (el.labelFontSize || 12) * 0.3}
+          offsetY={(el.labelFontSize || 12) / 2}
+          listening={false}
+          perfectDrawEnabled={false}
+        />
       )}
       {isSelected && (
         <>
-          <Circle x={startX} y={startY} radius={8} fill="#fbbf24" stroke="#f59e0b" strokeWidth={2} draggable
-            onMouseDown={(e) => { e.cancelBubble = true; }}
-            onDragStart={(e) => handleDragMove('from', e)} onDragMove={(e) => handleDragMove('from', e)} onDragEnd={(e) => handleDragEnd('from', e)} />
-          <Circle x={endX} y={endY} radius={8} fill="#fbbf24" stroke="#f59e0b" strokeWidth={2} draggable
-            onMouseDown={(e) => { e.cancelBubble = true; }}
-            onDragStart={(e) => handleDragMove('to', e)} onDragMove={(e) => handleDragMove('to', e)} onDragEnd={(e) => handleDragEnd('to', e)} />
+          <Circle
+            x={startX}
+            y={startY}
+            radius={8}
+            fill="#fbbf24"
+            stroke="#f59e0b"
+            strokeWidth={2}
+            draggable
+            onMouseDown={(e) => {
+              e.cancelBubble = true;
+            }}
+            onDragStart={(e) => handleDragMove('from', e)}
+            onDragMove={(e) => handleDragMove('from', e)}
+            onDragEnd={(e) => handleDragEnd('from', e)}
+          />
+          <Circle
+            x={endX}
+            y={endY}
+            radius={8}
+            fill="#fbbf24"
+            stroke="#f59e0b"
+            strokeWidth={2}
+            draggable
+            onMouseDown={(e) => {
+              e.cancelBubble = true;
+            }}
+            onDragStart={(e) => handleDragMove('to', e)}
+            onDragMove={(e) => handleDragMove('to', e)}
+            onDragEnd={(e) => handleDragEnd('to', e)}
+          />
         </>
       )}
     </Group>

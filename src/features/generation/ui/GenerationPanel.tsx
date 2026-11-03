@@ -11,11 +11,7 @@ import type { DataModel } from '@/features/data-models/domain/DataModel';
 import { resolveBindings } from '@/features/bindings/domain/BindingResolver';
 import { validateGeneration } from '../domain/GenerationValidator';
 import { generationStore } from '../state/GenerationStore';
-import { materializeSlide } from './materializeSlide';
-import {
-  SearchSelectList,
-  type ListItemAdapter,
-} from '@/presentation/components/list';
+import { SearchSelectList, type ListItemAdapter } from '@/presentation/components/list';
 import { toast } from '@/presentation/components/toast';
 
 const SUPPORTED = ['pdfa', 'pdf', 'svg'] as const;
@@ -95,37 +91,36 @@ export const GenerationPanel: React.FC = () => {
       setPickedIds(new Set([first]));
       modelStore.select(first);
     }
-  }, [packAs]);
+  }, [packAs, pickedIds]);
 
   const validationIssues = useMemo(
     () =>
       activeSchema
         ? validateGeneration({
             schema: activeSchema,
-            bindings: resolveBindings(slides),
+            bindings: resolveBindings(slides, docStore.getState().bindings),
             selectedModels:
-              pickedModels.length > 0
-                ? pickedModels
-                : activeModel
-                  ? [activeModel]
-                  : [],
+              pickedModels.length > 0 ? pickedModels : activeModel ? [activeModel] : [],
             format,
             supportedFormats: [...SUPPORTED],
           })
         : [],
-    [activeSchema, slides, pickedModels, activeModel, format],
+    [activeSchema, slides, pickedModels, activeModel, format, docStore],
   );
 
   const packAsIssues = useMemo(() => {
     if (packAs === 'single' && pickedModels.length > 1) {
-      return [{ kind: 'format' as const, message: 'Для «Один файл» выберите ровно одну модель.' }];
+      return [
+        {
+          kind: 'format' as const,
+          message: 'Для «Один файл» выберите ровно одну модель.',
+        },
+      ];
     }
     return [];
   }, [packAs, pickedModels.length]);
 
-  const blockingIssues = [...validationIssues, ...packAsIssues].filter(
-    (i) => i.kind !== 'model',
-  );
+  const blockingIssues = [...validationIssues, ...packAsIssues];
   const warnings = validationIssues.filter((i) => i.kind === 'model');
   const canRun = blockingIssues.length === 0;
   const useAsync = pickedModels.length > 100;
@@ -149,16 +144,14 @@ export const GenerationPanel: React.FC = () => {
               },
             ];
 
-    const baseItems = modelsToRender.map((m) => {
-      const materialized = slides.map((s) => materializeSlide(s, m.values));
-      return { inlineValues: m.values, _materializedSlides: materialized };
-    });
-
-    const materialized = baseItems[0]._materializedSlides;
-    const items = baseItems.map((b) => ({ inlineValues: b.inlineValues }));
+    const items = modelsToRender.map((model) => ({
+      inlineValues: model.values,
+    }));
 
     const req = {
-      inlineSlides: materialized,
+      schemaId: activeSchema.id,
+      bindings: resolveBindings(slides, docStore.getState().bindings),
+      inlineSlides: slides,
       items,
       format,
       packAs,
@@ -175,7 +168,18 @@ export const GenerationPanel: React.FC = () => {
     } catch (e) {
       console.error('[generation] failed', e);
     }
-  }, [activeSchema, canRun, pickedModels, activeModel, slides, format, packAs, filenamePattern, useAsync]);
+  }, [
+    activeSchema,
+    canRun,
+    pickedModels,
+    activeModel,
+    slides,
+    format,
+    packAs,
+    filenamePattern,
+    useAsync,
+    docStore,
+  ]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -226,18 +230,12 @@ export const GenerationPanel: React.FC = () => {
       >
         <span>Модели</span>
         <span style={{ display: 'flex', gap: 4 }}>
-          <button
-            className="dp-btn"
-            onClick={() => setImporterOpen((v) => !v)}
-            title="Импорт JSON"
-          >
+          <button className="dp-btn" onClick={() => setImporterOpen((v) => !v)} title="Импорт JSON">
             📥
           </button>
           <button
             className="dp-btn"
-            onClick={() =>
-              modelIO.download(models, `${activeSchema.name}-models.json`)
-            }
+            onClick={() => modelIO.download(models, `${activeSchema.name}-models.json`)}
             title="Экспорт JSON"
           >
             📤
@@ -245,7 +243,7 @@ export const GenerationPanel: React.FC = () => {
         </span>
       </div>
 
-      {importerOpen && <JsonImporterPanel onImport={importModels} />}
+      {importerOpen && <JsonImporterPanel schemaId={activeSchema?.id} onImport={importModels} />}
 
       <SearchSelectList<DataModel>
         items={models}
@@ -257,9 +255,7 @@ export const GenerationPanel: React.FC = () => {
         bulkActions={[]}
         searchPlaceholder="Поиск по названию модели…"
         emptyText={
-          <span>
-            Моделей нет. Создайте в разделе «Данные» или нажмите 📥 для импорта.
-          </span>
+          <span>Моделей нет. Создайте в разделе «Данные» или нажмите 📥 для импорта.</span>
         }
         maxHeight={260}
         minHeight={140}
@@ -267,13 +263,17 @@ export const GenerationPanel: React.FC = () => {
 
       {blockingIssues.length > 0 && (
         <div className="schema-error" style={{ marginTop: 12 }}>
-          {blockingIssues.map((i, k) => <div key={k}>⚠ {i.message}</div>)}
+          {blockingIssues.map((i, k) => (
+            <div key={k}>⚠ {i.message}</div>
+          ))}
         </div>
       )}
 
       {warnings.length > 0 && (
         <div className="gen-warning" style={{ marginTop: 12 }}>
-          {warnings.slice(0, 5).map((i, k) => <div key={k}>⚠ {i.message}</div>)}
+          {warnings.slice(0, 5).map((i, k) => (
+            <div key={k}>⚠ {i.message}</div>
+          ))}
           {warnings.length > 5 && <div>…и ещё {warnings.length - 5}</div>}
         </div>
       )}
@@ -285,8 +285,12 @@ export const GenerationPanel: React.FC = () => {
             style={{ display: 'flex', justifyContent: 'space-between' }}
           >
             <span>Поля: {activeModel.name}</span>
-            {saveStatus === 'saving' && <span style={{ fontSize: 10, color: '#94a3b8' }}>💾...</span>}
-            {saveStatus === 'saved' && <span style={{ fontSize: 10, color: '#16a34a' }}>✓ сохранено</span>}
+            {saveStatus === 'saving' && (
+              <span style={{ fontSize: 10, color: '#94a3b8' }}>💾...</span>
+            )}
+            {saveStatus === 'saved' && (
+              <span style={{ fontSize: 10, color: '#16a34a' }}>✓ сохранено</span>
+            )}
           </div>
           <ModelValuesEditor
             modelId={activeModel.id}
@@ -297,7 +301,9 @@ export const GenerationPanel: React.FC = () => {
         </div>
       )}
 
-      <div className="dp-section-title" style={{ marginTop: 16 }}>Параметры</div>
+      <div className="dp-section-title" style={{ marginTop: 16 }}>
+        Параметры
+      </div>
 
       <label className="gen-label">
         Формат
@@ -349,13 +355,17 @@ export const GenerationPanel: React.FC = () => {
 
       {phase === 'async-running' && job && (
         <div className="gen-progress" style={{ marginTop: 12 }}>
-          <div>Прогресс: {job.progress.completed} / {job.progress.total}</div>
+          <div>
+            Прогресс: {job.progress.completed} / {job.progress.total}
+          </div>
           <progress value={job.progress.completed} max={job.progress.total} />
           {job.errors.length > 0 && (
             <details style={{ marginTop: 8 }}>
               <summary>Ошибок: {job.errors.length}</summary>
               {job.errors.slice(0, 5).map((e, k) => (
-                <div key={k} style={{ fontSize: 11 }}>#{e.index}: {e.message}</div>
+                <div key={k} style={{ fontSize: 11 }}>
+                  #{e.index}: {e.message}
+                </div>
               ))}
             </details>
           )}
@@ -369,7 +379,11 @@ export const GenerationPanel: React.FC = () => {
           </button>
         </div>
       )}
-      {err && <div className="schema-error" style={{ marginTop: 12 }}>{err}</div>}
+      {err && (
+        <div className="schema-error" style={{ marginTop: 12 }}>
+          {err}
+        </div>
+      )}
     </div>
   );
 };

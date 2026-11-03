@@ -1,10 +1,14 @@
-﻿import React from 'react';
+import React from 'react';
 import type Konva from 'konva';
 import type { CanvasElement, SymbolDef } from '@/shared/types';
 import { getElementStrategy } from './elements/registry';
 import type { ElementSelectEvent } from './elements/types';
+import { useDocumentStore } from '../providers/EditorProvider';
+import { materializeElement } from '@/lib/materialize';
 import { useGraphicsStore } from '../providers/EditorProvider';
 import { useStore } from '@/shared/store/store';
+import { useActiveModelValues } from '@/features/data-models/state/useActiveModelValues';
+import { modelStore } from '@/features/data-models/state/ModelStore';
 
 export interface ElementRendererProps {
   element: CanvasElement;
@@ -24,11 +28,25 @@ export interface ElementRendererProps {
 const NOOP = (): void => {};
 
 const ElementRendererInner: React.FC<ElementRendererProps> = ({
-  element, elements, isSelected, isEditing,
-  onSelect, onUpdate, onDblClick, onContextMenu,
-  onDragStart, onDragMove, onDragEnd, onCellDblClick,
+  element,
+  elements,
+  isSelected,
+  isEditing,
+  onSelect,
+  onUpdate,
+  onDblClick,
+  onContextMenu,
+  onDragStart,
+  onDragMove,
+  onDragEnd,
+  onCellDblClick,
 }) => {
   const graphicsStore = useGraphicsStore();
+  const values = useActiveModelValues();
+  const hasModel = useStore(modelStore, (state) =>
+    state.models.some((model) => model.id === state.selectedId),
+  );
+  const bindings = useStore(useDocumentStore(), (state) => state.bindings);
   const symbolId = element.symbolId ?? null;
 
   const symbol: SymbolDef | null = useStore(
@@ -36,14 +54,16 @@ const ElementRendererInner: React.FC<ElementRendererProps> = ({
     React.useCallback(
       (s) => {
         if (!symbolId) return null;
-        return s.symbols.find(sym => sym.id === symbolId) ?? null;
+        return s.symbols.find((sym) => sym.id === symbolId) ?? null;
       },
       [symbolId],
     ),
   );
 
   const effectiveElement: CanvasElement = React.useMemo(() => {
-    if (!symbol) return element;
+    if (!symbol) {
+      return !isEditing && hasModel ? materializeElement(element, values, bindings) : element;
+    }
     return {
       ...symbol.prototype,
       id: element.id,
@@ -54,7 +74,7 @@ const ElementRendererInner: React.FC<ElementRendererProps> = ({
       height: element.height,
       symbolId: element.symbolId,
     } as CanvasElement;
-  }, [element, symbol]);
+  }, [element, symbol, values, bindings, isEditing, hasModel]);
 
   const strategy = getElementStrategy(effectiveElement.type);
   if (!strategy) return null;

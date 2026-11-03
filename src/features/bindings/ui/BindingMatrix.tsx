@@ -8,7 +8,6 @@ import { validateBindings } from '../domain/BindingValidator';
 import { flattenFields } from '@/features/schemas/domain/SchemaInference';
 import { useSchemas } from '@/features/schemas/state/useSchemas';
 import { modelStore } from '@/features/data-models/state/ModelStore';
-import { getPath } from '@/features/data-models/domain/DataModelValidator';
 import type { CanvasElement } from '@/shared/types';
 
 const primaryLinkStyle: React.CSSProperties = {
@@ -32,12 +31,8 @@ export const BindingMatrix: React.FC = () => {
   const returnTo = location.pathname + location.search;
 
   const slides = useStore(docStore, (s) => s.slides);
-  const activeId = useStore(docStore, (s) => s.activeId);
+  const overrides = useStore(docStore, (s) => s.bindings);
   const { activeSchema, schemas } = useSchemas();
-
-  const activeModelId = useStore(modelStore, (s) => s.selectedId);
-  const models = useStore(modelStore, (s) => s.models);
-  const activeModel = models.find((m) => m.id === activeModelId);
 
   const [uiError, setUiError] = useState<string | null>(null);
 
@@ -48,69 +43,33 @@ export const BindingMatrix: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSchema?.id]);
 
-  const activeSlide = slides.find((s) => s.id === activeId) ?? null;
-
   const elementsById = useMemo(() => {
     const map = new Map<string, CanvasElement>();
-    for (const el of activeSlide?.elements ?? []) map.set(el.id, el);
+    for (const slide of slides) for (const el of slide.elements) map.set(el.id, el);
     return map;
-  }, [activeSlide]);
+  }, [slides]);
 
-  const bindings = useMemo(() => resolveBindings(slides), [slides]);
+  const bindings = useMemo(() => resolveBindings(slides, overrides), [slides, overrides]);
 
   const issues = useMemo(
     () => (activeSchema ? validateBindings(bindings, activeSchema) : []),
     [bindings, activeSchema],
   );
 
-  const changeBinding = (b: Binding, newPath: string): void => {
-    if (!newPath) return;
+  const changeBinding = (binding: Binding, path: string): void => {
     setUiError(null);
-    try {
-      docStore.commit((draft) => {
-        const slide = draft.slides.find((s) => s.id === draft.activeId);
-        if (!slide) return;
-        const el = slide.elements.find((e) => e.id === b.elementId);
-        if (!el) return;
-
-        const newValue = activeModel ? getPath(activeModel.values, newPath) : undefined;
-        const newSample = newValue !== undefined && newValue !== null ? String(newValue) : '';
-
-        if (el.type === 'placeholder') {
-          el.fieldPath = newPath;
-          el.label = newPath;
-          el.sample = newSample;
-          return;
-        }
-
-        if (el.type === 'image') {
-          if (el.src) el.src = el.src.split(b.placeholder).join(`{{${newPath}}}`);
-          return;
-        }
-
-        if (el.type === 'table') {
-          const oldPrefix = `{{${b.schemaPath}`;
-          const newPrefix = `{{${newPath}`;
-          el.data = (el.data ?? []).map((row) =>
-            row.map((cell) =>
-              typeof cell === 'string' ? cell.split(oldPrefix).join(newPrefix) : cell,
-            ),
-          );
-          return;
-        }
-
-        if (el.type === 'text' || el.type === 'shape' || el.type === 'footer') {
-          const newToken = `{{${newPath}}}`;
-          if (el.text) el.text = el.text.split(b.placeholder).join(newToken);
-          if ('html' in el && typeof (el as { html?: string }).html === 'string') {
-            const html = (el as { html?: string }).html;
-            if (html) (el as { html?: string }).html = html.split(b.placeholder).join(newToken);
-          }
-        }
-      }, `binding-${b.elementId}`);
-    } catch (e) {
-      setUiError((e as Error).message);
-    }
+    docStore.commit((draft) => {
+      const next: Binding = {
+        ...binding,
+        source: 'manual',
+        schemaPath: path || binding.inferred,
+        status: path ? 'linked' : 'ignored',
+      };
+      draft.bindings = draft.bindings.filter(
+        (item) => item.elementId !== binding.elementId || item.placeholder !== binding.placeholder,
+      );
+      draft.bindings.push(next);
+    }, `binding-${binding.elementId}`);
   };
 
   if (!activeSchema) {
@@ -126,13 +85,16 @@ export const BindingMatrix: React.FC = () => {
             : 'Схем пока нет. Создайте первую — потом привяжете к ней поля на холсте.'}
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 8,
+            marginTop: 12,
+          }}
+        >
           {hasSchemas && (
-            <Link
-              to="/app/schemas"
-              className="dp-btn-submit"
-              style={primaryLinkStyle}
-            >
+            <Link to="/app/schemas" className="dp-btn-submit" style={primaryLinkStyle}>
               Выбрать схему
             </Link>
           )}
@@ -181,16 +143,18 @@ export const BindingMatrix: React.FC = () => {
       </div>
 
       <div className="schema-hint" style={{ marginBottom: 8 }}>
-        Схема: <b>{activeSchema.name}</b> · {known.length}{' '}
-        {known.length === 1 ? 'поле' : 'полей'}
+        Схема: <b>{activeSchema.name}</b> · {known.length} {known.length === 1 ? 'поле' : 'полей'}
         {bindings.length > 0 && (
-          <> · {bindings.length} {bindings.length === 1 ? 'связь' : 'связей'}</>
+          <>
+            {' '}
+            · {bindings.length} {bindings.length === 1 ? 'связь' : 'связей'}
+          </>
         )}
       </div>
 
       <p className="schema-hint" style={{ marginBottom: 12 }}>
-        Связи собираются из <code>{'{{...}}'}</code> и <code>fieldPath</code>.
-        Выбор сразу правит элемент (undo — Ctrl+Z).
+        Связи собираются из <code>{'{{...}}'}</code> и <code>fieldPath</code>. Выбор сразу правит
+        элемент (undo — Ctrl+Z).
       </p>
 
       {uiError && <div className="schema-error">{uiError}</div>}
@@ -214,9 +178,7 @@ export const BindingMatrix: React.FC = () => {
                 <tr key={key}>
                   <td>
                     <div style={{ fontWeight: 600, fontSize: 12 }}>{b.elementLabel}</div>
-                    <code style={{ fontSize: 10, wordBreak: 'break-all' }}>
-                      {b.placeholder}
-                    </code>
+                    <code style={{ fontSize: 10, wordBreak: 'break-all' }}>{b.placeholder}</code>
                     {isMissing && (
                       <div
                         className="schema-error"
@@ -226,7 +188,10 @@ export const BindingMatrix: React.FC = () => {
                         <Link
                           to={`/app/schemas/${activeSchema.id}`}
                           state={{ from: returnTo }}
-                          style={{ color: 'inherit', textDecoration: 'underline' }}
+                          style={{
+                            color: 'inherit',
+                            textDecoration: 'underline',
+                          }}
                           title="Открыть редактор схемы"
                         >
                           добавить
@@ -237,7 +202,7 @@ export const BindingMatrix: React.FC = () => {
                   <td>
                     <select
                       className="dp-select-model"
-                      value={b.schemaPath}
+                      value={b.status === 'ignored' ? '' : b.schemaPath}
                       onChange={(e) => changeBinding(b, e.target.value)}
                       style={{ minWidth: 100 }}
                     >
@@ -262,8 +227,7 @@ export const BindingMatrix: React.FC = () => {
                   Нет связей — на холсте нет <code>{'{{...}}'}</code> и плейсхолдеров.
                   <br />
                   <span style={{ fontSize: 11, color: 'var(--text-soft)' }}>
-                    Перетащите поле из вкладки «Данные» на холст — связь появится
-                    автоматически.
+                    Перетащите поле из вкладки «Данные» на холст — связь появится автоматически.
                   </span>
                 </td>
               </tr>
@@ -283,7 +247,11 @@ export const BindingMatrix: React.FC = () => {
             <Link
               to={`/app/schemas/${activeSchema.id}`}
               state={{ from: returnTo }}
-              style={{ color: 'inherit', textDecoration: 'underline', fontSize: 11 }}
+              style={{
+                color: 'inherit',
+                textDecoration: 'underline',
+                fontSize: 11,
+              }}
             >
               Редактировать схему →
             </Link>
@@ -291,10 +259,7 @@ export const BindingMatrix: React.FC = () => {
         </div>
       )}
       {issues.length === 0 && bindings.length > 0 && (
-        <div
-          className="schema-hint"
-          style={{ marginTop: 12, color: 'var(--success, #16a34a)' }}
-        >
+        <div className="schema-hint" style={{ marginTop: 12, color: 'var(--success, #16a34a)' }}>
           ✓ Связи валидны
         </div>
       )}

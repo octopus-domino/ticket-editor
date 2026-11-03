@@ -1,4 +1,4 @@
-﻿/* ============================================================
+/* ============================================================
    presentation/hooks/useAutoSave.ts
    F-AS-02: debounce 2000ms.
    F-AS-03: TTL 24h.
@@ -21,8 +21,16 @@ export interface AutoSaveData {
   savedAt: string;
 }
 
-interface SerializeRequest { id: number; payload: unknown; }
-interface SerializeResponse { id: number; ok: boolean; text?: string; error?: string; }
+interface SerializeRequest {
+  id: number;
+  payload: unknown;
+}
+interface SerializeResponse {
+  id: number;
+  ok: boolean;
+  text?: string;
+  error?: string;
+}
 
 /**
  * В части браузеров (Safari < 18) `requestIdleCallback` отсутствует.
@@ -37,6 +45,7 @@ export function useAutoSave(
   slides: Slide[],
   data: DataRoot[],
   activeSlideId: string | null,
+  enabled = true,
 ): void {
   const timerRef = useRef<number | null>(null);
   const workerRef = useRef<Worker | null>(null);
@@ -44,10 +53,9 @@ export function useAutoSave(
 
   useEffect(() => {
     try {
-      const worker = new Worker(
-        new URL('../../workers/serializeWorker.ts', import.meta.url),
-        { type: 'module' },
-      );
+      const worker = new Worker(new URL('../../workers/serializeWorker.ts', import.meta.url), {
+        type: 'module',
+      });
       workerRef.current = worker;
       return () => {
         worker.terminate();
@@ -60,6 +68,7 @@ export function useAutoSave(
   }, []);
 
   useEffect(() => {
+    if (!enabled) return;
     if (timerRef.current) window.clearTimeout(timerRef.current);
 
     timerRef.current = window.setTimeout(() => {
@@ -75,7 +84,7 @@ export function useAutoSave(
     return () => {
       if (timerRef.current) window.clearTimeout(timerRef.current);
     };
-  }, [slides, data, activeSlideId]);
+  }, [slides, data, activeSlideId, enabled]);
 }
 
 async function writeAutoSave(
@@ -116,11 +125,7 @@ async function writeAutoSave(
   }
 }
 
-function serializeViaWorker(
-  worker: Worker,
-  id: number,
-  payload: unknown,
-): Promise<string> {
+function serializeViaWorker(worker: Worker, id: number, payload: unknown): Promise<string> {
   return new Promise((resolve, reject) => {
     const handler = (e: MessageEvent<SerializeResponse>): void => {
       if (e.data.id !== id) return;
@@ -153,5 +158,9 @@ export function loadAutoSave(): AutoSaveData | null {
 }
 
 export function clearAutoSave(): void {
-  try { localStorage.removeItem(AUTO_SAVE_KEY); } catch { /* ignore */ }
+  try {
+    localStorage.removeItem(AUTO_SAVE_KEY);
+  } catch {
+    /* ignore */
+  }
 }

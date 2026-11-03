@@ -19,22 +19,30 @@ const INITIAL: SchemaState = {
 const STORAGE_KEY = 'ticket-editor:schemaId';
 
 export class SchemaStore extends SimpleStore<SchemaState> {
+  private epoch = 0;
+  private loadRevision = 0;
+  reset(): void {
+    this.epoch++;
+    this.loadRevision++;
+    this.setState({ ...INITIAL });
+  }
+
   constructor() {
     super(INITIAL);
   }
 
   async loadAll(): Promise<void> {
+    const revision = ++this.loadRevision;
     this.setState((s) => ({ ...s, loading: true, error: null }));
     try {
       const schemas = await httpSchemaRepository.list();
+      if (revision !== this.loadRevision) return;
       const savedId = this.getSavedId();
-      const activeId =
-        schemas.find((x) => x.id === savedId)?.id ??
-        schemas[0]?.id ??
-        null;
+      const activeId = schemas.find((x) => x.id === savedId)?.id ?? schemas[0]?.id ?? null;
       if (activeId) this.setSavedId(activeId);
       this.setState({ schemas, activeId, loading: false, error: null });
     } catch (e) {
+      if (revision !== this.loadRevision) return;
       this.setState((s) => ({ ...s, loading: false, error: (e as Error).message }));
     }
   }
@@ -50,6 +58,7 @@ export class SchemaStore extends SimpleStore<SchemaState> {
   }
 
   async refresh(id?: string): Promise<void> {
+    const epoch = this.epoch;
     const target = id ?? this.getState().activeId;
     if (!target) {
       await this.loadAll();
@@ -57,6 +66,7 @@ export class SchemaStore extends SimpleStore<SchemaState> {
     }
     try {
       const updated = await httpSchemaRepository.get(target);
+      if (epoch !== this.epoch) return;
       this.setState((s) => ({
         ...s,
         schemas: s.schemas.map((x) => (x.id === target ? updated : x)),
@@ -67,7 +77,9 @@ export class SchemaStore extends SimpleStore<SchemaState> {
   }
 
   async create(input: { name: string; fields: FieldDef[] }): Promise<DataSchema> {
+    const epoch = this.epoch;
     const created = await httpSchemaRepository.create(input);
+    if (epoch !== this.epoch) return created;
     this.setSavedId(created.id);
     this.setState((s) => ({
       ...s,
@@ -78,7 +90,9 @@ export class SchemaStore extends SimpleStore<SchemaState> {
   }
 
   async update(id: string, input: { name: string; fields: FieldDef[] }): Promise<DataSchema> {
+    const epoch = this.epoch;
     const updated = await httpSchemaRepository.update(id, input);
+    if (epoch !== this.epoch) return updated;
     this.setState((s) => ({
       ...s,
       schemas: s.schemas.map((x) => (x.id === id ? updated : x)),
@@ -87,7 +101,9 @@ export class SchemaStore extends SimpleStore<SchemaState> {
   }
 
   async delete(id: string): Promise<void> {
+    const epoch = this.epoch;
     await httpSchemaRepository.delete(id);
+    if (epoch !== this.epoch) return;
     this.setState((s) => {
       const schemas = s.schemas.filter((x) => x.id !== id);
       const activeId = s.activeId === id ? (schemas[0]?.id ?? null) : s.activeId;
@@ -98,13 +114,25 @@ export class SchemaStore extends SimpleStore<SchemaState> {
   }
 
   private getSavedId(): string | null {
-    try { return localStorage.getItem(STORAGE_KEY); } catch { return null; }
+    try {
+      return localStorage.getItem(STORAGE_KEY);
+    } catch {
+      return null;
+    }
   }
   private setSavedId(id: string): void {
-    try { localStorage.setItem(STORAGE_KEY, id); } catch { /* ignore */ }
+    try {
+      localStorage.setItem(STORAGE_KEY, id);
+    } catch {
+      /* ignore */
+    }
   }
   private removeSavedId(): void {
-    try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      /* ignore */
+    }
   }
 }
 

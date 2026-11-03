@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { DataSchema, FieldDef } from '@/features/schemas/domain/DataSchema';
 import { getPath, setPath } from '../domain/DataModelValidator';
 import { useModelHistory } from '../state/useModelHistory';
+import { validateModel } from '../domain/DataModelValidator';
 
 function getDirectChildren(fields: readonly FieldDef[], parentPath: string): FieldDef[] {
   const prefix = `${parentPath}.`;
@@ -21,7 +22,10 @@ function isChildOfArray(fields: readonly FieldDef[], fieldPath: string): boolean
   return false;
 }
 
-const JsonCell: React.FC<{ value: unknown; onChange: (v: unknown) => void }> = ({ value, onChange }) => {
+const JsonCell: React.FC<{
+  value: unknown;
+  onChange: (v: unknown) => void;
+}> = ({ value, onChange }) => {
   const [text, setText] = useState(() => JSON.stringify(value ?? {}, null, 2));
   const [error, setError] = useState(false);
 
@@ -61,6 +65,7 @@ export const ModelValuesEditor: React.FC<{
   onChange: (next: Record<string, unknown>) => void;
 }> = ({ modelId, schema, values, onChange }) => {
   const history = useModelHistory(modelId, values as Record<string, unknown>);
+  const issues = useMemo(() => validateModel({ values }, schema), [values, schema]);
   const inputRefs = useRef<Map<string, HTMLInputElement>>(new Map());
 
   const allFields = useMemo(() => schema.fields, [schema]);
@@ -86,7 +91,10 @@ export const ModelValuesEditor: React.FC<{
       const path = orderedPaths[idx];
       if (!path) return;
       const el = inputRefs.current.get(path);
-      if (el) { el.focus(); el.select(); }
+      if (el) {
+        el.focus();
+        el.select();
+      }
     },
     [orderedPaths],
   );
@@ -184,7 +192,12 @@ export const ModelValuesEditor: React.FC<{
                         <button
                           type="button"
                           className="dp-btn-danger"
-                          onClick={() => setValue(path, arr.filter((_, j) => j !== i))}
+                          onClick={() =>
+                            setValue(
+                              path,
+                              arr.filter((_, j) => j !== i),
+                            )
+                          }
                         >
                           ✕
                         </button>
@@ -236,7 +249,10 @@ export const ModelValuesEditor: React.FC<{
                             value={String(row[rel] ?? '')}
                             onChange={(e) => {
                               const nextArr = [...arr];
-                              nextArr[i] = { ...nextArr[i], [rel]: e.target.value };
+                              nextArr[i] = {
+                                ...nextArr[i],
+                                [rel]: e.target.value,
+                              };
                               setValue(path, nextArr);
                             }}
                           />
@@ -247,7 +263,12 @@ export const ModelValuesEditor: React.FC<{
                       <button
                         type="button"
                         className="dp-btn-danger"
-                        onClick={() => setValue(path, arr.filter((_, j) => j !== i))}
+                        onClick={() =>
+                          setValue(
+                            path,
+                            arr.filter((_, j) => j !== i),
+                          )
+                        }
                       >
                         ✕
                       </button>
@@ -313,7 +334,18 @@ export const ModelValuesEditor: React.FC<{
         </button>
       </div>
 
-      {roots.length === 0 && <p className="dp-empty">Схема пуста — добавьте поля в редакторе схем.</p>}
+      {issues.length > 0 && (
+        <div role="alert" className="schema-error">
+          {issues.map((issue) => (
+            <div key={`${issue.path}:${issue.message}`}>
+              {issue.path}: {issue.message}
+            </div>
+          ))}
+        </div>
+      )}
+      {roots.length === 0 && (
+        <p className="dp-empty">Схема пуста — добавьте поля в редакторе схем.</p>
+      )}
       {roots.map((f) => renderField(f, ''))}
     </div>
   );

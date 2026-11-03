@@ -1,7 +1,9 @@
-﻿// src/presentation/hooks/editor/useFileIO.ts
+// src/presentation/hooks/editor/useFileIO.ts
 import { useCallback } from 'react';
 import {
-  useDocumentStore, useSelectionStore, useModalsStore,
+  useDocumentStore,
+  useSelectionStore,
+  useModalsStore,
 } from '../../providers/EditorProvider';
 import { migrateDocument } from '@/lib/migrations';
 import {
@@ -12,6 +14,7 @@ import {
 import { prepareQrForExport } from '@/lib/qr';
 import { CONFIG } from '@/shared/config';
 import { toast } from '@/presentation/components/toast';
+import { importElements } from '@/application/use-cases/importElements';
 
 /* ---------- helpers ---------- */
 
@@ -34,19 +37,13 @@ function readFileAsDataUrl(file: File): Promise<string> {
 }
 
 function triggerDownload(content: Blob | string, filename: string, mime: string): void {
-  const blob = typeof content === 'string'
-    ? new Blob([content], { type: mime })
-    : content;
+  const blob = typeof content === 'string' ? new Blob([content], { type: mime }) : content;
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
   a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
-}
-
-function genId(): string {
-  return Math.random().toString(36).slice(2, 12);
 }
 
 /* ---------- hook ---------- */
@@ -76,13 +73,19 @@ export function useFileIO() {
       exportedAt: new Date().toISOString(),
       slides: state.slides,
       data: state.data,
+      bindings: state.bindings,
+      activeSlideId: state.activeId,
     };
     triggerDownload(
       JSON.stringify(payload, null, 2),
       `ticket-editor-${Date.now()}.json`,
       'application/json',
     );
-    try { localStorage.removeItem('ticket-editor:autosave'); } catch { /* ignore */ }
+    try {
+      localStorage.removeItem('ticket-editor:autosave');
+    } catch {
+      /* ignore */
+    }
   }, [docStore]);
 
   const importJson = useCallback(() => {
@@ -103,64 +106,28 @@ export function useFileIO() {
         const text = await readFileAsText(file);
         const parsed = JSON.parse(text);
 
-        if (
-          parsed && typeof parsed === 'object'
-          && !Array.isArray(parsed)
-          && 'type' in parsed
-          && typeof (parsed as { type?: unknown }).type === 'string'
-        ) {
-          const el = parsed as Record<string, unknown>;
-          if (!el.id) el.id = genId();
-          if (typeof el.x !== 'number') el.x = 100;
-          if (typeof el.y !== 'number') el.y = 100;
-          if (typeof el.width !== 'number') el.width = 100;
-          if (typeof el.height !== 'number') el.height = 100;
-          if (typeof el.rotation !== 'number') el.rotation = 0;
-
+        const state = docStore.getState();
+        const active = state.slides.find((slide) => slide.id === state.activeId);
+        const elements = importElements(parsed, active?.elements.length ?? 0);
+        if (elements) {
           docStore.commit((draft) => {
-            const s = draft.slides.find((x) => x.id === draft.activeId);
-            if (!s) return;
-            s.elements.push(el as never);
-          }, 'import-element');
-          clearUiState();
-          selStore.setIds([String(el.id)]);
-          toast.success('Элемент импортирован');
-          return;
-        }
-
-        if (Array.isArray(parsed)) {
-          const ids: string[] = [];
-          docStore.commit((draft) => {
-            const s = draft.slides.find((x) => x.id === draft.activeId);
-            if (!s) return;
-            for (const raw of parsed) {
-              if (!raw || typeof raw !== 'object' || !('type' in raw)) continue;
-              const clone = JSON.parse(JSON.stringify(raw)) as Record<string, unknown>;
-              if (!clone.id) clone.id = genId();
-              if (typeof clone.x !== 'number') clone.x = 100;
-              if (typeof clone.y !== 'number') clone.y = 100;
-              if (typeof clone.width !== 'number') clone.width = 100;
-              if (typeof clone.height !== 'number') clone.height = 100;
-              if (typeof clone.rotation !== 'number') clone.rotation = 0;
-              s.elements.push(clone as never);
-              ids.push(String(clone.id));
-            }
+            const slide = draft.slides.find((item) => item.id === draft.activeId);
+            if (slide) slide.elements.push(...elements);
           }, 'import-elements');
           clearUiState();
-          selStore.setIds(ids);
-          toast.success(`Импортировано элементов: ${ids.length}`);
+          selStore.setIds(elements.map((element) => element.id));
           return;
         }
 
         const migrated = migrateDocument(parsed);
         const validActiveId =
-          migrated.slides.find((s) => s.id === migrated.activeSlideId)?.id
-          ?? migrated.slides[0].id;
+          migrated.slides.find((s) => s.id === migrated.activeSlideId)?.id ?? migrated.slides[0].id;
 
         docStore.commit((draft) => {
           draft.slides = migrated.slides;
           draft.activeId = validActiveId;
           draft.data = migrated.data;
+          draft.bindings = migrated.bindings;
         }, 'import-json');
 
         clearUiState();
@@ -202,54 +169,61 @@ export function useFileIO() {
     await doExportPdfServer(state.slides);
   }, [docStore]);
 
-  const addImage = useCallback((opts: { centered?: boolean } = {}) => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.onchange = async () => {
-      const file = input.files?.[0];
-      if (!file) return;
+  const addImage = useCallback(
+    (opts: { centered?: boolean } = {}) => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.onchange = async () => {
+        const file = input.files?.[0];
+        if (!file) return;
 
-      try {
-        const src = await readFileAsDataUrl(file);
-        const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-          const i = new Image();
-          i.onload = () => resolve(i);
-          i.onerror = reject;
-          i.src = src;
-        });
+        try {
+          const src = await readFileAsDataUrl(file);
+          const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+            const i = new Image();
+            i.onload = () => resolve(i);
+            i.onerror = reject;
+            i.src = src;
+          });
 
-        const active = getActiveSlide();
-        if (!active) return;
+          const active = getActiveSlide();
+          if (!active) return;
 
-        const maxRatio = opts.centered ? 0.7 : 1;
-        const k = Math.min(
-          1,
-          (active.width * maxRatio) / img.width,
-          (active.height * maxRatio) / img.height,
-        );
-        const w = Math.max(20, Math.round(img.width * k));
-        const h = Math.max(20, Math.round(img.height * k));
-        const x = opts.centered ? Math.round((active.width - w) / 2) : 100;
-        const y = opts.centered ? Math.round((active.height - h) / 2) : 100;
+          const maxRatio = opts.centered ? 0.7 : 1;
+          const k = Math.min(
+            1,
+            (active.width * maxRatio) / img.width,
+            (active.height * maxRatio) / img.height,
+          );
+          const w = Math.max(20, Math.round(img.width * k));
+          const h = Math.max(20, Math.round(img.height * k));
+          const x = opts.centered ? Math.round((active.width - w) / 2) : 100;
+          const y = opts.centered ? Math.round((active.height - h) / 2) : 100;
 
-        docStore.commit((draft) => {
-          const s = draft.slides.find((sl) => sl.id === draft.activeId);
-          if (s) {
-            s.elements.push({
-              id: genId(),
-              type: 'image',
-              x, y, width: w, height: h, rotation: 0,
-              src,
-            });
-          }
-        }, 'add-image');
-      } catch (err) {
-        toast.error('Не удалось загрузить картинку', (err as Error).message);
-      }
-    };
-    input.click();
-  }, [docStore, getActiveSlide]);
+          docStore.commit((draft) => {
+            const s = draft.slides.find((sl) => sl.id === draft.activeId);
+            if (s) {
+              s.elements.push({
+                id: crypto.randomUUID(),
+                type: 'image',
+                x,
+                y,
+                width: w,
+                height: h,
+                rotation: 0,
+                src,
+              });
+            }
+          }, 'add-image');
+        } catch (err) {
+          toast.error('Не удалось загрузить картинку', (err as Error).message);
+        }
+      };
+      input.click();
+    },
+    [docStore, getActiveSlide],
+  );
 
   const setBackgroundImage = useCallback(() => {
     const input = document.createElement('input');

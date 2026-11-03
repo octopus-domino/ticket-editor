@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Layer, Rect, Label, Tag, Text as KonvaText, Circle } from 'react-konva';
-import type { CanvasElement, Slide } from '@/shared/types';
+import type { Slide } from '@/shared/types';
 import { resolveBindings } from '@/features/bindings/domain/BindingResolver';
 import { useActiveModelValues } from '@/features/data-models/state/useActiveModelValues';
 import { getByPath } from '@/lib/modelBinding';
@@ -54,8 +54,10 @@ export const DataHighlightLayer: React.FC<Props> = ({ slide, zoom, active }) => 
           return (
             <React.Fragment key={el.id}>
               <Rect
-                x={el.x} y={el.y}
-                width={el.width} height={el.height}
+                x={el.x}
+                y={el.y}
+                width={el.width}
+                height={el.height}
                 stroke={COLOR_EMPTY}
                 strokeWidth={bw}
                 dash={[4 / zoom, 4 / zoom]}
@@ -63,12 +65,7 @@ export const DataHighlightLayer: React.FC<Props> = ({ slide, zoom, active }) => 
               />
               <Label x={el.x} y={el.y - fs - pad * 2}>
                 <Tag fill={COLOR_EMPTY} cornerRadius={3 / zoom} />
-                <KonvaText
-                  text="нет поля"
-                  fontSize={fs}
-                  fill="#ffffff"
-                  padding={pad}
-                />
+                <KonvaText text="нет поля" fontSize={fs} fill="#ffffff" padding={pad} />
               </Label>
             </React.Fragment>
           );
@@ -87,8 +84,10 @@ export const DataHighlightLayer: React.FC<Props> = ({ slide, zoom, active }) => 
         return (
           <React.Fragment key={el.id}>
             <Rect
-              x={el.x} y={el.y}
-              width={el.width} height={el.height}
+              x={el.x}
+              y={el.y}
+              width={el.width}
+              height={el.height}
               stroke={color}
               strokeWidth={bw}
               cornerRadius={2 / zoom}
@@ -96,12 +95,7 @@ export const DataHighlightLayer: React.FC<Props> = ({ slide, zoom, active }) => 
             />
             <Label x={el.x} y={el.y - fs - pad * 2}>
               <Tag fill={color} cornerRadius={3 / zoom} />
-              <KonvaText
-                text={label}
-                fontSize={fs}
-                fill="#ffffff"
-                padding={pad}
-              />
+              <KonvaText text={label} fontSize={fs} fill="#ffffff" padding={pad} />
             </Label>
             {items.map((b, i) => (
               <Circle

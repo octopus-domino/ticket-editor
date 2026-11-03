@@ -2,6 +2,7 @@ import { SimpleStore } from '@/shared/store/store';
 import type { DataModel } from '../domain/DataModel';
 import type { DataModelRepository } from '../api/DataModelRepository';
 import { httpDataModelRepository } from '../api/HttpDataModelRepository';
+import { RevisionSaveQueue } from '@/application/use-cases/RevisionSaveQueue';
 
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
@@ -17,38 +18,103 @@ export interface ModelState {
 }
 
 const INITIAL: ModelState = {
-  models: [], selectedId: null, loading: false, error: null,
-  saveStatus: 'idle', saveError: null, lastSavedAt: null, schemaId: null,
+  models: [],
+  selectedId: null,
+  loading: false,
+  error: null,
+  saveStatus: 'idle',
+  saveError: null,
+  lastSavedAt: null,
+  schemaId: null,
 };
 
 export class ModelStore extends SimpleStore<ModelState> {
   private readonly repo: DataModelRepository;
-  private timer: number | null = null;
+  private readonly saves: RevisionSaveQueue<DataModel>;
+  private loadVersion = 0;
+  private sessionVersion = 0;
+  private readonly dirtyRevisions = new Map<string, number>();
 
   constructor(repo: DataModelRepository = httpDataModelRepository) {
     super(INITIAL);
     this.repo = repo;
+    this.saves = new RevisionSaveQueue(async (id, model) => {
+      const session = this.sessionVersion;
+      const revision = this.dirtyRevisions.get(id);
+      try {
+        const saved = await this.repo.update(id, {
+          name: model.name,
+          values: model.values,
+        });
+        if (session !== this.sessionVersion) return;
+        if (this.dirtyRevisions.get(id) === revision) this.dirtyRevisions.delete(id);
+        this.setState((s) => ({
+          ...s,
+          models: s.models.map((m) => (m.id === id ? { ...m, updatedAt: saved.updatedAt } : m)),
+          saveStatus: this.dirtyRevisions.size ? 'saving' : 'saved',
+          saveError: null,
+          lastSavedAt: Date.now(),
+        }));
+      } catch (error) {
+        if (session !== this.sessionVersion) throw error;
+        this.setState((s) => ({
+          ...s,
+          saveStatus: 'error',
+          saveError: (error as Error).message,
+        }));
+        throw error;
+      }
+    });
   }
 
   async load(schemaId: string): Promise<void> {
-    this.setState((s) => ({ ...s, loading: true, error: null, schemaId }));
+    const version = ++this.loadVersion;
     try {
+      await this.saves.flush();
+      if (version !== this.loadVersion) return;
+      this.setState((s) => ({ ...s, loading: true, error: null, schemaId }));
       const models = await this.repo.list(schemaId);
+      if (version !== this.loadVersion) return;
       this.setState((s) => ({
-        ...s, models, loading: false,
-        selectedId: s.selectedId ?? models[0]?.id ?? null,
+        ...s,
+        models,
+        loading: false,
+        selectedId: models.some((m) => m.id === s.selectedId)
+          ? s.selectedId
+          : (models[0]?.id ?? null),
       }));
     } catch (e) {
-      this.setState((s) => ({ ...s, loading: false, error: (e as Error).message }));
+      if (version !== this.loadVersion) return;
+      this.setState((s) => ({
+        ...s,
+        loading: false,
+        error: (e as Error).message,
+      }));
     }
   }
 
-  select(id: string | null): void { this.setState((s) => ({ ...s, selectedId: id })); }
+  select(id: string | null): void {
+    this.setState((s) => ({ ...s, selectedId: id }));
+  }
 
-  async create(schemaId: string, name: string, values: Record<string, unknown> = {}): Promise<DataModel> {
+  async create(
+    schemaId: string,
+    name: string,
+    values: Record<string, unknown> = {},
+  ): Promise<DataModel> {
+    const session = this.sessionVersion;
     const uniqueName = this.uniqueName(schemaId, name);
-    const created = await this.repo.create({ schemaId, name: uniqueName, values });
-    this.setState((s) => ({ ...s, models: [created, ...s.models], selectedId: created.id }));
+    const created = await this.repo.create({
+      schemaId,
+      name: uniqueName,
+      values,
+    });
+    if (session !== this.sessionVersion) return created;
+    this.setState((s) => ({
+      ...s,
+      models: [created, ...s.models],
+      selectedId: created.id,
+    }));
     return created;
   }
 
@@ -75,11 +141,18 @@ export class ModelStore extends SimpleStore<ModelState> {
       });
       return { ...s, models, saveStatus: 'saving' as SaveStatus };
     });
-    if (updated) this.scheduleSave(id);
+    if (updated) {
+      this.dirtyRevisions.set(id, (this.dirtyRevisions.get(id) ?? 0) + 1);
+      this.saves.enqueue(id, updated);
+    }
   }
 
   async remove(id: string): Promise<void> {
+    const session = this.sessionVersion;
+    await this.saves.flush(id);
+    if (session !== this.sessionVersion) return;
     await this.repo.delete(id);
+    if (session !== this.sessionVersion) return;
     this.setState((s) => ({
       ...s,
       models: s.models.filter((m) => m.id !== id),
@@ -87,30 +160,43 @@ export class ModelStore extends SimpleStore<ModelState> {
     }));
   }
 
-  async importMany(schemaId: string, items: { name: string; values: Record<string, unknown> }[]): Promise<void> {
+  async importMany(
+    schemaId: string,
+    items: { name: string; values: Record<string, unknown> }[],
+  ): Promise<void> {
+    const session = this.sessionVersion;
+    if (this.repo.importMany) {
+      const result = await this.repo.importMany(schemaId, items);
+      if (session !== this.sessionVersion) return;
+      await this.load(schemaId);
+      if (result.issues.length)
+        throw new Error(
+          `${result.imported} imported; ${result.issues.length} failed: ${result.issues[0].message}`,
+        );
+      return;
+    }
     for (const item of items) {
+      if (session !== this.sessionVersion) return;
       const uniqueName = this.uniqueName(schemaId, item.name);
-      const created = await this.repo.create({ schemaId, name: uniqueName, values: item.values });
+      const created = await this.repo.create({
+        schemaId,
+        name: uniqueName,
+        values: item.values,
+      });
+      if (session !== this.sessionVersion) return;
       this.setState((s) => ({ ...s, models: [created, ...s.models] }));
     }
   }
 
-  private scheduleSave(id: string): void {
-    if (this.timer !== null) window.clearTimeout(this.timer);
-    this.timer = window.setTimeout(async () => {
-      const model = this.getState().models.find((m) => m.id === id);
-      if (!model) return;
-      try {
-        const saved = await this.repo.update(id, { name: model.name, values: { ...model.values } });
-        this.setState((s) => ({
-          ...s,
-          models: s.models.map((m) => (m.id === id ? saved : m)),
-          saveStatus: 'saved', saveError: null, lastSavedAt: Date.now(),
-        }));
-      } catch (e) {
-        this.setState((s) => ({ ...s, saveStatus: 'error', saveError: (e as Error).message }));
-      }
-    }, 2000);
+  flush(): Promise<void> {
+    return this.saves.flush();
+  }
+  reset(): void {
+    this.sessionVersion++;
+    this.loadVersion++;
+    this.saves.clear();
+    this.dirtyRevisions.clear();
+    this.setState({ ...INITIAL });
   }
 }
 

@@ -92,8 +92,8 @@ test('creates template in selected folder, reopens the same item and generates w
   const api = await mockWorkspace(page);
   await page.goto('/app');
   await page.getByText('My folder', { exact: true }).click();
-  await page.locator('.workspace-nav').getByRole('link', { name: 'Шаблоны' }).click();
-  await page.getByRole('link', { name: '+ Создать шаблон' }).click();
+  await page.locator('.workspace-nav').getByRole('link', { name: 'Библиотека документов' }).click();
+  await page.getByRole('link', { name: 'Пустой документ' }).click();
   await page.getByLabel('Название шаблона').fill('Certificate');
   await page.getByLabel('Схема данных').selectOption('');
   await page.getByRole('button', { name: 'Создать и открыть редактор' }).click();
@@ -101,7 +101,7 @@ test('creates template in selected folder, reopens the same item and generates w
   expect(api.template()).toMatchObject({ folderId: 'F', schemaId: null });
   const treeItem = page.locator('aside').getByText('Certificate', { exact: true });
   await expect(treeItem).toBeVisible();
-  await page.locator('.workspace-nav').getByRole('link', { name: 'Документы' }).click();
+  await page.locator('.workspace-nav').getByRole('link', { name: /Рабочая область/ }).click();
   await treeItem.click();
   await expect(page).toHaveURL(/templates\/T\/edit/);
   const panel = page.locator('.right-panel');

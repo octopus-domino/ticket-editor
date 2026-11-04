@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 import React, { useMemo } from 'react';
 import { Group, Rect, Path, Line, Text as KonvaText } from 'react-konva';
 import type { ChartElement, DataRoot, DataField } from '@/shared/types';
@@ -126,8 +127,8 @@ export const ChartEl: React.FC<Props> = ({
 
   const emptyLabel = !values.length
     ? el.dataPath
-      ? `нет данных: ${el.dataPath}`
-      : 'нет данных'
+      ? __tr("нет данных: {0}", el.dataPath)
+      : __tr("нет данных")
     : null;
 
   return (

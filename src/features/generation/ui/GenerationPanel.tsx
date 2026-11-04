@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useStore } from '@/shared/store/store';
@@ -13,6 +14,7 @@ import { validateGeneration } from '../domain/GenerationValidator';
 import { generationStore } from '../state/GenerationStore';
 import { SearchSelectList, type ListItemAdapter } from '@/presentation/components/list';
 import { toast } from '@/presentation/components/toast';
+import { SignGeneratedLink } from '@/features/signing/SignGeneratedLink';
 
 const SUPPORTED = ['pdfa', 'pdf', 'svg'] as const;
 type Format = (typeof SUPPORTED)[number];
@@ -111,7 +113,7 @@ export const GenerationPanel: React.FC = () => {
       return [
         {
           kind: 'format' as const,
-          message: 'Для «Один файл» выберите ровно один набор данных.',
+          message: __tr("Для «Один файл» выберите ровно один набор данных."),
         },
       ];
     }
@@ -197,9 +199,9 @@ export const GenerationPanel: React.FC = () => {
     try {
       await modelStore.importMany(activeSchema.id, items);
       setImporterOpen(false);
-      toast.success(`Импортировано наборов данных: ${items.length}`);
+      toast.success(__tr("Импортировано наборов данных: {0}", items.length));
     } catch (e) {
-      toast.error('Не удалось импортировать', (e as Error).message);
+      toast.error(__tr("Не удалось импортировать"), (e as Error).message);
     }
   };
 
@@ -207,17 +209,15 @@ export const GenerationPanel: React.FC = () => {
     <div className="dp-container" style={{ overflowY: 'auto' }}>
       <div className="gen-preview">
         <div style={{ fontWeight: 600 }}>
-          📄 {activeSchema?.name ?? 'Документ без подстановки данных'}
+          📄 {activeSchema?.name ?? __tr("Документ без подстановки данных")}
         </div>
         <div className="schema-hint">
-          Слайдов: {slides.length} · Наборов данных: {models.length}
+          {__tr("Слайдов:")}{slides.length} {__tr("· Наборов данных:")}{models.length}
         </div>
       </div>
       {!activeSchema && (
         <p className="schema-hint">
-          Будет создан один документ из текущего макета. Для персонализации выберите или создайте
-          схему данных во вкладке «Данные».
-        </p>
+          {__tr("Будет создан один документ из текущего макета. Для персонализации выберите или создайте схему данных во вкладке «Данные».")}</p>
       )}
       {activeSchema && (
         <>
@@ -225,19 +225,19 @@ export const GenerationPanel: React.FC = () => {
             className="dp-section-title"
             style={{ display: 'flex', justifyContent: 'space-between' }}
           >
-            <span>Наборы данных</span>
+            <span>{__tr("Наборы данных")}</span>
             <span style={{ display: 'flex', gap: 4 }}>
               <button
                 className="dp-btn"
                 onClick={() => setImporterOpen((v) => !v)}
-                title="Импорт JSON"
+                title={__tr("Импорт JSON")}
               >
                 📥
               </button>
               <button
                 className="dp-btn"
                 onClick={() => modelIO.download(models, `${activeSchema.name}-models.json`)}
-                title="Экспорт JSON"
+                title={__tr("Экспорт JSON")}
               >
                 📤
               </button>
@@ -256,11 +256,10 @@ export const GenerationPanel: React.FC = () => {
             activeId={selectedId}
             onItemClick={(m) => modelStore.select(m.id)}
             bulkActions={[]}
-            searchPlaceholder="Поиск по названию набора данных…"
+            searchPlaceholder={__tr("Поиск по названию набора данных…")}
             emptyText={
               <span>
-                Наборов данных нет. Создайте в разделе «Данные» или нажмите 📥 для импорта.
-              </span>
+                {__tr("Наборов данных нет. Создайте в разделе «Данные» или нажмите 📥 для импорта.")}</span>
             }
             maxHeight={260}
             minHeight={140}
@@ -281,7 +280,7 @@ export const GenerationPanel: React.FC = () => {
           {warnings.slice(0, 5).map((i, k) => (
             <div key={k}>⚠ {i.message}</div>
           ))}
-          {warnings.length > 5 && <div>…и ещё {warnings.length - 5}</div>}
+          {warnings.length > 5 && <div>{__tr("…и ещё")}{warnings.length - 5}</div>}
         </div>
       )}
 
@@ -291,12 +290,12 @@ export const GenerationPanel: React.FC = () => {
             className="dp-section-title"
             style={{ display: 'flex', justifyContent: 'space-between' }}
           >
-            <span>Поля: {activeModel.name}</span>
+            <span>{__tr("Поля:")}{activeModel.name}</span>
             {saveStatus === 'saving' && (
               <span style={{ fontSize: 10, color: '#94a3b8' }}>💾...</span>
             )}
             {saveStatus === 'saved' && (
-              <span style={{ fontSize: 10, color: '#16a34a' }}>✓ сохранено</span>
+              <span style={{ fontSize: 10, color: '#16a34a' }}>{__tr("✓ сохранено")}</span>
             )}
           </div>
           <ModelValuesEditor
@@ -309,12 +308,10 @@ export const GenerationPanel: React.FC = () => {
       )}
 
       <div className="dp-section-title" style={{ marginTop: 16 }}>
-        Параметры
-      </div>
+        {__tr("Параметры")}</div>
 
       <label className="gen-label">
-        Формат
-        <select
+        {__tr("Формат")}<select
           className="gen-select"
           value={format}
           onChange={(e) => updateParams({ format: e.target.value })}
@@ -326,20 +323,18 @@ export const GenerationPanel: React.FC = () => {
       </label>
 
       <label className="gen-label">
-        Упаковка
-        <select
+        {__tr("Упаковка")}<select
           className="gen-select"
           value={packAs}
           onChange={(e) => updateParams({ packAs: e.target.value })}
         >
           <option value="zip">ZIP</option>
-          <option value="single">Один файл (если 1 набор данных)</option>
+          <option value="single">{__tr("Один файл (если 1 набор данных)")}</option>
         </select>
       </label>
 
       <label className="gen-label">
-        Шаблон имени
-        <input
+        {__tr("Шаблон имени")}<input
           className="gen-input"
           value={filenamePattern}
           onChange={(e) => updateParams({ fn: e.target.value })}
@@ -354,21 +349,21 @@ export const GenerationPanel: React.FC = () => {
         title="Ctrl+Enter"
       >
         {phase === 'sync-running'
-          ? 'Генерация…'
+          ? __tr("Генерация…")
           : phase === 'async-running'
-            ? 'В очереди…'
-            : 'Сгенерировать (Ctrl+Enter)'}
+            ? __tr("В очереди…")
+            : __tr("Сгенерировать (Ctrl+Enter)")}
       </button>
 
       {phase === 'async-running' && job && (
         <div className="gen-progress" style={{ marginTop: 12 }}>
           <div>
-            Прогресс: {job.progress.completed} / {job.progress.total}
+            {__tr("Прогресс:")}{job.progress.completed} / {job.progress.total}
           </div>
           <progress value={job.progress.completed} max={job.progress.total} />
           {job.errors.length > 0 && (
             <details style={{ marginTop: 8 }}>
-              <summary>Ошибок: {job.errors.length}</summary>
+              <summary>{__tr("Ошибок:")}{job.errors.length}</summary>
               {job.errors.slice(0, 5).map((e, k) => (
                 <div key={k} style={{ fontSize: 11 }}>
                   #{e.index}: {e.message}
@@ -378,12 +373,12 @@ export const GenerationPanel: React.FC = () => {
           )}
         </div>
       )}
-      {phase === 'async-done' && result && (
+      {(phase === 'async-done' || phase === 'sync-done') && result && (
         <div className="gen-status done" style={{ marginTop: 12 }}>
-          Готово: {result.count}.{' '}
+          {__tr("Готово:")}{result.count}.{' '}
           <button className="dp-btn" onClick={() => downloadBlob(result.blob, result.filename)}>
-            Скачать
-          </button>
+            {__tr("Скачать")}</button>
+          <SignGeneratedLink />
         </div>
       )}
       {err && (

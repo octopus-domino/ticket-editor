@@ -11,6 +11,7 @@ import type { Slide, CanvasElement, DocFormat, Orientation, Padding } from '@/sh
 import { DEFAULT_PADDING } from '@/shared/constants';
 import { getFormatSize } from '@/shared/utils/formats';
 import { generateId } from '@/shared/utils/id';
+import { t } from '@/shared/i18n/core';
 
 export { getFormatSize };
 
@@ -24,7 +25,7 @@ export function createSlide(
   const { w, h } = getFormatSize(format, orientation, customSize);
   return {
     id: generateId(),
-    name: `Слайд ${n}`,
+    name: t('Slide {0}', n),
     format, orientation,
     width: w, height: h,
     background: '#ffffff',
@@ -37,7 +38,7 @@ export function cloneSlide(source: Slide): Slide {
   return {
     ...source,
     id: generateId(),
-    name: `${source.name} (копия)`,
+    name: t('{0} (copy)', source.name),
     padding: { ...source.padding },
     elements: source.elements.map((el) => {
       const copy = JSON.parse(JSON.stringify(el)) as CanvasElement;

@@ -1,4 +1,5 @@
-﻿import React from 'react';
+import { t as __tr } from '@/shared/i18n';
+import React from 'react';
 import { useStore } from '@/shared/store/store';
 import { useDocumentStore, useSelectionStore } from '../providers/EditorProvider';
 import { createSlide, cloneSlide } from '@/domain/slide/operations';
@@ -70,7 +71,7 @@ export const SlidesBar: React.FC = () => {
           )}
         </div>
       ))}
-      <button className="add-slide" onClick={addSlide}>+ Слайд</button>
+      <button className="add-slide" onClick={addSlide}>{__tr("+ Слайд")}</button>
     </footer>
   );
 };

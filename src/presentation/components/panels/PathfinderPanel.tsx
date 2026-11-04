@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 import React from 'react';
 import { useStore } from '@/shared/store/store';
 import { useDocumentStore, useSelectionStore } from '../../providers/EditorProvider';
@@ -16,7 +17,7 @@ export const PathfinderPanel: React.FC = () => {
   const handleClick = (op: typeof PATHFINDER_OPS[number]['op']): void => {
     const result = run(op);
     if (!result.ok) {
-      toast.error('Pathfinder не выполнен', result.error);
+      toast.error(__tr("Pathfinder не выполнен"), result.error);
     }
   };
 
@@ -35,8 +36,7 @@ export const PathfinderPanel: React.FC = () => {
         ))}
       </div>
       <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 6 }}>
-        Boolean ops через polygon-clipping. Text и символы не участвуют.
-      </p>
+        {__tr("Boolean ops через polygon-clipping. Text и символы не участвуют.")}</p>
     </div>
   );
 };

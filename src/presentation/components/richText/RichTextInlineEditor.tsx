@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 import React, { useCallback, useEffect, useMemo, useRef, useState, useLayoutEffect } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -55,7 +56,7 @@ export const RichTextInlineEditor: React.FC<Props> = ({
   const baseHtml = useMemo(() => {
     if (editing.html && editing.html.trim()) return editing.html;
     const plain = editing.value ?? '';
-    if (!plain.trim() || plain === 'Введите текст') return '<p></p>';
+    if (!plain.trim() || plain === __tr("Введите текст")) return '<p></p>';
     return plainToHtml(plain);
   }, [editing.html, editing.value]);
 
@@ -275,10 +276,10 @@ export const RichTextInlineEditor: React.FC<Props> = ({
               else editor.chain().focus().toggleHeading({ level: +v[1] as 1 | 2 | 3 }).run();
             }}
           >
-            <option value="p">Обычный</option>
-            <option value="h1">Заголовок 1</option>
-            <option value="h2">Заголовок 2</option>
-            <option value="h3">Заголовок 3</option>
+            <option value="p">{__tr("Обычный")}</option>
+            <option value="h1">{__tr("Заголовок 1")}</option>
+            <option value="h2">{__tr("Заголовок 2")}</option>
+            <option value="h3">{__tr("Заголовок 3")}</option>
           </select>
           <select
             className="rt-select"
@@ -300,21 +301,21 @@ export const RichTextInlineEditor: React.FC<Props> = ({
 
         <div className="rt-sep" />
         <div className="rt-group">
-          <button type="button" className={`rt-btn ${editor.isActive('bold') ? 'active' : ''}`} onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().toggleBold().run()} title="Жирный"><b>B</b></button>
-          <button type="button" className={`rt-btn ${editor.isActive('italic') ? 'active' : ''}`} onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().toggleItalic().run()} title="Курсив"><i>I</i></button>
-          <button type="button" className={`rt-btn ${editor.isActive('underline') ? 'active' : ''}`} onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().toggleUnderline().run()} title="Подчёркнутый"><u>U</u></button>
-          <button type="button" className={`rt-btn ${editor.isActive('strike') ? 'active' : ''}`} onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().toggleStrike().run()} title="Зачёркнутый"><s>S</s></button>
+          <button type="button" className={`rt-btn ${editor.isActive('bold') ? 'active' : ''}`} onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().toggleBold().run()} title={__tr("Жирный")}><b>B</b></button>
+          <button type="button" className={`rt-btn ${editor.isActive('italic') ? 'active' : ''}`} onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().toggleItalic().run()} title={__tr("Курсив")}><i>I</i></button>
+          <button type="button" className={`rt-btn ${editor.isActive('underline') ? 'active' : ''}`} onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().toggleUnderline().run()} title={__tr("Подчёркнутый")}><u>U</u></button>
+          <button type="button" className={`rt-btn ${editor.isActive('strike') ? 'active' : ''}`} onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().toggleStrike().run()} title={__tr("Зачёркнутый")}><s>S</s></button>
         </div>
 
         <div className="rt-sep" />
         <div className="rt-popover-wrap">
-          <button type="button" className="rt-btn" title="Цвет текста"
+          <button type="button" className="rt-btn" title={__tr("Цвет текста")}
             onMouseDown={(e) => { e.preventDefault(); setPop((p) => (p === 'color' ? null : 'color')); }}>
             <span className="rt-letter" style={{ borderBottomColor: currentColor }}>A</span>
           </button>
           {pop === 'color' && (
             <ColorPickerPopover
-              title="Цвет текста"
+              title={__tr("Цвет текста")}
               colors={TEXT_COLORS.flat()}
               onPick={(c) => { editor.chain().focus().setColor(c).run(); setPop(null); }}
               onReset={() => { editor.chain().focus().unsetColor().run(); setPop(null); }}
@@ -322,13 +323,13 @@ export const RichTextInlineEditor: React.FC<Props> = ({
           )}
         </div>
         <div className="rt-popover-wrap">
-          <button type="button" className="rt-btn" title="Фон текста"
+          <button type="button" className="rt-btn" title={__tr("Фон текста")}
             onMouseDown={(e) => { e.preventDefault(); setPop((p) => (p === 'bg' ? null : 'bg')); }}>
             <span className="rt-letter rt-bg-letter" style={{ background: currentHighlight || 'transparent', borderBottomColor: currentHighlight || '#9ca3af' }}>A</span>
           </button>
           {pop === 'bg' && (
             <ColorPickerPopover
-              title="Фон текста"
+              title={__tr("Фон текста")}
               colors={BG_COLORS.flat()}
               onPick={(c) => { editor.chain().focus().setHighlight({ color: c }).run(); setPop(null); }}
               onReset={() => { editor.chain().focus().unsetHighlight().run(); setPop(null); }}
@@ -338,22 +339,22 @@ export const RichTextInlineEditor: React.FC<Props> = ({
 
         <div className="rt-sep" />
         <div className="rt-group">
-          <button type="button" className={`rt-btn ${editor.isActive({ textAlign: 'left' }) ? 'active' : ''}`} onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().setTextAlign('left').run()} title="По левому краю">◧</button>
-          <button type="button" className={`rt-btn ${editor.isActive({ textAlign: 'center' }) ? 'active' : ''}`} onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().setTextAlign('center').run()} title="По центру">◫</button>
-          <button type="button" className={`rt-btn ${editor.isActive({ textAlign: 'right' }) ? 'active' : ''}`} onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().setTextAlign('right').run()} title="По правому краю">◨</button>
-          <button type="button" className={`rt-btn ${editor.isActive({ textAlign: 'justify' }) ? 'active' : ''}`} onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().setTextAlign('justify').run()} title="По ширине">☰</button>
+          <button type="button" className={`rt-btn ${editor.isActive({ textAlign: 'left' }) ? 'active' : ''}`} onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().setTextAlign('left').run()} title={__tr("По левому краю")}>◧</button>
+          <button type="button" className={`rt-btn ${editor.isActive({ textAlign: 'center' }) ? 'active' : ''}`} onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().setTextAlign('center').run()} title={__tr("По центру")}>◫</button>
+          <button type="button" className={`rt-btn ${editor.isActive({ textAlign: 'right' }) ? 'active' : ''}`} onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().setTextAlign('right').run()} title={__tr("По правому краю")}>◨</button>
+          <button type="button" className={`rt-btn ${editor.isActive({ textAlign: 'justify' }) ? 'active' : ''}`} onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().setTextAlign('justify').run()} title={__tr("По ширине")}>☰</button>
         </div>
 
         <div className="rt-sep" />
         <div className="rt-group">
-          <button type="button" className={`rt-btn ${editor.isActive('bulletList') ? 'active' : ''}`} onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().toggleBulletList().run()} title="Маркированный список">• Список</button>
-          <button type="button" className={`rt-btn ${editor.isActive('orderedList') ? 'active' : ''}`} onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().toggleOrderedList().run()} title="Нумерованный список">1. Список</button>
+          <button type="button" className={`rt-btn ${editor.isActive('bulletList') ? 'active' : ''}`} onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().toggleBulletList().run()} title={__tr("Маркированный список")}>{__tr("• Список")}</button>
+          <button type="button" className={`rt-btn ${editor.isActive('orderedList') ? 'active' : ''}`} onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().toggleOrderedList().run()} title={__tr("Нумерованный список")}>{__tr("1. Список")}</button>
         </div>
 
         <div className="rt-sep" />
         <div className="rt-group">
-          <button type="button" className="rt-btn" onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().outdent().run()} title="Уменьшить отступ">← Отступ</button>
-          <button type="button" className="rt-btn" onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().indent().run()} title="Увеличить отступ">→ Отступ</button>
+          <button type="button" className="rt-btn" onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().outdent().run()} title={__tr("Уменьшить отступ")}>{__tr("← Отступ")}</button>
+          <button type="button" className="rt-btn" onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().indent().run()} title={__tr("Увеличить отступ")}>{__tr("→ Отступ")}</button>
         </div>
 
         <TableOperationsToolbar editor={editor} />
@@ -365,8 +366,8 @@ export const RichTextInlineEditor: React.FC<Props> = ({
             className="rt-btn primary"
             onMouseDown={(e) => e.preventDefault()}
             onClick={handleCommit}
-            title="Готово (Escape)"
-          >✓ Готово</button>
+            title={__tr("Готово (Escape)")}
+          >{__tr("✓ Готово")}</button>
         </div>
       </div>
     </>

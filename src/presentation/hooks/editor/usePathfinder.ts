@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 /* ============================================================
    presentation/hooks/editor/usePathfinder.ts
 
@@ -22,7 +23,7 @@ export function usePathfinder(docStore: DocumentStore, selStore: SelectionStore)
   const run = useCallback((op: PathfinderOp): PathfinderResult => {
     const state = docStore.getState();
     const slide = state.slides.find(s => s.id === state.activeId);
-    if (!slide) return { ok: false, error: 'Нет активного слайда' };
+    if (!slide) return { ok: false, error: __tr("Нет активного слайда") };
 
     const ids = selStore.getState().selectedIds;
     const selected = ids
@@ -30,12 +31,12 @@ export function usePathfinder(docStore: DocumentStore, selStore: SelectionStore)
       .filter((el): el is NonNullable<typeof el> => Boolean(el));
 
     if (selected.length < 2) {
-      return { ok: false, error: 'Нужно минимум 2 элемента' };
+      return { ok: false, error: __tr("Нужно минимум 2 элемента") };
     }
 
     for (const el of selected) {
       if (!isBooleanOperand(el)) {
-        return { ok: false, error: 'Text и символы не участвуют в boolean-операциях' };
+        return { ok: false, error: __tr('Text and symbols are excluded from shape operations') };
       }
     }
 
@@ -43,7 +44,7 @@ export function usePathfinder(docStore: DocumentStore, selStore: SelectionStore)
     try {
       const result = applyPathfinder(selected, op);
       if (!result) {
-        return { ok: false, error: 'Операция не дала результата (пустые контуры?)' };
+        return { ok: false, error: __tr("Операция не дала результата (пустые контуры?)") };
       }
       docStore.commit((draft) => {
         const s = draft.slides.find(x => x.id === draft.activeId);

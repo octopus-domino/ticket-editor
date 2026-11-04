@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 import React from 'react';
 import type {
   CanvasElement, AppearanceFill, AppearanceStroke,
@@ -16,9 +17,9 @@ interface Props {
 }
 
 const FILL_TYPE_LABEL: Record<AppearanceFillType, string> = {
-  solid: 'Сплошная',
-  linear: 'Линейный',
-  radial: 'Радиальный',
+  solid: __tr("Сплошная"),
+  linear: __tr("Линейный"),
+  radial: __tr("Радиальный"),
 };
 
 const DEFAULT_STOPS: GradientStop[] = [
@@ -95,12 +96,11 @@ export const AppearancePanel: React.FC<Props> = ({ element, update }) => {
   return (
     <div style={{ marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid #e2e8f0' }}>
       <h4 style={{ margin: '0 0 8px', fontSize: 11, color: '#64748b', textTransform: 'uppercase' }}>
-        Appearance
-      </h4>
+        {__tr("Appearance")}</h4>
 
       {/* ---------- Fills ---------- */}
       <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 4 }}>
-        Заливки ({fills.length})
+        {__tr("Заливки (")}{fills.length})
       </div>
       {fills.map((fill, idx) => (
         <div
@@ -122,7 +122,7 @@ export const AppearancePanel: React.FC<Props> = ({ element, update }) => {
             </select>
             <button
               type="button"
-              title="Удалить заливку"
+              title={__tr("Удалить заливку")}
               style={{ border: 'none', background: 'transparent', color: '#dc2626', cursor: 'pointer', fontSize: 16 }}
               onClick={() => setFills(fills.filter((_, i) => i !== idx))}
             >×</button>
@@ -148,7 +148,7 @@ export const AppearancePanel: React.FC<Props> = ({ element, update }) => {
                     value={stop.offset}
                     onChange={e => changeStop(idx, sIdx, { offset: parseFloat(e.target.value) })}
                     style={{ flex: 1 }}
-                    title="Позиция"
+                    title={__tr("Позиция")}
                   />
                   <input
                     type="color"
@@ -160,7 +160,7 @@ export const AppearancePanel: React.FC<Props> = ({ element, update }) => {
               ))}
               {fill.type === 'linear' && (
                 <div style={{ display: 'flex', gap: 4, alignItems: 'center', marginTop: 4 }}>
-                  <span style={{ fontSize: 11, color: '#64748b' }}>Угол:</span>
+                  <span style={{ fontSize: 11, color: '#64748b' }}>{__tr("Угол:")}</span>
                   <input
                     type="number"
                     value={fill.angle ?? 0}
@@ -175,7 +175,7 @@ export const AppearancePanel: React.FC<Props> = ({ element, update }) => {
 
           {/* Прозрачность (видна для всех типов заливок) */}
           <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-            <span style={{ fontSize: 11, color: '#64748b', width: 80 }}>Прозрачность:</span>
+            <span style={{ fontSize: 11, color: '#64748b', width: 80 }}>{__tr("Прозрачность:")}</span>
             <input
               type="range" min={0} max={1} step={0.01}
               value={fill.opacity ?? 1}
@@ -193,12 +193,11 @@ export const AppearancePanel: React.FC<Props> = ({ element, update }) => {
         style={{ ...inputStyle, width: '100%', cursor: 'pointer', marginBottom: 12 }}
         onClick={() => setFills([...fills, { id: generateIdWithPrefix('fill'), type: 'solid', color: '#10b981', opacity: 1 }])}
       >
-        + Заливка
-      </button>
+        {__tr("+ Заливка")}</button>
 
       {/* ---------- Strokes ---------- */}
       <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 4 }}>
-        Обводки ({strokes.length})
+        {__tr("Обводки (")}{strokes.length})
       </div>
       {strokes.map((stroke, idx) => (
         <div key={stroke.id} style={{ display: 'flex', gap: 4, marginBottom: 4, alignItems: 'center' }}>
@@ -213,25 +212,25 @@ export const AppearancePanel: React.FC<Props> = ({ element, update }) => {
             value={stroke.width}
             onChange={e => setStrokes(strokes.map((s, i) => i === idx ? { ...s, width: parseFloat(e.target.value) || 0 } : s))}
             style={{ ...inputStyle, width: 50 }}
-            title="Толщина"
+            title={__tr("Толщина")}
           />
           <button
             type="button"
-            title="Выше"
+            title={__tr("Выше")}
             disabled={idx === 0}
             onClick={() => moveStroke(idx, idx - 1)}
             style={{ background: 'transparent', border: 'none', cursor: 'pointer', opacity: idx === 0 ? 0.3 : 1 }}
           >↑</button>
           <button
             type="button"
-            title="Ниже"
+            title={__tr("Ниже")}
             disabled={idx === strokes.length - 1}
             onClick={() => moveStroke(idx, idx + 1)}
             style={{ background: 'transparent', border: 'none', cursor: 'pointer', opacity: idx === strokes.length - 1 ? 0.3 : 1 }}
           >↓</button>
           <button
             type="button"
-            title="Удалить обводку"
+            title={__tr("Удалить обводку")}
             style={{ border: 'none', background: 'transparent', color: '#dc2626', cursor: 'pointer', fontSize: 16 }}
             onClick={() => setStrokes(strokes.filter((_, i) => i !== idx))}
           >×</button>
@@ -242,8 +241,7 @@ export const AppearancePanel: React.FC<Props> = ({ element, update }) => {
         style={{ ...inputStyle, width: '100%', cursor: 'pointer' }}
         onClick={() => setStrokes([...strokes, { id: generateIdWithPrefix('stroke'), color: '#0f172a', width: 2, align: 'center' }])}
       >
-        + Обводка
-      </button>
+        {__tr("+ Обводка")}</button>
     </div>
   );
 };

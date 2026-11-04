@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 import React from 'react';
 
 interface Props {
@@ -19,18 +20,17 @@ export const ZoomBar: React.FC<Props> = ({
     <button onClick={() => onChange(Math.min(10, +(zoom + 0.1).toFixed(2)))}>+</button>
     <button onClick={() => onChange(1)}>100%</button>
     {typeof selectedCount === 'number' && selectedCount > 1 && (
-      <span className="style-badge">Выбрано: {selectedCount}</span>
+      <span className="style-badge">{__tr("Выбрано:")}{selectedCount}</span>
     )}
-    {fillMode && <span className="style-badge">🎨 Заливка</span>}
+    {fillMode && <span className="style-badge">{__tr("🎨 Заливка")}</span>}
     {onToggleDataHighlight && (
       <button
         onClick={onToggleDataHighlight}
         className={dataHighlight ? 'active' : ''}
-        title="Показать, где на холсте используются данные"
+        title={__tr("Показать, где на холсте используются данные")}
         style={dataHighlight ? { background: '#eef2ff', borderColor: '#6366f1', color: '#4f46e5' } : undefined}
       >
-        🏷 Данные
-      </button>
+        {__tr("🏷 Данные")}</button>
     )}
   </div>
 );

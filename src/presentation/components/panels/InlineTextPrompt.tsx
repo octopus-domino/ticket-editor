@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 import React, { useEffect, useRef, useState } from 'react';
 
 export interface InlineTextPromptProps {
@@ -17,8 +18,8 @@ export interface InlineTextPromptProps {
 export const InlineTextPrompt: React.FC<InlineTextPromptProps> = ({
   initialValue = '',
   placeholder,
-  saveLabel = 'Сохранить',
-  cancelLabel = 'Отмена',
+  saveLabel = __tr("Сохранить"),
+  cancelLabel = __tr("Отмена"),
   onSave,
   onCancel,
 }) => {

@@ -11,9 +11,10 @@
   --text: #0f172a;
   --text-muted: #64748b;
   --text-soft: #94a3b8;
-  --accent: #6366f1;
-  --accent-hover: #4f46e5;
-  --accent-light: #eef2ff;
+  --accent: #ff4d00;
+  --accent-hover: #d94000;
+  --accent-light: #fff0e8;
+  --accent-soft: #ffe0d1;
   --danger: #ef4444;
   --danger-light: #fee2e2;
   --success: #10b981;

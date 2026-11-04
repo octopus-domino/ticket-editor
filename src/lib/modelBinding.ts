@@ -1,5 +1,6 @@
 import type { CanvasElement } from '@/shared/types';
 import { TEXT_PLACEHOLDER } from '@/shared/constants';
+import { isTranslation } from '@/shared/i18n/core';
 import { layoutRuns } from '@/lib/richText/layout';
 import { getByPath } from '@/lib/path';
 
@@ -23,13 +24,13 @@ export function resolveWithValues(
 function isEmptyText(text: string | undefined | null): boolean {
   if (!text) return true;
   const t = text.trim();
-  return t === '' || t === TEXT_PLACEHOLDER;
+  return t === '' || isTranslation(TEXT_PLACEHOLDER, t);
 }
 
 function isEmptyHtml(html: string | undefined | null): boolean {
   if (!html) return true;
   const t = html.replace(/<[^>]+>/g, '').trim();
-  return t === '' || t === TEXT_PLACEHOLDER;
+  return t === '' || isTranslation(TEXT_PLACEHOLDER, t);
 }
 
 export function appendPlaceholderPatch(

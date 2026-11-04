@@ -12,7 +12,10 @@ test('landing works on mobile and preserves creation intent across auth screens'
   await page.goto('/');
   await expect(page).toHaveTitle(/CoDoc.*генерация PDF/);
   await expect(page.locator('h1')).toContainText('Документы разные.');
-  await expect(page.locator('.codoc-hero-art img')).toHaveJSProperty('naturalWidth', 1536);
+  const heroImage = page.locator('.codoc-hero-art img');
+  await expect(heroImage).toHaveJSProperty('complete', true);
+  expect(await heroImage.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
+  expect(await heroImage.evaluate((image: HTMLImageElement) => image.currentSrc)).toMatch(/people-workshop-(640|1280)\.webp$/);
   expect(
     await page.locator('.codoc-landing').evaluate((el) => el.scrollWidth <= el.clientWidth),
   ).toBe(true);

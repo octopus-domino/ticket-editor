@@ -1,4 +1,5 @@
-﻿import { useCallback } from 'react';
+import { t as __tr } from '@/shared/i18n';
+import { useCallback } from 'react';
 import type { DocumentStore } from '@/infra/state/DocumentStore';
 import type { EditingState } from '../../stores/ModalsStore';
 
@@ -17,7 +18,7 @@ export function useEditingCommit(docStore: DocumentStore) {
           const hasRichContent = html && (html.includes('<table') || html.includes('<img'));
           const isEmpty = !safeText.trim() && !hasRichContent;
 
-          el.text = isEmpty ? 'Введите текст' : safeText;
+          el.text = isEmpty ? __tr("Введите текст") : safeText;
           el.html = isEmpty ? undefined : html;
           if (hasRichContent) el.richText = true;
           return;

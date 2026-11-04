@@ -1,4 +1,5 @@
-﻿/* ============================================================
+import { stampContentSvg } from './stamp';
+/* ============================================================
    lib/svg/exporters.ts
    ============================================================ */
 
@@ -580,27 +581,7 @@ export function toSvgDiagram(el: DiagramElement): string {
 }
 
 export function toSvgStamp(el: StampElement): string {
-  let svg = '';
-  if (el.shapes) {
-    el.shapes.forEach((s) => {
-      if (s.kind === 'rect') {
-        svg += `<rect x="${s.x}" y="${s.y}" width="${s.width}" height="${s.height}" fill="${escapeXml(s.fill || 'transparent')}" stroke="${escapeXml(s.stroke)}" stroke-width="${s.strokeWidth}" />`;
-      } else if (s.kind === 'circle' || s.kind === 'ellipse') {
-        svg += `<ellipse cx="${s.x + s.width / 2}" cy="${s.y + s.height / 2}" rx="${s.width / 2}" ry="${s.height / 2}" fill="${escapeXml(s.fill || 'transparent')}" stroke="${escapeXml(s.stroke)}" stroke-width="${s.strokeWidth}" />`;
-      } else if (s.kind === 'line') {
-        const pts = s.points || [0, 0, s.width, 0];
-        svg += `<polyline points="${pts.join(' ')}" fill="none" stroke="${escapeXml(s.stroke)}" stroke-width="${s.strokeWidth}" />`;
-      }
-    });
-  }
-  if (el.texts) {
-    el.texts.forEach((t) => {
-      if (t.mode === 'straight') {
-        svg += `<text x="${t.x}" y="${t.y + t.fontSize}" font-size="${t.fontSize}" font-family="${escapeXml(t.fontFamily)}" fill="${escapeXml(t.fill)}" text-anchor="middle">${escapeXml(t.text)}</text>`;
-      }
-    });
-  }
-  return wrapTransform(el, svg);
+  return wrapTransform(el, stampContentSvg(el));
 }
 
 export function toSvgQr(el: QrElement): string {

@@ -1,4 +1,5 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+import { t as __tr } from '@/shared/i18n';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useStore } from '@/shared/store/store';
 import { inferFieldsFromSlides, flattenFields } from '@/features/schemas/domain/SchemaInference';
@@ -7,6 +8,8 @@ import { schemaStore } from '@/features/schemas/state/SchemaStore';
 import { modelStore } from '@/features/data-models/state/ModelStore';
 import { getPath } from '@/features/data-models/domain/DataModelValidator';
 import { ModelValuesEditor } from '@/features/data-models/ui/ModelValuesEditor';
+import { ExcelActions } from '@/features/data-models/ui/ExcelActions';
+import { JsonImporterPanel } from '@/features/data-models/ui/JsonImporterPanel';
 import type { DataModel } from '@/features/data-models/domain/DataModel';
 import { useDocumentStore } from '../providers/EditorProvider';
 import {
@@ -27,6 +30,7 @@ export const DataPanel: React.FC = () => {
 
   const [uiError, setUiError] = useState<string | null>(null);
   const [valuesOpen, setValuesOpen] = useState(false);
+  const [importerOpen, setImporterOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [selectedModelIds, setSelectedModelIds] = useState<Set<string>>(() => new Set());
 
@@ -57,18 +61,21 @@ export const DataPanel: React.FC = () => {
     () => [
       {
         key: 'delete',
-        label: 'Удалить',
+        label: __tr('Удалить'),
         icon: '🗑',
         variant: 'danger',
         confirm: (ids) => ({
-          title: `Удалить ${ids.length} ${pluralModels(ids.length)}?`,
-          description: 'Действие необратимо.',
+          title: __tr('Удалить {0} {1}?', ids.length, pluralModels(ids.length)),
+          description: __tr('Действие необратимо.'),
         }),
         onRun: async (ids) => {
           const result = await runBulk(ids, (id) => modelStore.remove(id));
-          if (result.ok > 0) toast.success(`Удалено: ${result.ok}`);
+          if (result.ok > 0) toast.success(__tr('Удалено: {0}', result.ok));
           if (result.failed.length > 0) {
-            toast.error(`Не удалось удалить: ${result.failed.length}`, result.failed[0].message);
+            toast.error(
+              __tr('Не удалось удалить: {0}', result.failed.length),
+              result.failed[0].message,
+            );
           }
           setSelectedModelIds((prev) => {
             const next = new Set(prev);
@@ -85,13 +92,13 @@ export const DataPanel: React.FC = () => {
     const slides = docStore.getState().slides;
     const inferred = inferFieldsFromSlides(slides);
     if (inferred.length === 0) {
-      setUiError('В документе нет {{...}} или fieldPath. Добавьте плейсхолдер на холст.');
+      setUiError(__tr('В документе нет {{...}} или fieldPath. Добавьте плейсхолдер на холст.'));
       return;
     }
     setUiError(null);
     try {
       const created = await schemaStore.create({
-        name: `Схема ${new Date().toLocaleDateString('ru-RU')}`,
+        name: __tr('Схема {0}', new Date().toLocaleDateString('ru-RU')),
         fields: inferred,
       });
       selectSchema(created.id);
@@ -104,10 +111,10 @@ export const DataPanel: React.FC = () => {
     setUiError(null);
     try {
       const created = await schemaStore.create({
-        name: 'Новая схема',
+        name: __tr('Новая схема'),
         fields: [
-          { path: 'title', type: 'string', required: true, label: 'Заголовок' },
-          { path: 'subtitle', type: 'string', required: false, label: 'Подзаголовок' },
+          { path: 'title', type: 'string', required: true, label: __tr('Заголовок') },
+          { path: 'subtitle', type: 'string', required: false, label: __tr('Подзаголовок') },
         ],
       });
       selectSchema(created.id);
@@ -121,7 +128,7 @@ export const DataPanel: React.FC = () => {
     setCreating(true);
     setUiError(null);
     try {
-      await modelStore.create(activeSchema.id, 'Новый набор данных', {});
+      await modelStore.create(activeSchema.id, __tr('Новый набор данных'), {});
     } catch (e) {
       setUiError((e as Error).message);
     } finally {
@@ -178,7 +185,7 @@ export const DataPanel: React.FC = () => {
   if (loading)
     return (
       <div className="dp-container">
-        <div className="schema-hint">Загрузка…</div>
+        <div className="schema-hint">{__tr('Загрузка…')}</div>
       </div>
     );
   if (error)
@@ -191,17 +198,19 @@ export const DataPanel: React.FC = () => {
   if (!activeSchema) {
     return (
       <div className="dp-container">
-        <div className="dp-section-title">Добавьте схему данных</div>
-        <p className="schema-hint">Выберите существующую схему или создайте новую прямо здесь.</p>
+        <div className="dp-section-title">{__tr('Добавьте схему данных')}</div>
+        <p className="schema-hint">
+          {__tr('Выберите существующую схему или создайте новую прямо здесь.')}
+        </p>
         {schemas.length > 0 && (
           <select
             className="dp-select-model"
-            aria-label="Схема данных"
+            aria-label={__tr('Схема данных')}
             value=""
             onChange={(event) => selectSchema(event.target.value)}
           >
             <option value="" disabled>
-              Выберите схему
+              {__tr('Выберите схему')}
             </option>
             {schemas.map((schema) => (
               <option key={schema.id} value={schema.id}>
@@ -212,14 +221,14 @@ export const DataPanel: React.FC = () => {
         )}
         {uiError && <div className="schema-error">{uiError}</div>}
         <button className="dp-btn-submit" onClick={() => void createFromDocument()}>
-          ⤓ Создать из документа
+          {__tr('⤓ Создать из документа')}
         </button>
         <button
           className="dp-btn"
           onClick={() => void createEmpty()}
           style={{ marginTop: 8, width: '100%' }}
         >
-          + Создать схему
+          {__tr('+ Создать схему')}
         </button>
       </div>
     );
@@ -235,7 +244,7 @@ export const DataPanel: React.FC = () => {
       <div className="dp-toolbar" style={{ flexDirection: 'column', gap: 4 }}>
         <select
           className="dp-select-model"
-          aria-label="Схема данных"
+          aria-label={__tr('Схема данных')}
           value={activeSchema.id}
           onChange={(e) => selectSchema(e.target.value)}
         >
@@ -251,12 +260,28 @@ export const DataPanel: React.FC = () => {
             state={{ from: returnTo }}
             style={{ color: 'var(--accent)' }}
           >
-            ✎ Редактировать схему
+            {__tr('✎ Редактировать схему')}
           </Link>
         </div>
       </div>
 
-      <div className="dp-section-title">Поля (drag на холст)</div>
+      <div className="dp-section-title">{__tr('Поля (drag на холст)')}</div>
+      <ExcelActions
+        schema={activeSchema}
+        models={models.filter((model) => model.schemaId === activeSchema.id)}
+      />
+      <button type="button" onClick={() => setImporterOpen(!importerOpen)}>
+        Excel / JSON ↑
+      </button>
+      {importerOpen && (
+        <JsonImporterPanel
+          schemaId={activeSchema.id}
+          onImport={async (items) => {
+            await modelStore.importMany(activeSchema.id, items);
+            setImporterOpen(false);
+          }}
+        />
+      )}
       <div className="dp-list">
         {leafFields.map((f) => (
           <div
@@ -269,12 +294,12 @@ export const DataPanel: React.FC = () => {
             <span className="schema-hint">{f.type}</span>
           </div>
         ))}
-        {leafFields.length === 0 && <div className="schema-hint">Нет полей</div>}
+        {leafFields.length === 0 && <div className="schema-hint">{__tr('Нет полей')}</div>}
       </div>
 
       {arrayFields.length > 0 && (
         <>
-          <div className="dp-section-title">Массивы (drag → таблица)</div>
+          <div className="dp-section-title">{__tr('Массивы (drag → таблица)')}</div>
           <div className="dp-list">
             {arrayFields.map((f) => (
               <div
@@ -284,7 +309,7 @@ export const DataPanel: React.FC = () => {
                 onDragStart={(e) => onDragArray(e, f.path)}
               >
                 <span>{f.path}</span>
-                <span className="schema-hint">→ таблица</span>
+                <span className="schema-hint">{__tr('→ таблица')}</span>
               </div>
             ))}
           </div>
@@ -300,15 +325,15 @@ export const DataPanel: React.FC = () => {
           marginTop: 12,
         }}
       >
-        <span>Наборы данных</span>
+        <span>{__tr('Наборы данных')}</span>
         <button
           className="dp-btn"
           onClick={() => void createModel()}
           disabled={creating}
-          title="Создать новый набор данных"
+          title={__tr('Создать новый набор данных')}
           style={{ fontSize: 11 }}
         >
-          {creating ? '…' : '+ Новая'}
+          {creating ? '…' : __tr('+ Новая')}
         </button>
       </div>
 
@@ -320,11 +345,11 @@ export const DataPanel: React.FC = () => {
         activeId={activeModelId}
         onItemClick={(m) => modelStore.select(m.id)}
         bulkActions={modelBulkActions}
-        searchPlaceholder="Поиск по названию набора данных…"
+        searchPlaceholder={__tr('Поиск по названию набора данных…')}
         emptyText={
           <span>
-            Нет наборов данных. Создайте через <Link to="/app/data-models">Данные</Link> или нажмите
-            «+ Новая».
+            {__tr('Нет наборов данных. Создайте через')}
+            <Link to="/app/data-models">{__tr('Данные')}</Link> {__tr('или нажмите «+ Новая».')}
           </span>
         }
         maxHeight={240}
@@ -344,7 +369,10 @@ export const DataPanel: React.FC = () => {
             }}
             onClick={() => setValuesOpen((v) => !v)}
           >
-            <span>Значения: {activeModel.name}</span>
+            <span>
+              {__tr('Значения:')}
+              {activeModel.name}
+            </span>
             <span style={{ fontSize: 11 }}>{valuesOpen ? '▾' : '▸'}</span>
           </div>
           {valuesOpen && (
@@ -362,7 +390,7 @@ export const DataPanel: React.FC = () => {
             onClick={() => docStore.applyModelToSlides(activeModel.values)}
             style={{ marginTop: 8 }}
           >
-            Применить набор данных к холсту
+            {__tr('Применить набор данных к холсту')}
           </button>
         </>
       )}
@@ -375,7 +403,7 @@ export const DataPanel: React.FC = () => {
 function pluralModels(n: number): string {
   const m10 = n % 10;
   const m100 = n % 100;
-  if (m10 === 1 && m100 !== 11) return 'набор данных';
-  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return 'набора данных';
-  return 'наборов данных';
+  if (m10 === 1 && m100 !== 11) return __tr('набор данных');
+  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return __tr('набора данных');
+  return __tr('наборов данных');
 }

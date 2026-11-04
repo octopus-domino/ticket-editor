@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 // src/workspace/components/WorkspaceLayout.tsx
 import React, { useEffect } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
@@ -10,8 +11,12 @@ import { templateStore } from '@/features/templates/state/TemplateStore';
 import { modelStore } from '@/features/data-models/state/ModelStore';
 import './workspace-flow.css';
 import { FeedbackWidget } from '@/features/feedback/ui/FeedbackWidget';
+import { LanguageSwitcher } from '@/shared/i18n/LanguageSwitcher';
+import { t } from '@/shared/i18n';
+import { useMobilePanel, toggleMobilePanel, closeMobilePanel } from '@/shared/mobile/panels';
 
 export const WorkspaceLayout: React.FC = () => {
+  const mobilePanel = useMobilePanel();
   const navigate = useNavigate();
   const { schemas, activeSchema } = useSchemas();
   const user = useStore(authStore, (s) => s.user);
@@ -28,20 +33,22 @@ export const WorkspaceLayout: React.FC = () => {
     if (activeSchemaId) void modelStore.load(activeSchemaId);
   }, [activeSchemaId]);
 
-  const displayName = user?.name || user?.email || 'Гость';
+  const displayName = user?.name || user?.email || __tr("Гость");
   const handleLogout = async (): Promise<void> => {
     await authStore.logout();
     navigate('/login', { replace: true });
   };
 
   return (
-    <div className="workspace-layout">
+    <div className="workspace-layout" data-mobile-panel={mobilePanel || undefined}>
       <header className="workspace-header">
+        <button type="button" className="mobile-menu-button" aria-label={t('Documents')} onClick={() => toggleMobilePanel('documents')}>☰</button>
         <div className="logo">CoDoc</div>
 
         <WorkspaceFlowBreadcrumbs />
 
         <div className="workspace-profile">
+          <LanguageSwitcher />
           <FeedbackWidget surface="workspace" />
           {user ? (
             <>
@@ -56,23 +63,22 @@ export const WorkspaceLayout: React.FC = () => {
                 className="workspace-login-btn"
                 onClick={() => void handleLogout()}
               >
-                Выйти
-              </button>
+                {__tr("Выйти")}</button>
             </>
           ) : (
             <button
               type="button"
               className="workspace-login-btn primary"
               onClick={() => navigate('/login')}
-              title={offline ? 'Бэкенд недоступен — можно войти позже' : 'Войти'}
+              title={offline ? __tr("Бэкенд недоступен — можно войти позже") : __tr("Войти")}
             >
-              Войти
-            </button>
+              {__tr("Войти")}</button>
           )}
         </div>
       </header>
 
       <div className="workspace-body">
+        {mobilePanel && <button type="button" className="mobile-panel-backdrop" aria-label={t('Close panel')} onClick={closeMobilePanel}/>}
         <WorkspaceSidebar />
         <main className="workspace-main">
           <Outlet />

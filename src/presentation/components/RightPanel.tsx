@@ -1,4 +1,5 @@
-﻿// src/presentation/components/RightPanel.tsx
+import { t as __tr } from '@/shared/i18n';
+// src/presentation/components/RightPanel.tsx
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useStore } from '@/shared/store/store';
@@ -58,20 +59,17 @@ export const RightPanel: React.FC = () => {
           className={`rp-tab ${tab === 'data' ? 'active' : ''}`}
           onClick={() => setTab('data')}
         >
-          📊 Данные
-        </button>
+          {__tr("📊 Данные")}</button>
         <button
           className={`rp-tab ${tab === 'generate' ? 'active' : ''}`}
           onClick={() => setTab('generate')}
         >
-          📦 Генерация
-        </button>
+          {__tr("📦 Генерация")}</button>
         <button
           className={`rp-tab ${tab === 'bindings' ? 'active' : ''}`}
           onClick={() => setTab('bindings')}
         >
-          🔗 Связи
-        </button>
+          {__tr("🔗 Связи")}</button>
       </div>
       <div className="rp-body">
         {tab === 'props' && <PropertiesPanel />}

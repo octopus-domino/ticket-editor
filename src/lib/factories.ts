@@ -1,4 +1,5 @@
-﻿/* ============================================================
+import { t as __tr } from '@/shared/i18n';
+/* ============================================================
    lib/factories.ts
    ============================================================ */
 
@@ -24,7 +25,7 @@ export function newSlide(
   const { w, h } = getFormatSize(format, orientation);
   return {
     id: uid(),
-    name: `Страница ${n}`,
+    name: __tr("Страница {0}", n),
     format, orientation, width: w, height: h,
     background: '#ffffff',
     padding: { ...DEFAULT_PADDING },
@@ -40,11 +41,11 @@ export function newStamp(shape: StampShape, x = 200, y = 200): StampElement {
     rotation: 0, stampColor: '#1a1a1a',
     strokeWidth: 3, strokeDash: 'solid',
     innerStrokeWidth: 1, innerStrokeDash: 'solid', showInner: true,
-    topText: 'МАЗАВИЯ', topFontSize: 14, topFontFamily: 'Arial',
+    topText: __tr("МАЗАВИЯ"), topFontSize: 14, topFontFamily: 'Arial',
     topFontStyle: 'bold', topTextDecoration: '', topColor: '#1a1a1a',
     centerText: '2026', centerFontSize: 20, centerFontFamily: 'Arial',
     centerFontStyle: 'bold', centerTextDecoration: '', centerColor: '#1a1a1a',
-    bottomText: 'ДОКУМЕНТ', bottomFontSize: 12, bottomFontFamily: 'Arial',
+    bottomText: __tr("ДОКУМЕНТ"), bottomFontSize: 12, bottomFontFamily: 'Arial',
     bottomFontStyle: 'normal', bottomTextDecoration: '', bottomColor: '#1a1a1a',
   };
 }
@@ -52,7 +53,7 @@ export function newStamp(shape: StampShape, x = 200, y = 200): StampElement {
 export function newText(x = 100, y = 100): TextElement {
   return {
     id: uid(), type: 'text', x, y, width: 300, height: 80, rotation: 0,
-    text: TEXT_PLACEHOLDER,
+    text: __tr(TEXT_PLACEHOLDER),
     richText: true,
     fontSize: 18, fontFamily: 'Arial',
     fill: '#000000', fontStyle: 'normal', textDecoration: '',
@@ -66,7 +67,7 @@ export function newText(x = 100, y = 100): TextElement {
 export function newSimpleText(x = 100, y = 100): TextElement {
   return {
     id: uid(), type: 'text', x, y, width: 300, height: 40, rotation: 0,
-    text: TEXT_PLACEHOLDER,
+    text: __tr(TEXT_PLACEHOLDER),
     richText: false,
     fontSize: 18, fontFamily: 'Arial',
     fill: '#000000', fontStyle: 'normal', textDecoration: '',
@@ -122,7 +123,7 @@ export function newTable(x = 100, y = 100): TableElement {
     id: uid(), type: 'table', x, y, width: 400, height: 160, rotation: 0,
     rows: 3, cols: 3,
     data: [
-      ['Колонка 1', 'Колонка 2', 'Колонка 3'],
+      [__tr("Колонка 1"), __tr("Колонка 2"), __tr("Колонка 3")],
       ['', '', ''],
       ['', '', ''],
     ],
@@ -140,7 +141,7 @@ export function newFooter(slide?: Slide, footerHeight = 60): FooterElement {
     x: padding.left,
     y: height - padding.bottom - footerHeight,
     width: printableWidth, height: footerHeight, rotation: 0,
-    text: 'ООО «Компания» · www.example.com · +7 (495) 000-00-00',
+    text: __tr("ООО «Компания» · www.example.com · +7 (495) 000-00-00"),
     fill: '#ffffff', bgColor: '#1e293b', fontSize: 14,
   };
 }
@@ -202,7 +203,7 @@ export function makeArrayTable(
   const header: string[] =
     children.length > 0
       ? children.map((c) => c.name)
-      : ['значение'];
+      : [__tr("значение")];
 
   const data: string[][] = [header];
   for (let i = 0; i < count; i++) {

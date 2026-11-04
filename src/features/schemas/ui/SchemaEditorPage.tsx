@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import type { FieldDef, FieldType } from '../domain/DataSchema';
@@ -123,7 +124,7 @@ export const SchemaEditorPage: React.FC = () => {
   const fromState = (location.state as { from?: string } | null)?.from;
   const backPath = fromState || '/app/schemas';
 
-  const [name, setName] = useState('Схема');
+  const [name, setName] = useState(__tr("Схема"));
   const [fields, setFields] = useState<DraftField[]>([makeDraft()]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -150,13 +151,13 @@ export const SchemaEditorPage: React.FC = () => {
       const slides = readSlidesFromLocalStorage();
       if (slides.length === 0) {
         setError(
-          'Не вижу активного документа. Откройте редактор и вернитесь сюда — слайды подтянутся автоматически.',
+          __tr("Не вижу активного документа. Откройте редактор и вернитесь сюда — слайды подтянутся автоматически."),
         );
         return;
       }
       const inferred = inferFieldsFromSlides(slides);
       if (inferred.length === 0) {
-        setError('В документе нет {{...}} и плейсхолдеров. Добавьте их на холст и вернитесь.');
+        setError(__tr("В документе нет {{...}} и плейсхолдеров. Добавьте их на холст и вернитесь."));
         return;
       }
       setFields(unflattenFields(inferred));
@@ -169,11 +170,11 @@ export const SchemaEditorPage: React.FC = () => {
   const submit = async (): Promise<void> => {
     const out = stripDraft(fields).filter((f) => f.path.trim());
     if (!name.trim()) {
-      setError('Название схемы');
+      setError(__tr("Название схемы"));
       return;
     }
     if (out.length === 0) {
-      setError('Хотя бы одно поле');
+      setError(__tr("Хотя бы одно поле"));
       return;
     }
     setBusy(true);
@@ -209,24 +210,20 @@ export const SchemaEditorPage: React.FC = () => {
         onClick={() => navigate(backPath)}
         style={{ alignSelf: 'flex-start', marginBottom: 16 }}
       >
-        ← Назад
-      </button>
+        {__tr("← Назад")}</button>
 
-      <h2>{schemaId ? 'Редактирование схемы данных' : 'Создание схемы данных'}</h2>
+      <h2>{schemaId ? __tr("Редактирование схемы данных") : __tr("Создание схемы данных")}</h2>
       <p>
-        Схема — список полей. Массивы и объекты поддерживаются: задайте тип и добавьте дочерние
-        поля.
-      </p>
+        {__tr("Схема — список полей. Массивы и объекты поддерживаются: задайте тип и добавьте дочерние поля.")}</p>
       <div className="schema-form">
         <label className="schema-label">
-          <span>Название</span>
+          <span>{__tr("Название")}</span>
           <input className="schema-input" value={name} onChange={(e) => setName(e.target.value)} />
         </label>
         <div className="schema-fields-header">
-          <h3>Поля схемы</h3>
+          <h3>{__tr("Поля схемы")}</h3>
           <button type="button" className="schema-btn-fill" onClick={fillFromDocument}>
-            ⤓ Заполнить из документа
-          </button>
+            {__tr("⤓ Заполнить из документа")}</button>
         </div>
         <FieldTree fields={fields} onChange={setFields} />
         <button
@@ -234,8 +231,7 @@ export const SchemaEditorPage: React.FC = () => {
           className="schema-btn-add"
           onClick={() => setFields((prev) => [...prev, makeDraft()])}
         >
-          + Добавить поле
-        </button>
+          {__tr("+ Добавить поле")}</button>
         {error && <div className="schema-error">{error}</div>}
         <div className="schema-actions">
           <button
@@ -244,7 +240,7 @@ export const SchemaEditorPage: React.FC = () => {
             onClick={() => void submit()}
             disabled={busy}
           >
-            {busy ? 'Сохранение…' : 'Сохранить'}
+            {busy ? __tr("Сохранение…") : __tr("Сохранить")}
           </button>
         </div>
       </div>
@@ -312,8 +308,7 @@ const FieldTree: React.FC<{
                   checked={f.required}
                   onChange={(e) => update(f.key, { required: e.target.checked })}
                 />
-                обяз.
-              </label>
+                {__tr("обяз.")}</label>
               <button className="schema-btn-remove" onClick={() => remove(f.key)}>
                 ×
               </button>
@@ -326,8 +321,7 @@ const FieldTree: React.FC<{
                   depth={depth + 1}
                 />
                 <button className="schema-btn-add" onClick={() => addChild(f.key)}>
-                  + дочернее поле
-                </button>
+                  {__tr("+ дочернее поле")}</button>
               </>
             )}
           </div>

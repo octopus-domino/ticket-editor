@@ -87,6 +87,7 @@ export function useCanvasDrag(params: {
   const onDragStart = useCallback((el: CanvasElement, e: any) => {
     modalsStore.setFloatingPos(null);
     const current = selStore.getState().selectedIds;
+    const byId = new Map(slideRef.current.elements.map((element) => [element.id, element]));
     const parentGroup = slideRef.current.elements.find(
       (p): p is GroupElement => p.type === 'group' && p.children.includes(el.id)
     );
@@ -101,7 +102,7 @@ export function useCanvasDrag(params: {
       if (!current.includes(el.id)) selStore.setIds([el.id]);
       baseIds.forEach((id) => idsToMoveSet.add(id));
       for (const id of baseIds) {
-        const target = slideRef.current.elements.find((e2) => e2.id === id);
+        const target = byId.get(id);
         if (target && target.type === 'group') {
           target.children.forEach((cid) => idsToMoveSet.add(cid));
         }
@@ -112,10 +113,12 @@ export function useCanvasDrag(params: {
     if (layer) layer.listening(false);
 
     const orig: Record<string, OrigData> = {};
+    const nodes = new Map<string, Konva.Node>();
+    layer?.find((node: Konva.Node) => idsToMoveSet.has(node.id())).forEach((node) => nodes.set(node.id(), node));
     for (const ee of slideRef.current.elements) {
       if (!idsToMoveSet.has(ee.id) || ee.type === 'connector') continue;
       // findOne в Konva 9 возвращает Node | undefined — нормализуем в null.
-      const node = layer ? (layer.findOne('#' + ee.id) ?? null) : null;
+      const node = nodes.get(ee.id) ?? null;
       orig[ee.id] = { x: ee.x, y: ee.y, node };
     }
 
@@ -287,10 +290,9 @@ export function useCanvasDrag(params: {
     docStore.commit((draft) => {
       const sl = draft.slides.find((x) => x.id === draft.activeId);
       if (!sl) return;
-      for (const id in s.orig) {
-        const el = sl.elements.find((e) => e.id === id);
-        if (!el || el.type === 'connector') continue;
-        const o = s.orig[id];
+      for (const el of sl.elements) {
+        const o = s.orig[el.id];
+        if (!o || el.type === 'connector') continue;
         el.x = o.x + dx;
         el.y = o.y + dy;
       }

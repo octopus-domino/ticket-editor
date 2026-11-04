@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 // src/presentation/hooks/editor/useFileIO.ts
 import { useCallback } from 'react';
 import {
@@ -99,7 +100,7 @@ export function useFileIO() {
 
       if (file.size > CONFIG.MAX_IMPORT_SIZE) {
         const mb = (CONFIG.MAX_IMPORT_SIZE / 1024 / 1024).toFixed(0);
-        toast.error('Файл слишком большой', `Максимум ${mb} MB`);
+        toast.error(__tr("Файл слишком большой"), __tr("Максимум {0} MB", mb));
         return;
       }
 
@@ -132,9 +133,9 @@ export function useFileIO() {
         }, 'import-json');
 
         clearUiState();
-        toast.success('Документ импортирован');
+        toast.success(__tr("Документ импортирован"));
       } catch (err) {
-        toast.error('Ошибка импорта', (err as Error).message);
+        toast.error(__tr("Ошибка импорта"), (err as Error).message);
       }
     };
     input.click();
@@ -220,7 +221,7 @@ export function useFileIO() {
             }
           }, 'add-image');
         } catch (err) {
-          toast.error('Не удалось загрузить картинку', (err as Error).message);
+          toast.error(__tr("Не удалось загрузить картинку"), (err as Error).message);
         }
       };
       input.click();
@@ -242,7 +243,7 @@ export function useFileIO() {
           if (s) s.backgroundImage = src;
         }, 'set-bg');
       } catch (err) {
-        toast.error('Не удалось установить фон', (err as Error).message);
+        toast.error(__tr("Не удалось установить фон"), (err as Error).message);
       }
     };
     input.click();

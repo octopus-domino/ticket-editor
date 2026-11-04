@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 import React from 'react';
 import { Group, Rect, Text as KonvaText } from 'react-konva';
 import type { QrElement } from '@/shared/types';
@@ -56,7 +57,7 @@ export const QrEl: React.FC<Props> = ({
       y={el.height - 22}
       width={el.width - 12}
       align="center"
-      text={el.text ? truncate(el.text, 32) : '(пустой QR)'}
+      text={el.text ? truncate(el.text, 32) : __tr("(пустой QR)")}
       fontSize={11}
       fill="#64748b"
       ellipsis

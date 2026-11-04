@@ -2,12 +2,15 @@
 import '@testing-library/jest-dom/vitest';
 import { afterEach, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
+import { setLocale } from '@/shared/i18n';
+setLocale('ru');
 
 /* ─────────────────────────────────────────────
    1. RTL: размонтируем между тестами
    ───────────────────────────────────────────── */
 afterEach(() => {
   cleanup();
+  setLocale('ru');
 });
 
 /* ─────────────────────────────────────────────

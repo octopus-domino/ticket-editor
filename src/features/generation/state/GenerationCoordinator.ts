@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 import { SimpleStore } from '@/shared/store/store';
 import type {
   GenerationClient,
@@ -78,7 +79,7 @@ export class GenerationStore extends SimpleStore<GenState> {
     }
   }
   async run(req: GenerationRequest): Promise<GenerationResult | undefined> {
-    if (this.getState().phase.endsWith('running')) throw new Error('Генерация уже выполняется');
+    if (this.getState().phase.endsWith('running')) throw new Error(__tr("Генерация уже выполняется"));
     if (req.items.length > 100) {
       await this.runAsync(req);
       return;

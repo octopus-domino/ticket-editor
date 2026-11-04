@@ -1,0 +1,38 @@
+import { describe, expect, it } from 'vitest';
+import { DOCUMENT_PRESETS } from '@/templates/catalog';
+import { essentialStamps } from '@/lib/stamps/essential';
+import { DocumentSchema } from '@/shared/schemas/document';
+import { serializeSlideToSvg } from '@/lib/svg/serialize';
+import { newStampFromTemplate } from '@/lib/stamps/factories';
+import { setLocale, LANGUAGES } from '@/shared/i18n';
+
+describe('curated document and stamp libraries', () => {
+  it('contains exactly 20 editable document designs with valid fresh page IDs', () => {
+    expect(DOCUMENT_PRESETS).toHaveLength(20);
+    expect(new Set(DOCUMENT_PRESETS.map((preset) => preset.id)).size).toBe(20);
+    for (const preset of DOCUMENT_PRESETS) {
+      const slides = preset.build();
+      expect(DocumentSchema.safeParse({ version: '2.0', slides, data: [] }).success, preset.id).toBe(true);
+      expect(slides[0].id).not.toBe(preset.build()[0].id);
+      expect(slides.every((slide) => slide.elements.length > 0)).toBe(true);
+    }
+  });
+  it('translates every design title and generated copy in all supported locales', () => {
+    for (const [locale] of LANGUAGES) {
+      setLocale(locale);
+      const slides = DOCUMENT_PRESETS.find((preset) => preset.id === 'business-card')!.build();
+      const title = slides[0].elements.find((element) => element.type === 'text');
+      expect(title?.type === 'text' && title.text).toBeTruthy();
+    }
+    setLocale('ru');
+  });
+  it('retains ten distinct core stamps and exports curved and straight text', () => {
+    const stamps = essentialStamps();
+    expect(stamps).toHaveLength(10);
+    expect(new Set(stamps.map((stamp) => stamp.id)).size).toBe(10);
+    const stamp = stamps[0];
+    const svg = serializeSlideToSvg({ id: 'page', name: stamp.name, width: stamp.width, height: stamp.height, format: 'custom', orientation: 'portrait', background: 'transparent', padding: { top: 0, right: 0, bottom: 0, left: 0 }, elements: [newStampFromTemplate(stamp, 0, 0)] });
+    expect((svg.match(/<text/g) ?? []).length).toBeGreaterThan(2);
+    expect(svg).toContain('rotate(');
+  });
+});

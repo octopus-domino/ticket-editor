@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 import React, { useEffect, useRef } from 'react';
 import { useFocusTrap } from '@/presentation/hooks/useFocusTrap';
 import './confirm-dialog.css';
@@ -24,8 +25,8 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   isOpen,
   title,
   description,
-  confirmLabel = 'Подтвердить',
-  cancelLabel = 'Отмена',
+  confirmLabel = __tr("Подтвердить"),
+  cancelLabel = __tr("Отмена"),
   variant = 'default',
   onConfirm,
   onCancel,

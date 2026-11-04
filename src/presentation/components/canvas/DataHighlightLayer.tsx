@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 import React, { useMemo } from 'react';
 import { Layer, Rect, Label, Tag, Text as KonvaText, Circle } from 'react-konva';
 import type { Slide } from '@/shared/types';
@@ -65,7 +66,7 @@ export const DataHighlightLayer: React.FC<Props> = ({ slide, zoom, active }) => 
               />
               <Label x={el.x} y={el.y - fs - pad * 2}>
                 <Tag fill={COLOR_EMPTY} cornerRadius={3 / zoom} />
-                <KonvaText text="нет поля" fontSize={fs} fill="#ffffff" padding={pad} />
+                <KonvaText text={__tr("нет поля")} fontSize={fs} fill="#ffffff" padding={pad} />
               </Label>
             </React.Fragment>
           );

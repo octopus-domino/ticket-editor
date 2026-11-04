@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 import React from 'react';
 
 interface Props {
@@ -9,7 +10,7 @@ interface Props {
 }
 
 export const ColorPickerPopover: React.FC<Props> = ({
-  title, colors, onPick, onReset, resetLabel = 'Сбросить',
+  title, colors, onPick, onReset, resetLabel = __tr("Сбросить"),
 }) => (
   <div className="rt-popover">
     <div className="rt-popover-title">{title}</div>

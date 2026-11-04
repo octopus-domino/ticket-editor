@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { authStore } from './store';
@@ -13,12 +14,12 @@ export const OAuth2RedirectPage: React.FC = () => {
   useEffect(() => {
     const token = params.get('token');
     if (!token) {
-      setError('Токен не получен от сервера');
+      setError(__tr("Токен не получен от сервера"));
       setTimeout(() => navigate('/login', { replace: true }), 3000);
       return;
     }
 
-    authStore.setSession(token, { id: '', email: '', name: 'Загрузка…' });
+    authStore.setSession(token, { id: '', email: '', name: __tr("Загрузка…") });
 
     authApi.me()
       .then((user) => {
@@ -28,7 +29,7 @@ export const OAuth2RedirectPage: React.FC = () => {
       .catch((err) => {
         console.error('OAuth2 me() failed:', err);
         authStore.clear();
-        setError('Не удалось получить профиль: ' + (err as Error).message);
+        setError(__tr("Не удалось получить профиль: ") + (err as Error).message);
         setTimeout(() => navigate('/login', { replace: true }), 3000);
       });
   }, [params, navigate]);
@@ -55,9 +56,8 @@ export const OAuth2RedirectPage: React.FC = () => {
         ) : (
           <>
             <h1 className="auth-title" style={{ fontSize: 22, marginTop: 24 }}>
-              Завершаем вход…
-            </h1>
-            <p className="auth-subtitle">Пара секунд.</p>
+              {__tr("Завершаем вход…")}</h1>
+            <p className="auth-subtitle">{__tr("Пара секунд.")}</p>
           </>
         )}
       </div>

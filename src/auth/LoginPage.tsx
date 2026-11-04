@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authStore } from './store';
@@ -5,6 +6,7 @@ import { useStore } from '@/shared/store/store';
 import './auth.css';
 import { AuthProductAside } from './AuthProductAside';
 import { useAuthDestination } from './useAuthDestination';
+import { LanguageSwitcher } from '@/shared/i18n/LanguageSwitcher';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -36,39 +38,35 @@ export const LoginPage: React.FC = () => {
 
       <main className="auth-right">
         <div className="auth-form-wrap">
+          <LanguageSwitcher />
           <Link to="/" className="auth-back">
-            ← На главную
-          </Link>
+            {__tr("← На главную")}</Link>
 
           {offline ? (
             <div className="auth-offline">
               <div className="auth-offline-icon">📴</div>
-              <h2>Сервер недоступен</h2>
+              <h2>{__tr("Сервер недоступен")}</h2>
               <p>
-                Связаться не удалось. Но вы можете работать в <b>локальном режиме</b> — всё
-                сохранится в этом браузере.
-              </p>
+                {__tr("Связаться не удалось. Но вы можете работать в")}<b>{__tr("локальном режиме")}</b> {__tr("— всё сохранится в этом браузере.")}</p>
               <div className="auth-offline-actions">
                 <button
                   type="button"
                   className="auth-submit"
                   onClick={() => navigate('/app/editor/local', { replace: true })}
                 >
-                  Перейти в редактор →
-                </button>
+                  {__tr("Перейти в редактор →")}</button>
                 <button
                   type="button"
                   className="auth-offline-ghost"
                   onClick={() => window.location.reload()}
                 >
-                  Попробовать снова
-                </button>
+                  {__tr("Попробовать снова")}</button>
               </div>
             </div>
           ) : (
             <>
-              <h1 className="auth-title">Вход</h1>
-              <p className="auth-subtitle">Продолжите с Google или войдите по email.</p>
+              <h1 className="auth-title">{__tr("Вход")}</h1>
+              <p className="auth-subtitle">{__tr("Продолжите с Google или войдите по email.")}</p>
 
               <a
                 href="/oauth2/authorization/google"
@@ -76,14 +74,13 @@ export const LoginPage: React.FC = () => {
                 onClick={rememberOAuthDestination}
               >
                 <img src="https://www.google.com/favicon.ico" alt="" referrerPolicy="no-referrer" />
-                Войти через Google
-              </a>
+                {__tr("Войти через Google")}</a>
 
-              <div className="auth-divider">или</div>
+              <div className="auth-divider">{__tr("или")}</div>
 
               <form className="auth-form" onSubmit={submit}>
                 <div className="auth-field">
-                  <label htmlFor="email">Email</label>
+                  <label htmlFor="email">{__tr("Email")}</label>
                   <input
                     id="email"
                     type="email"
@@ -97,7 +94,7 @@ export const LoginPage: React.FC = () => {
                 </div>
 
                 <div className="auth-field">
-                  <label htmlFor="password">Пароль</label>
+                  <label htmlFor="password">{__tr("Пароль")}</label>
                   <input
                     id="password"
                     type="password"
@@ -112,12 +109,12 @@ export const LoginPage: React.FC = () => {
                 {error && <div className="auth-error">{error}</div>}
 
                 <button type="submit" disabled={busy} className="auth-submit">
-                  {busy ? 'Вход…' : 'Войти →'}
+                  {busy ? __tr("Вход…") : __tr("Войти →")}
                 </button>
               </form>
 
               <p className="auth-footer">
-                Нет аккаунта? <Link to={`/register${suffix}`}>Зарегистрироваться</Link>
+                {__tr("Нет аккаунта?")}<Link to={`/register${suffix}`}>{__tr("Зарегистрироваться")}</Link>
               </p>
             </>
           )}

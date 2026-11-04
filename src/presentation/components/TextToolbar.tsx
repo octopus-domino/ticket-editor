@@ -1,4 +1,5 @@
-﻿// src/presentation/components/TextToolbar.tsx
+import { t as __tr } from '@/shared/i18n';
+// src/presentation/components/TextToolbar.tsx
 import React, { useLayoutEffect, useRef, useState } from 'react';
 import type { TextAlign } from '@/shared/types';
 
@@ -89,7 +90,7 @@ export const TextToolbar: React.FC<Props> = ({
         value={fontFamily}
         onChange={(e) => onChange({ fontFamily: e.target.value })}
         className="tt-select"
-        title="Шрифт"
+        title={__tr("Шрифт")}
       >
         {FONTS.map((f) => (
           <option key={f} value={f}>{f}</option>
@@ -100,7 +101,7 @@ export const TextToolbar: React.FC<Props> = ({
         value={Math.round(fontSize)}
         onChange={(e) => onChange({ fontSize: +e.target.value })}
         className="tt-select tt-size"
-        title="Размер"
+        title={__tr("Размер")}
       >
         {SIZES.map((s) => (
           <option key={s} value={s}>{s}</option>
@@ -113,21 +114,21 @@ export const TextToolbar: React.FC<Props> = ({
           onMouseDown={keepFocus}
           className={isBold ? 'active' : ''}
           onClick={() => toggleStyle('bold')}
-          title="Жирный"
+          title={__tr("Жирный")}
         ><b>B</b></button>
         <button
           type="button"
           onMouseDown={keepFocus}
           className={isItalic ? 'active' : ''}
           onClick={() => toggleStyle('italic')}
-          title="Курсив"
+          title={__tr("Курсив")}
         ><i>I</i></button>
         <button
           type="button"
           onMouseDown={keepFocus}
           className={isUnderline ? 'active' : ''}
           onClick={toggleUnderline}
-          title="Подчёркнутый"
+          title={__tr("Подчёркнутый")}
         ><u>U</u></button>
       </div>
 
@@ -136,7 +137,7 @@ export const TextToolbar: React.FC<Props> = ({
         value={fill}
         onChange={(e) => onChange({ fill: e.target.value })}
         className="tt-color"
-        title="Цвет"
+        title={__tr("Цвет")}
       />
 
       <div className="tt-group">
@@ -145,21 +146,21 @@ export const TextToolbar: React.FC<Props> = ({
           onMouseDown={keepFocus}
           className={align === 'left' ? 'active' : ''}
           onClick={() => onChange({ align: 'left' })}
-          title="Влево"
+          title={__tr("Влево")}
         >◧</button>
         <button
           type="button"
           onMouseDown={keepFocus}
           className={align === 'center' ? 'active' : ''}
           onClick={() => onChange({ align: 'center' })}
-          title="По центру"
+          title={__tr("По центру")}
         >◫</button>
         <button
           type="button"
           onMouseDown={keepFocus}
           className={align === 'right' ? 'active' : ''}
           onClick={() => onChange({ align: 'right' })}
-          title="Вправо"
+          title={__tr("Вправо")}
         >◨</button>
       </div>
 
@@ -168,7 +169,7 @@ export const TextToolbar: React.FC<Props> = ({
           type="button"
           onMouseDown={keepFocus}
           onClick={onCommit}
-          title="Готово (Ctrl+Enter)"
+          title={__tr("Готово (Ctrl+Enter)")}
           className="tt-done"
         >✓</button>
       </div>

@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 /* ============================================================
    stamps/LineContextMenu.tsx
    F-LN-09, F-CM-03..04, F-CM-06..08.
@@ -54,13 +55,13 @@ export const LineContextMenu: React.FC<Props> = ({
       style={{ left, top, zIndex: 3000, position: 'fixed' }}
     >
       <div className="context-menu-item" onClick={onAddPoint}>
-        <span>Добавить точку</span>
+        <span>{__tr("Добавить точку")}</span>
       </div>
       <div
         className={`context-menu-item ${canRemove ? 'danger' : 'disabled'}`}
         onClick={canRemove ? onRemovePoint : undefined}
       >
-        <span>Удалить точку</span>
+        <span>{__tr("Удалить точку")}</span>
       </div>
     </div>
   );

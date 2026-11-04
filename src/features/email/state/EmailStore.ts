@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 import { SimpleStore } from '@/shared/store/store';
 import type { Slide } from '@/shared/types';
 import {
@@ -48,7 +49,7 @@ export class EmailStore extends SimpleStore<EmailState> {
         ...s,
         modal: 'preview',
         previewHtml: null,
-        previewError: 'Нет слайдов',
+        previewError: __tr("Нет слайдов"),
         slides,
       }));
       return;
@@ -127,7 +128,7 @@ export class EmailStore extends SimpleStore<EmailState> {
         sendBusy: false,
         sendDone: result.failed === 0,
         sendError: result.failed
-          ? `Передано серверу: ${result.sent}. Не отправлено: ${result.failed}. ${result.errors.map((error) => `${error.to}: ${error.message}`).join('; ')}`
+          ? __tr("Передано серверу: {0}. Не отправлено: {1}. {2}", result.sent, result.failed, result.errors.map((error) => `${error.to}: ${error.message}`).join('; '))
           : null,
       }));
     } catch (e) {

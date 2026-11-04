@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 // src/workspace/components/WorkspaceFlowBreadcrumbs.tsx
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -16,7 +17,7 @@ export const WorkspaceFlowBreadcrumbs: React.FC = () => {
   const ctx = useFlowContext();
 
   return (
-    <nav className="flow-breadcrumbs" aria-label="Путь документа">
+    <nav className="flow-breadcrumbs" aria-label={__tr("Путь документа")}>
       <ol className="flow-list">
         {FLOW_STEPS.map((step, index) => {
           const status = stepStatus(step.id, ctx);
@@ -66,7 +67,7 @@ export const WorkspaceFlowBreadcrumbs: React.FC = () => {
                   </span>
                 )}
                 {badge !== null && (
-                  <span className="flow-badge" aria-label={`${badge} шт.`}>
+                  <span className="flow-badge" aria-label={__tr("{0} шт.", badge)}>
                     {badge}
                   </span>
                 )}

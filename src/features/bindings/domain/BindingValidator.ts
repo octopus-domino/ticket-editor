@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 import type { DataSchema } from '@/features/schemas/domain/DataSchema';
 import { flattenFields } from '@/features/schemas/domain/SchemaInference';
 import type { Binding } from './Binding';
@@ -19,7 +20,7 @@ export function validateBindings(bindings: readonly Binding[], schema: DataSchem
       issues.push({
         kind: 'invalid-type',
         path: b.schemaPath,
-        message: `Несовместимый тип: ${b.schemaPath}`,
+        message: __tr("Несовместимый тип: {0}", b.schemaPath),
       });
     const path = b.schemaPath.replace(/\[\d+\]/g, '');
     const field = schema.fields.find((item) => item.path === path);
@@ -33,14 +34,14 @@ export function validateBindings(bindings: readonly Binding[], schema: DataSchem
       issues.push({
         kind: 'invalid-type',
         path: b.schemaPath,
-        message: `Несовместимый тип: ${b.schemaPath}`,
+        message: __tr("Несовместимый тип: {0}", b.schemaPath),
       });
     }
     if (!known.has(path)) {
       issues.push({
         kind: 'missing',
         path: b.schemaPath,
-        message: `Поле "${b.schemaPath}" отсутствует в схеме`,
+        message: __tr("Поле \"{0}\" отсутствует в схеме", b.schemaPath),
       });
     }
     used.add(b.schemaPath);
@@ -53,8 +54,8 @@ export function validateBindings(bindings: readonly Binding[], schema: DataSchem
         kind: f.required ? 'required-unbound' : 'unused',
         path: f.path,
         message: f.required
-          ? `Обязательное поле "${f.path}" ни к чему не привязано`
-          : `Поле "${f.path}" не используется`,
+          ? __tr("Обязательное поле \"{0}\" ни к чему не привязано", f.path)
+          : __tr("Поле \"{0}\" не используется", f.path),
       });
     }
   }

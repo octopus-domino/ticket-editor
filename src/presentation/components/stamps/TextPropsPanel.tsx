@@ -1,4 +1,5 @@
-﻿/* ============================================================
+import { t as __tr } from '@/shared/i18n';
+/* ============================================================
    stamps/TextPropsPanel.tsx
    F-STMP-E-13, F-STMP-N-05, F-STMP-N-08..09, F-SGEO-01.
    ============================================================ */
@@ -33,30 +34,27 @@ export const TextPropsPanel: React.FC<Props> = ({ text, onChange }) => {
 
   return (
     <>
-      <h4>Текст</h4>
+      <h4>{__tr("Текст")}</h4>
       <label>
-        Имя
-        <input
+        {__tr("Имя")}<input
           value={text.name || ''}
-          placeholder="Текст"
+          placeholder={__tr("Текст")}
           onChange={(e) => onChange({ name: e.target.value })}
         />
       </label>
       <label>
-        Содержимое
-        <textarea
+        {__tr("Содержимое")}<textarea
           value={text.text}
           onChange={(e) => onChange({ text: e.target.value })}
         />
       </label>
       <label>
-        Режим
-        <select
+        {__tr("Режим")}<select
           value={text.mode}
           onChange={(e) => onChange({ mode: e.target.value as 'straight' | 'arc' })}
         >
-          <option value="straight">Прямой</option>
-          <option value="arc">По дуге</option>
+          <option value="straight">{__tr("Прямой")}</option>
+          <option value="arc">{__tr("По дуге")}</option>
         </select>
       </label>
 
@@ -66,31 +64,29 @@ export const TextPropsPanel: React.FC<Props> = ({ text, onChange }) => {
             <label>X <input type="number" value={Math.round(text.x)} onChange={(e) => onChange({ x: +e.target.value })} /></label>
             <label>Y <input type="number" value={Math.round(text.y)} onChange={(e) => onChange({ y: +e.target.value })} /></label>
           </div>
-          <label>Ширина <input type="number" min="10" value={Math.round(text.width)} onChange={(e) => onChange({ width: +e.target.value })} /></label>
+          <label>{__tr("Ширина")}<input type="number" min="10" value={Math.round(text.width)} onChange={(e) => onChange({ width: +e.target.value })} /></label>
           <label>
-            Выравнивание
-            <select value={text.align} onChange={(e) => onChange({ align: e.target.value as TextAlign })}>
-              <option value="left">Влево</option>
-              <option value="center">По центру</option>
-              <option value="right">Вправо</option>
+            {__tr("Выравнивание")}<select value={text.align} onChange={(e) => onChange({ align: e.target.value as TextAlign })}>
+              <option value="left">{__tr("Влево")}</option>
+              <option value="center">{__tr("По центру")}</option>
+              <option value="right">{__tr("Вправо")}</option>
             </select>
           </label>
         </>
       ) : (
         <>
-          <h4>Дуга</h4>
+          <h4>{__tr("Дуга")}</h4>
           <label>
-            Направление
-            <select
+            {__tr("Направление")}<select
               value={direction}
               onChange={(e) => onChange({ arcDirection: e.target.value as ArcDirection })}
             >
-              <option value="cw">По часовой</option>
-              <option value="ccw">Против часовой</option>
+              <option value="cw">{__tr("По часовой")}</option>
+              <option value="ccw">{__tr("Против часовой")}</option>
             </select>
           </label>
           <label>
-            Угол: {Math.round(text.arcSpanDeg ?? 320)}°
+            {__tr("Угол:")}{Math.round(text.arcSpanDeg ?? 320)}°
             <input
               type="range"
               min={MIN_ARC_SPAN_DEG}
@@ -101,8 +97,7 @@ export const TextPropsPanel: React.FC<Props> = ({ text, onChange }) => {
           </label>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
             <label>
-              Градус
-              <input
+              {__tr("Градус")}<input
                 type="number"
                 min={MIN_ARC_SPAN_DEG}
                 max={MAX_ARC_SPAN_DEG}
@@ -116,8 +111,7 @@ export const TextPropsPanel: React.FC<Props> = ({ text, onChange }) => {
               />
             </label>
             <label>
-              Отступ px
-              <input
+              {__tr("Отступ px")}<input
                 type="number"
                 min="0"
                 max="100"
@@ -128,8 +122,7 @@ export const TextPropsPanel: React.FC<Props> = ({ text, onChange }) => {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
             <label>
-              Радиус X
-              <input
+              {__tr("Радиус X")}<input
                 type="number"
                 value={Math.round(rx)}
                 onChange={(e) => onChange({
@@ -139,8 +132,7 @@ export const TextPropsPanel: React.FC<Props> = ({ text, onChange }) => {
               />
             </label>
             <label>
-              Радиус Y
-              <input
+              {__tr("Радиус Y")}<input
                 type="number"
                 value={Math.round(ry)}
                 onChange={(e) => onChange({
@@ -156,26 +148,24 @@ export const TextPropsPanel: React.FC<Props> = ({ text, onChange }) => {
               checked={!!text.arcOutside}
               onChange={(e) => onChange({ arcOutside: e.target.checked })}
             />{' '}
-            Снаружи
-          </label>
-          <h4>Центр дуги</h4>
+            {__tr("Снаружи")}</label>
+          <h4>{__tr("Центр дуги")}</h4>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
             <label>X <input type="number" value={Math.round(text.arcCx)} onChange={(e) => onChange({ arcCx: +e.target.value })} /></label>
             <label>Y <input type="number" value={Math.round(text.arcCy)} onChange={(e) => onChange({ arcCy: +e.target.value })} /></label>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-            <label>Начало° <input type="number" value={Math.round(text.arcStartDeg)} onChange={(e) => onChange({ arcStartDeg: +e.target.value })} /></label>
-            <label>Конец° <input type="number" value={Math.round(text.arcEndDeg)} onChange={(e) => onChange({ arcEndDeg: +e.target.value })} /></label>
+            <label>{__tr("Начало°")}<input type="number" value={Math.round(text.arcStartDeg)} onChange={(e) => onChange({ arcStartDeg: +e.target.value })} /></label>
+            <label>{__tr("Конец°")}<input type="number" value={Math.round(text.arcEndDeg)} onChange={(e) => onChange({ arcEndDeg: +e.target.value })} /></label>
           </div>
         </>
       )}
 
-      <h4>Стиль</h4>
+      <h4>{__tr("Стиль")}</h4>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-        <label>Размер <input type="number" min="6" value={text.fontSize} onChange={(e) => onChange({ fontSize: +e.target.value })} /></label>
+        <label>{__tr("Размер")}<input type="number" min="6" value={text.fontSize} onChange={(e) => onChange({ fontSize: +e.target.value })} /></label>
         <label>
-          Шрифт
-          <select value={text.fontFamily} onChange={(e) => onChange({ fontFamily: e.target.value })}>
+          {__tr("Шрифт")}<select value={text.fontFamily} onChange={(e) => onChange({ fontFamily: e.target.value })}>
             <option value="Arial">Arial</option>
             <option value="Times New Roman">Times New Roman</option>
             <option value="Courier New">Courier New</option>
@@ -196,8 +186,7 @@ export const TextPropsPanel: React.FC<Props> = ({ text, onChange }) => {
         </button>
       </div>
       <label>
-        Цвет
-        <input type="color" value={text.fill} onChange={(e) => onChange({ fill: e.target.value })} />
+        {__tr("Цвет")}<input type="color" value={text.fill} onChange={(e) => onChange({ fill: e.target.value })} />
       </label>
     </>
   );

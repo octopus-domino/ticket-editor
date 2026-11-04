@@ -1,4 +1,5 @@
-﻿import React, { useEffect, useRef, useState } from 'react';
+import { t as __tr } from '@/shared/i18n';
+import React, { useEffect, useRef, useState } from 'react';
 import type { CanvasElement } from '@/shared/types';
 
 interface FloatingPropsProps {
@@ -48,13 +49,13 @@ export const FloatingProps: React.FC<FloatingPropsProps> = ({
   return (
     <div ref={panelRef} className="floating-props" style={{ left: position.x, top: position.y }}>
       <div className="fp-group">
-        <button onClick={onDelete} title="Удалить">🗑</button>
+        <button onClick={onDelete} title={__tr("Удалить")}>🗑</button>
       </div>
 
       {element.type === 'shape' && (
         <>
           <div className="fp-group">
-            <label>Заливка</label>
+            <label>{__tr("Заливка")}</label>
             <input
               type="color"
               value={normalizeColor(element.fill)}
@@ -63,7 +64,7 @@ export const FloatingProps: React.FC<FloatingPropsProps> = ({
             <button onClick={() => onUpdate({ fill: 'transparent' })}>∅</button>
           </div>
           <div className="fp-group">
-            <label>Обводка</label>
+            <label>{__tr("Обводка")}</label>
             <input
               type="color"
               value={normalizeColor(element.stroke)}
@@ -76,7 +77,7 @@ export const FloatingProps: React.FC<FloatingPropsProps> = ({
       {element.type === 'text' && (
         <>
           <div className="fp-group">
-            <label>Цвет</label>
+            <label>{__tr("Цвет")}</label>
             <input
               type="color"
               value={normalizeColor(element.fill)}
@@ -84,7 +85,7 @@ export const FloatingProps: React.FC<FloatingPropsProps> = ({
             />
           </div>
           <div className="fp-group">
-            <label>Размер</label>
+            <label>{__tr("Размер")}</label>
             <input
               type="number"
               value={element.fontSize}

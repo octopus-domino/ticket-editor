@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 import type { DataSchema, FieldDef } from '@/features/schemas/domain/DataSchema';
 import { flattenFields } from '@/features/schemas/domain/SchemaInference';
 import type { DataModel } from './DataModel';
@@ -35,7 +36,7 @@ export function validateModel(
 
     const v = getByPath(model.values, f.path);
     if (f.required && (v === undefined || v === null || String(v).trim() === '')) {
-      issues.push({ path: f.path, message: 'Обязательное поле не заполнено' });
+      issues.push({ path: f.path, message: __tr("Обязательное поле не заполнено") });
     }
     if (v !== undefined && v !== null && String(v).trim() !== '') {
       const valid =
@@ -46,7 +47,7 @@ export function validateModel(
             : f.type === 'date'
               ? /^\d{4}-\d{2}-\d{2}$/.test(String(v)) && !Number.isNaN(Date.parse(String(v)))
               : typeof v === 'string';
-      if (!valid) issues.push({ path: f.path, message: `Неверный тип: ${f.type}` });
+      if (!valid) issues.push({ path: f.path, message: __tr("Неверный тип: {0}", f.type) });
     }
   }
 
@@ -59,16 +60,16 @@ export function validateModel(
       if (f.required)
         issues.push({
           path: f.path,
-          message: 'Обязательный массив не заполнен',
+          message: __tr("Обязательный массив не заполнен"),
         });
       continue;
     }
     if (!Array.isArray(arr)) {
-      issues.push({ path: f.path, message: 'Ожидался массив' });
+      issues.push({ path: f.path, message: __tr("Ожидался массив") });
       continue;
     }
     if (f.required && arr.length === 0) {
-      issues.push({ path: f.path, message: 'Обязательный массив пуст' });
+      issues.push({ path: f.path, message: __tr("Обязательный массив пуст") });
     }
 
     const prefix = f.path + '.';
@@ -87,7 +88,7 @@ export function validateModel(
         if (val === undefined || val === null || String(val).trim() === '') {
           issues.push({
             path: `${f.path}[${idx}].${childName}`,
-            message: `Обязательное поле не заполнено (строка ${idx + 1})`,
+            message: __tr("Обязательное поле не заполнено (строка {0})", idx + 1),
           });
         }
       }

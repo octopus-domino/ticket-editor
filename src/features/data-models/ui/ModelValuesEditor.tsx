@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { DataSchema, FieldDef } from '@/features/schemas/domain/DataSchema';
 import { getPath, setPath } from '../domain/DataModelValidator';
@@ -53,7 +54,7 @@ const JsonCell: React.FC<{
         onBlur={commit}
         style={error ? { borderColor: 'var(--danger)' } : undefined}
       />
-      {error && <span style={{ fontSize: 10, color: 'var(--danger)' }}>Невалидный JSON</span>}
+      {error && <span style={{ fontSize: 10, color: 'var(--danger)' }}>{__tr("Невалидный JSON")}</span>}
     </div>
   );
 };
@@ -160,10 +161,9 @@ export const ModelValuesEditor: React.FC<{
         return (
           <div key={path} className="mv-array">
             <div className="mv-array-head">
-              <span>{path} (массив)</span>
+              <span>{path} {__tr("(массив)")}</span>
               <button type="button" className="dp-btn" onClick={() => setValue(path, [...arr, {}])}>
-                + Строка
-              </button>
+                {__tr("+ Строка")}</button>
             </div>
             <div className="mv-table-scroll">
               <table className="mv-table mv-table-wide">
@@ -214,10 +214,9 @@ export const ModelValuesEditor: React.FC<{
       return (
         <div key={path} className="mv-array">
           <div className="mv-array-head">
-            <span>{path} (массив)</span>
+            <span>{path} {__tr("(массив)")}</span>
             <button type="button" className="dp-btn" onClick={() => setValue(path, [...arr, {}])}>
-              + Строка
-            </button>
+              {__tr("+ Строка")}</button>
           </div>
           <div className="mv-table-scroll">
             <table className="mv-table mv-table-wide">
@@ -285,7 +284,7 @@ export const ModelValuesEditor: React.FC<{
     if (field.type === 'object') {
       return (
         <div key={path} className="mv-object">
-          <div className="mv-object-head">{path} (объект)</div>
+          <div className="mv-object-head">{path} {__tr("(объект)")}</div>
           <JsonCell value={val ?? {}} onChange={(next) => setValue(path, next)} />
         </div>
       );
@@ -321,8 +320,7 @@ export const ModelValuesEditor: React.FC<{
           disabled={!history.canUndo}
           title="Ctrl+Z"
         >
-          ↶ Отменить
-        </button>
+          {__tr("↶ Отменить")}</button>
         <button
           type="button"
           className="dp-btn"
@@ -330,8 +328,7 @@ export const ModelValuesEditor: React.FC<{
           disabled={!history.canRedo}
           title="Ctrl+Y"
         >
-          ↷ Повторить
-        </button>
+          {__tr("↷ Повторить")}</button>
       </div>
 
       {issues.length > 0 && (
@@ -344,7 +341,7 @@ export const ModelValuesEditor: React.FC<{
         </div>
       )}
       {roots.length === 0 && (
-        <p className="dp-empty">Схема пуста — добавьте поля в редакторе схем.</p>
+        <p className="dp-empty">{__tr("Схема пуста — добавьте поля в редакторе схем.")}</p>
       )}
       {roots.map((f) => renderField(f, ''))}
     </div>

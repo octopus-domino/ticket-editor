@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 import React, { useState } from 'react';
 import { useStore } from '@/shared/store/store';
 import { emailStore } from '../state/EmailStore';
@@ -34,7 +35,7 @@ export const EmailPreviewModal: React.FC = () => {
     if (!slides || slides.length === 0) return;
     void emailStore.downloadEml({
       inlineSlides: slides,
-      items: [{ inlineValues: {}, to: 'preview@local', subject: 'Превью' }],
+      items: [{ inlineValues: {}, to: 'preview@local', subject: __tr("Превью") }],
     });
   };
 
@@ -48,8 +49,7 @@ export const EmailPreviewModal: React.FC = () => {
       <div className="email-modal" onMouseDown={(e) => e.stopPropagation()}>
         <header className="email-modal-head">
           <h3>
-            📧 Email-превью
-            {slideName && (
+            {__tr("📧 Email-превью")}{slideName && (
               <span
                 style={{
                   color: '#94a3b8',
@@ -82,7 +82,7 @@ export const EmailPreviewModal: React.FC = () => {
                 max={800}
                 value={width}
                 onChange={(e) => setWidth(+e.target.value)}
-                title="Ширина окна"
+                title={__tr("Ширина окна")}
               />
             </label>
             <button className="email-modal-close" onClick={() => emailStore.close()}>×</button>
@@ -90,21 +90,20 @@ export const EmailPreviewModal: React.FC = () => {
         </header>
 
         <div className="email-modal-toolbar">
-          <button className="toolbar-btn" onClick={download}>📥 Скачать .eml</button>
-          <button className="toolbar-btn" onClick={downloadHtml} disabled={!html}>📄 Скачать HTML</button>
-          <button className="toolbar-btn primary" onClick={openSend}>📤 Отправить</button>
+          <button className="toolbar-btn" onClick={download}>{__tr("📥 Скачать .eml")}</button>
+          <button className="toolbar-btn" onClick={downloadHtml} disabled={!html}>{__tr("📄 Скачать HTML")}</button>
+          <button className="toolbar-btn primary" onClick={openSend}>{__tr("📤 Отправить")}</button>
           <div style={{ flex: 1 }} />
           <span className="email-hint">
-            {slideName ? `Отправляется: ${slideName}. ` : ''}
-            .eml открывается в Outlook двойным кликом.
-          </span>
+            {slideName ? __tr("Отправляется: {0}. ", slideName) : ''}
+            {__tr(".eml открывается в Outlook двойным кликом.")}</span>
         </div>
 
         <div
           className="email-modal-body"
           style={{ background: client === 'outlook' ? '#eaeaea' : '#f0f0f0' }}
         >
-          {loading && <div className="email-loading">Загрузка превью…</div>}
+          {loading && <div className="email-loading">{__tr("Загрузка превью…")}</div>}
           {error && <div className="email-error">{error}</div>}
           {html && !loading && (
             <div
@@ -116,13 +115,13 @@ export const EmailPreviewModal: React.FC = () => {
                   <span /><span /><span />
                 </div>
                 <div className="email-client-title">
-                  {client === 'outlook' ? 'Новое сообщение — Outlook' :
-                   client === 'gmail' ? 'Черновик — Gmail' : 'Новое сообщение — Mail'}
+                  {client === 'outlook' ? __tr("Новое сообщение — Outlook") :
+                   client === 'gmail' ? __tr("Черновик — Gmail") : __tr("Новое сообщение — Mail")}
                 </div>
               </div>
               <iframe
                 key={html.length + client}
-                title="Email preview"
+                title={__tr("Email preview")}
                 srcDoc={html}
                 sandbox="allow-same-origin allow-popups"
                 referrerPolicy="no-referrer"

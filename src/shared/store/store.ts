@@ -13,10 +13,12 @@ export class SimpleStore<T> {
   getState = (): T => this.state;
 
   setState = (nextState: T | ((prev: T) => T)): void => {
-    this.state =
+    const next =
       typeof nextState === 'function'
         ? (nextState as (prev: T) => T)(this.state)
         : nextState;
+    if (Object.is(next, this.state)) return;
+    this.state = next;
     this.listeners.forEach((l) => l());
   };
 

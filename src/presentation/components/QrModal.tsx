@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 import React, { useState } from 'react';
 import { generateId } from '@/shared/utils/id';
 import type { QrElement, QrFormat } from '@/shared/types';
@@ -43,11 +44,10 @@ export const QrModal: React.FC<Props> = ({ isOpen, onClose, onSave }) => {
         style={{ width: 420, height: 'auto', padding: 24 }}
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <h3 style={{ marginTop: 0 }}>Создать QR-код</h3>
+        <h3 style={{ marginTop: 0 }}>{__tr("Создать QR-код")}</h3>
 
         <label style={{ display: 'block', marginBottom: 12 }}>
-          Алгоритм
-          <select
+          {__tr("Алгоритм")}<select
             value={format}
             onChange={(e) => setFormat(e.target.value as QrFormat)}
             style={{ width: '100%', padding: 8, marginTop: 4, border: '1px solid #cbd5e1', borderRadius: 4 }}
@@ -60,8 +60,7 @@ export const QrModal: React.FC<Props> = ({ isOpen, onClose, onSave }) => {
         </label>
 
         <label style={{ display: 'block', marginBottom: 12 }}>
-          Текст / URL
-          <input
+          {__tr("Текст / URL")}<input
             type="text"
             value={text}
             onChange={(e) => setText(e.target.value)}
@@ -71,16 +70,14 @@ export const QrModal: React.FC<Props> = ({ isOpen, onClose, onSave }) => {
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
           <label>
-            Размер, px
-            <input
+            {__tr("Размер, px")}<input
               type="number" min={100} max={1000} value={size}
               onChange={(e) => setSize(Math.max(100, +e.target.value))}
               style={{ width: '100%', padding: 6, marginTop: 4, border: '1px solid #cbd5e1', borderRadius: 4 }}
             />
           </label>
           <label>
-            Коррекция
-            <select
+            {__tr("Коррекция")}<select
               value={ecc} onChange={(e) => setEcc(e.target.value as QrElement['ecc'])}
               style={{ width: '100%', padding: 6, marginTop: 4, border: '1px solid #cbd5e1', borderRadius: 4 }}
             >
@@ -94,29 +91,23 @@ export const QrModal: React.FC<Props> = ({ isOpen, onClose, onSave }) => {
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
           <label>
-            Цвет кода
-            <input type="color" value={fgColor} onChange={(e) => setFgColor(e.target.value)}
+            {__tr("Цвет кода")}<input type="color" value={fgColor} onChange={(e) => setFgColor(e.target.value)}
               style={{ width: '100%', height: 32, padding: 2, border: '1px solid #cbd5e1', borderRadius: 4 }} />
           </label>
           <label>
-            Фон
-            <input type="color" value={bgColor} onChange={(e) => setBgColor(e.target.value)}
+            {__tr("Фон")}<input type="color" value={bgColor} onChange={(e) => setBgColor(e.target.value)}
               style={{ width: '100%', height: 32, padding: 2, border: '1px solid #cbd5e1', borderRadius: 4 }} />
           </label>
         </div>
 
         <p style={{ fontSize: 12, color: '#64748b', marginBottom: 16 }}>
-          На канве будет видна разметка. Реальный код появится при экспорте
-          SVG (локально) или PDF (на сервере).
-        </p>
+          {__tr("На канве будет видна разметка. Реальный код появится при экспорте SVG (локально) или PDF (на сервере).")}</p>
 
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
           <button onClick={onClose} style={{ padding: '6px 12px', border: '1px solid #cbd5e1', borderRadius: 4, background: '#fff', cursor: 'pointer' }}>
-            Отмена
-          </button>
+            {__tr("Отмена")}</button>
           <button onClick={handleCreate} disabled={!text.trim()} style={{ padding: '6px 12px', border: 'none', borderRadius: 4, background: '#6366f1', color: '#fff', cursor: 'pointer' }}>
-            Создать
-          </button>
+            {__tr("Создать")}</button>
         </div>
       </div>
     </div>

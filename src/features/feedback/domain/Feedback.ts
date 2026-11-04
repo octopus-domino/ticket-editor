@@ -1,8 +1,9 @@
+import { t as __tr } from '@/shared/i18n';
 export const FEEDBACK_TOPICS = [
-  { value: 'general', label: 'В целом о сервисе' },
-  { value: 'templates', label: 'Создание шаблонов' },
-  { value: 'data', label: 'Работа с данными' },
-  { value: 'export', label: 'Генерация и скачивание' },
+  { value: 'general', label: __tr("В целом о сервисе") },
+  { value: 'templates', label: __tr("Создание шаблонов") },
+  { value: 'data', label: __tr("Работа с данными") },
+  { value: 'export', label: __tr("Генерация и скачивание") },
 ] as const;
 
 export interface FeedbackRating {

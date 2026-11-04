@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 import React, { useEffect, useRef, useState } from 'react';
 import type { Editor } from '@tiptap/react';
 import { TableSizePicker } from './TableSizePicker';
@@ -50,11 +51,10 @@ export const TableOperationsToolbar: React.FC<{ editor: Editor }> = ({ editor })
         <button
           type="button"
           className="rt-btn"
-          title="Вставить таблицу"
+          title={__tr("Вставить таблицу")}
           onMouseDown={(e) => { e.preventDefault(); toggle('size'); }}
         >
-          ⊞ Таблица
-        </button>
+          {__tr("⊞ Таблица")}</button>
         {pop === 'size' && <TableSizePicker onPick={handleInsertTable} />}
       </div>
 
@@ -63,35 +63,35 @@ export const TableOperationsToolbar: React.FC<{ editor: Editor }> = ({ editor })
           {/* СТРОКИ И КОЛОНКИ */}
           <div className="rt-sep" />
           <div className="rt-group">
-            <button type="button" className="rt-btn" title="Добавить строку"
-              onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().addRowAfter().run(); }}>+Стр</button>
-            <button type="button" className="rt-btn" title="Удалить строку"
-              onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().deleteRow().run(); }}>-Стр</button>
-            <button type="button" className="rt-btn" title="Добавить колонку"
-              onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().addColumnAfter().run(); }}>+Кол</button>
-            <button type="button" className="rt-btn" title="Удалить колонку"
-              onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().deleteColumn().run(); }}>-Кол</button>
+            <button type="button" className="rt-btn" title={__tr("Добавить строку")}
+              onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().addRowAfter().run(); }}>{__tr("+Стр")}</button>
+            <button type="button" className="rt-btn" title={__tr("Удалить строку")}
+              onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().deleteRow().run(); }}>{__tr("-Стр")}</button>
+            <button type="button" className="rt-btn" title={__tr("Добавить колонку")}
+              onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().addColumnAfter().run(); }}>{__tr("+Кол")}</button>
+            <button type="button" className="rt-btn" title={__tr("Удалить колонку")}
+              onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().deleteColumn().run(); }}>{__tr("-Кол")}</button>
           </div>
 
           {/* ОБЪЕДИНЕНИЕ / РАЗДЕЛЕНИЕ */}
           <div className="rt-sep" />
           <div className="rt-group">
-            <button type="button" className="rt-btn" title="Объединить ячейки"
-              onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().mergeCells().run(); }}>Объед</button>
-            <button type="button" className="rt-btn" title="Разделить ячейку"
-              onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().splitCell().run(); }}>Разъед</button>
+            <button type="button" className="rt-btn" title={__tr("Объединить ячейки")}
+              onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().mergeCells().run(); }}>{__tr("Объед")}</button>
+            <button type="button" className="rt-btn" title={__tr("Разделить ячейку")}
+              onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().splitCell().run(); }}>{__tr("Разъед")}</button>
           </div>
 
           {/* ВЫРАВНИВАНИЕ */}
           <div className="rt-sep" />
           <div className="rt-group">
-            <button type="button" className="rt-btn" title="По левому краю"
+            <button type="button" className="rt-btn" title={__tr("По левому краю")}
               onMouseDown={(e) => { e.preventDefault(); setCellAttrs({ textAlign: 'left' }); }}>◧</button>
-            <button type="button" className="rt-btn" title="По центру"
+            <button type="button" className="rt-btn" title={__tr("По центру")}
               onMouseDown={(e) => { e.preventDefault(); setCellAttrs({ textAlign: 'center' }); }}>◫</button>
-            <button type="button" className="rt-btn" title="По правому краю"
+            <button type="button" className="rt-btn" title={__tr("По правому краю")}
               onMouseDown={(e) => { e.preventDefault(); setCellAttrs({ textAlign: 'right' }); }}>◨</button>
-            <button type="button" className="rt-btn" title="По ширине"
+            <button type="button" className="rt-btn" title={__tr("По ширине")}
               onMouseDown={(e) => { e.preventDefault(); setCellAttrs({ textAlign: 'justify' }); }}>☰</button>
           </div>
 
@@ -99,10 +99,9 @@ export const TableOperationsToolbar: React.FC<{ editor: Editor }> = ({ editor })
           <div className="rt-sep" />
           <div className="rt-popover-wrap">
             <button type="button" className="rt-btn"
-              title="Границы ячейки"
+              title={__tr("Границы ячейки")}
               onMouseDown={(e) => { e.preventDefault(); toggle('border'); }}>
-              ╳ Границы
-            </button>
+              {__tr("╳ Границы")}</button>
             {pop === 'border' && (
               <CellBorderPopover
                 editor={editor}
@@ -114,10 +113,9 @@ export const TableOperationsToolbar: React.FC<{ editor: Editor }> = ({ editor })
           {/* ОТСТУПЫ */}
           <div className="rt-popover-wrap">
             <button type="button" className="rt-btn"
-              title="Отступы в ячейке"
+              title={__tr("Отступы в ячейке")}
               onMouseDown={(e) => { e.preventDefault(); toggle('pad'); }}>
-              ↔ Отступы
-            </button>
+              {__tr("↔ Отступы")}</button>
             {pop === 'pad' && (
               <CellPadPopover onSet={(padding) => { setCellAttrs({ cellPadding: padding }); setPop(null); }} />
             )}
@@ -127,10 +125,9 @@ export const TableOperationsToolbar: React.FC<{ editor: Editor }> = ({ editor })
           <div className="rt-sep" />
           <div className="rt-popover-wrap">
             <button type="button" className="rt-btn"
-              title="Заливка ячейки"
+              title={__tr("Заливка ячейки")}
               onMouseDown={(e) => { e.preventDefault(); toggle('fill'); }}>
-              ▣ Заливка
-            </button>
+              {__tr("▣ Заливка")}</button>
             {pop === 'fill' && (
               <CellFillPopover onSet={(c) => { setCellAttrs({ bgColor: c }); setPop(null); }} />
             )}

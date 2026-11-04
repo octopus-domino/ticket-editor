@@ -6,6 +6,7 @@ import {
 import { IndexedDraftRepository } from '@/infra/state/IndexedDraftRepository';
 import type { EditorInitialDoc } from '@/shared/types/document';
 import { documentPreview } from '@/application/use-cases/DocumentPreview';
+import { registerLanguageSave } from '@/shared/i18n';
 
 export const documentDrafts = new IndexedDraftRepository<EditorInitialDoc>();
 export function useDocumentPersistence(
@@ -37,6 +38,7 @@ export function useDocumentPersistence(
     [id, enabled, target],
   );
   const { slides, data, activeId, bindings } = snapshot;
+  useEffect(() => registerLanguageSave(async () => { await persistence?.flush(); }), [persistence]);
   useEffect(() => {
     documentPreview.set(id.split(':')[0], slides);
   }, [id, slides]);

@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 import React, { useState, useMemo } from 'react';
 import type { Editor } from '@tiptap/react';
 import { BG_COLORS, BORDER_COLORS, BORDER_WIDTHS, CELL_PADDINGS } from './palettes';
@@ -8,7 +9,7 @@ import { BG_COLORS, BORDER_COLORS, BORDER_WIDTHS, CELL_PADDINGS } from './palett
 
 export const CellFillPopover: React.FC<{ onSet: (color: string | null) => void }> = ({ onSet }) => (
   <div className="rt-popover">
-    <div className="rt-popover-title">Заливка ячейки</div>
+    <div className="rt-popover-title">{__tr("Заливка ячейки")}</div>
     <div className="rt-color-grid">
       {BG_COLORS.flat().map((c) => (
         <button
@@ -16,7 +17,7 @@ export const CellFillPopover: React.FC<{ onSet: (color: string | null) => void }
           onMouseDown={(e) => { e.preventDefault(); onSet(c); }}
         />
       ))}
-      <button type="button" className="rt-color-cell color-reset" title="Без заливки"
+      <button type="button" className="rt-color-cell color-reset" title={__tr("Без заливки")}
         onMouseDown={(e) => { e.preventDefault(); onSet(null); }}>×</button>
     </div>
   </div>
@@ -36,13 +37,13 @@ export type BorderSidePreset =
   | 'none';
 
 const SIDE_LABEL: Record<BorderSidePreset, string> = {
-  all: 'Все 4 стороны',
-  topBottom: 'Сверху и снизу',
-  top: 'Только сверху',
-  right: 'Только справа',
-  bottom: 'Только снизу',
-  left: 'Только слева',
-  none: 'Без границ',
+  all: __tr("Все 4 стороны"),
+  topBottom: __tr("Сверху и снизу"),
+  top: __tr("Только сверху"),
+  right: __tr("Только справа"),
+  bottom: __tr("Только снизу"),
+  left: __tr("Только слева"),
+  none: __tr("Без границ"),
 };
 
 const SIDES_CAP = ['Top', 'Right', 'Bottom', 'Left'] as const;
@@ -174,7 +175,7 @@ export const CellBorderPopover: React.FC<CellBorderPopoverProps> = ({ editor, on
 
   return (
     <div className="rt-popover" style={{ minWidth: 280 }}>
-      <div className="rt-popover-title">Границы ячейки</div>
+      <div className="rt-popover-title">{__tr("Границы ячейки")}</div>
 
       <select
         className="rt-select"
@@ -189,7 +190,7 @@ export const CellBorderPopover: React.FC<CellBorderPopoverProps> = ({ editor, on
 
       {preset !== 'none' && (
         <>
-          <div className="rt-popover-title" style={{ marginTop: 4 }}>Цвет</div>
+          <div className="rt-popover-title" style={{ marginTop: 4 }}>{__tr("Цвет")}</div>
           <div className="rt-color-grid">
             {BORDER_COLORS.map((c) => (
               <button key={c} type="button"
@@ -200,7 +201,7 @@ export const CellBorderPopover: React.FC<CellBorderPopoverProps> = ({ editor, on
             ))}
           </div>
 
-          <div className="rt-popover-title" style={{ marginTop: 10 }}>Толщина</div>
+          <div className="rt-popover-title" style={{ marginTop: 10 }}>{__tr("Толщина")}</div>
           <div className="rt-row">
             {BORDER_WIDTHS.map((w) => {
               const val = `${w}px`;
@@ -214,7 +215,7 @@ export const CellBorderPopover: React.FC<CellBorderPopoverProps> = ({ editor, on
             })}
           </div>
 
-          <div className="rt-popover-title" style={{ marginTop: 10 }}>Стиль</div>
+          <div className="rt-popover-title" style={{ marginTop: 10 }}>{__tr("Стиль")}</div>
           <div className="rt-row">
             {[
               { v: 'solid', label: '──' },
@@ -237,8 +238,7 @@ export const CellBorderPopover: React.FC<CellBorderPopoverProps> = ({ editor, on
         style={{ width: '100%', marginTop: 12, justifyContent: 'center' }}
         onMouseDown={(e) => { e.preventDefault(); apply(); }}
       >
-        Применить
-      </button>
+        {__tr("Применить")}</button>
     </div>
   );
 };
@@ -249,7 +249,7 @@ export const CellBorderPopover: React.FC<CellBorderPopoverProps> = ({ editor, on
 
 export const CellPadPopover: React.FC<{ onSet: (padding: string | null) => void }> = ({ onSet }) => (
   <div className="rt-popover" style={{ minWidth: 200 }}>
-    <div className="rt-popover-title">Отступы (padding)</div>
+    <div className="rt-popover-title">{__tr("Отступы (padding)")}</div>
     <div className="rt-row">
       {CELL_PADDINGS.map((p) => (
         <button key={p} type="button" className="rt-btn"
@@ -260,7 +260,6 @@ export const CellPadPopover: React.FC<{ onSet: (padding: string | null) => void 
     </div>
     <button type="button" className="rt-popover-action"
       onMouseDown={(e) => { e.preventDefault(); onSet(null); }}>
-      Сбросить
-    </button>
+      {__tr("Сбросить")}</button>
   </div>
 );

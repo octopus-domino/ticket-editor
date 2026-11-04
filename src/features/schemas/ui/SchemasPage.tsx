@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 import React, { useCallback, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSchemas } from '../state/useSchemas';
@@ -21,7 +22,7 @@ export const SchemasPage: React.FC = () => {
     () => ({
       getId: (s) => s.id,
       getLabel: (s) => s.name,
-      getMeta: (s) => `${s.fields.length} полей`,
+      getMeta: (s) => __tr("{0} полей", s.fields.length),
       getSearchText: (s) => s.name,
     }),
     [],
@@ -31,22 +32,22 @@ export const SchemasPage: React.FC = () => {
     () => [
       {
         key: 'delete',
-        label: 'Удалить',
+        label: __tr("Удалить"),
         icon: '🗑',
         variant: 'danger',
         confirm: (ids) => ({
-          title: `Удалить ${ids.length} ${plural(ids.length)}?`,
+          title: __tr("Удалить {0} {1}?", ids.length, plural(ids.length)),
           description:
-            'Схемы, к которым привязаны наборы данных данных, удалить нельзя — сначала удалите наборы данных.',
+            __tr("Схемы, к которым привязаны наборы данных данных, удалить нельзя — сначала удалите наборы данных."),
         }),
         onRun: async (ids) => {
           const result = await runBulk(ids, (id) => schemaStore.delete(id));
           if (result.ok > 0) {
-            toast.success(`Удалено: ${result.ok} ${plural(result.ok)}`);
+            toast.success(__tr("Удалено: {0} {1}", result.ok, plural(result.ok)));
           }
           if (result.failed.length > 0) {
             toast.error(
-              `Не удалось удалить: ${result.failed.length}`,
+              __tr("Не удалось удалить: {0}", result.failed.length),
               result.failed[0].message,
             );
           }
@@ -72,10 +73,9 @@ export const SchemasPage: React.FC = () => {
       style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 12 }}
     >
       <div className="schema-fields-header">
-        <h2>Схемы данных</h2>
+        <h2>{__tr("Схемы данных")}</h2>
         <Link to="/app/schemas/new" className="schema-btn-fill">
-          + Новая схема
-        </Link>
+          {__tr("+ Новая схема")}</Link>
       </div>
 
       {error && (
@@ -91,11 +91,11 @@ export const SchemasPage: React.FC = () => {
         onSelectionChange={setSelectedIds}
         onItemClick={onItemClick}
         bulkActions={bulkActions}
-        searchPlaceholder="Поиск по названию схемы…"
+        searchPlaceholder={__tr("Поиск по названию схемы…")}
         emptyText={
           schemas.length === 0
-            ? 'Схем пока нет. Создайте первую.'
-            : 'Ни одна схема не подходит под запрос.'
+            ? __tr("Схем пока нет. Создайте первую.")
+            : __tr("Ни одна схема не подходит под запрос.")
         }
         loading={loading}
       />
@@ -106,7 +106,7 @@ export const SchemasPage: React.FC = () => {
 function plural(n: number): string {
   const m10 = n % 10;
   const m100 = n % 100;
-  if (m10 === 1 && m100 !== 11) return 'схему';
-  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return 'схемы';
-  return 'схем';
+  if (m10 === 1 && m100 !== 11) return __tr("схему");
+  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return __tr("схемы");
+  return __tr("схем");
 }

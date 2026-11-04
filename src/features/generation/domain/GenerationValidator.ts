@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 import type { DataSchema } from '@/features/schemas/domain/DataSchema';
 import type { DataModel } from '@/features/data-models/domain/DataModel';
 import { validateModel } from '@/features/data-models/domain/DataModelValidator';
@@ -21,7 +22,7 @@ export interface GenerationInput {
 export function validateGeneration(input: GenerationInput): GenerationIssue[] {
   const issues: GenerationIssue[] = [];
   if (input.schema && input.selectedModels.length === 0)
-    issues.push({ kind: 'model', message: 'Выберите хотя бы один набор данных' });
+    issues.push({ kind: 'model', message: __tr("Выберите хотя бы один набор данных") });
 
   if (input.schema) {
     const bindingIssues = validateBindings(input.bindings, input.schema);
@@ -35,7 +36,7 @@ export function validateGeneration(input: GenerationInput): GenerationIssue[] {
   if (input.schema && !input.allowEmpty) {
     for (const m of input.selectedModels) {
       if (m.schemaId !== input.schema.id)
-        issues.push({ kind: 'schema', message: `${m.name}: другая схема` });
+        issues.push({ kind: 'schema', message: __tr("{0}: другая схема", m.name) });
       for (const e of validateModel(m, input.schema)) {
         issues.push({
           kind: 'model',
@@ -48,7 +49,7 @@ export function validateGeneration(input: GenerationInput): GenerationIssue[] {
   if (!input.supportedFormats.includes(input.format)) {
     issues.push({
       kind: 'format',
-      message: `Формат ${input.format} не поддерживается`,
+      message: __tr("Формат {0} не поддерживается", input.format),
     });
   }
 

@@ -1,15 +1,16 @@
+import { t as __tr } from '@/shared/i18n';
 import React from 'react';
 import { useStore } from '@/shared/store/store';
 import { useDocumentStore, useSelectionStore } from '../../providers/EditorProvider';
 import { useArrange } from '../../hooks/editor/useArrange';
 
 const btns: { mode: Parameters<ReturnType<typeof useArrange>['align']>[0]; label: string; icon: string }[] = [
-  { mode: 'left', label: 'По левому краю', icon: '◧' },
-  { mode: 'center', label: 'По центру', icon: '◫' },
-  { mode: 'right', label: 'По правому краю', icon: '◨' },
-  { mode: 'top', label: 'По верху', icon: '⬒' },
-  { mode: 'middle', label: 'По середине', icon: '⬓' },
-  { mode: 'bottom', label: 'По низу', icon: '⬓' },
+  { mode: 'left', label: __tr("По левому краю"), icon: '◧' },
+  { mode: 'center', label: __tr("По центру"), icon: '◫' },
+  { mode: 'right', label: __tr("По правому краю"), icon: '◨' },
+  { mode: 'top', label: __tr("По верху"), icon: '⬒' },
+  { mode: 'middle', label: __tr("По середине"), icon: '⬓' },
+  { mode: 'bottom', label: __tr("По низу"), icon: '⬓' },
 ];
 
 export const ArrangePanel: React.FC = () => {
@@ -43,19 +44,16 @@ export const ArrangePanel: React.FC = () => {
           disabled={disabledDistribute}
           onClick={() => distribute('horizontal')}
         >
-          Распределить →
-        </button>
+          {__tr("Распределить →")}</button>
         <button
           type="button"
           disabled={disabledDistribute}
           onClick={() => distribute('vertical')}
         >
-          Распределить ↓
-        </button>
+          {__tr("Распределить ↓")}</button>
       </div>
       <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 6 }}>
-        Align ≥ 2 элементов, Distribute ≥ 3.
-      </p>
+        {__tr("Align ≥ 2 элементов, Distribute ≥ 3.")}</p>
     </div>
   );
 };

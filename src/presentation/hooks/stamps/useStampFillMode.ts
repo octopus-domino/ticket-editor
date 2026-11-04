@@ -1,4 +1,5 @@
-﻿/* ============================================================
+import { t as __tr } from '@/shared/i18n';
+/* ============================================================
    presentation/hooks/stamps/useStampFillMode.ts
    F-STMP-E-10, F-SGEO-11. NFR-OBS-03.
    ============================================================ */
@@ -55,7 +56,7 @@ export function useStampFillMode({
       fill: fillColor,
       fillTargetShapeId: target.id,
       fillAnchorLocal: { x: localX, y: localY },
-      name: 'Заливка области',
+      name: __tr("Заливка области"),
     };
 
     logger.info('stamp.fill.created', {

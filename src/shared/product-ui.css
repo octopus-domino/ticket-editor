@@ -1,0 +1,163 @@
+/* Shared controls for product pages, scoped away from canvas tools. */
+.sign-generated-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px;
+  text-decoration: none;
+  color: var(--accent-hover);
+}
+.language-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.language-switcher select {
+  max-width: 145px;
+  min-height: 36px;
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  padding: 7px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.excel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 0;
+}
+.excel-actions button {
+  min-height: 38px;
+  padding: 8px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 550;
+}
+.excel-actions button:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+.excel-actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.excel-actions [role='alert'] {
+  flex-basis: 100%;
+  color: #b42318;
+}
+.signing-page {
+  width: 100%;
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 40px 36px 64px;
+  overflow: auto;
+}
+.signing-page h1 {
+  font-size: 32px;
+  letter-spacing: -0.8px;
+  margin: 0 0 12px;
+}
+.signing-page h2 {
+  font-size: 18px;
+  margin: 0 0 12px;
+}
+.signing-page p {
+  font-size: 14px;
+  color: var(--text-muted);
+  line-height: 1.75;
+  overflow-wrap: anywhere;
+}
+.signing-page > section {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 24px;
+  margin: 24px 0;
+}
+.signing-page label {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 20px 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.signing-page select,
+.signing-page input[type='file'] {
+  width: 100%;
+  min-height: 44px;
+  padding: 11px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 9px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 14px;
+}
+.signing-page label:has(input[type='checkbox']) {
+  flex-direction: row;
+  align-items: flex-start;
+  font-weight: 400;
+  line-height: 1.6;
+}
+.signing-page input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  accent-color: var(--accent);
+}
+.signing-page button {
+  min-height: 42px;
+  border: 1px solid var(--accent);
+  border-radius: 9px;
+  padding: 10px 16px;
+  color: #fff;
+  background: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+}
+.signing-page button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.signing-page [role='alert'] {
+  background: #fff4f2;
+  color: #b42318;
+  padding: 14px;
+  border-radius: 9px;
+}
+.signing-page > a {
+  color: var(--accent-hover);
+  font-size: 13px;
+}
+.signing-page code {
+  font-size: 12px;
+}
+:is(.signing-page, .learning-page, .product-library) :is(button, input, select, a):focus-visible {
+  outline: 3px solid var(--accent-soft);
+  outline-offset: 3px;
+}
+@media (max-width: 600px) {
+  .signing-page {
+    padding: 24px 18px 40px;
+  }
+  .signing-page > section {
+    padding: 20px;
+  }
+  .language-switcher select {
+    max-width: 116px;
+  }
+}
+@media (max-width: 760px) {
+  .language-switcher select,
+  .excel-actions button {
+    min-height: 44px;
+  }
+}

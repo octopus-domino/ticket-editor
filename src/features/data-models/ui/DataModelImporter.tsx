@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 import React, { useState } from 'react';
 import { modelIO, type ImportedModel } from '../api/ModelIO';
 
@@ -73,7 +74,7 @@ export const DataModelImporter: React.FC<Props> = ({ onImport }) => {
       <textarea
         value={text}
         onChange={(e) => { setText(e.target.value); parse(e.target.value); }}
-        placeholder='Или вставьте JSON: {"items": [{"name": "...", "values": {...}}]}'
+        placeholder={__tr("Или вставьте JSON: {\"items\": [{\"name\": \"...\", \"values\": {...}}]}")}
         style={{
           width: '100%', minHeight: 80, fontFamily: 'monospace', fontSize: 11,
           padding: 6, border: '1px solid #cbd5e1', borderRadius: 4,
@@ -94,8 +95,7 @@ export const DataModelImporter: React.FC<Props> = ({ onImport }) => {
       {preview && (
         <div style={{ marginTop: 8 }}>
           <div style={{ fontSize: 12, color: '#16a34a', marginBottom: 6 }}>
-            ✓ Найдено {preview.length} наборов данных
-          </div>
+            {__tr("✓ Найдено")}{preview.length} {__tr("наборов данных")}</div>
           <button
             onClick={() => void apply()}
             disabled={busy}
@@ -104,7 +104,7 @@ export const DataModelImporter: React.FC<Props> = ({ onImport }) => {
               border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12,
             }}
           >
-            {busy ? 'Импорт…' : 'Импортировать'}
+            {busy ? __tr("Импорт…") : __tr("Импортировать")}
           </button>
           <button
             onClick={() => { setPreview(null); setText(''); }}
@@ -113,8 +113,7 @@ export const DataModelImporter: React.FC<Props> = ({ onImport }) => {
               border: '1px solid #cbd5e1', borderRadius: 4, cursor: 'pointer', fontSize: 12,
             }}
           >
-            Отмена
-          </button>
+            {__tr("Отмена")}</button>
         </div>
       )}
     </div>

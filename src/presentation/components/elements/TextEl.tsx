@@ -10,6 +10,7 @@ import {
 } from '@/lib/richText';
 import { RichTable } from './RichTable';
 import { TEXT_PLACEHOLDER } from '@/shared/constants';
+import { isTranslation } from '@/shared/i18n/core';
 import { drawArcText, canvasFont } from '@/lib/stamps/render';
 import { useActiveModelValues } from '@/features/data-models/state/useActiveModelValues';
 import { resolveWithValues } from '@/lib/modelBinding';
@@ -39,7 +40,7 @@ export const TextEl: React.FC<Props> = ({
   const rawHtml = el.html ?? '';
   const htmlEmpty = !rawHtml || rawHtml.replace(/<[^>]+>/g, '').trim() === '';
   const isPlaceholder =
-    htmlEmpty && (rawText.trim() === '' || rawText === TEXT_PLACEHOLDER);
+    htmlEmpty && (rawText.trim() === '' || isTranslation(TEXT_PLACEHOLDER, rawText));
 
   const effectiveFill = isPlaceholder ? '#9ca3af' : (el.fill || '#000000');
   const isArc = el.textMode === 'arc';

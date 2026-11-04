@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 // src/workspace/components/EditorPage.tsx
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -40,7 +41,7 @@ const DocumentEditorSession: React.FC<{ docId?: string }> = ({ docId }) => {
 
     const search = window.location.search; // сохраняем ?schemaId=...&tab=data
     void workspaceApi
-      .createDocument('Новый документ', workspaceStore.getState().activeFolderId)
+      .createDocument(__tr("Новый документ"), workspaceStore.getState().activeFolderId)
       .then((newDoc) => {
         if (cancelled) return;
         void workspaceStore.refresh();
@@ -71,14 +72,14 @@ const DocumentEditorSession: React.FC<{ docId?: string }> = ({ docId }) => {
         const remote: DocumentFull = isLocal
           ? {
               id: 'local',
-              name: 'Локальный проект',
+              name: __tr("Локальный проект"),
               folderId: null,
               content: localStorage.getItem(OFFLINE_KEY) ?? '{}',
               updatedAt: new Date(0).toISOString(),
             }
           : await workspaceApi.getDocument(docId);
         if (cancelled) return;
-        if (remote.id !== docId) throw new Error('Сервер вернул другой документ');
+        if (remote.id !== docId) throw new Error(__tr("Сервер вернул другой документ"));
 
         let initial: HydratedDocument = hydrateDocument(remote.content);
 
@@ -171,9 +172,9 @@ const DocumentEditorSession: React.FC<{ docId?: string }> = ({ docId }) => {
   );
 
   if (loading || (doc && doc.id !== docId))
-    return <div style={{ padding: 40 }}>Загрузка документа…</div>;
+    return <div style={{ padding: 40 }}>{__tr("Загрузка документа…")}</div>;
   if (error) return <div style={{ padding: 40, color: '#dc2626' }}>{error}</div>;
-  if (!doc || !docId) return <div style={{ padding: 40 }}>Документ не найден</div>;
+  if (!doc || !docId) return <div style={{ padding: 40 }}>{__tr("Документ не найден")}</div>;
 
   const initial = hydrateDocument(doc.content);
 
@@ -201,10 +202,9 @@ const DocumentEditorSession: React.FC<{ docId?: string }> = ({ docId }) => {
             color: 'var(--text)',
           }}
         >
-          ← К списку
-        </button>
+          {__tr("← К списку")}</button>
         <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-          {doc.name} {isLocal && '(Сохранено локально)'}
+          {doc.name} {isLocal && __tr("(Сохранено локально)")}
         </span>
       </div>
       <div style={{ flex: 1, minHeight: 0 }}>

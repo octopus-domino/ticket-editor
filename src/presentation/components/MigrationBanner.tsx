@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 /* ============================================================
    presentation/components/MigrationBanner.tsx
    MIG-UI-01, MIG-UI-02. Скромный баннер с обратной связью + rollback.
@@ -34,17 +35,17 @@ export const MigrationBanner: React.FC<Props> = ({
   return (
     <div className="migration-banner" role="status" aria-live="polite">
       <span>
-        Вы используете новую версию редактора.{' '}
-        <a href={reportUrl} target="_blank" rel="noreferrer">Сообщить о проблеме →</a>
+        {__tr("Вы используете новую версию редактора.")}{' '}
+        <a href={reportUrl} target="_blank" rel="noreferrer">{__tr("Сообщить о проблеме →")}</a>
       </span>
       {rollbackUrl && (
-        <a href={rollbackUrl} className="migration-banner__rollback">Старая версия</a>
+        <a href={rollbackUrl} className="migration-banner__rollback">{__tr("Старая версия")}</a>
       )}
       <button
         type="button"
         className="migration-banner__close"
         onClick={dismiss}
-        aria-label="Скрыть"
+        aria-label={__tr("Скрыть")}
       >×</button>
     </div>
   );

@@ -1,0 +1,30 @@
+name: CoDoc
+options:
+  bundleIdPrefix: site.codoc
+  deploymentTarget:
+    iOS: '16.0'
+settings:
+  base:
+    SWIFT_VERSION: '5.0'
+    CURRENT_PROJECT_VERSION: '1'
+    MARKETING_VERSION: '1.0.0'
+    TARGETED_DEVICE_FAMILY: '1,2'
+targets:
+  CoDoc:
+    type: application
+    platform: iOS
+    sources: [CoDoc]
+    info:
+      path: CoDoc/Info.plist
+      properties:
+        CFBundleDisplayName: CoDoc
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        NSFaceIDUsageDescription: Confirm sensitive actions in CoDoc. Biometric confirmation does not itself sign documents.
+        NFCReaderUsageDescription: Access an electronic signature token through a connected certified signing provider.
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: site.codoc.mobile
+        CODE_SIGN_STYLE: Automatic

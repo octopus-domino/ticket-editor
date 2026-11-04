@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 import React, { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
@@ -44,6 +45,10 @@ const TemplateEditorPage = lazy(() =>
 const NewTemplatePage = lazy(() =>
   import('@/features/templates/ui/NewTemplatePage').then((m) => ({ default: m.NewTemplatePage })),
 );
+const DocumentLibraryPage = lazy(() => import('./features/library/DocumentLibraryPage').then((module) => ({ default: module.DocumentLibraryPage })));
+const StampStudioPage = lazy(() => import('./features/stamps/StampStudioPage').then((module) => ({ default: module.StampStudioPage })));
+const LearningPage = lazy(() => import('./features/learning/LearningPage').then((module) => ({ default: module.LearningPage })));
+const SigningPage = lazy(() => import('./features/signing/SigningPage').then((module) => ({ default: module.SigningPage })));
 
 const App: React.FC = () => {
   const offline = useStore(authStore, (s) => s.offline);
@@ -60,13 +65,12 @@ const App: React.FC = () => {
       future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
     >
       <RouteMetadata />
-      {offline && <div className="offline-banner">⚠️ Бэкенд недоступен. Локальный режим.</div>}
+      {offline && <div className="offline-banner">{__tr("⚠️ Бэкенд недоступен. Локальный режим.")}</div>}
       <div className="app-root" style={{ height: offline ? 'calc(100vh - 37px)' : '100vh' }}>
         <Suspense
           fallback={
             <div role="status" style={{ padding: 32 }}>
-              Загрузка…
-            </div>
+              {__tr("Загрузка…")}</div>
           }
         >
           <Routes>
@@ -76,6 +80,8 @@ const App: React.FC = () => {
               <Route key={page.path} path={page.path} element={<SearchLandingPage />} />
             ))}
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/learn" element={<LearningPage />} />
+            <Route path="/stamp-editor" element={<StampStudioPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/auth/callback" element={<OAuth2RedirectPage />} />
 
@@ -94,6 +100,10 @@ const App: React.FC = () => {
               />
               <Route path="editor/:docId" element={<EditorPage />} />
               <Route path="templates" element={<TemplatesPage />} />
+              <Route path="library" element={<DocumentLibraryPage />} />
+              <Route path="stamps" element={<StampStudioPage />} />
+              <Route path="learn" element={<LearningPage />} />
+              <Route path="sign" element={<SigningPage />} />
               <Route path="templates/new" element={<NewTemplatePage />} />
               <Route path="templates/:templateId/edit" element={<TemplateEditorPage />} />
               <Route path="schemas" element={<SchemasPage />} />

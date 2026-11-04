@@ -1,4 +1,5 @@
-﻿import React from 'react';
+import { t as __tr } from '@/shared/i18n';
+import React from 'react';
 import type { StampShapeKind } from '@/shared/types';
 import type { PlacementMode } from '@/lib/stamps/geometry';
 
@@ -20,28 +21,26 @@ export const StampToolbar: React.FC<Props> = ({
   onUndo, onRedo, onZoomIn, onZoomOut, onZoomFit, onToggleGrid, onToggleSnap,
 }) => (
   <div className="stamp-toolbar">
-    <button className="stamp-btn" onClick={() => onAddShape('circle')}>○ Круг</button>
-    <button className="stamp-btn" onClick={() => onAddShape('ellipse')}>⬭ Эллипс</button>
-    <button className="stamp-btn" onClick={() => onAddShape('rect')}>▭ Прямоугольник</button>
-    <button className="stamp-btn" onClick={() => onAddShape('triangle')}>△ Треугольник</button>
-    <button className="stamp-btn" onClick={() => onAddShape('line')}>╱ Линия</button>
+    <button className="stamp-btn" onClick={() => onAddShape('circle')}>{__tr("○ Круг")}</button>
+    <button className="stamp-btn" onClick={() => onAddShape('ellipse')}>{__tr("⬭ Эллипс")}</button>
+    <button className="stamp-btn" onClick={() => onAddShape('rect')}>{__tr("▭ Прямоугольник")}</button>
+    <button className="stamp-btn" onClick={() => onAddShape('triangle')}>{__tr("△ Треугольник")}</button>
+    <button className="stamp-btn" onClick={() => onAddShape('line')}>{__tr("╱ Линия")}</button>
     <span className="stamp-sep" />
     <div className="stamp-fill-group">
-      <button className={`stamp-btn ${fillMode ? 'active' : ''}`} onClick={onToggleFillMode} title="Заливка">
-        🎨 Заливка
-      </button>
-      <input type="color" value={fillColor} onChange={(e) => onFillColorChange(e.target.value)} className="stamp-fill-color" title="Цвет заливки" />
+      <button className={`stamp-btn ${fillMode ? 'active' : ''}`} onClick={onToggleFillMode} title={__tr("Заливка")}>
+        {__tr("🎨 Заливка")}</button>
+      <input type="color" value={fillColor} onChange={(e) => onFillColorChange(e.target.value)} className="stamp-fill-color" title={__tr("Цвет заливки")} />
     </div>
     <span className="stamp-sep" />
-    <button className="stamp-btn" onClick={onAddStraightText}>T Прямой текст</button>
-    <button className="stamp-btn" onClick={onAddArcText}>◯ Текст по дуге</button>
+    <button className="stamp-btn" onClick={onAddStraightText}>{__tr("T Прямой текст")}</button>
+    <button className="stamp-btn" onClick={onAddArcText}>{__tr("◯ Текст по дуге")}</button>
     <span className="stamp-sep" />
-    <button className="stamp-btn" onClick={() => onAddImage(false)}>🖼 Картинка</button>
-    <button className="stamp-btn" onClick={() => onAddImage(true)}>✂ Картинка (убрать фон)</button>
+    <button className="stamp-btn" onClick={() => onAddImage(false)}>{__tr("🖼 Картинка")}</button>
+    <button className="stamp-btn" onClick={() => onAddImage(true)}>{__tr("✂ Картинка (убрать фон)")}</button>
     <span className="stamp-sep" />
-    <label className="stamp-check">Размещать
-      <select value={placementMode} onChange={(e) => onChangePlacement(e.target.value as PlacementMode)} style={{ width: 110, marginLeft: 4 }}>
-        <option value="inside">Внутри</option><option value="outside">Снаружи</option><option value="next">Рядом</option>
+    <label className="stamp-check">{__tr("Размещать")}<select value={placementMode} onChange={(e) => onChangePlacement(e.target.value as PlacementMode)} style={{ width: 110, marginLeft: 4 }}>
+        <option value="inside">{__tr("Внутри")}</option><option value="outside">{__tr("Снаружи")}</option><option value="next">{__tr("Рядом")}</option>
       </select>
     </label>
     <span className="stamp-sep" />
@@ -53,7 +52,7 @@ export const StampToolbar: React.FC<Props> = ({
     <button className="stamp-btn" onClick={onZoomIn} disabled={zoom >= maxZoom}>+</button>
     <button className="stamp-btn" onClick={onZoomFit}>⤢</button>
     <span className="stamp-sep" />
-    <label className="stamp-check"><input type="checkbox" checked={showGrid} onChange={(e) => onToggleGrid(e.target.checked)} /> Сетка</label>
-    <label className="stamp-check"><input type="checkbox" checked={snap} onChange={(e) => onToggleSnap(e.target.checked)} /> Привязка</label>
+    <label className="stamp-check"><input type="checkbox" checked={showGrid} onChange={(e) => onToggleGrid(e.target.checked)} /> {__tr("Сетка")}</label>
+    <label className="stamp-check"><input type="checkbox" checked={snap} onChange={(e) => onToggleSnap(e.target.checked)} /> {__tr("Привязка")}</label>
   </div>
 );

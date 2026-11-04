@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { useFocusTrap } from '@/presentation/hooks/useFocusTrap';
@@ -68,7 +69,7 @@ export function FeedbackWidget({
       setError(
         reason instanceof Error
           ? reason.message
-          : 'Не удалось отправить оценку. Попробуйте ещё раз.',
+          : __tr("Не удалось отправить оценку. Попробуйте ещё раз."),
       );
       setStatus('error');
     }
@@ -77,8 +78,7 @@ export function FeedbackWidget({
   return (
     <>
       <button ref={trigger} type="button" className="feedback-trigger" onClick={show}>
-        Обратная связь
-      </button>
+        {__tr("Обратная связь")}</button>
       {open &&
         createPortal(
           <div
@@ -95,11 +95,11 @@ export function FeedbackWidget({
               aria-labelledby={headingId}
             >
               <header className="feedback-header">
-                <h2 id={headingId}>Как вам CoDoc?</h2>
+                <h2 id={headingId}>{__tr("Как вам CoDoc?")}</h2>
                 <button
                   type="button"
                   className="feedback-close"
-                  aria-label="Закрыть обратную связь"
+                  aria-label={__tr("Закрыть обратную связь")}
                   onClick={close}
                 >
                   ×
@@ -108,24 +108,22 @@ export function FeedbackWidget({
               {detailed && forms ? (
                 <>
                   <p className="feedback-description">
-                    Расскажите, что стоит улучшить. Ответ получит команда CoDoc.
-                  </p>
+                    {__tr("Расскажите, что стоит улучшить. Ответ получит команда CoDoc.")}</p>
                   <iframe
                     className="feedback-frame"
                     src={forms.embedUrl}
-                    title="Подробный отзыв о CoDoc"
+                    title={__tr("Подробный отзыв о CoDoc")}
                     referrerPolicy="no-referrer"
                   />
                   <p className="feedback-fallback">
-                    Если форма не открылась,{' '}
+                    {__tr("Если форма не открылась,")}{' '}
                     <a
                       href={forms.publicUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       referrerPolicy="no-referrer"
                     >
-                      откройте её в новой вкладке ↗
-                    </a>
+                      {__tr("откройте её в новой вкладке ↗")}</a>
                     .
                   </p>
                   <button
@@ -133,31 +131,27 @@ export function FeedbackWidget({
                     className="feedback-secondary"
                     onClick={() => setDetailed(false)}
                   >
-                    ← К оценке
-                  </button>
+                    {__tr("← К оценке")}</button>
                 </>
               ) : status === 'sent' ? (
                 <div className="feedback-success" role="status">
                   <span aria-hidden="true">✓</span>
-                  <h3>Спасибо за вашу оценку!</h3>
-                  <p>Она поможет нам сделать CoDoc удобнее.</p>
+                  <h3>{__tr("Спасибо за вашу оценку!")}</h3>
+                  <p>{__tr("Она поможет нам сделать CoDoc удобнее.")}</p>
                   {forms && (
                     <button type="button" className="feedback-secondary" onClick={showDetailed}>
-                      Написать подробнее →
-                    </button>
+                      {__tr("Написать подробнее →")}</button>
                   )}
                   <button type="button" className="feedback-primary" onClick={close}>
-                    Вернуться к работе
-                  </button>
+                    {__tr("Вернуться к работе")}</button>
                 </div>
               ) : (
                 <>
                   <p className="feedback-description">
-                    Что получилось хорошо, а что стоит улучшить? Оценка займёт несколько секунд.
-                  </p>
+                    {__tr("Что получилось хорошо, а что стоит улучшить? Оценка займёт несколько секунд.")}</p>
                   <form onSubmit={(event) => void submit(event)}>
                     <fieldset className="feedback-ratings" disabled={status === 'sending'}>
-                      <legend>Насколько вам удобно пользоваться сервисом?</legend>
+                      <legend>{__tr("Насколько вам удобно пользоваться сервисом?")}</legend>
                       <div>
                         {[1, 2, 3, 4, 5].map((value) => (
                           <label
@@ -170,20 +164,19 @@ export function FeedbackWidget({
                               value={value}
                               checked={rating === value}
                               onChange={() => setRating(value)}
-                              aria-label={`Оценка ${value} из 5`}
+                              aria-label={__tr("Оценка {0} из 5", value)}
                             />
                             <span>{value}</span>
                           </label>
                         ))}
                       </div>
                       <p>
-                        <span>Совсем неудобно</span>
-                        <span>Всё отлично</span>
+                        <span>{__tr("Совсем неудобно")}</span>
+                        <span>{__tr("Всё отлично")}</span>
                       </p>
                     </fieldset>
                     <label className="feedback-topic-label" htmlFor={topicId}>
-                      О чём отзыв?
-                    </label>
+                      {__tr("О чём отзыв?")}</label>
                     <select
                       id={topicId}
                       className="feedback-topic"
@@ -207,15 +200,14 @@ export function FeedbackWidget({
                       type="submit"
                       disabled={rating === null || status === 'sending'}
                     >
-                      {status === 'sending' ? 'Отправляем…' : 'Отправить оценку'}
+                      {status === 'sending' ? __tr("Отправляем…") : __tr("Отправить оценку")}
                     </button>
                   </form>
                   {forms && (
                     <button type="button" className="feedback-secondary" onClick={showDetailed}>
-                      Хочу написать подробнее →
-                    </button>
+                      {__tr("Хочу написать подробнее →")}</button>
                   )}
-                  <p className="feedback-note">Без регистрации и обязательных контактов.</p>
+                  <p className="feedback-note">{__tr("Без регистрации и обязательных контактов.")}</p>
                 </>
               )}
             </div>

@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 import type { Slide } from '@/shared/types';
 import type { Binding } from './Binding';
 
@@ -64,12 +65,12 @@ export function resolveBindings(
       }
 
       if (el.type === 'shape') {
-        scanSources(el.id, `Фигура (${el.shape ?? 'shape'})`, [el.text]);
+        scanSources(el.id, __tr("Фигура ({0})", el.shape ?? 'shape'), [el.text]);
         continue;
       }
 
       if (el.type === 'footer') {
-        scanSources(el.id, 'Футер', [el.text, el.html]);
+        scanSources(el.id, __tr("Футер"), [el.text, el.html]);
         continue;
       }
 
@@ -93,7 +94,7 @@ export function resolveBindings(
           }
         }
         for (const base of bases) {
-          add(el.id, `Таблица (${base})`, base, base, 'auto');
+          add(el.id, __tr("Таблица ({0})", base), base, base, 'auto');
         }
         continue;
       }

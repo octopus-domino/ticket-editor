@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Editor, type EditorInitialDoc } from '@/presentation/components/Editor';
@@ -12,6 +13,7 @@ import { templateStore } from '../state/TemplateStore';
 import { useStore } from '@/shared/store/store';
 import { workspaceStore } from '@/workspace/store';
 import './template-journey.css';
+import { TutorialCoach } from '@/features/learning/TutorialCoach';
 
 function TemplateEditorSession({ templateId }: { templateId: string }) {
   const activeSchemaId = useStore(schemaStore, (state) => state.activeId);
@@ -29,7 +31,7 @@ function TemplateEditorSession({ templateId }: { templateId: string }) {
       .then(async (value) => {
         if (!active) return;
         if (!value) {
-          setError('Шаблон не найден');
+          setError(__tr("Шаблон не найден"));
           return;
         }
         const owner = authStore.getState().user?.id ?? 'local';
@@ -70,27 +72,26 @@ function TemplateEditorSession({ templateId }: { templateId: string }) {
     [template, activeSchemaId],
   );
   if (error) return <p role="alert">{error}</p>;
-  if (!template) return <p>Загрузка…</p>;
+  if (!template) return <p>{__tr("Загрузка…")}</p>;
   return (
     <div className="template-editor-frame">
+      <TutorialCoach topic="document" />
       <header className="template-editor-toolbar">
-        <Link to="/app/templates">← Шаблоны</Link>
+        <Link to="/app/library">← {__tr('Document library')}</Link>
         <strong>{template.name}</strong>
-        <span>Макет → Данные → Документы</span>
+        <span>{__tr("Макет → Данные → Документы")}</span>
       </header>
       {saved && (
         <div className="template-next" role="status">
-          <strong>Шаблон сохранён</strong>
+          <strong>{__tr("Шаблон сохранён")}</strong>
           <Link
             to={`/app/data-models${savedSchemaId ? `?schemaId=${encodeURIComponent(savedSchemaId)}` : ''}`}
           >
-            Заполнить данные →
-          </Link>
+            {__tr("Заполнить данные →")}</Link>
           <Link
             to={`/app/generate?templateId=${encodeURIComponent(template.id)}${savedSchemaId ? `&schemaId=${encodeURIComponent(savedSchemaId)}` : ''}`}
           >
-            Перейти к генерации →
-          </Link>
+            {__tr("Перейти к генерации →")}</Link>
         </div>
       )}
       <div className="template-editor-canvas">
@@ -112,6 +113,6 @@ function TemplateEditorSession({ templateId }: { templateId: string }) {
 
 export function TemplateEditorPage() {
   const { templateId } = useParams();
-  if (!templateId) return <p role="alert">Шаблон не найден</p>;
+  if (!templateId) return <p role="alert">{__tr("Шаблон не найден")}</p>;
   return <TemplateEditorSession key={templateId} templateId={templateId} />;
 }

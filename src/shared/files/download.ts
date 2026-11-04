@@ -1,0 +1,10 @@
+export function downloadFile(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = Array.from(filename, (char) => char.charCodeAt(0) < 32 ? '_' : char).join('').replace(/[\\/]/g, '_');
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}

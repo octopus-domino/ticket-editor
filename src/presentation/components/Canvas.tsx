@@ -1,6 +1,8 @@
-﻿import React, { useCallback, useLayoutEffect, useRef } from 'react';
+import { t as __tr } from '@/shared/i18n';
+import React, { useCallback, useLayoutEffect, useRef } from 'react';
 import { Stage, Layer, Rect, Transformer } from 'react-konva';
 import type Konva from 'konva';
+import { useMemo } from 'react';
 import type { Slide, AnchorSide, CanvasElement } from '@/shared/types';
 import { useStore } from '@/shared/store/store';
 import { useDocumentStore, useSelectionStore, useModalsStore } from '@/ui/providers/EditorProvider';
@@ -48,6 +50,7 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
   if (elementsRef.current !== slide.elements) elementsRef.current = slide.elements;
 
   const selectedIds = useStore(selStore, (s) => s.selectedIds);
+  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
   const editing = useStore(modalsStore, (s) => s.editing);
   const fillMode = useStore(modalsStore, (s) => s.fillMode);
   const showGrid = useStore(modalsStore, (s) => s.showGrid);
@@ -204,7 +207,7 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
       className="stage-wrap"
       data-fill-mode={fillMode || undefined}
       role="presentation"
-      aria-label={`Холст, ${slide.elements.length} элементов`}
+      aria-label={__tr("Холст, {0} элементов", slide.elements.length)}
       onDragOver={drop.onDragOver}
       onDrop={drop.onDrop}
       style={{ position: 'relative' }}
@@ -218,6 +221,9 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
         onMouseDown={onStageDown}
         onMouseMove={onStageMove}
         onMouseUp={onStageUp}
+        onTouchStart={(event) => { if (event.evt.touches.length === 1 && !viewport.isPinching()) onStageDown(event as unknown as Konva.KonvaEventObject<MouseEvent>); }}
+        onTouchMove={(event) => { if (event.evt.touches.length === 1 && !viewport.isPinching()) onStageMove(event as unknown as Konva.KonvaEventObject<MouseEvent>); }}
+        onTouchEnd={(event) => { if (!viewport.isPinching()) onStageUp(event as unknown as Konva.KonvaEventObject<MouseEvent>); }}
         onContextMenu={(e) => {
           if (e.target !== e.target.getStage()) return;
           e.evt.preventDefault();
@@ -254,7 +260,7 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
               key={el.id}
               element={el}
               elements={elementsRef.current}
-              isSelected={selectedIds.includes(el.id)}
+              isSelected={selectedSet.has(el.id)}
               isEditing={editing?.id === el.id}
               onSelect={(e) => handleSelect(el, e)}
               onUpdate={(patch, newElement) => {

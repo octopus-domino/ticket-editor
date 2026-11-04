@@ -1,4 +1,5 @@
-﻿import type {
+import { t as __tr } from '@/shared/i18n';
+import type {
   StampElement, StampShape,
   StampShapeItem, StampTextItem, StampImageItem, StampShapeKind,
 } from '@/shared/types';
@@ -45,11 +46,11 @@ export function newLegacyStamp(shape: StampShape, x = 200, y = 200): StampElemen
     rotation: 0, stampColor: '#1a1a1a',
     strokeWidth: 3, strokeDash: 'solid',
     innerStrokeWidth: 1, innerStrokeDash: 'solid', showInner: true,
-    topText: 'НАЗВАНИЕ', topFontSize: 14, topFontFamily: 'Arial',
+    topText: __tr("НАЗВАНИЕ"), topFontSize: 14, topFontFamily: 'Arial',
     topFontStyle: 'bold', topTextDecoration: '', topColor: '#1a1a1a',
     centerText: '2026', centerFontSize: 20, centerFontFamily: 'Arial',
     centerFontStyle: 'bold', centerTextDecoration: '', centerColor: '#1a1a1a',
-    bottomText: 'ГОРОД', bottomFontSize: 12, bottomFontFamily: 'Arial',
+    bottomText: __tr("ГОРОД"), bottomFontSize: 12, bottomFontFamily: 'Arial',
     bottomFontStyle: 'normal', bottomTextDecoration: '', bottomColor: '#1a1a1a',
   };
 }
@@ -105,7 +106,7 @@ export function createStraightText(ctx: FactoryContext): StampTextItem {
     : { x: (ctx.stampW - w) / 2, y: (ctx.stampH - h) / 2 };
 
   return {
-    id: uid(), text: 'Мой текст', mode: 'straight',
+    id: uid(), text: __tr("Мой текст"), mode: 'straight',
     x: Math.round(pos.x), y: Math.round(pos.y), width: w, align: 'center',
     arcCx: ctx.stampW / 2, arcCy: ctx.stampH / 2, arcRadius: 60,
     arcStartDeg: -30, arcEndDeg: 30, arcFlip: false,
@@ -127,12 +128,12 @@ export function createArcText(ctx: FactoryContext): StampTextItem {
   };
 
   const params = computeArcParams(
-    fakeHost, 14, 'Новый текст'.length, true, 0,
+    fakeHost, 14, __tr("Новый текст").length, true, 0,
     DEFAULT_ARC_OFFSET, DEFAULT_ARC_SPAN_DEG, 'cw',
   );
 
   return {
-    id: uid(), text: 'Новый текст', mode: 'arc',
+    id: uid(), text: __tr("Новый текст"), mode: 'arc',
     x: 0, y: 0, width: 200, align: 'center',
     ...params,
     arcDirection: 'cw',
@@ -154,7 +155,7 @@ export function createImage(
     y: Math.round((stampH - h) / 2),
     width: w, height: h,
     fit: 'contain',
-    name: 'Картинка',
+    name: __tr("Картинка"),
   };
 }
 
@@ -191,7 +192,7 @@ export function createFillSubtract(
     rotation: 0, cornerRadius: 0,
     stroke: '', strokeWidth: 0, dash: 'solid',
     fill: '#bfdbfe',
-    name: 'Вычитание',
+    name: __tr("Вычитание"),
     fillMode: 'subtract',
     fillOuterId: outer.id,
     fillHoleIds: holeIds,
@@ -245,7 +246,7 @@ export function createFillIntersect(
     rotation: 0, cornerRadius: 0,
     stroke: '', strokeWidth: 0, dash: 'solid',
     fill: '#fca5a5',
-    name: 'Пересечение',
+    name: __tr("Пересечение"),
     fillMode: 'intersect',
     fillOuterId: a.id,
     fillHoleIds: [b.id],
@@ -256,7 +257,7 @@ export function createFillBetween(
   outer: StampShapeItem,
   holes: StampShapeItem[],
   color: string,
-  name = 'Заливка области',
+  name = __tr("Заливка области"),
 ): StampShapeItem {
   return {
     id: uid(), kind: 'fill',

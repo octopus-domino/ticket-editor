@@ -1,4 +1,5 @@
-﻿import React, { useEffect, useRef } from 'react';
+import { t as __tr } from '@/shared/i18n';
+import React, { useEffect, useRef } from 'react';
 import type { CanvasElement } from '@/shared/types';
 
 interface ContextMenuProps {
@@ -80,45 +81,45 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
       {hasSelection && (
         <>
           <div className="context-menu-item" onClick={onCut}>
-            <span>Вырезать</span>
+            <span>{__tr("Вырезать")}</span>
             <span className="shortcut">Ctrl+X</span>
           </div>
           <div className="context-menu-item" onClick={onCopy}>
-            <span>Копировать</span>
+            <span>{__tr("Копировать")}</span>
             <span className="shortcut">Ctrl+C</span>
           </div>
           <div className={`context-menu-item ${!canPaste ? 'disabled' : ''}`} onClick={canPaste ? onPaste : undefined}>
-            <span>Вставить</span>
+            <span>{__tr("Вставить")}</span>
             <span className="shortcut">Ctrl+V</span>
           </div>
           <div className="context-menu-item" onClick={onDuplicate}>
-            <span>Дублировать</span>
+            <span>{__tr("Дублировать")}</span>
             <span className="shortcut">Ctrl+D</span>
           </div>
 
           {/* v8: JSON clipboard */}
           <div className="context-menu-divider" />
           <div className="context-menu-item" onClick={onCopyAsJson}>
-            <span>Копировать как JSON</span>
+            <span>{__tr("Копировать как JSON")}</span>
           </div>
           <div
             className={`context-menu-item ${!canPasteJson ? 'disabled' : ''}`}
             onClick={canPasteJson ? onPasteFromJson : undefined}
           >
-            <span>Вставить из JSON</span>
+            <span>{__tr("Вставить из JSON")}</span>
           </div>
 
           <div className="context-menu-divider" />
 
           {canGroup && onGroup && (
             <div className="context-menu-item" onClick={handleGroup}>
-              <span>Сгруппировать</span>
+              <span>{__tr("Сгруппировать")}</span>
               <span className="shortcut">Ctrl+G</span>
             </div>
           )}
           {canUngroup && onUngroup && (
             <div className="context-menu-item" onClick={handleUngroup}>
-              <span>Разгруппировать</span>
+              <span>{__tr("Разгруппировать")}</span>
               <span className="shortcut">Ctrl+Shift+G</span>
             </div>
           )}
@@ -126,39 +127,39 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
           <div className="context-menu-divider" />
 
           <div className="context-menu-item" onClick={onCopyStyle}>
-            <span>Копировать стиль</span>
+            <span>{__tr("Копировать стиль")}</span>
             <span className="shortcut">Alt+C</span>
           </div>
           <div className={`context-menu-item ${!hasStyleCopied ? 'disabled' : ''}`} onClick={hasStyleCopied ? onApplyStyle : undefined}>
-            <span>Применить стиль</span>
+            <span>{__tr("Применить стиль")}</span>
             <span className="shortcut">Alt+V</span>
           </div>
 
           <div className="context-menu-divider" />
 
           <div className="context-menu-item" onClick={onBringToFront}>
-            <span>На самый верх</span>
+            <span>{__tr("На самый верх")}</span>
           </div>
           <div className="context-menu-item" onClick={onBringForward}>
-            <span>Переместить вперед</span>
+            <span>{__tr("Переместить вперед")}</span>
             <span className="shortcut">]</span>
           </div>
           <div className="context-menu-item" onClick={onSendBackward}>
-            <span>Переместить назад</span>
+            <span>{__tr("Переместить назад")}</span>
             <span className="shortcut">[</span>
           </div>
           <div className="context-menu-item" onClick={onSendToBack}>
-            <span>На самый низ</span>
+            <span>{__tr("На самый низ")}</span>
           </div>
 
           {isLine && (
             <>
               <div className="context-menu-divider" />
               <div className="context-menu-item">
-                <span>Добавить точку</span>
+                <span>{__tr("Добавить точку")}</span>
               </div>
               <div className="context-menu-item">
-                <span>Удалить последнюю точку</span>
+                <span>{__tr("Удалить последнюю точку")}</span>
               </div>
             </>
           )}
@@ -172,7 +173,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
                   className="context-menu-item"
                   onClick={() => { onApplyClipByTop(); onClose(); }}
                 >
-                  <span>Обрезать по верхнему</span>
+                  <span>{__tr("Обрезать по верхнему")}</span>
                 </div>
               )}
               {canRemoveClip && onRemoveClip && (
@@ -180,7 +181,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
                   className="context-menu-item"
                   onClick={() => { onRemoveClip(); onClose(); }}
                 >
-                  <span>Снять обрезку</span>
+                  <span>{__tr("Снять обрезку")}</span>
                 </div>
               )}
             </>
@@ -189,7 +190,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
           <div className="context-menu-divider" />
 
           <div className="context-menu-item danger" onClick={onDelete}>
-            <span>Удалить</span>
+            <span>{__tr("Удалить")}</span>
             <span className="shortcut">Del</span>
           </div>
         </>

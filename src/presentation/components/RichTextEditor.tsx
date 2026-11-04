@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -101,7 +102,7 @@ export const RichTextEditor: React.FC<Props> = ({
    *   • нормализуем ширины таблиц под innerWidth
    */
   const processedHtml = useMemo(() => {
-    const isPlaceholder = initialHtml.includes('Введите текст') || !initialHtml.trim();
+    const isPlaceholder = initialHtml.includes(__tr("Введите текст")) || !initialHtml.trim();
     let cleanHtml = isPlaceholder ? '<p></p>' : initialHtml;
 
     if (cleanHtml.includes('<table')) {
@@ -248,7 +249,7 @@ export const RichTextEditor: React.FC<Props> = ({
           onMouseDown={onHeaderMouseDown}
           style={{ cursor: 'grab', userSelect: 'none' }}
         >
-          <h3>Редактор текста</h3>
+          <h3>{__tr("Редактор текста")}</h3>
           <button type="button" className="rt-close" onClick={handleSave}>×</button>
         </div>
 
@@ -268,10 +269,10 @@ export const RichTextEditor: React.FC<Props> = ({
                 else editor.chain().focus().toggleHeading({ level: +v[1] as 1 | 2 | 3 }).run();
               }}
             >
-              <option value="p">Обычный</option>
-              <option value="h1">Заголовок 1</option>
-              <option value="h2">Заголовок 2</option>
-              <option value="h3">Заголовок 3</option>
+              <option value="p">{__tr("Обычный")}</option>
+              <option value="h1">{__tr("Заголовок 1")}</option>
+              <option value="h2">{__tr("Заголовок 2")}</option>
+              <option value="h3">{__tr("Заголовок 3")}</option>
             </select>
             <select
               className="rt-select"
@@ -293,21 +294,21 @@ export const RichTextEditor: React.FC<Props> = ({
 
           <div className="rt-sep" />
           <div className="rt-group">
-            <Btn onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive('bold')} title="Жирный"><b>B</b></Btn>
-            <Btn onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive('italic')} title="Курсив"><i>I</i></Btn>
-            <Btn onClick={() => editor.chain().focus().toggleUnderline().run()} active={editor.isActive('underline')} title="Подчёркнутый"><u>U</u></Btn>
-            <Btn onClick={() => editor.chain().focus().toggleStrike().run()} active={editor.isActive('strike')} title="Зачёркнутый"><s>S</s></Btn>
+            <Btn onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive('bold')} title={__tr("Жирный")}><b>B</b></Btn>
+            <Btn onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive('italic')} title={__tr("Курсив")}><i>I</i></Btn>
+            <Btn onClick={() => editor.chain().focus().toggleUnderline().run()} active={editor.isActive('underline')} title={__tr("Подчёркнутый")}><u>U</u></Btn>
+            <Btn onClick={() => editor.chain().focus().toggleStrike().run()} active={editor.isActive('strike')} title={__tr("Зачёркнутый")}><s>S</s></Btn>
           </div>
 
           <div className="rt-sep" />
           <div className="rt-popover-wrap">
-            <button type="button" className="rt-btn" title="Цвет текста"
+            <button type="button" className="rt-btn" title={__tr("Цвет текста")}
               onMouseDown={(e) => { e.preventDefault(); setPop((p) => (p === 'color' ? null : 'color')); }}>
               <span className="rt-letter" style={{ borderBottomColor: currentColor }}>A</span>
             </button>
             {pop === 'color' && (
               <ColorPickerPopover
-                title="Цвет текста"
+                title={__tr("Цвет текста")}
                 colors={TEXT_COLORS.flat()}
                 onPick={(c) => { editor.chain().focus().setColor(c).run(); setPop(null); }}
                 onReset={() => { editor.chain().focus().unsetColor().run(); setPop(null); }}
@@ -315,13 +316,13 @@ export const RichTextEditor: React.FC<Props> = ({
             )}
           </div>
           <div className="rt-popover-wrap">
-            <button type="button" className="rt-btn" title="Фон текста"
+            <button type="button" className="rt-btn" title={__tr("Фон текста")}
               onMouseDown={(e) => { e.preventDefault(); setPop((p) => (p === 'bg' ? null : 'bg')); }}>
               <span className="rt-letter rt-bg-letter" style={{ background: currentHighlight || 'transparent', borderBottomColor: currentHighlight || '#9ca3af' }}>A</span>
             </button>
             {pop === 'bg' && (
               <ColorPickerPopover
-                title="Фон текста"
+                title={__tr("Фон текста")}
                 colors={BG_COLORS.flat()}
                 onPick={(c) => { editor.chain().focus().setHighlight({ color: c }).run(); setPop(null); }}
                 onReset={() => { editor.chain().focus().unsetHighlight().run(); setPop(null); }}
@@ -331,22 +332,22 @@ export const RichTextEditor: React.FC<Props> = ({
 
           <div className="rt-sep" />
           <div className="rt-group">
-            <Btn onClick={() => editor.chain().focus().setTextAlign('left').run()} active={editor.isActive({ textAlign: 'left' })} title="По левому краю">◧</Btn>
-            <Btn onClick={() => editor.chain().focus().setTextAlign('center').run()} active={editor.isActive({ textAlign: 'center' })} title="По центру">◫</Btn>
-            <Btn onClick={() => editor.chain().focus().setTextAlign('right').run()} active={editor.isActive({ textAlign: 'right' })} title="По правому краю">◨</Btn>
-            <Btn onClick={() => editor.chain().focus().setTextAlign('justify').run()} active={editor.isActive({ textAlign: 'justify' })} title="По ширине">☰</Btn>
+            <Btn onClick={() => editor.chain().focus().setTextAlign('left').run()} active={editor.isActive({ textAlign: 'left' })} title={__tr("По левому краю")}>◧</Btn>
+            <Btn onClick={() => editor.chain().focus().setTextAlign('center').run()} active={editor.isActive({ textAlign: 'center' })} title={__tr("По центру")}>◫</Btn>
+            <Btn onClick={() => editor.chain().focus().setTextAlign('right').run()} active={editor.isActive({ textAlign: 'right' })} title={__tr("По правому краю")}>◨</Btn>
+            <Btn onClick={() => editor.chain().focus().setTextAlign('justify').run()} active={editor.isActive({ textAlign: 'justify' })} title={__tr("По ширине")}>☰</Btn>
           </div>
 
           <div className="rt-sep" />
           <div className="rt-group">
-            <Btn onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive('bulletList')} title="Маркированный список">• Список</Btn>
-            <Btn onClick={() => editor.chain().focus().toggleOrderedList().run()} active={editor.isActive('orderedList')} title="Нумерованный список">1. Список</Btn>
+            <Btn onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive('bulletList')} title={__tr("Маркированный список")}>{__tr("• Список")}</Btn>
+            <Btn onClick={() => editor.chain().focus().toggleOrderedList().run()} active={editor.isActive('orderedList')} title={__tr("Нумерованный список")}>{__tr("1. Список")}</Btn>
           </div>
 
           <div className="rt-sep" />
           <div className="rt-group">
-            <Btn onClick={() => editor.chain().focus().outdent().run()} title="Уменьшить отступ">← Отступ</Btn>
-            <Btn onClick={() => editor.chain().focus().indent().run()} title="Увеличить отступ">→ Отступ</Btn>
+            <Btn onClick={() => editor.chain().focus().outdent().run()} title={__tr("Уменьшить отступ")}>{__tr("← Отступ")}</Btn>
+            <Btn onClick={() => editor.chain().focus().indent().run()} title={__tr("Увеличить отступ")}>{__tr("→ Отступ")}</Btn>
           </div>
 
           <TableOperationsToolbar editor={editor} />

@@ -38,6 +38,37 @@ export interface ArcTextParams {
   fill: string;
 }
 
+export interface ArcGlyph { readonly char: string; readonly x: number; readonly y: number; readonly rotation: number; }
+const arcLayouts = new Map<string, readonly ArcGlyph[]>();
+let cachedGlyphs = 0;
+/** Geometry is independent of paint and position; retain a bounded cache between canvas redraws. */
+export function arcGlyphLayout(text: string, rx: number, ry: number, startDeg: number, endDeg: number): readonly ArcGlyph[] {
+  if (!text || rx <= 0 || ry <= 0 || ![rx, ry, startDeg, endDeg].every(Number.isFinite)) return [];
+  const key = JSON.stringify([text, rx, ry, startDeg, endDeg]);
+  const found = arcLayouts.get(key);
+  if (found) return found;
+  const a0 = startDeg * Math.PI / 180, a1 = endDeg * Math.PI / 180;
+  if (a0 === a1) return [];
+  const chars = Array.from(text), result: ArcGlyph[] = [];
+  chars.forEach((char, index) => {
+    if (/\s/.test(char)) return;
+    const fraction = chars.length > 1 ? (index + .5) / chars.length : .5;
+    const angle = rx === ry ? a0 + (a1 - a0) * fraction : angleAtArcFraction(rx, ry, a0, a1, fraction);
+    const direction = Math.sign(a1 - a0);
+    result.push({ char, x: Math.cos(angle) * rx, y: Math.sin(angle) * ry, rotation: Math.atan2(direction * ry * Math.cos(angle), direction * -rx * Math.sin(angle)) });
+  });
+  if (result.length <= 20_000) {
+    while (cachedGlyphs + result.length > 20_000 || arcLayouts.size >= 256) {
+      const oldest = arcLayouts.keys().next().value;
+      if (oldest === undefined) break;
+      cachedGlyphs -= arcLayouts.get(oldest)!.length;
+      arcLayouts.delete(oldest);
+    }
+    arcLayouts.set(key, result); cachedGlyphs += result.length;
+  }
+  return result;
+}
+
 /* ============================================================
    Утилиты для эллипса
    ============================================================ */
@@ -109,15 +140,8 @@ export function drawArcText(ctx: CanvasRenderingContext2D, p: ArcTextParams): vo
   const ry = p.radiusY ?? p.radius;
   if (!rx || !ry) return;
 
-  const startRad = (p.startDeg * Math.PI) / 180;
-  const endRad = (p.endDeg * Math.PI) / 180;
-  const chars = Array.from(p.text);
-  const n = chars.length;
-  if (n === 0) return;
-
-  /* Полная длина дуги — для равномерного распределения */
-  const totalLen = ellipseArcLength(rx, ry, startRad, endRad);
-  if (totalLen === 0) return;
+  const glyphs = arcGlyphLayout(p.text, rx, ry, p.startDeg, p.endDeg);
+  if (!glyphs.length) return;
 
   ctx.save();
   ctx.font = p.font;
@@ -125,28 +149,11 @@ export function drawArcText(ctx: CanvasRenderingContext2D, p: ArcTextParams): vo
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
 
-  for (let i = 0; i < n; i++) {
-    const ch = chars[i];
-    if (ch === ' ' || ch === '\t' || ch === '\n') continue;
-
-    /* Доля от начала до ЦЕНТРА этой буквы */
-    const fraction = n > 1 ? (i + 0.5) / n : 0.5;
-    const a = angleAtArcFraction(rx, ry, startRad, endRad, fraction);
-
-    const cosA = Math.cos(a);
-    const sinA = Math.sin(a);
-    const x = p.cx + cosA * rx;
-    const y = p.cy + sinA * ry;
-
-    /* Касательная к эллипсу: d/da (rx·cos a, ry·sin a) = (-rx·sin a, ry·cos a) */
-    const tx = -rx * sinA;
-    const ty = ry * cosA;
-    const rot = Math.atan2(ty, tx);
-
+  for (const glyph of glyphs) {
     ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(rot);
-    ctx.fillText(ch, 0, 0);
+    ctx.translate(p.cx + glyph.x, p.cy + glyph.y);
+    ctx.rotate(glyph.rotation);
+    ctx.fillText(glyph.char, 0, 0);
     ctx.restore();
   }
 

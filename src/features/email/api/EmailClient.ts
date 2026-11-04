@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 import { authFetch } from '@/shared/api/client';
 import type { Slide } from '@/shared/types';
 
@@ -84,7 +85,7 @@ export async function sendEmail(req: EmailRequest): Promise<EmailSendResult> {
     result.errors.length !== result.failed
   ) {
     throw new Error(
-      'Сервер вернул некорректный результат отправки. Проверьте статус перед повторной попыткой.',
+      __tr("Сервер вернул некорректный результат отправки. Проверьте статус перед повторной попыткой."),
     );
   }
   return result;

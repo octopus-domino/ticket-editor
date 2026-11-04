@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 // src/workspace/components/WorkspaceHome.tsx
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -20,16 +21,14 @@ export const WorkspaceHome: React.FC = () => {
     });
   };
 
-  const displayName = user?.name?.split(' ')[0] || 'коллега';
+  const displayName = user?.name?.split(' ')[0] || __tr("коллега");
 
   return (
     <div className="workspace-home">
       <header className="workspace-home-head">
-        <h1>С чего начнём, {displayName}?</h1>
+        <h1>{__tr("С чего начнём,")}{displayName}?</h1>
         <p>
-          Выберите удобную точку входа. Схему данных и наборы данных можно создать прямо во время работы —
-          в панели «Данные» справа от холста.
-        </p>
+          {__tr("Выберите удобную точку входа. Схему данных и наборы данных можно создать прямо во время работы — в панели «Данные» справа от холста.")}</p>
       </header>
 
       <div className="workspace-entry-grid">
@@ -39,12 +38,10 @@ export const WorkspaceHome: React.FC = () => {
           onClick={startWithTemplate}
         >
           <div className="workspace-entry-icon" aria-hidden>🎨</div>
-          <h2>Начать с шаблона</h2>
+          <h2>{__tr("Начать с шаблона")}</h2>
           <p>
-            Откроется редактор. Справа — панель «Данные»: создайте схему, добавьте наборы данных,
-            перетащите поля на холст.
-          </p>
-          <span className="workspace-entry-cta">Открыть редактор →</span>
+            {__tr("Откроется редактор. Справа — панель «Данные»: создайте схему, добавьте наборы данных, перетащите поля на холст.")}</p>
+          <span className="workspace-entry-cta">{__tr("Открыть редактор →")}</span>
         </button>
 
         <button
@@ -53,19 +50,15 @@ export const WorkspaceHome: React.FC = () => {
           onClick={startWithData}
         >
           <div className="workspace-entry-icon" aria-hidden>📊</div>
-          <h2>Начать с данных</h2>
+          <h2>{__tr("Начать с данных")}</h2>
           <p>
-            Опишите схему данных — список полей — и заполните наборы данных значениями.
-            Затем примените к любому шаблону одной кнопкой.
-          </p>
-          <span className="workspace-entry-cta">Создать схему →</span>
+            {__tr("Опишите схему данных — список полей — и заполните наборы данных значениями. Затем примените к любому шаблону одной кнопкой.")}</p>
+          <span className="workspace-entry-cta">{__tr("Создать схему →")}</span>
         </button>
       </div>
 
       <div className="workspace-home-hint">
-        <strong>Совет:</strong> если не знаете, с чего начать, — начните с шаблона.
-        Схема данных и наборы данных создаются прямо в редакторе, никуда не нужно уходить.
-      </div>
+        <strong>{__tr("Совет:")}</strong> {__tr("если не знаете, с чего начать, — начните с шаблона. Схема данных и наборы данных создаются прямо в редакторе, никуда не нужно уходить.")}</div>
     </div>
   );
 };

@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 // src/features/workspace/domain/WorkspaceFlow.ts
 
 export type FlowStep = 'schema' | 'template' | 'models' | 'generate';
@@ -34,27 +35,27 @@ export interface FlowStepDef {
 export const FLOW_STEPS: FlowStepDef[] = [
   {
     id: 'template',
-    label: 'Шаблон',
-    emptyLabel: '+ Шаблон',
-    hint: 'Создайте макет. Поля данных можно добавить позже',
+    label: __tr("Шаблон"),
+    emptyLabel: __tr("+ Шаблон"),
+    hint: __tr("Создайте макет. Поля данных можно добавить позже"),
   },
   {
     id: 'schema',
-    label: 'Схема данных',
-    emptyLabel: '+ Схема данных',
-    hint: 'Опишите поля, которые будут меняться в документах',
+    label: __tr("Схема данных"),
+    emptyLabel: __tr("+ Схема данных"),
+    hint: __tr("Опишите поля, которые будут меняться в документах"),
   },
   {
     id: 'models',
-    label: 'Наборы данных',
-    emptyLabel: '+ Наборы данных',
-    hint: 'Заполните значения для генерации',
+    label: __tr("Наборы данных"),
+    emptyLabel: __tr("+ Наборы данных"),
+    hint: __tr("Заполните значения для генерации"),
   },
   {
     id: 'generate',
-    label: 'Генерация',
-    emptyLabel: 'Генерация',
-    hint: 'Экспорт в PDF / SVG / ZIP',
+    label: __tr("Генерация"),
+    emptyLabel: __tr("Генерация"),
+    hint: __tr("Экспорт в PDF / SVG / ZIP"),
   },
 ];
 

@@ -13,6 +13,7 @@ import { SERVICE_STAMPS } from './serviceStamps';
 import { SPECIAL_STAMPS } from './specialStamps';
 import { BANKING_STAMPS_WITH_IMAGES } from './bankingStampsWithImages';
 import type { StampTemplate } from './types';
+import { essentialStamps } from './essential';
 
 export type { StampTemplate } from './types';
 
@@ -142,7 +143,7 @@ const BUILTIN_IDS = new Set<string>([
 ]);
 
 export function isBuiltinStamp(id: string): boolean {
-  return BUILTIN_IDS.has(id);
+  return id.startsWith('essential-') || BUILTIN_IDS.has(id);
 }
 
 /* ------------------------------------------------------------
@@ -150,20 +151,7 @@ export function isBuiltinStamp(id: string): boolean {
    ------------------------------------------------------------ */
 
 export function getAllStamps(): StampTemplate[] {
-  const banking = BANKING_STAMPS.map((s) => ({ ...s, banking: true }));
-  const bankingFilled = BANKING_STAMPS_FILLED.map((s) => ({ ...s, banking: true }));
-  const services = SERVICE_STAMPS.map((s) => ({ ...s, banking: true }));
-  const specials = SPECIAL_STAMPS.map((s) => ({ ...s, banking: true }));
-  const withImages = BANKING_STAMPS_WITH_IMAGES.map((s) => ({ ...s, banking: true }));
-  return [
-    ...BUILTIN_STAMPS,
-    ...banking,
-    ...bankingFilled,
-    ...services,
-    ...specials,
-    ...withImages,
-    ...loadCustomStamps(),
-  ];
+  return [...essentialStamps(), ...loadCustomStamps()];
 }
 
 export function addCustomStamp(t: StampTemplate): void {

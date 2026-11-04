@@ -1,5 +1,6 @@
 ﻿import { useCallback, useRef, useState } from 'react';
 import type { SelectionStore } from '../../stores/SelectionStore';
+import { useEffect } from 'react';
 import type { CanvasElement } from '@/shared/types';
 import { getBBox } from '@/lib/geometry';
 
@@ -9,6 +10,8 @@ export function useCanvasRubberBand(params: { selStore: SelectionStore }) {
   const { selStore } = params;
   const [box, setBox] = useState<Box | null>(null);
   const active = useRef<Box | null>(null);
+  const frame = useRef<number | null>(null);
+  useEffect(() => () => { if (frame.current !== null) cancelAnimationFrame(frame.current); }, []);
 
   const begin = useCallback((x: number, y: number) => {
     active.current = { x1: x, y1: y, x2: x, y2: y };
@@ -24,12 +27,16 @@ export function useCanvasRubberBand(params: { selStore: SelectionStore }) {
       x2: x,
       y2: y,
     };
-    setBox({ ...active.current });
+    if (frame.current === null) frame.current = requestAnimationFrame(() => {
+      frame.current = null;
+      if (active.current) setBox({ ...active.current });
+    });
   }, []);
 
   const finish = useCallback((elements: CanvasElement[]) => {
     const b = active.current;
     active.current = null;
+    if (frame.current !== null) { cancelAnimationFrame(frame.current); frame.current = null; }
     setBox(null);
     if (!b) return;
 

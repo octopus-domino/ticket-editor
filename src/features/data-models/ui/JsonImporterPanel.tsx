@@ -1,10 +1,14 @@
+import { t as __tr } from '@/shared/i18n';
 import React, { useRef, useState } from 'react';
 import { modelIO, type ImportedModel } from '../api/ModelIO';
+import { useSchemas } from '@/features/schemas/state/useSchemas';
+import { t } from '@/shared/i18n';
 
 export const JsonImporterPanel: React.FC<{
   schemaId?: string;
   onImport: (models: ImportedModel[]) => Promise<void>;
 }> = ({ onImport, schemaId }) => {
+  const { schemas } = useSchemas();
   const [schemaWarning, setSchemaWarning] = useState<string | null>(null);
   const [text, setText] = useState('');
   const [preview, setPreview] = useState<ImportedModel[] | null>(null);
@@ -19,7 +23,16 @@ export const JsonImporterPanel: React.FC<{
     setIssues([]);
     setPreview(null);
     const res = file
-      ? await modelIO.fromFile(file).catch((error: Error) => ({
+      ? await (async () => {
+          if (/\.xlsx$/i.test(file.name)) {
+            const schema = schemas.find((item) => item.id === schemaId);
+            if (!schema) throw new Error(t('Choose a data schema first'));
+            if (file.size > 20 * 1024 * 1024) throw new Error(t('Import exceeds 20 MB'));
+            const { readWorkbook } = await import('../api/ExcelModelIO');
+            return readWorkbook(new Uint8Array(await file.arrayBuffer()), schema);
+          }
+          return modelIO.fromFile(file);
+        })().catch((error: Error) => ({
           ok: false,
           schemaId: undefined,
           models: undefined,
@@ -29,7 +42,7 @@ export const JsonImporterPanel: React.FC<{
     if (version !== parseVersion.current) return;
     setSchemaWarning(
       res.schemaId && schemaId && res.schemaId !== schemaId
-        ? `Файл использует схему ${res.schemaId}. Импортировать в выбранную схему?`
+        ? __tr("Файл использует схему {0}. Импортировать в выбранную схему?", res.schemaId)
         : null,
     );
     if (res.ok && res.models) setPreview(res.models);
@@ -64,12 +77,12 @@ export const JsonImporterPanel: React.FC<{
       }}
     >
       <div className="dm-importer-drop">
-        {dragOver ? '📥 Отпустите файл' : 'Перетащите .json сюда или выберите файл'}
+        {dragOver ? t('Drop the file here') : t('Drop an Excel (.xlsx) or JSON file here')}
       </div>
       <input
         ref={fileRef}
         type="file"
-        accept=".json,application/json"
+        accept=".json,.xlsx,application/json,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         onChange={(e) => {
           const f = e.target.files?.[0];
           if (f) void parse(f);
@@ -100,9 +113,9 @@ export const JsonImporterPanel: React.FC<{
               {schemaWarning}
             </div>
           )}
-          <div className="schema-hint">✓ Найдено наборов данных: {preview.length}</div>
+          <div className="schema-hint">{__tr("✓ Найдено наборов данных:")}{preview.length}</div>
           <button className="schema-btn-submit" onClick={() => void apply()} disabled={busy}>
-            {busy ? 'Импорт…' : 'Импортировать'}
+            {busy ? __tr("Импорт…") : __tr("Импортировать")}
           </button>
           <button
             className="schema-btn-add"
@@ -111,8 +124,7 @@ export const JsonImporterPanel: React.FC<{
               setText('');
             }}
           >
-            Отмена
-          </button>
+            {__tr("Отмена")}</button>
         </div>
       )}
     </div>

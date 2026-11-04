@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 import React from 'react';
 import { useStore } from '@/shared/store/store';
 import { toastStore } from './toastStore';
@@ -24,7 +25,7 @@ export const Toaster: React.FC = () => {
     <div
       className="toaster"
       role="region"
-      aria-label="Уведомления"
+      aria-label={__tr("Уведомления")}
       aria-live="polite"
     >
       {items.map((t) => (
@@ -42,7 +43,7 @@ export const Toaster: React.FC = () => {
             type="button"
             className="toast-close"
             onClick={() => toast.dismiss(t.id)}
-            aria-label="Закрыть уведомление"
+            aria-label={__tr("Закрыть уведомление")}
           >
             ×
           </button>

@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useStore } from '@/shared/store/store';
@@ -74,7 +75,7 @@ export const Toolbar: React.FC = () => {
   };
 
   const openSaveAs = () => {
-    setSaveAsName(`Шаблон ${new Date().toLocaleDateString('ru-RU')}`);
+    setSaveAsName(__tr("Шаблон {0}", new Date().toLocaleDateString('ru-RU')));
     setSaveAsError(null);
     setSaveAsOpen(true);
   };
@@ -121,7 +122,7 @@ export const Toolbar: React.FC = () => {
 
   return (
     <header className="toolbar" style={{ position: 'relative' }}>
-      <h1>Редактор шаблонов</h1>
+      <h1>{__tr("Редактор шаблонов")}</h1>
       <div className="toolbar-actions">
         <button className="toolbar-btn" onClick={() => docStore.undo()} disabled={!canUndo}>
           ↶
@@ -131,26 +132,23 @@ export const Toolbar: React.FC = () => {
         </button>
         <div style={{ width: 8 }} />
         <button className="toolbar-btn" onClick={openSaveAs}>
-          💾 Сохранить как шаблон
-        </button>
+          {__tr("💾 Сохранить как шаблон")}</button>
         {isFeatureEnabled('FEATURE_EMAIL') && (
           <>
             <button
               className="toolbar-btn"
               onClick={() => openEmail('send')}
               disabled={!activeSlide}
-              title="Отправить текущий слайд по электронной почте"
+              title={__tr("Отправить текущий слайд по электронной почте")}
             >
-              📤 Отправить по email
-            </button>
+              {__tr("📤 Отправить по email")}</button>
             <button
               className="toolbar-btn"
               onClick={() => openEmail('preview')}
               disabled={!activeSlide}
-              title="Предпросмотр письма и скачивание .eml"
+              title={__tr("Предпросмотр письма и скачивание .eml")}
             >
-              📧 Email-превью
-            </button>
+              {__tr("📧 Email-превью")}</button>
           </>
         )}
         <button className="toolbar-btn" onClick={handleExportSvg}>
@@ -185,8 +183,7 @@ export const Toolbar: React.FC = () => {
               marginBottom: 4,
             }}
           >
-            Имя шаблона
-          </label>
+            {__tr("Имя шаблона")}</label>
           <input
             autoFocus
             className="field"
@@ -207,14 +204,13 @@ export const Toolbar: React.FC = () => {
               onClick={() => setSaveAsOpen(false)}
               disabled={saveAsBusy}
             >
-              Отмена
-            </button>
+              {__tr("Отмена")}</button>
             <button
               className="toolbar-btn primary"
               onClick={() => void submitSaveAs()}
               disabled={saveAsBusy || !saveAsName.trim()}
             >
-              {saveAsBusy ? 'Сохранение…' : 'Сохранить'}
+              {saveAsBusy ? __tr("Сохранение…") : __tr("Сохранить")}
             </button>
           </div>
         </div>
@@ -243,7 +239,7 @@ export const Toolbar: React.FC = () => {
           role="status"
           aria-live="polite"
         >
-          <span>✅ Шаблон «{savedTemplate.name}» сохранён.</span>
+          <span>{__tr("✅ Шаблон «")}{savedTemplate.name}{__tr("» сохранён.")}</span>
           <Link
             to={`/app/templates?highlight=${encodeURIComponent(savedTemplate.id)}`}
             style={{
@@ -253,12 +249,11 @@ export const Toolbar: React.FC = () => {
               whiteSpace: 'nowrap',
             }}
           >
-            Открыть в списке →
-          </Link>
+            {__tr("Открыть в списке →")}</Link>
           <button
             type="button"
             onClick={() => setSavedTemplate(null)}
-            aria-label="Скрыть"
+            aria-label={__tr("Скрыть")}
             style={{
               background: 'none',
               border: 'none',

@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 import { Link } from 'react-router-dom';
 
 export function AuthProductAside() {
@@ -8,22 +9,18 @@ export function AuthProductAside() {
       </Link>
       <div className="auth-quote">
         <p className="auth-quote-text">
-          Документы разные.
-          <br />
-          <em>Шаблон — один.</em>
+          {__tr("Документы разные.")}<br />
+          <em>{__tr("Шаблон — один.")}</em>
         </p>
-        <p>Соберите макет в своём стиле. Подставьте данные. Получите готовые документы.</p>
+        <p>{__tr("Соберите макет в своём стиле. Подставьте данные. Получите готовые документы.")}</p>
       </div>
       <ul className="auth-features">
         <li>
-          <span className="check">✓</span> Визуальный редактор шаблонов
-        </li>
+          <span className="check">✓</span> {__tr("Визуальный редактор шаблонов")}</li>
         <li>
-          <span className="check">✓</span> Персонализация из своих данных
-        </li>
+          <span className="check">✓</span> {__tr("Персонализация из своих данных")}</li>
         <li>
-          <span className="check">✓</span> Экспорт PDF, PDF/A и SVG
-        </li>
+          <span className="check">✓</span> {__tr("Экспорт PDF, PDF/A и SVG")}</li>
       </ul>
     </aside>
   );

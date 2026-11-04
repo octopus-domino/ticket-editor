@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 // src/presentation/components/Editor.tsx
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
@@ -44,6 +45,7 @@ import { fixGroupBoundsInPlace } from '@/lib/migrations';
 import { useDocumentPersistence } from '../hooks/editor/useDocumentPersistence';
 import { authStore } from '@/auth/store';
 import { resetFillRasterizer } from '@/lib/stamps/fillRasterizer';
+import { MobileEditorControls } from './MobileEditorControls';
 
 const InlineEditorHost = lazy(() =>
   import('./InlineEditorHost').then((m) => ({ default: m.InlineEditorHost })),
@@ -208,9 +210,9 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave, documentId }) => {
       return;
     }
     const n = selectedIds.length;
-    if (n === 0) setLiveMessage('Ничего не выбрано');
-    else if (n === 1) setLiveMessage('Выбран 1 элемент');
-    else setLiveMessage(`Выбрано ${n} элементов`);
+    if (n === 0) setLiveMessage(__tr("Ничего не выбрано"));
+    else if (n === 1) setLiveMessage(__tr("Выбран 1 элемент"));
+    else setLiveMessage(__tr("Выбрано {0} элементов", n));
   }, [selectedIds, activeSlide]);
 
   const handleToolbarChange = useCallback(
@@ -259,7 +261,7 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave, documentId }) => {
   }, [diagramEditorTarget, activeSlide]);
 
   if (!activeSlide) {
-    return <div style={{ padding: 40 }}>Нет активного слайда</div>;
+    return <div style={{ padding: 40 }}>{__tr("Нет активного слайда")}</div>;
   }
 
   const contextSelected = activeSlide.elements.filter((e) => selectedIds.includes(e.id));
@@ -379,7 +381,7 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave, documentId }) => {
   const showPlainInlineEditor = !!editing && !editing.isRich;
 
   return (
-    <div className="editor-shell" role="application" aria-label="Редактор билетов">
+    <div className="editor-shell" role="application" aria-label={__tr("Редактор билетов")}>
       {isFeatureEnabled('FEATURE_SHOW_MIGRATION_BANNER') && (
         <MigrationBanner
           rollbackUrl={isFeatureEnabled('FEATURE_SHOW_ROLLBACK_BUTTON') ? '/?legacy=1' : undefined}
@@ -388,18 +390,19 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave, documentId }) => {
 
       {onSave && persistence.status !== 'saved' && (
         <div role="status" style={{ padding: '4px 12px' }}>
-          {persistence.status === 'saving' ? 'Сохранение…' : 'Не удалось сохранить'}
+          {persistence.status === 'saving' ? __tr("Сохранение…") : __tr("Не удалось сохранить")}
           {persistence.error && (
             <>
               : {persistence.error}{' '}
-              <button onClick={() => void persistence.retry()}>Повторить сохранение</button>
+              <button onClick={() => void persistence.retry()}>{__tr("Повторить сохранение")}</button>
             </>
           )}
         </div>
       )}
       <Toolbar />
+      <MobileEditorControls />
       <div className="editor-layout">
-        <ErrorBoundary fallback={<div style={{ padding: 20 }}>Ошибка в левой панели</div>}>
+        <ErrorBoundary fallback={<div style={{ padding: 20 }}>{__tr("Ошибка в левой панели")}</div>}>
           <LeftPanel />
         </ErrorBoundary>
 
@@ -412,7 +415,7 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave, documentId }) => {
             dataHighlight={modalsStore.getState().dataHighlight}
             onToggleDataHighlight={() => modalsStore.toggleDataHighlight()}
           />
-          <ErrorBoundary fallback={<div style={{ padding: 20 }}>Ошибка в холсте</div>}>
+          <ErrorBoundary fallback={<div style={{ padding: 20 }}>{__tr("Ошибка в холсте")}</div>}>
             <Canvas slide={activeSlide} zoom={zoom} onZoomChange={setZoom} wrapRef={wrapRef} />
           </ErrorBoundary>
 
@@ -435,11 +438,11 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave, documentId }) => {
           )}
         </main>
 
-        <ErrorBoundary fallback={<div style={{ padding: 20 }}>Ошибка в правой панели</div>}>
+        <ErrorBoundary fallback={<div style={{ padding: 20 }}>{__tr("Ошибка в правой панели")}</div>}>
           <RightPanel />
         </ErrorBoundary>
 
-        <ErrorBoundary fallback={<div style={{ padding: 20 }}>Ошибка в панели слайдов</div>}>
+        <ErrorBoundary fallback={<div style={{ padding: 20 }}>{__tr("Ошибка в панели слайдов")}</div>}>
           <SlidesBar />
         </ErrorBoundary>
       </div>
@@ -502,7 +505,7 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave, documentId }) => {
           }}
           onPasteFromJson={() => {
             const res = pasteFromJson();
-            if (!res.ok) setToastText(res.error || 'Не удалось вставить JSON');
+            if (!res.ok) setToastText(res.error || __tr("Не удалось вставить JSON"));
             closeContextMenu();
           }}
           canPasteJson={canPasteJson}
@@ -542,7 +545,7 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave, documentId }) => {
       )}
 
       {showPlainInlineEditor && editing && (
-        <ErrorBoundary fallback={<div style={{ padding: 20 }}>Ошибка в редакторе текста</div>}>
+        <ErrorBoundary fallback={<div style={{ padding: 20 }}>{__tr("Ошибка в редакторе текста")}</div>}>
           <Suspense fallback={null}>
             <InlineEditorHost
               key={editing.id}
@@ -558,7 +561,7 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave, documentId }) => {
       )}
 
       {showStampEditor && stampElement && stampElement.type === 'stamp' && (
-        <ErrorBoundary fallback={<div style={{ padding: 20 }}>Ошибка в редакторе штампа</div>}>
+        <ErrorBoundary fallback={<div style={{ padding: 20 }}>{__tr("Ошибка в редакторе штампа")}</div>}>
           <Suspense fallback={null}>
             <StampEditorHost
               element={stampElement}
@@ -573,7 +576,7 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave, documentId }) => {
       )}
 
       {showDiagramEditor && diagramElement && diagramElement.type === 'diagram' && (
-        <ErrorBoundary fallback={<div style={{ padding: 20 }}>Ошибка в редакторе диаграммы</div>}>
+        <ErrorBoundary fallback={<div style={{ padding: 20 }}>{__tr("Ошибка в редакторе диаграммы")}</div>}>
           <Suspense fallback={null}>
             <DiagramEditorHost
               element={diagramElement}
@@ -591,14 +594,14 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave, documentId }) => {
 
       <ConfirmDialog
         isOpen={!!pendingRestore}
-        title="Восстановить незавершённую сессию?"
+        title={__tr("Восстановить незавершённую сессию?")}
         description={
           pendingRestore
-            ? `Сессия от ${new Date(pendingRestore.savedAt).toLocaleString()}`
+            ? __tr("Сессия от {0}", new Date(pendingRestore.savedAt).toLocaleString())
             : undefined
         }
-        confirmLabel="Восстановить"
-        cancelLabel="Отклонить"
+        confirmLabel={__tr("Восстановить")}
+        cancelLabel={__tr("Отклонить")}
         onConfirm={handleRestoreConfirm}
         onCancel={handleRestoreCancel}
       />

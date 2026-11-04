@@ -1,9 +1,11 @@
+import { t as __tr } from '@/shared/i18n';
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authStore } from './store';
 import './auth.css';
 import { AuthProductAside } from './AuthProductAside';
 import { useAuthDestination } from './useAuthDestination';
+import { LanguageSwitcher } from '@/shared/i18n/LanguageSwitcher';
 
 export const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
@@ -34,16 +36,16 @@ export const RegisterPage: React.FC = () => {
 
       <main className="auth-right">
         <div className="auth-form-wrap">
+          <LanguageSwitcher />
           <Link to="/" className="auth-back">
-            ← На главную
-          </Link>
+            {__tr("← На главную")}</Link>
 
-          <h1 className="auth-title">Создать аккаунт</h1>
-          <p className="auth-subtitle">Сохраните свои шаблоны и создавайте документы из данных.</p>
+          <h1 className="auth-title">{__tr("Создать аккаунт")}</h1>
+          <p className="auth-subtitle">{__tr("Сохраните свои шаблоны и создавайте документы из данных.")}</p>
 
           <form className="auth-form" onSubmit={submit}>
             <div className="auth-field">
-              <label htmlFor="email">Email</label>
+              <label htmlFor="email">{__tr("Email")}</label>
               <input
                 id="email"
                 type="email"
@@ -57,7 +59,7 @@ export const RegisterPage: React.FC = () => {
             </div>
 
             <div className="auth-field">
-              <label htmlFor="name">Имя (необязательно)</label>
+              <label htmlFor="name">{__tr("Имя (необязательно)")}</label>
               <input
                 id="name"
                 type="text"
@@ -69,7 +71,7 @@ export const RegisterPage: React.FC = () => {
             </div>
 
             <div className="auth-field">
-              <label htmlFor="password">Пароль (минимум 8 символов)</label>
+              <label htmlFor="password">{__tr("Пароль (минимум 8 символов)")}</label>
               <input
                 id="password"
                 type="password"
@@ -85,12 +87,12 @@ export const RegisterPage: React.FC = () => {
             {error && <div className="auth-error">{error}</div>}
 
             <button type="submit" disabled={busy} className="auth-submit">
-              {busy ? 'Создание…' : 'Создать аккаунт →'}
+              {busy ? __tr("Создание…") : __tr("Создать аккаунт →")}
             </button>
           </form>
 
           <p className="auth-footer">
-            Уже есть аккаунт? <Link to={`/login${suffix}`}>Войти</Link>
+            {__tr("Уже есть аккаунт?")}<Link to={`/login${suffix}`}>{__tr("Войти")}</Link>
           </p>
         </div>
       </main>

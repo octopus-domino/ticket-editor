@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { ConfirmDialog } from '@/presentation/components/dialog';
 import { toast } from '@/presentation/components/toast';
@@ -62,8 +63,8 @@ export function SearchSelectList<T>(props: SearchSelectListProps<T>): React.Reac
     onItemClick,
     rowClickTogglesSelection = false,
     bulkActions = [],
-    searchPlaceholder = 'Поиск…',
-    emptyText = 'Ничего не найдено',
+    searchPlaceholder = __tr("Поиск…"),
+    emptyText = __tr("Ничего не найдено"),
     loading = false,
     renderItem,
     className,
@@ -106,7 +107,7 @@ export function SearchSelectList<T>(props: SearchSelectListProps<T>): React.Reac
       try {
         await action.onRun(Array.from(selectedIds), selection.selectedItems);
       } catch (e) {
-        toast.error(`Не удалось выполнить «${action.label}»`, (e as Error).message);
+        toast.error(__tr("Не удалось выполнить «{0}»", action.label), (e as Error).message);
       } finally {
         setBulkBusy(false);
       }
@@ -217,7 +218,7 @@ export function SearchSelectList<T>(props: SearchSelectListProps<T>): React.Reac
       />
 
       <div className="ssl-list" role="listbox" aria-multiselectable="true" style={listStyle}>
-        {loading && <div className="ssl-empty">Загрузка…</div>}
+        {loading && <div className="ssl-empty">{__tr("Загрузка…")}</div>}
 
         {!loading && filtered.length === 0 && <div className="ssl-empty">{emptyText}</div>}
 

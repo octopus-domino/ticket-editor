@@ -1,0 +1,63 @@
+.codoc-landing .codoc-hero-art > img {
+  border-radius: 20px;
+  aspect-ratio: 3/2;
+  object-fit: cover;
+}
+.codoc-landing .codoc-art-label {
+  transform: none;
+  left: 18px;
+  bottom: 18px;
+  border: 1px solid #ffffffb3;
+  box-shadow: 0 4px 18px #183c3912;
+}
+.codoc-landing .codoc-art-note {
+  display: none;
+}
+.codoc-landing .codoc-hero-art {
+  padding-bottom: 0;
+}
+@media (max-width: 600px) {
+  .codoc-landing .codoc-art-label {
+    left: 12px;
+    bottom: 12px;
+    padding: 10px 12px;
+  }
+  .codoc-landing .codoc-hero-art > img {
+    border-radius: 14px;
+  }
+}
+.codoc-landing {
+  --codoc-purple: #d94000;
+}
+@media (max-width: 600px) {
+  .codoc-landing .codoc-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px 12px;
+  }
+  .codoc-header > .codoc-brand {
+    grid-row: 1;
+    grid-column: 1;
+    min-width: 0;
+  }
+  .codoc-header > .codoc-button {
+    grid-row: 1;
+    grid-column: 2;
+    max-width: 170px;
+    font-size: 12px;
+    padding: 9px 12px;
+    text-align: center;
+    white-space: normal;
+  }
+  .codoc-header > .language-switcher {
+    grid-row: 2;
+    grid-column: 1/-1;
+    justify-self: end;
+  }
+  .codoc-header > .language-switcher select {
+    min-height: 44px;
+  }
+  .codoc-landing .codoc-actions {
+    flex-wrap: wrap;
+  }
+}

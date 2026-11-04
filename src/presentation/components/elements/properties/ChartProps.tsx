@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 import React from 'react';
 import type { ChartElement } from '@/shared/types';
 import { Group, L, inputStyle } from './ui';
@@ -16,52 +17,50 @@ export const ChartProps: React.FC<{
 
   return (
     <>
-      <Group title="Тип">
-        <L label="Вид графика">
+      <Group title={__tr("Тип")}>
+        <L label={__tr("Вид графика")}>
           <select
             style={inputStyle}
             value={el.chartKind}
             onChange={(e) => update({ chartKind: e.target.value as 'bar' | 'donut' })}
           >
-            <option value="bar">Гистограмма</option>
-            <option value="donut">Пончик</option>
+            <option value="bar">{__tr("Гистограмма")}</option>
+            <option value="donut">{__tr("Пончик")}</option>
           </select>
         </L>
       </Group>
 
-      <Group title="Данные">
-        <L label="Значения (через запятую)">
+      <Group title={__tr("Данные")}>
+        <L label={__tr("Значения (через запятую)")}>
           <textarea
             style={{ ...inputStyle, minHeight: 60 }}
             value={el.values.join(', ')}
             onChange={(e) => onValuesChange(e.target.value)}
           />
         </L>
-        <L label="Привязка (data path)">
+        <L label={__tr("Привязка (data path)")}>
           <input
             style={inputStyle}
             value={el.dataPath ?? ''}
-            placeholder="например, catalog.items"
+            placeholder={__tr("например, catalog.items")}
             onChange={(e) => update({ dataPath: e.target.value || null })}
           />
         </L>
         <p style={{ fontSize: 11, color: '#94a3b8', margin: '4px 0 0', lineHeight: 1.4 }}>
-          Если задан путь — значения берутся из панели «Данные».
-          Иначе — из списка выше.
-        </p>
+          {__tr("Если задан путь — значения берутся из панели «Данные». Иначе — из списка выше.")}</p>
       </Group>
 
-      <Group title="Геометрия">
+      <Group title={__tr("Геометрия")}>
         {el.chartKind === 'bar' && (
           <>
-            <L label="Ширина столбика">
+            <L label={__tr("Ширина столбика")}>
               <input
                 type="number" min={4} style={inputStyle}
                 value={el.barWidth}
                 onChange={(e) => update({ barWidth: Math.max(4, +e.target.value) })}
               />
             </L>
-            <L label="Зазор">
+            <L label={__tr("Зазор")}>
               <input
                 type="number" min={0} style={inputStyle}
                 value={el.gap}
@@ -71,7 +70,7 @@ export const ChartProps: React.FC<{
           </>
         )}
         {el.chartKind === 'donut' && (
-          <L label={`Внутренний радиус: ${Math.round(el.donutInnerRatio * 100)}%`}>
+          <L label={__tr("Внутренний радиус: {0}%", Math.round(el.donutInnerRatio * 100))}>
             <input
               type="range" min={0} max={0.95} step={0.01}
               value={el.donutInnerRatio}

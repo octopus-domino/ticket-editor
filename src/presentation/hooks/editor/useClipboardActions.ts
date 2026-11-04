@@ -1,4 +1,5 @@
-﻿import { useCallback } from 'react';
+import { t as __tr } from '@/shared/i18n';
+import { useCallback } from 'react';
 import type { DocumentStore } from '@/infra/state/DocumentStore';
 import type { SelectionStore } from '../../stores/SelectionStore';
 import type { ModalsStore } from '../../stores/ModalsStore';
@@ -71,11 +72,11 @@ export function useClipboardActions(
 
   const pasteFromJson = useCallback((): { ok: boolean; error?: string } => {
     const json = modalsStore.getClipboardJson();
-    if (!json) return { ok: false, error: 'Буфер JSON пуст. Сначала «Копировать как JSON».' };
+    if (!json) return { ok: false, error: __tr("Буфер JSON пуст. Сначала «Копировать как JSON».") };
     try {
       const parsed = JSON.parse(json);
       const list: CanvasElement[] = Array.isArray(parsed) ? parsed : [parsed];
-      if (!list.length) return { ok: false, error: 'Пустой массив' };
+      if (!list.length) return { ok: false, error: __tr("Пустой массив") };
       const newIds: string[] = [];
       docStore.commit((draft) => {
         const s = draft.slides.find((x) => x.id === draft.activeId);

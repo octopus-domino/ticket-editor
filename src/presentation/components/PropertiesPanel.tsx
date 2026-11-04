@@ -1,4 +1,5 @@
-﻿import React, { useState } from 'react';
+import { t as __tr } from '@/shared/i18n';
+import React, { useState } from 'react';
 import type { CanvasElement } from '@/shared/types';
 import { useStore } from '@/shared/store/store';
 import {
@@ -57,11 +58,10 @@ const SymbolSection: React.FC<{ el: CanvasElement }> = ({ el }) => {
       background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 8,
     }}>
       <div style={{ fontSize: 12, fontWeight: 700, color: '#4f46e5', marginBottom: 4 }}>
-        🔗 Инстанс символа «{symbol.name}»
+        {__tr("🔗 Инстанс символа «")}{symbol.name}»
       </div>
       <div style={{ fontSize: 10.5, color: '#6366f1', marginBottom: 8, lineHeight: 1.4 }}>
-        Этот элемент — копия символа. Изменения прототипа отразятся на всех копиях.
-      </div>
+        {__tr("Этот элемент — копия символа. Изменения прототипа отразятся на всех копиях.")}</div>
       <div style={{ display: 'flex', gap: 4 }}>
         <button
           type="button"
@@ -72,8 +72,7 @@ const SymbolSection: React.FC<{ el: CanvasElement }> = ({ el }) => {
             borderRadius: 4, cursor: 'pointer',
           }}
         >
-          Обновить символ
-        </button>
+          {__tr("Обновить символ")}</button>
         <button
           type="button"
           onClick={handleDetach}
@@ -83,15 +82,14 @@ const SymbolSection: React.FC<{ el: CanvasElement }> = ({ el }) => {
             borderRadius: 4, cursor: 'pointer',
           }}
         >
-          Отсоединить
-        </button>
+          {__tr("Отсоединить")}</button>
       </div>
 
       <ConfirmDialog
         isOpen={confirmUpdate}
-        title={`Обновить символ «${symbol.name}»?`}
-        description="Все экземпляры на холсте будут изменены."
-        confirmLabel="Обновить"
+        title={__tr("Обновить символ «{0}»?", symbol.name)}
+        description={__tr("Все экземпляры на холсте будут изменены.")}
+        confirmLabel={__tr("Обновить")}
         onConfirm={doUpdateFromThis}
         onCancel={() => setConfirmUpdate(false)}
       />
@@ -107,8 +105,7 @@ export const PropertiesPanel: React.FC = () => {
 
   if (!el) {
     return <div style={{ padding: 20, color: '#94a3b8', textAlign: 'center' }}>
-      Выделите элемент на холсте
-    </div>;
+      {__tr("Выделите элемент на холсте")}</div>;
   }
 
   const update = (patch: Partial<CanvasElement>) => {
@@ -126,12 +123,12 @@ export const PropertiesPanel: React.FC = () => {
     <div style={{ padding: 12, overflowY: 'auto', height: '100%' }}>
       {el.symbolId && <SymbolSection el={el} />}
 
-      <Group title="Положение">
+      <Group title={__tr("Положение")}>
         <L label="X"><input style={inputStyle} type="number" value={Math.round(el.x)} onChange={(e) => update({ x: +e.target.value })} /></L>
         <L label="Y"><input style={inputStyle} type="number" value={Math.round(el.y)} onChange={(e) => update({ y: +e.target.value })} /></L>
-        <L label="Ширина"><input style={inputStyle} type="number" value={Math.round(el.width)} onChange={(e) => update({ width: +e.target.value })} /></L>
-        <L label="Высота"><input style={inputStyle} type="number" value={Math.round(el.height)} onChange={(e) => update({ height: +e.target.value })} /></L>
-        <L label="Поворот"><input style={inputStyle} type="number" value={Math.round(el.rotation)} onChange={(e) => update({ rotation: +e.target.value })} /></L>
+        <L label={__tr("Ширина")}><input style={inputStyle} type="number" value={Math.round(el.width)} onChange={(e) => update({ width: +e.target.value })} /></L>
+        <L label={__tr("Высота")}><input style={inputStyle} type="number" value={Math.round(el.height)} onChange={(e) => update({ height: +e.target.value })} /></L>
+        <L label={__tr("Поворот")}><input style={inputStyle} type="number" value={Math.round(el.rotation)} onChange={(e) => update({ rotation: +e.target.value })} /></L>
       </Group>
 
       {PropsComponent && <PropsComponent el={el as never} update={update as never} />}

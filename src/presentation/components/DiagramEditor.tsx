@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 /* ============================================================
    DiagramEditor.tsx
 
@@ -110,7 +111,7 @@ export const DiagramEditor: React.FC<DiagramEditorProps> = ({
     timeoutRef.current = window.setTimeout(() => {
       setIsLoading((prev) => {
         if (prev) {
-          setLoadError('Не удалось загрузить draw.io за 20 секунд. Проверьте интернет.');
+          setLoadError(__tr("Не удалось загрузить draw.io за 20 секунд. Проверьте интернет."));
           return false;
         }
         return prev;
@@ -244,7 +245,7 @@ export const DiagramEditor: React.FC<DiagramEditorProps> = ({
     <div className="diagram-editor-backdrop">
       <div className="diagram-editor-modal">
         <div className="diagram-editor-header">
-          <h3>Diagram Editor</h3>
+          <h3>{__tr("Diagram Editor")}</h3>
           <div className="diagram-editor-actions">
             <button
               type="button"
@@ -252,11 +253,9 @@ export const DiagramEditor: React.FC<DiagramEditorProps> = ({
               onClick={handleSave}
               disabled={isLoading || !!loadError}
             >
-              💾 Сохранить
-            </button>
+              {__tr("💾 Сохранить")}</button>
             <button type="button" className="diagram-btn" onClick={onClose}>
-              ✕ Закрыть
-            </button>
+              {__tr("✕ Закрыть")}</button>
           </div>
         </div>
 
@@ -264,7 +263,7 @@ export const DiagramEditor: React.FC<DiagramEditorProps> = ({
           {isLoading && !loadError && (
             <div className="diagram-loading">
               <div className="diagram-spinner" />
-              <p>Загрузка редактора…</p>
+              <p>{__tr("Загрузка редактора…")}</p>
             </div>
           )}
 
@@ -280,8 +279,7 @@ export const DiagramEditor: React.FC<DiagramEditorProps> = ({
                   if (iframeRef.current) iframeRef.current.src = iframeSrc;
                 }}
               >
-                Попробовать снова
-              </button>
+                {__tr("Попробовать снова")}</button>
             </div>
           )}
 
@@ -291,7 +289,7 @@ export const DiagramEditor: React.FC<DiagramEditorProps> = ({
             className="diagram-iframe"
             sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-downloads"
             allow="clipboard-write"
-            title="Draw.io editor"
+            title={__tr("Draw.io editor")}
           />
         </div>
       </div>

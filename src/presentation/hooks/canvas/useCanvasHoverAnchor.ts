@@ -1,5 +1,6 @@
 ﻿import { useCallback, useRef } from 'react';
 import type { Slide } from '@/shared/types';
+import { useEffect } from 'react';
 import { findElementWithPadding } from '@/lib/connectors';
 import { hoverStore } from '../../stores/HoverStore';
 
@@ -10,6 +11,7 @@ export function useCanvasHoverAnchor(params: { slide: Slide }) {
 
   const rafRef = useRef<number | null>(null);
   const pendingRef = useRef<{ x: number; y: number } | null>(null);
+  useEffect(() => () => { if (rafRef.current !== null) cancelAnimationFrame(rafRef.current); }, []);
 
   const update = useCallback((_e: any, wx: number, wy: number) => {
     pendingRef.current = { x: wx, y: wy };

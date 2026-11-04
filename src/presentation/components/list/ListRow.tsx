@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 import React, { forwardRef } from 'react';
 import type { ListItemAdapter, ListItemRenderer } from './types';
 
@@ -71,7 +72,7 @@ function ListRowInner<T>(
         checked={isSelected}
         onChange={onToggle}
         onClick={(e) => e.stopPropagation()}
-        aria-label={isSelected ? 'Снять выбор' : 'Выбрать'}
+        aria-label={isSelected ? __tr("Снять выбор") : __tr("Выбрать")}
         tabIndex={-1}
       />
 

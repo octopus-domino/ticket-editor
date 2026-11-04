@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 import React, { useState } from 'react';
 import { useStore } from '@/shared/store/store';
 import { useDocumentStore, useSelectionStore } from '../../providers/EditorProvider';
@@ -61,14 +62,13 @@ export const StylesPanel: React.FC = () => {
             marginBottom: 8,
           }}
         >
-          + Сохранить стиль
-        </button>
+          {__tr("+ Сохранить стиль")}</button>
       )}
 
       {creating && (
         <div style={{ marginBottom: 8 }}>
           <InlineTextPrompt
-            placeholder={`Стиль ${styles.length + 1}`}
+            placeholder={__tr("Стиль {0}", styles.length + 1)}
             onSave={saveStyle}
             onCancel={() => setCreating(false)}
           />
@@ -77,8 +77,7 @@ export const StylesPanel: React.FC = () => {
 
       {styles.length === 0 && (
         <p style={{ fontSize: 11, color: '#94a3b8' }}>
-          Сохраните стиль из выделенного элемента.
-        </p>
+          {__tr("Сохраните стиль из выделенного элемента.")}</p>
       )}
 
       {styles.map((style) => (
@@ -100,7 +99,7 @@ export const StylesPanel: React.FC = () => {
           </button>
           <button
             type="button"
-            title="Удалить стиль"
+            title={__tr("Удалить стиль")}
             onClick={() => graphicsStore.removeStyle(style.id)}
             style={{
               background: 'transparent', border: 'none',

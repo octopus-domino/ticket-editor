@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useStore } from '@/shared/store/store';
@@ -7,6 +8,7 @@ import { modelIO } from '../api/ModelIO';
 import type { DataModel } from '../domain/DataModel';
 import { ModelValuesEditor } from './ModelValuesEditor';
 import { JsonImporterPanel } from './JsonImporterPanel';
+import { ExcelActions } from './ExcelActions';
 import {
   SearchSelectList,
   type BulkAction,
@@ -46,7 +48,7 @@ export const ModelsPage: React.FC = () => {
     () => ({
       getId: (m) => m.id,
       getLabel: (m) => m.name,
-      getMeta: (m) => `${Object.keys(m.values).length} полей`,
+      getMeta: (m) => __tr("{0} полей", Object.keys(m.values).length),
       getSearchText: (m) => m.name,
     }),
     [],
@@ -56,31 +58,31 @@ export const ModelsPage: React.FC = () => {
     () => [
       {
         key: 'export',
-        label: 'Экспорт',
+        label: __tr("Экспорт"),
         icon: '📤',
         onRun: async (ids) => {
           const toExport = models.filter((m) => ids.includes(m.id));
           if (toExport.length === 0) return;
           modelIO.download(toExport, `${activeSchema?.name ?? 'models'}-models.json`);
-          toast.success(`Экспортировано: ${toExport.length}`);
+          toast.success(__tr("Экспортировано: {0}", toExport.length));
         },
       },
       {
         key: 'delete',
-        label: 'Удалить',
+        label: __tr("Удалить"),
         icon: '🗑',
         variant: 'danger',
         confirm: (ids) => ({
-          title: `Удалить ${ids.length} ${plural(ids.length)}?`,
-          description: 'Действие необратимо.',
+          title: __tr("Удалить {0} {1}?", ids.length, plural(ids.length)),
+          description: __tr("Действие необратимо."),
         }),
         onRun: async (ids) => {
           const result = await runBulk(ids, (id) => modelStore.remove(id));
           if (result.ok > 0) {
-            toast.success(`Удалено: ${result.ok} ${plural(result.ok)}`);
+            toast.success(__tr("Удалено: {0} {1}", result.ok, plural(result.ok)));
           }
           if (result.failed.length > 0) {
-            toast.error(`Не удалось удалить: ${result.failed.length}`, result.failed[0].message);
+            toast.error(__tr("Не удалось удалить: {0}", result.failed.length), result.failed[0].message);
           }
           setSelectedIds((prev) => {
             const next = new Set(prev);
@@ -96,9 +98,9 @@ export const ModelsPage: React.FC = () => {
   const create = useCallback(async (): Promise<void> => {
     if (!activeSchema) return;
     try {
-      await modelStore.create(activeSchema.id, 'Новый набор данных', {});
+      await modelStore.create(activeSchema.id, __tr("Новый набор данных"), {});
     } catch (e) {
-      toast.error('Не удалось создать набор данных', (e as Error).message);
+      toast.error(__tr("Не удалось создать набор данных"), (e as Error).message);
     }
   }, [activeSchema]);
 
@@ -108,34 +110,33 @@ export const ModelsPage: React.FC = () => {
       try {
         await modelStore.importMany(activeSchema.id, items);
         setImporterOpen(false);
-        toast.success(`Импортировано наборов данных: ${items.length}`);
+        toast.success(__tr("Импортировано наборов данных: {0}", items.length));
       } catch (e) {
-        toast.error('Не удалось импортировать', (e as Error).message);
+        toast.error(__tr("Не удалось импортировать"), (e as Error).message);
       }
     },
     [activeSchema],
   );
 
   const saveStatusText = (): string => {
-    if (saveStatus === 'saving') return '💾 Сохранение…';
-    if (saveStatus === 'error') return `⚠ ${saveError ?? 'Не сохранено'}`;
+    if (saveStatus === 'saving') return __tr("💾 Сохранение…");
+    if (saveStatus === 'error') return `⚠ ${saveError ?? __tr("Не сохранено")}`;
     if (saveStatus === 'saved' && lastSavedAt) {
       const sec = Math.round((Date.now() - lastSavedAt) / 1000);
-      return `💾 Сохранено ${sec < 5 ? 'только что' : `${sec} с назад`}`;
+      return __tr("💾 Сохранено {0}", sec < 5 ? 'только что' : `${sec} с назад`);
     }
     return '';
   };
 
-  if (schemasLoading) return <div className="schema-page">Загрузка…</div>;
+  if (schemasLoading) return <div className="schema-page">{__tr("Загрузка…")}</div>;
 
   if (schemas.length === 0) {
     return (
       <div className="schema-page">
-        <h2>Наборы данных</h2>
-        <p>Наборы данных привязаны к схеме. Сначала создайте схему.</p>
+        <h2>{__tr("Наборы данных")}</h2>
+        <p>{__tr("Наборы данных привязаны к схеме. Сначала создайте схему.")}</p>
         <Link to="/app/schemas/new" className="schema-btn-submit">
-          + Создать первую схему
-        </Link>
+          {__tr("+ Создать первую схему")}</Link>
       </div>
     );
   }
@@ -143,13 +144,12 @@ export const ModelsPage: React.FC = () => {
   if (!activeSchema)
     return (
       <div className="schema-page">
-        <h2>Наборы данных</h2>
-        <p>Выберите схему данных — она определяет поля, которые нужно заполнить.</p>
-        <label htmlFor="data-schema">Схема данных</label>
+        <h2>{__tr("Наборы данных")}</h2>
+        <p>{__tr("Выберите схему данных — она определяет поля, которые нужно заполнить.")}</p>
+        <label htmlFor="data-schema">{__tr("Схема данных")}</label>
         <select id="data-schema" value="" onChange={(event) => selectSchema(event.target.value)}>
           <option value="" disabled>
-            Выберите схему данных
-          </option>
+            {__tr("Выберите схему данных")}</option>
           {schemas.map((schema) => (
             <option key={schema.id} value={schema.id}>
               {schema.name}
@@ -157,8 +157,7 @@ export const ModelsPage: React.FC = () => {
           ))}
         </select>
         <Link to="/app/schemas/new" state={{ from: '/app/data-models' }}>
-          + Создать схему данных
-        </Link>
+          {__tr("+ Создать схему данных")}</Link>
       </div>
     );
 
@@ -169,7 +168,7 @@ export const ModelsPage: React.FC = () => {
           <select
             className="gen-select"
             value={activeSchema.id}
-            aria-label="Схема данных"
+            aria-label={__tr("Схема данных")}
             onChange={(e) => selectSchema(e.target.value)}
           >
             {schemas.map((s) => (
@@ -184,12 +183,11 @@ export const ModelsPage: React.FC = () => {
               disabled={!activeSchema}
               onClick={() => void create()}
             >
-              + Новая
-            </button>
+              {__tr("+ Новая")}</button>
             <button
               className="dm-btn-icon"
               onClick={() => setImporterOpen((v) => !v)}
-              title="Импорт JSON"
+              title={__tr("Импорт JSON")}
             >
               📥
             </button>
@@ -197,6 +195,7 @@ export const ModelsPage: React.FC = () => {
         </div>
 
         {importerOpen && <JsonImporterPanel schemaId={activeSchema?.id} onImport={importModels} />}
+        <ExcelActions schema={activeSchema} models={selectedIds.size ? models.filter((model) => selectedIds.has(model.id)) : models}/>
         {loadError && (
           <div className="schema-error" role="alert">
             {loadError}
@@ -211,8 +210,8 @@ export const ModelsPage: React.FC = () => {
           activeId={activeModelId}
           onItemClick={(m) => modelStore.select(m.id)}
           bulkActions={bulkActions}
-          searchPlaceholder="Поиск по названию набора данных…"
-          emptyText="Наборов данных нет. Создайте новую или импортируйте JSON."
+          searchPlaceholder={__tr("Поиск по названию набора данных…")}
+          emptyText={__tr("Наборов данных нет. Создайте новую или импортируйте JSON.")}
           loading={loading}
         />
       </aside>
@@ -236,7 +235,7 @@ export const ModelsPage: React.FC = () => {
             />
           </div>
         ) : (
-          <div className="dm-empty">Выберите набор данных или создайте новый</div>
+          <div className="dm-empty">{__tr("Выберите набор данных или создайте новый")}</div>
         )}
       </main>
     </div>
@@ -246,7 +245,7 @@ export const ModelsPage: React.FC = () => {
 function plural(n: number): string {
   const m10 = n % 10;
   const m100 = n % 100;
-  if (m10 === 1 && m100 !== 11) return 'набор данных';
-  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return 'набора данных';
-  return 'наборов данных';
+  if (m10 === 1 && m100 !== 11) return __tr("набор данных");
+  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return __tr("набора данных");
+  return __tr("наборов данных");
 }

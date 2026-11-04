@@ -1,4 +1,5 @@
-﻿import React, { useEffect, useRef, useState } from 'react';
+import { t as __tr } from '@/shared/i18n';
+import React, { useEffect, useRef, useState } from 'react';
 import { Group, Rect, Text, Image as KImage } from 'react-konva';
 import type Konva from 'konva';
 import type { PlaceholderElement } from '@/shared/types';
@@ -163,7 +164,7 @@ export const PlaceholderEl: React.FC<Props> = ({
           <Text
             x={pad.left} y={(el.height + 22) / 2} width={innerW}
             align="center"
-            text="(картинка не загружена)"
+            text={__tr("(картинка не загружена)")}
             fontSize={12} fill="#94a3b8" listening={false}
           />
         )}

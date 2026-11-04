@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 import React, { useState } from 'react';
 
 interface Props {
@@ -11,7 +12,7 @@ export const TableSizePicker: React.FC<Props> = ({ onPick }) => {
 
   return (
     <div className="rt-popover">
-      <div className="rt-popover-title">Размер таблицы</div>
+      <div className="rt-popover-title">{__tr("Размер таблицы")}</div>
       <div className="rt-table-grid">
         {Array.from({ length: MAX }, (_, r) =>
           Array.from({ length: MAX }, (_, c) => {
@@ -30,7 +31,7 @@ export const TableSizePicker: React.FC<Props> = ({ onPick }) => {
         )}
       </div>
       <div className="rt-popover-hint">
-        {hover.r >= 0 ? `${hover.r + 1} × ${hover.c + 1}` : 'Наведите курсор'}
+        {hover.r >= 0 ? `${hover.r + 1} × ${hover.c + 1}` : __tr("Наведите курсор")}
       </div>
     </div>
   );

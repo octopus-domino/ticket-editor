@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useStore } from '@/shared/store/store';
@@ -51,7 +52,7 @@ export const TemplatesPage: React.FC = () => {
     () => ({
       getId: (t) => t.id,
       getLabel: (t) => t.name,
-      getMeta: (t) => `${t.slideCount} слайд(ов)`,
+      getMeta: (t) => __tr("{0} слайд(ов)", t.slideCount),
       getSearchText: (t) => t.name,
     }),
     [],
@@ -61,20 +62,20 @@ export const TemplatesPage: React.FC = () => {
     () => [
       {
         key: 'delete',
-        label: 'Удалить',
+        label: __tr("Удалить"),
         icon: '🗑',
         variant: 'danger',
         confirm: (ids) => ({
-          title: `Удалить ${ids.length} ${plural(ids.length)}?`,
-          description: 'Действие необратимо.',
+          title: __tr("Удалить {0} {1}?", ids.length, plural(ids.length)),
+          description: __tr("Действие необратимо."),
         }),
         onRun: async (ids) => {
           const result = await runBulk(ids, (id) => templateStore.delete(id));
           if (result.ok > 0) {
-            toast.success(`Удалено: ${result.ok} ${plural(result.ok)}`);
+            toast.success(__tr("Удалено: {0} {1}", result.ok, plural(result.ok)));
           }
           if (result.failed.length > 0) {
-            toast.error(`Не удалось удалить: ${result.failed.length}`, result.failed[0].message);
+            toast.error(__tr("Не удалось удалить: {0}", result.failed.length), result.failed[0].message);
           }
           setSelectedIds((prev) => {
             const next = new Set(prev);
@@ -103,17 +104,17 @@ export const TemplatesPage: React.FC = () => {
       }}
     >
       <div className="schema-fields-header">
-        <h2>Шаблоны</h2>
+        <h2>{__tr("Шаблоны")}</h2>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <select
             className="gen-select"
             style={{ minWidth: 220 }}
-            aria-label="Фильтр по схеме данных"
+            aria-label={__tr("Фильтр по схеме данных")}
             value={schemaFilter}
             onChange={(e) => setSchemaFilter(e.target.value)}
           >
-            <option value="">Все схемы данных</option>
-            <option value="__none__">Без схемы данных</option>
+            <option value="">{__tr("Все схемы данных")}</option>
+            <option value="__none__">{__tr("Без схемы данных")}</option>
             {schemas.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}
@@ -124,8 +125,7 @@ export const TemplatesPage: React.FC = () => {
             to={`/app/templates/new${schemaFilter && schemaFilter !== '__none__' ? `?schemaId=${encodeURIComponent(schemaFilter)}` : ''}`}
             className="schema-btn-fill"
           >
-            + Создать шаблон
-          </Link>
+            {__tr("+ Создать шаблон")}</Link>
         </div>
       </div>
 
@@ -142,11 +142,11 @@ export const TemplatesPage: React.FC = () => {
         onSelectionChange={setSelectedIds}
         onItemClick={onItemClick}
         bulkActions={bulkActions}
-        searchPlaceholder="Поиск по названию шаблона…"
+        searchPlaceholder={__tr("Поиск по названию шаблона…")}
         emptyText={
           items.length === 0
-            ? 'Шаблонов пока нет. Нажмите «Создать шаблон»: дайте название и соберите макет. Данные можно добавить позже.'
-            : 'Ни один шаблон не подходит под запрос.'
+            ? __tr("Шаблонов пока нет. Нажмите «Создать шаблон»: дайте название и соберите макет. Данные можно добавить позже.")
+            : __tr("Ни один шаблон не подходит под запрос.")
         }
         loading={loading}
       />
@@ -157,7 +157,7 @@ export const TemplatesPage: React.FC = () => {
 function plural(n: number): string {
   const m10 = n % 10;
   const m100 = n % 100;
-  if (m10 === 1 && m100 !== 11) return 'шаблон';
-  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return 'шаблона';
-  return 'шаблонов';
+  if (m10 === 1 && m100 !== 11) return __tr("шаблон");
+  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return __tr("шаблона");
+  return __tr("шаблонов");
 }

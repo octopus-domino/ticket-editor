@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 import React, { useEffect, useRef } from 'react';
 import type { BulkAction } from './types';
 
@@ -76,9 +77,9 @@ export function ListToolbar<T>({
             checked={allVisibleSelected}
             indeterminate={someVisibleSelected}
             onChange={onToggleAll}
-            title={allVisibleSelected ? 'Снять выбор со всех' : 'Выбрать всех в списке'}
+            title={allVisibleSelected ? __tr("Снять выбор со всех") : __tr("Выбрать всех в списке")}
           />
-          <span>{selectedCount > 0 ? `Выбрано: ${selectedCount}` : 'Выбрать все'}</span>
+          <span>{selectedCount > 0 ? __tr("Выбрано: {0}", selectedCount) : __tr("Выбрать все")}</span>
         </label>
 
         <div className="ssl-search">
@@ -92,15 +93,15 @@ export function ListToolbar<T>({
             placeholder={searchPlaceholder}
             onChange={(e) => onSearchChange(e.target.value)}
             className="ssl-search-input"
-            aria-label="Поиск по списку"
+            aria-label={__tr("Поиск по списку")}
           />
           {searchQuery && (
             <button
               type="button"
               className="ssl-search-clear"
               onClick={() => onSearchChange('')}
-              title="Очистить поиск"
-              aria-label="Очистить поиск"
+              title={__tr("Очистить поиск")}
+              aria-label={__tr("Очистить поиск")}
             >
               ×
             </button>
@@ -110,13 +111,13 @@ export function ListToolbar<T>({
 
       {showFilteredHint && (
         <div className="ssl-hint">
-          Показано {visibleCount} из {totalCount}
+          {__tr("Показано")}{visibleCount} {__tr("из")}{totalCount}
         </div>
       )}
 
       {selectedCount > 0 && bulkActions.length > 0 && (
-        <div className="ssl-bulk-bar" role="toolbar" aria-label="Действия с выбранными">
-          <span className="ssl-bulk-count">{selectedCount} выбрано</span>
+        <div className="ssl-bulk-bar" role="toolbar" aria-label={__tr("Действия с выбранными")}>
+          <span className="ssl-bulk-count">{selectedCount} {__tr("выбрано")}</span>
           {bulkActions.map((action) => (
             <button
               key={action.key}
@@ -137,10 +138,9 @@ export function ListToolbar<T>({
             className="ssl-btn ssl-btn-ghost"
             onClick={onClearSelection}
             disabled={bulkBusy}
-            title="Снять выделение (Esc)"
+            title={__tr("Снять выделение (Esc)")}
           >
-            Снять
-          </button>
+            {__tr("Снять")}</button>
         </div>
       )}
     </div>

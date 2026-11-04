@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 export type FieldType = 'string' | 'number' | 'date' | 'boolean' | 'image' | 'object' | 'array';
 
 export interface FieldDef {
@@ -17,6 +18,6 @@ export interface DataSchema {
 }
 
 export const FIELD_TYPE_LABEL: Record<FieldType, string> = {
-  string: 'Строка', number: 'Число', date: 'Дата', boolean: 'Да/Нет',
-  image: 'Картинка', object: 'Объект', array: 'Массив',
+  string: __tr("Строка"), number: __tr("Число"), date: __tr("Дата"), boolean: __tr("Да/Нет"),
+  image: __tr("Картинка"), object: __tr("Объект"), array: __tr("Массив"),
 };

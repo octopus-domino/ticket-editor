@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 import type { DataField, DataRoot } from '@/shared/types';
 import type { FieldDef, FieldType } from './DataSchema';
 
@@ -114,7 +115,7 @@ export function schemaFromLegacyData(data: DataRoot[]): {
     walk(root.name, root.fields);
   }
 
-  return { name: 'Импорт из документа', fields };
+  return { name: __tr("Импорт из документа"), fields };
 }
 
 /**

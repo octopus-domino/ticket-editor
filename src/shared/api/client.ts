@@ -1,4 +1,5 @@
 import { getHttpSession } from './session';
+import { t } from '@/shared/i18n/core';
 
 const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? '';
 
@@ -35,7 +36,7 @@ export async function authFetch(
         signal: init.signal ?? AbortSignal.timeout(30_000),
       });
     } catch {
-      throw new Error('Сетевая ошибка. Проверьте подключение.');
+      throw new Error(t('Network error. Check your connection.'));
     }
   };
 

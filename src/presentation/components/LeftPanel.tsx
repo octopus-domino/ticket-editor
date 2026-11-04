@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 import React, { useState } from 'react';
 import type { DocFormat, Orientation, Padding, CanvasElement } from '@/shared/types';
 import { FORMATS } from '@/shared/constants';
@@ -16,7 +17,8 @@ import {
   newChart,
   newDiagram,
 } from '@/lib/factories';
-import { TYPICAL_LAYOUTS, BUNDLES } from '../../templates';
+import { DOCUMENT_PRESETS } from '../../templates/catalog';
+import { t } from '@/shared/i18n';
 import { useFileIO } from '../hooks/editor/useFileIO';
 import { ArrangePanel } from './panels/ArrangePanel';
 import { PathfinderPanel } from './panels/PathfinderPanel';
@@ -50,10 +52,10 @@ const PaddingEditor: React.FC<{
   onChange: (p: Padding) => void;
 }> = ({ value, onChange }) => {
   const keys: Array<{ k: keyof Padding; label: string }> = [
-    { k: 'top', label: 'Верх' },
-    { k: 'bottom', label: 'Низ' },
-    { k: 'left', label: 'Лево' },
-    { k: 'right', label: 'Право' },
+    { k: 'top', label: __tr("Верх") },
+    { k: 'bottom', label: __tr("Низ") },
+    { k: 'left', label: __tr("Лево") },
+    { k: 'right', label: __tr("Право") },
   ];
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
@@ -157,25 +159,13 @@ export const LeftPanel: React.FC = () => {
   };
 
   const applyLayout = (layoutId: string) => {
-    const layout = TYPICAL_LAYOUTS.find((l) => l.id === layoutId);
+    const layout = DOCUMENT_PRESETS.find((l) => l.id === layoutId);
     if (!layout) return;
     docStore.commit((draft) => {
-      const slide = layout.build();
-      draft.slides = [slide];
-      draft.activeId = slide.id;
+      const slides = layout.build();
+      draft.slides = slides;
+      draft.activeId = slides[0].id;
     }, 'apply-layout');
-    resetAfterLoad();
-  };
-
-  const applyBundle = (bundleId: string) => {
-    const bundle = BUNDLES.find((b) => b.id === bundleId);
-    if (!bundle) return;
-    const { slide, data: bundleData } = bundle.build();
-    docStore.commit((draft) => {
-      draft.slides = [slide];
-      draft.activeId = slide.id;
-      draft.data = bundleData;
-    }, 'apply-bundle');
     resetAfterLoad();
   };
 
@@ -185,7 +175,7 @@ export const LeftPanel: React.FC = () => {
     try {
       await fileIO.exportSvgServer();
     } catch (err) {
-      toast.error('Не удалось получить SVG с сервера', (err as Error).message);
+      toast.error(__tr("Не удалось получить SVG с сервера"), (err as Error).message);
     } finally {
       setSvgBusy(false);
     }
@@ -197,7 +187,7 @@ export const LeftPanel: React.FC = () => {
     try {
       await fileIO.exportPdfaServer();
     } catch (err) {
-      toast.error('Не удалось получить PDF/A с сервера', (err as Error).message);
+      toast.error(__tr("Не удалось получить PDF/A с сервера"), (err as Error).message);
     } finally {
       setPdfBusy(false);
     }
@@ -223,7 +213,7 @@ export const LeftPanel: React.FC = () => {
             onClick={() => add(newSimpleText())}
           >
             <span className="tile-ico">A</span>
-            <span>Текст</span>
+            <span>{__tr("Текст")}</span>
           </button>
           <button
             type="button"
@@ -233,7 +223,7 @@ export const LeftPanel: React.FC = () => {
             onClick={() => add(newShape('rect'))}
           >
             <span className="tile-ico">▭</span>
-            <span>Блок</span>
+            <span>{__tr("Блок")}</span>
           </button>
           <button
             type="button"
@@ -243,7 +233,7 @@ export const LeftPanel: React.FC = () => {
             onClick={() => add(newShape('roundRect'))}
           >
             <span className="tile-ico">▢</span>
-            <span>Блок (R)</span>
+            <span>{__tr("Блок (R)")}</span>
           </button>
           <button
             type="button"
@@ -253,7 +243,7 @@ export const LeftPanel: React.FC = () => {
             onClick={() => add(newShape('circle'))}
           >
             <span className="tile-ico">○</span>
-            <span>Круг</span>
+            <span>{__tr("Круг")}</span>
           </button>
           <button
             type="button"
@@ -263,7 +253,7 @@ export const LeftPanel: React.FC = () => {
             onClick={() => add(newShape('triangle'))}
           >
             <span className="tile-ico">△</span>
-            <span>Треуг.</span>
+            <span>{__tr("Треуг.")}</span>
           </button>
           <button
             type="button"
@@ -273,7 +263,7 @@ export const LeftPanel: React.FC = () => {
             onClick={() => add(newLine())}
           >
             <span className="tile-ico">╱</span>
-            <span>Линия</span>
+            <span>{__tr("Линия")}</span>
           </button>
           <button
             type="button"
@@ -287,7 +277,7 @@ export const LeftPanel: React.FC = () => {
             }}
           >
             <span className="tile-ico">➔</span>
-            <span>Стрелка</span>
+            <span>{__tr("Стрелка")}</span>
           </button>
         </>
       );
@@ -302,7 +292,7 @@ export const LeftPanel: React.FC = () => {
           onClick={() => add(newSimpleText())}
         >
           <span className="tile-ico">A</span>
-          <span>Текст</span>
+          <span>{__tr("Текст")}</span>
         </button>
         <button
           type="button"
@@ -312,7 +302,7 @@ export const LeftPanel: React.FC = () => {
           onClick={() => add(newText())}
         >
           <span className="tile-ico">📝</span>
-          <span>Rich</span>
+          <span>{__tr("Rich")}</span>
         </button>
         <button
           type="button"
@@ -322,7 +312,7 @@ export const LeftPanel: React.FC = () => {
           onClick={() => add(newFooter(activeSlide))}
         >
           <span className="tile-ico">¬</span>
-          <span>Футер</span>
+          <span>{__tr("Футер")}</span>
         </button>
         <button
           type="button"
@@ -332,7 +322,7 @@ export const LeftPanel: React.FC = () => {
           onClick={() => add(newTable())}
         >
           <span className="tile-ico">▦</span>
-          <span>Таблица</span>
+          <span>{__tr("Таблица")}</span>
         </button>
         <button
           type="button"
@@ -342,7 +332,7 @@ export const LeftPanel: React.FC = () => {
           onClick={() => add(newLine())}
         >
           <span className="tile-ico">╱</span>
-          <span>Линия</span>
+          <span>{__tr("Линия")}</span>
         </button>
         <button
           type="button"
@@ -352,7 +342,7 @@ export const LeftPanel: React.FC = () => {
           onClick={() => add(newShape('rect'))}
         >
           <span className="tile-ico">▭</span>
-          <span>Прямоуг.</span>
+          <span>{__tr("Прямоуг.")}</span>
         </button>
         <button
           type="button"
@@ -362,7 +352,7 @@ export const LeftPanel: React.FC = () => {
           onClick={() => add(newShape('roundRect'))}
         >
           <span className="tile-ico">▢</span>
-          <span>Округл.</span>
+          <span>{__tr("Округл.")}</span>
         </button>
         <button
           type="button"
@@ -372,7 +362,7 @@ export const LeftPanel: React.FC = () => {
           onClick={() => add(newShape('circle'))}
         >
           <span className="tile-ico">○</span>
-          <span>Круг</span>
+          <span>{__tr("Круг")}</span>
         </button>
         <button
           type="button"
@@ -382,7 +372,7 @@ export const LeftPanel: React.FC = () => {
           onClick={() => add(newShape('triangle'))}
         >
           <span className="tile-ico">△</span>
-          <span>Треуг.</span>
+          <span>{__tr("Треуг.")}</span>
         </button>
         <button
           type="button"
@@ -392,7 +382,7 @@ export const LeftPanel: React.FC = () => {
           onClick={() => add(newShape('star'))}
         >
           <span className="tile-ico">☆</span>
-          <span>Звезда</span>
+          <span>{__tr("Звезда")}</span>
         </button>
         <button
           type="button"
@@ -402,7 +392,7 @@ export const LeftPanel: React.FC = () => {
           onClick={() => add(newShape('arc'))}
         >
           <span className="tile-ico">◔</span>
-          <span>Дуга</span>
+          <span>{__tr("Дуга")}</span>
         </button>
         <button
           type="button"
@@ -412,7 +402,7 @@ export const LeftPanel: React.FC = () => {
           onClick={() => add(newPath())}
         >
           <span className="tile-ico">✎</span>
-          <span>Path</span>
+          <span>{__tr("Path")}</span>
         </button>
         <button
           type="button"
@@ -422,7 +412,7 @@ export const LeftPanel: React.FC = () => {
           onClick={() => add(newChart('bar'))}
         >
           <span className="tile-ico">📊</span>
-          <span>Bar</span>
+          <span>{__tr("Bar")}</span>
         </button>
         <button
           type="button"
@@ -432,7 +422,7 @@ export const LeftPanel: React.FC = () => {
           onClick={() => add(newChart('donut'))}
         >
           <span className="tile-ico">◎</span>
-          <span>Donut</span>
+          <span>{__tr("Donut")}</span>
         </button>
         <button
           type="button"
@@ -442,7 +432,7 @@ export const LeftPanel: React.FC = () => {
           onClick={() => setQrModalOpen(true)}
         >
           <span className="tile-ico">🔳</span>
-          <span>QR-код</span>
+          <span>{__tr("QR-код")}</span>
         </button>
         <button
           type="button"
@@ -452,7 +442,7 @@ export const LeftPanel: React.FC = () => {
           onClick={() => add(newDiagram())}
         >
           <span className="tile-ico">🖼</span>
-          <span>Диаграмма</span>
+          <span>{__tr("Диаграмма")}</span>
         </button>
       </>
     );
@@ -487,8 +477,7 @@ export const LeftPanel: React.FC = () => {
           }}
           onClick={() => modalsStore.setEditorMode('print')}
         >
-          🖨 Полиграфия
-        </button>
+          {__tr("🖨 Полиграфия")}</button>
         <button
           type="button"
           style={{
@@ -505,28 +494,24 @@ export const LeftPanel: React.FC = () => {
           }}
           onClick={() => modalsStore.setEditorMode('schema')}
         >
-          📐 Схемы
-        </button>
+          {__tr("📐 Схемы")}</button>
       </div>
 
-      <Section title="Файл" icon="📁" defaultOpen>
+      <Section title={__tr("Файл")} icon="📁" defaultOpen>
         <button type="button" className="tool-btn" onClick={fileIO.importJson}>
-          📥 Импорт JSON
-        </button>
+          {__tr("📥 Импорт JSON")}</button>
         <button type="button" className="tool-btn" onClick={fileIO.exportJson}>
-          📤 Экспорт JSON
-        </button>
+          {__tr("📤 Экспорт JSON")}</button>
         <div style={{ height: 8 }} />
         <button type="button" className="tool-btn" onClick={fileIO.exportSvgLocal}>
-          🖼 SVG (локально)
-        </button>
+          {__tr("🖼 SVG (локально)")}</button>
         <button
           type="button"
           className="tool-btn"
           onClick={handleExportSvgServer}
           disabled={svgBusy}
         >
-          {svgBusy ? '⏳ SVG (сервер)…' : '🖼 SVG (сервер)'}
+          {svgBusy ? __tr("⏳ SVG (сервер)…") : __tr("🖼 SVG (сервер)")}
         </button>
         <button
           type="button"
@@ -534,44 +519,31 @@ export const LeftPanel: React.FC = () => {
           onClick={handleExportPdfaServer}
           disabled={pdfBusy}
         >
-          {pdfBusy ? '⏳ PDF/A (сервер)…' : '📄 PDF/A (сервер)'}
+          {pdfBusy ? __tr("⏳ PDF/A (сервер)…") : __tr("📄 PDF/A (сервер)")}
         </button>
       </Section>
 
       {editorMode === 'print' && (
         <>
-          <Section title="Макеты" icon="🎨">
-            {TYPICAL_LAYOUTS.map((l) => (
+          <Section title={t('Document library')} icon="🎨">
+            {DOCUMENT_PRESETS.map((l) => (
               <button
                 key={l.id}
                 type="button"
                 className="tool-btn"
-                title={l.description}
+                title={l.size}
                 onClick={() => applyLayout(l.id)}
               >
-                {l.icon} {l.name}
+                {t(l.name)}
               </button>
             ))}
           </Section>
 
-          <Section title="Документы" icon="📄">
-            {BUNDLES.map((b) => (
-              <button
-                key={b.id}
-                type="button"
-                className="tool-btn"
-                title={b.description}
-                onClick={() => applyBundle(b.id)}
-              >
-                {b.icon} {b.name}
-              </button>
-            ))}
-          </Section>
         </>
       )}
 
-      <Section title="Формат" icon="📐" defaultOpen>
-        <label className="field-label">Размер</label>
+      <Section title={__tr("Формат")} icon="📐" defaultOpen>
+        <label className="field-label">{__tr("Размер")}</label>
         <select
           className="field"
           value={activeSlide.format}
@@ -579,30 +551,28 @@ export const LeftPanel: React.FC = () => {
         >
           {Object.entries(FORMATS).map(([k, v]) => (
             <option key={k} value={k}>
-              {v.label}
+              {t(v.label)}
             </option>
           ))}
         </select>
 
-        <label className="field-label">Ориентация</label>
+        <label className="field-label">{__tr("Ориентация")}</label>
         <div className="segmented">
           <button
             type="button"
             className={activeSlide.orientation === 'portrait' ? 'active' : ''}
             onClick={() => handleOrientation('portrait')}
           >
-            Книжная
-          </button>
+            {__tr("Книжная")}</button>
           <button
             type="button"
             className={activeSlide.orientation === 'landscape' ? 'active' : ''}
             onClick={() => handleOrientation('landscape')}
           >
-            Альбомная
-          </button>
+            {__tr("Альбомная")}</button>
         </div>
 
-        <label className="field-label">Цвет фона</label>
+        <label className="field-label">{__tr("Цвет фона")}</label>
         <input
           type="color"
           className="field"
@@ -620,8 +590,7 @@ export const LeftPanel: React.FC = () => {
             }}
           >
             <label className="field-label">
-              Ширина
-              <input
+              {__tr("Ширина")}<input
                 className="field"
                 type="number"
                 min={50}
@@ -630,8 +599,7 @@ export const LeftPanel: React.FC = () => {
               />
             </label>
             <label className="field-label">
-              Высота
-              <input
+              {__tr("Высота")}<input
                 className="field"
                 type="number"
                 min={50}
@@ -654,75 +622,71 @@ export const LeftPanel: React.FC = () => {
             textTransform: 'uppercase',
           }}
         >
-          Отступы страницы
-        </h4>
+          {__tr("Отступы страницы")}</h4>
         <PaddingEditor value={activeSlide.padding} onChange={updatePadding} />
       </Section>
 
-      <Section title="Изображения" icon="🖼">
+      <Section title={__tr("Изображения")} icon="🖼">
         <button
           type="button"
           className="tool-btn"
           onClick={() => fileIO.addImage({ centered: true })}
         >
-          🖼 Добавить картинку
-        </button>
+          {__tr("🖼 Добавить картинку")}</button>
         <button type="button" className="tool-btn" onClick={fileIO.setBackgroundImage}>
-          🖼 Установить фон
-        </button>
+          {__tr("🖼 Установить фон")}</button>
         <button
           type="button"
           className="tool-btn danger"
           onClick={fileIO.removeBackgroundImage}
           disabled={!activeSlide.backgroundImage}
         >
-          ✕ Убрать фон
-        </button>
+          {__tr("✕ Убрать фон")}</button>
       </Section>
 
-      <Section title="Элементы" icon="🧩" defaultOpen>
+      <Section title={__tr("Элементы")} icon="🧩" defaultOpen>
         <div className="tool-grid">{renderElementTiles()}</div>
       </Section>
 
       {editorMode === 'print' && (
         <>
-          <Section title="Штампы" icon="🔖">
+          <Section title={__tr("Штампы")} icon="🔖">
             <StampLibraryPanel />
           </Section>
-          <Section title="Графы" icon="📊">
+          <Section title={__tr("Графы")} icon="📊">
             <GraphToolPanel />
           </Section>
         </>
       )}
 
-      <Section title="Компоновка" icon="🎯">
+      <Section title={__tr("Компоновка")} icon="🎯">
         <ArrangePanel />
       </Section>
 
       {editorMode === 'print' && (
-        <Section title="Pathfinder" icon="⚡">
+        <Section title={__tr("Pathfinder")} icon="⚡">
           <PathfinderPanel />
         </Section>
       )}
 
-      <Section title="Стили" icon="🎨">
+      <Section title={__tr("Стили")} icon="🎨">
         <StylesPanel />
       </Section>
-      <Section title="Символы" icon="🔗">
+      <Section title={__tr("Символы")} icon="🔗">
         <SymbolsPanel />
       </Section>
 
       {editorMode === 'print' && (
-        <Section title="Заливка" icon="🎨">
+        <Section title={__tr("Заливка")} icon="🎨">
           <label className="check-row">
             <input
               type="checkbox"
               checked={fillMode}
               onChange={(e) => modalsStore.setFillMode(e.target.checked)}
             />
-            <span>Режим заливки</span>
+            <span>{__tr("Режим заливки")}</span>
           </label>
-          <label className="field-label">Цвет заливки</label>
+          <label className="field-label">{__tr("Цвет заливки")}</label>
           <input
             type="color"
             className="field"
@@ -730,23 +694,20 @@ export const LeftPanel: React.FC = () => {
             onChange={(e) => modalsStore.setFillColor(e.target.value)}
           />
           <p className="hint-sm">
-            Клик по фигуре — залить область.
-            <br />
-            Клик по пустому месту — добавить точку.
-            <br />
-            Esc — отменить.
-          </p>
+            {__tr("Клик по фигуре — залить область.")}<br />
+            {__tr("Клик по пустому месту — добавить точку.")}<br />
+            {__tr("Esc — отменить.")}</p>
         </Section>
       )}
 
-      <Section title="Вид" icon="👁">
+      <Section title={__tr("Вид")} icon="👁">
         <label className="check-row">
           <input
             type="checkbox"
             checked={showGrid}
             onChange={(e) => modalsStore.setShowGrid(e.target.checked)}
           />
-          <span>Показать сетку</span>
+          <span>{__tr("Показать сетку")}</span>
         </label>
         <div className="row-2">
           <button
@@ -755,16 +716,14 @@ export const LeftPanel: React.FC = () => {
             onClick={() => docStore.undo()}
             disabled={!canUndo}
           >
-            ↶ Отменить
-          </button>
+            {__tr("↶ Отменить")}</button>
           <button
             type="button"
             className="tool-btn"
             onClick={() => docStore.redo()}
             disabled={!canRedo}
           >
-            ↷ Повторить
-          </button>
+            {__tr("↷ Повторить")}</button>
         </div>
       </Section>
 

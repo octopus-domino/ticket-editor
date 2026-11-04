@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 import React, { useState } from 'react';
 import { useStore } from '@/shared/store/store';
 import {
@@ -57,14 +58,13 @@ export const SymbolsPanel: React.FC = () => {
             marginBottom: 8,
           }}
         >
-          + Создать из выделенного
-        </button>
+          {__tr("+ Создать из выделенного")}</button>
       )}
 
       {creating && (
         <div style={{ marginBottom: 8 }}>
           <InlineTextPrompt
-            placeholder={`Символ ${symbols.length + 1}`}
+            placeholder={__tr("Символ {0}", symbols.length + 1)}
             onSave={handleCreate}
             onCancel={() => setCreating(false)}
           />
@@ -73,8 +73,7 @@ export const SymbolsPanel: React.FC = () => {
 
       {symbols.length === 0 && (
         <p style={{ fontSize: 11, color: '#94a3b8', lineHeight: 1.5 }}>
-          Выделите элемент на холсте и создайте из него символ. Затем вставляйте его на любой слайд — все копии будут связаны с оригиналом.
-        </p>
+          {__tr("Выделите элемент на холсте и создайте из него символ. Затем вставляйте его на любой слайд — все копии будут связаны с оригиналом.")}</p>
       )}
 
       {symbols.map((sym) => (
@@ -105,7 +104,7 @@ export const SymbolsPanel: React.FC = () => {
           </div>
           <button
             type="button"
-            title="Вставить экземпляр"
+            title={__tr("Вставить экземпляр")}
             onClick={() => instantiate(sym.id)}
             style={{
               padding: '4px 8px', fontSize: 11,
@@ -113,11 +112,10 @@ export const SymbolsPanel: React.FC = () => {
               border: 'none', borderRadius: 3, cursor: 'pointer',
             }}
           >
-            Вставить
-          </button>
+            {__tr("Вставить")}</button>
           <button
             type="button"
-            title="Удалить символ"
+            title={__tr("Удалить символ")}
             onClick={() => setConfirmDeleteId(sym.id)}
             style={{
               background: 'transparent', border: 'none',
@@ -132,10 +130,10 @@ export const SymbolsPanel: React.FC = () => {
 
       <ConfirmDialog
         isOpen={!!confirmDeleteId}
-        title={`Удалить символ «${confirmDeleteSym?.name ?? ''}»?`}
-        description="Существующие экземпляры на холсте станут обычными элементами."
+        title={__tr("Удалить символ «{0}»?", confirmDeleteSym?.name ?? '')}
+        description={__tr("Существующие экземпляры на холсте станут обычными элементами.")}
         variant="danger"
-        confirmLabel="Удалить"
+        confirmLabel={__tr("Удалить")}
         onConfirm={() => {
           if (confirmDeleteId) graphicsStore.removeSymbol(confirmDeleteId);
           setConfirmDeleteId(null);

@@ -1,4 +1,5 @@
-﻿/* ============================================================
+import { t as __tr } from '@/shared/i18n';
+/* ============================================================
    stamps/StampEditor.tsx
    F-STMP-E-01..26, REG-B1, REG-B4, F-LN-09.
    ============================================================ */
@@ -62,7 +63,7 @@ export const StampEditor: React.FC<Props> = ({
   initialWidth, initialHeight, initialShapes, initialTexts, initialImages,
   initialName, onSave, onCancel,
 }) => {
-  const [name, setName] = useState(initialName || 'Новый штамп');
+  const [name, setName] = useState(initialName || __tr("Новый штамп"));
   const [width, setWidth] = useState(initialWidth);
   const [height, setHeight] = useState(initialHeight);
   const [placementMode, setPlacementMode] = useState<PlacementMode>('inside');
@@ -358,7 +359,7 @@ export const StampEditor: React.FC<Props> = ({
               />
             )}
             <div className="stamp-editor-info">
-              {width}×{height} · {Math.round(zp.zoom * 100)}% · Элементов:{' '}
+              {width}×{height} · {Math.round(zp.zoom * 100)}{__tr("% · Элементов:")}{' '}
               {shapes.length + texts.length + images.length}
             </div>
           </StampCanvas>
@@ -385,12 +386,9 @@ export const StampEditor: React.FC<Props> = ({
             )}
             {!selectedShape && !selectedText && !selectedImage && (
               <p className="stamp-editor-empty">
-                <b>Выберите элемент</b>, чтобы редактировать.
-                <br /><br />
-                <b>Ctrl</b> при перемещении/масштабировании — свободно.
-                <br />
-                <b>Двойной клик по тексту</b> — редактирование.
-              </p>
+                <b>{__tr("Выберите элемент")}</b>{__tr(", чтобы редактировать.")}<br /><br />
+                <b>Ctrl</b> {__tr("при перемещении/масштабировании — свободно.")}<br />
+                <b>{__tr("Двойной клик по тексту")}</b> {__tr("— редактирование.")}</p>
             )}
           </div>
         </div>

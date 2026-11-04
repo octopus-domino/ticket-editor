@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useStore } from '@/shared/store/store';
@@ -8,7 +9,7 @@ export const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ childr
   const booting = useStore(authStore, (s) => s.booting);
   const offline = useStore(authStore, (s) => s.offline);
 
-  if (booting) return <div style={{ padding: 40 }}>Загрузка…</div>;
+  if (booting) return <div style={{ padding: 40 }}>{__tr("Загрузка…")}</div>;
   
   // Если мы в оффлайне, пускаем без реального пользователя
   if (offline) return <>{children}</>;

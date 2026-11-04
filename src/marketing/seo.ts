@@ -1,4 +1,5 @@
 import { SEARCH_PAGES } from './searchPages';
+import { t, getLocale } from '@/shared/i18n';
 
 export const SITE_URL = 'https://codoc.site';
 export interface PageMetadata {
@@ -9,23 +10,24 @@ export interface PageMetadata {
 }
 export const HOME_METADATA: PageMetadata = {
   path: '/',
-  title: 'CoDoc — шаблоны документов, штампы и генерация PDF онлайн',
+  title: t('CoDoc — шаблоны документов, штампы и генерация PDF онлайн'),
   description:
-    'Создавайте документы, билеты, сертификаты, штампы и печати в редакторе CoDoc. Свои макеты, текст по дуге, данные и пакетная генерация PDF, PDF/A и SVG.',
+    t('Создавайте документы, билеты, сертификаты, штампы и печати в редакторе CoDoc. Свои макеты, текст по дуге, данные и пакетная генерация PDF, PDF/A и SVG.'),
   index: true,
 };
 
 export function getPageMetadata(pathname: string): PageMetadata {
   const path = pathname.replace(/\/+$/, '') || '/';
   if (path === '/') return HOME_METADATA;
+  if (path === '/learn' || path === '/stamp-editor') return { path, title: `CoDoc — ${t(path === '/learn' ? 'Learning center' : 'Stamp studio')}`, description: t('Create documents from templates and data.'), index: false };
   const page = SEARCH_PAGES.find((item) => item.path.replace(/\/$/, '') === path);
   if (page)
     return { path: page.path, title: page.title, description: page.description, index: true };
   const privateRoute = /^\/(app(?:\/|$)|login(?:\/|$)|register(?:\/|$)|auth(?:\/|$))/.test(path);
   return {
     path,
-    title: privateRoute ? 'CoDoc — рабочая область' : 'Страница не найдена — CoDoc',
-    description: 'CoDoc — создание шаблонов и документов из данных.',
+    title: privateRoute ? `CoDoc — ${t('Workspace')}` : t('Страница не найдена — CoDoc'),
+    description: t('Create documents from templates and data.'),
     index: false,
   };
 }
@@ -37,7 +39,7 @@ export function structuredData(meta: PageMetadata) {
     '@id': `${SITE_URL}/#website`,
     name: 'CoDoc',
     url: `${SITE_URL}/`,
-    inLanguage: 'ru',
+    inLanguage: getLocale(),
   };
   return {
     '@context': 'https://schema.org',
@@ -52,7 +54,7 @@ export function structuredData(meta: PageMetadata) {
               description: meta.description,
               applicationCategory: 'BusinessApplication',
               operatingSystem: 'Web',
-              inLanguage: 'ru',
+              inLanguage: getLocale(),
               featureList: [
                 'Визуальное создание шаблонов',
                 'Персонализация документов',

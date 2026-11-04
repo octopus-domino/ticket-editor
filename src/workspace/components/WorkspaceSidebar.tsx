@@ -1,11 +1,13 @@
+import { t as __tr } from '@/shared/i18n';
 import React, { useEffect, useState, useRef } from 'react';
-import { NavLink, useNavigate, useParams } from 'react-router-dom';
+import { NavLink, useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useStore } from '@/shared/store/store';
 import { authStore } from '@/auth/store';
 import { workspaceStore } from '../store';
 import { workspaceApi } from '../api';
 import type { TreeNode } from '../types';
 import { templateStore } from '@/features/templates/state/TemplateStore';
+import { t } from '@/shared/i18n';
 
 function findPathToNode(tree: TreeNode[], targetId: string): string[] | null {
   for (const node of tree) {
@@ -18,25 +20,29 @@ function findPathToNode(tree: TreeNode[], targetId: string): string[] | null {
   return null;
 }
 
-const WorkspaceNav: React.FC = () => (
+const WorkspaceNav: React.FC = () => {
+  const { search } = useLocation();
+  const mine = new URLSearchParams(search).get('view') === 'mine';
+  return (
   <nav className="workspace-nav" style={{ gridTemplateColumns: '1fr 1fr' }}>
     <NavLink to="/app" end className={({ isActive }) => (isActive ? 'active' : '')}>
-      📁 Документы
-    </NavLink>
+      ⌂ {t('Workspace')}</NavLink>
     <NavLink to="/app/schemas" className={({ isActive }) => (isActive ? 'active' : '')}>
-      📋 Схемы данных
+      {__tr("📋 Схемы данных")}</NavLink>
+    <NavLink to="/app/library?view=mine" className={({ isActive }) => (isActive && mine ? 'active' : '')}>
+      🎨 {t('My documents')}
     </NavLink>
-    <NavLink to="/app/templates" className={({ isActive }) => (isActive ? 'active' : '')}>
-      🎨 Шаблоны
-    </NavLink>
+    <NavLink to="/app/library" className={({ isActive }) => (isActive && !mine ? 'active' : '')}>▦ {t('Document library')}</NavLink>
+    <NavLink to="/app/stamps">◎ {t('Stamps')}</NavLink>
+    <NavLink to="/app/learn">? {t('Learning center')}</NavLink>
+    <NavLink to="/app/sign">✍ {t('Electronic signature')}</NavLink>
     <NavLink to="/app/data-models" className={({ isActive }) => (isActive ? 'active' : '')}>
-      📊 Наборы данных
-    </NavLink>
+      {__tr("📊 Наборы данных")}</NavLink>
     <NavLink to="/app/generate" className={({ isActive }) => (isActive ? 'active' : '')}>
-      ⚡ Генерация
-    </NavLink>
+      {__tr("⚡ Генерация")}</NavLink>
   </nav>
-);
+  );
+};
 
 const InlineInput: React.FC<{
   initialValue?: string;
@@ -158,7 +164,7 @@ const TreeItem: React.FC<{
     return (
       <InlineInput
         initialValue={node.name}
-        placeholder="Название"
+        placeholder={__tr("Название")}
         onSave={handleRename}
         onCancel={() => setRenaming(false)}
         depth={depth}
@@ -202,24 +208,24 @@ const TreeItem: React.FC<{
             {isFolder && (
               <>
                 <button
-                  title="Новый документ"
+                  title={__tr("Новый документ")}
                   onClick={() => { setCreatingChild('document'); workspaceStore.expandFolders([node.id]); workspaceStore.setActiveFolder(node.id); }}
                   style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 12, padding: 2, color: 'inherit' }}
                 >📄+</button>
                 <button
-                  title="Новая папка"
+                  title={__tr("Новая папка")}
                   onClick={() => { setCreatingChild('folder'); workspaceStore.expandFolders([node.id]); workspaceStore.setActiveFolder(node.id); }}
                   style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 12, padding: 2, color: 'inherit' }}
                 >📁+</button>
               </>
             )}
             <button
-              title="Переименовать"
+              title={__tr("Переименовать")}
               onClick={() => setRenaming(true)}
               style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 12, padding: 2, color: 'inherit' }}
             >✏️</button>
             <button
-              title="Удалить"
+              title={__tr("Удалить")}
               onClick={() => void handleDelete()}
               style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 12, padding: 2, color: 'inherit' }}
             >🗑️</button>
@@ -240,7 +246,7 @@ const TreeItem: React.FC<{
           ))}
           {creatingChild && (
             <InlineInput
-              placeholder={creatingChild === 'folder' ? 'Название папки…' : 'Название документа…'}
+              placeholder={creatingChild === 'folder' ? __tr("Название папки…") : __tr("Название документа…")}
               onSave={(name) => void handleCreateChild(creatingChild, name)}
               onCancel={() => setCreatingChild(null)}
               depth={depth + 1}
@@ -307,12 +313,11 @@ export const WorkspaceSidebar: React.FC = () => {
         <a
           href="/"
           style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text-muted)', textDecoration: 'none', marginBottom: 4 }}
-          title="На главную"
+          title={__tr("На главную")}
         >
-          ← На главную
-        </a>
+          {__tr("← На главную")}</a>
         <div style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 500 }}>
-          {user?.name || user?.email || 'Гость'}
+          {user?.name || user?.email || __tr("Гость")}
         </div>
         <WorkspaceNav />
         {!offline && (
@@ -320,21 +325,21 @@ export const WorkspaceSidebar: React.FC = () => {
             <button
               onClick={() => { setCreatingRoot('document'); }}
               style={{ flex: 1, padding: '6px 0', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
-            >+ Документ</button>
+            >{__tr("+ Документ")}</button>
             <button
               onClick={() => { setCreatingRoot('folder'); }}
               style={{ flex: 1, padding: '6px 0', background: 'var(--panel-alt)', border: '1px solid var(--border-strong)', borderRadius: 4, cursor: 'pointer', fontSize: 12, color: 'var(--text)' }}
-            >+ Папка</button>
+            >{__tr("+ Папка")}</button>
           </div>
         )}
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: 8 }}>
-        <button type="button" onClick={() => workspaceStore.setActiveFolder(null)} aria-pressed={activeFolderId === null} style={{ marginBottom: 8 }}>Все документы (корневая папка)</button>
-        {loading && !offline && <div style={{ fontSize: 12, color: 'var(--text-soft)', padding: 8 }}>Загрузка…</div>}
+        <button type="button" onClick={() => workspaceStore.setActiveFolder(null)} aria-pressed={activeFolderId === null} style={{ marginBottom: 8 }}>{__tr("Все документы (корневая папка)")}</button>
+        {loading && !offline && <div style={{ fontSize: 12, color: 'var(--text-soft)', padding: 8 }}>{__tr("Загрузка…")}</div>}
         {!offline && creatingRoot && (
           <InlineInput
-            placeholder={creatingRoot === 'folder' ? 'Название папки…' : 'Название документа…'}
+            placeholder={creatingRoot === 'folder' ? __tr("Название папки…") : __tr("Название документа…")}
             onSave={(name) => void handleCreateRoot(creatingRoot, name)}
             onCancel={() => setCreatingRoot(null)}
             depth={0}
@@ -353,14 +358,13 @@ export const WorkspaceSidebar: React.FC = () => {
             >
               <span style={{ width: 16 }} />
               <span style={{ marginRight: 6 }}>📄</span>
-              <span style={{ flex: 1 }}>Локальный проект</span>
+              <span style={{ flex: 1 }}>{__tr("Локальный проект")}</span>
             </div>
           </div>
         )}
         {!offline && !loading && tree.length === 0 && !creatingRoot && (
           <div style={{ fontSize: 12, color: 'var(--text-soft)', padding: 8, textAlign: 'center' }}>
-            Пусто. Создайте папку или документ.
-          </div>
+            {__tr("Пусто. Создайте папку или документ.")}</div>
         )}
         {!offline && tree.map((n) => (
           <TreeItem
@@ -378,8 +382,7 @@ export const WorkspaceSidebar: React.FC = () => {
         onClick={() => void logout()}
         style={{ padding: 12, border: 'none', borderTop: '1px solid var(--border)', background: 'var(--panel)', cursor: 'pointer', color: '#dc2626', fontSize: 13 }}
       >
-        Выйти
-      </button>
+        {__tr("Выйти")}</button>
     </aside>
   );
 };

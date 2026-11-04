@@ -1,3 +1,4 @@
+import { t as __tr } from '@/shared/i18n';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useStore } from '@/shared/store/store';
@@ -11,6 +12,7 @@ import { resolveBindings } from '@/features/bindings/domain/BindingResolver';
 import type { GenerationRequest } from '../api/GenerationClient';
 import { SearchSelectList, type ListItemAdapter } from '@/presentation/components/list';
 import { toast } from '@/presentation/components/toast';
+import { SignGeneratedLink } from '@/features/signing/SignGeneratedLink';
 
 const SUPPORTED = ['pdfa', 'pdf', 'svg'] as const;
 type Format = (typeof SUPPORTED)[number];
@@ -117,7 +119,7 @@ export const GenerationPage: React.FC = () => {
     () => ({
       getId: (m) => m.id,
       getLabel: (m) => m.name,
-      getMeta: (m) => `${Object.keys(m.values).length} полей`,
+      getMeta: (m) => __tr("{0} полей", Object.keys(m.values).length),
       getSearchText: (m) => m.name,
     }),
     [],
@@ -129,9 +131,9 @@ export const GenerationPage: React.FC = () => {
   );
 
   const blockingReasons = useMemo(() => {
-    if (!activeTemplate) return ['Выберите шаблон'];
+    if (!activeTemplate) return [__tr("Выберите шаблон")];
     if (activeTemplate.schemaId && !activeSchema)
-      return [schemasLoading ? 'Загрузка схемы данных…' : 'Схема данных шаблона недоступна'];
+      return [schemasLoading ? __tr("Загрузка схемы данных…") : __tr("Схема данных шаблона недоступна")];
     return validateGeneration({
       schema: activeSchema,
       bindings: activeTemplate.bindings.length
@@ -166,7 +168,7 @@ export const GenerationPage: React.FC = () => {
       if (r) downloadBlob(r.blob, r.filename);
     } catch (e) {
       setError((e as Error).message);
-      toast.error('Генерация не удалась', (e as Error).message);
+      toast.error(__tr("Генерация не удалась"), (e as Error).message);
     } finally {
       setBusy(false);
     }
@@ -186,16 +188,16 @@ export const GenerationPage: React.FC = () => {
   return (
     <div className="gen-page">
       <main className="gen-main">
-        <h2 className="gen-title">Генерация документов</h2>
+        <h2 className="gen-title">{__tr("Генерация документов")}</h2>
         <p className="gen-subtitle">
-          Шаблон × наборы данных → документы. Формат: <b>{format.toUpperCase()}</b>, упаковка:{' '}
+          {__tr("Шаблон × наборы данных → документы. Формат:")}<b>{format.toUpperCase()}</b>{__tr(", упаковка:")}{' '}
           <b>{packAs}</b>.
         </p>
 
-        {templatesLoading && <div className="schema-hint">Загрузка шаблонов…</div>}
+        {templatesLoading && <div className="schema-hint">{__tr("Загрузка шаблонов…")}</div>}
         {templatesError && <div className="schema-error">{templatesError}</div>}
         {!withoutData && modelsLoading && (
-          <div className="schema-hint">Загрузка наборов данных…</div>
+          <div className="schema-hint">{__tr("Загрузка наборов данных…")}</div>
         )}
         {!withoutData && modelsError && <div className="schema-error">{modelsError}</div>}
 
@@ -203,7 +205,7 @@ export const GenerationPage: React.FC = () => {
           <div className="gen-preview">
             <div style={{ fontWeight: 600 }}>📄 {activeTemplate.name}</div>
             <div className="schema-hint">
-              Слайдов: {activeTemplate.slides.length} · Наборов данных: {models.length} · Выбрано:{' '}
+              {__tr("Слайдов:")}{activeTemplate.slides.length} {__tr("· Наборов данных:")}{models.length} {__tr("· Выбрано:")}{' '}
               {pickedModels.length}
             </div>
           </div>
@@ -226,32 +228,31 @@ export const GenerationPage: React.FC = () => {
         {job && (
           <div role="status">
             {job.status}: {job.progress.completed} / {job.progress.total}{' '}
-            <button onClick={() => void generationStore.cancel()}>Cancel</button>
+            <button onClick={() => void generationStore.cancel()}>{__tr('Cancel')}</button>
           </div>
         )}
         {jobError && <div role="alert">{jobError}</div>}
         {result && (
           <div className="gen-status done" style={{ marginTop: 12 }}>
-            Готово: {result.count} документ(ов), ошибок: {result.failed}.{' '}
+            <strong>{result.filename}</strong>{' · '}
+            {__tr("Готово:")}{result.count} {__tr("документ(ов), ошибок:")}{result.failed}.{' '}
             <button className="dp-btn" onClick={() => downloadBlob(result.blob, result.filename)}>
-              Скачать снова
-            </button>
+              {__tr("Скачать снова")}</button>
+            <SignGeneratedLink />
           </div>
         )}
 
         {!activeTemplate && (
           <p className="gen-empty" style={{ marginTop: 16 }}>
-            Нет выбранного шаблона. Откройте{' '}
+            {__tr("Нет выбранного шаблона. Откройте")}{' '}
             <Link to="/app" style={{ color: 'var(--accent)' }}>
-              список проектов
-            </Link>{' '}
-            или создайте документ в редакторе и сохраните.
-          </p>
+              {__tr("список проектов")}</Link>{' '}
+            {__tr("или создайте документ в редакторе и сохраните.")}</p>
         )}
       </main>
 
       <aside className="gen-sidebar">
-        <h3 className="gen-section-title">Шаблон</h3>
+        <h3 className="gen-section-title">{__tr("Шаблон")}</h3>
         <select
           className="gen-select"
           value={activeTemplateId ?? ''}
@@ -261,21 +262,17 @@ export const GenerationPage: React.FC = () => {
           }}
         >
           <option value="" disabled>
-            — выберите шаблон —
-          </option>
+            {__tr("— выберите шаблон —")}</option>
           {templates.map((t) => (
             <option key={t.id} value={t.id}>
-              {t.name} ({t.slideCount} слайд.)
-            </option>
+              {t.name} ({t.slideCount} {__tr("слайд.)")}</option>
           ))}
         </select>
 
-        <h3 className="gen-section-title">Наборы данных</h3>
+        <h3 className="gen-section-title">{__tr("Наборы данных")}</h3>
         {withoutData ? (
           <p className="schema-hint">
-            У шаблона нет схемы данных. Будет создан один документ из макета без подстановки
-            значений.
-          </p>
+            {__tr("У шаблона нет схемы данных. Будет создан один документ из макета без подстановки значений.")}</p>
         ) : (
           <>
             <SearchSelectList<DataModel>
@@ -285,10 +282,10 @@ export const GenerationPage: React.FC = () => {
               onSelectionChange={setPickedIds}
               rowClickTogglesSelection={true}
               bulkActions={[]}
-              searchPlaceholder="Поиск по названию набора данных…"
+              searchPlaceholder={__tr("Поиск по названию набора данных…")}
               emptyText={
                 <span>
-                  Наборов данных нет. Создайте в <Link to="/app/data-models">Данные</Link>.
+                  {__tr("Наборов данных нет. Создайте в")}<Link to="/app/data-models">{__tr("Данные")}</Link>.
                 </span>
               }
               maxHeight={300}
@@ -296,16 +293,15 @@ export const GenerationPage: React.FC = () => {
             />
 
             {saveStatus === 'saving' && (
-              <div className="schema-hint">💾 сохранение набора данных…</div>
+              <div className="schema-hint">{__tr("💾 сохранение набора данных…")}</div>
             )}
           </>
         )}
 
-        <h3 className="gen-section-title">Параметры</h3>
+        <h3 className="gen-section-title">{__tr("Параметры")}</h3>
 
         <label className="gen-label">
-          Формат
-          <select
+          {__tr("Формат")}<select
             className="gen-select"
             value={format}
             onChange={(e) => updateUrl({ format: e.target.value })}
@@ -317,20 +313,18 @@ export const GenerationPage: React.FC = () => {
         </label>
 
         <label className="gen-label">
-          Упаковка
-          <select
+          {__tr("Упаковка")}<select
             className="gen-select"
             value={packAs}
             onChange={(e) => updateUrl({ packAs: e.target.value })}
           >
             <option value="zip">ZIP</option>
-            <option value="single">Один файл (1 набор данных)</option>
+            <option value="single">{__tr("Один файл (1 набор данных)")}</option>
           </select>
         </label>
 
         <label className="gen-label">
-          Шаблон имени
-          <input
+          {__tr("Шаблон имени")}<input
             className="gen-input"
             value={filenamePattern}
             onChange={(e) => updateUrl({ fn: e.target.value })}
@@ -344,7 +338,7 @@ export const GenerationPage: React.FC = () => {
           title="Ctrl+Enter"
           style={{ marginTop: 16 }}
         >
-          {busy ? 'Генерация…' : 'Сгенерировать (Ctrl+Enter)'}
+          {busy ? __tr("Генерация…") : __tr("Сгенерировать (Ctrl+Enter)")}
         </button>
       </aside>
     </div>

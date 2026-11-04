@@ -20,12 +20,10 @@ export interface GenerationInput {
 
 export function validateGeneration(input: GenerationInput): GenerationIssue[] {
   const issues: GenerationIssue[] = [];
-  if (input.selectedModels.length === 0)
-    issues.push({ kind: 'model', message: 'Выберите хотя бы одну модель' });
+  if (input.schema && input.selectedModels.length === 0)
+    issues.push({ kind: 'model', message: 'Выберите хотя бы один набор данных' });
 
-  if (!input.schema) {
-    issues.push({ kind: 'schema', message: 'Схема не выбрана' });
-  } else {
+  if (input.schema) {
     const bindingIssues = validateBindings(input.bindings, input.schema);
     for (const i of bindingIssues) {
       if (i.kind === 'missing' || i.kind === 'invalid-type') {

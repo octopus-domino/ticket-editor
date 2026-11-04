@@ -3,10 +3,13 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useSchemas } from '@/features/schemas/state/useSchemas';
 import { templateStore } from '../state/TemplateStore';
 import { createSlide } from '@/domain/slide/operations';
+import { workspaceStore } from '@/workspace/store';
+import { useStore } from '@/shared/store/store';
 import './template-journey.css';
 
 export function NewTemplatePage() {
   const navigate = useNavigate();
+  const folderId = useStore(workspaceStore, (state) => state.activeFolderId);
   const [params] = useSearchParams();
   const { schemas, activeSchema, loading, error: schemaError } = useSchemas();
   const [name, setName] = useState('');
@@ -22,10 +25,13 @@ export function NewTemplatePage() {
     try {
       const template = await templateStore.create({
         name: name.trim(),
+        folderId,
         schemaId: schemas.some((s) => s.id === selectedSchema) ? selectedSchema : null,
         slides: [createSlide(1)],
         bindings: [],
       });
+      if (folderId) workspaceStore.expandFolders([folderId]);
+      await workspaceStore.refresh();
       navigate(`/app/templates/${encodeURIComponent(template.id)}/edit`, { replace: true });
     } catch (reason) {
       setError(
@@ -40,6 +46,11 @@ export function NewTemplatePage() {
       <p className="template-eyebrow">Макет → Данные → Готовые документы</p>
       <h1>Начнём с вашего шаблона</h1>
       <p>Дайте ему название — и переходите к макету. Подготовить данные можно позже.</p>
+      <p role="status">
+        {folderId
+          ? 'Шаблон появится в выбранной слева папке.'
+          : 'Шаблон появится в корневой папке документов.'}
+      </p>
       <form onSubmit={(event) => void submit(event)} className="template-form">
         <label htmlFor="template-name">Название шаблона</label>
         <input
@@ -53,7 +64,7 @@ export function NewTemplatePage() {
           disabled={busy}
         />
         <label htmlFor="template-schema">
-          Поля данных <span>(необязательно)</span>
+          Схема данных <span>(необязательно)</span>
         </label>
         <select
           id="template-schema"

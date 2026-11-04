@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Editor } from '@/presentation/components/Editor';
 import { workspaceApi } from '../api';
+import { workspaceStore } from '../store';
 import type { DocumentFull } from '../types';
 import { hydrateDocument, type HydratedDocument } from '../hydrateDocument';
 import { documentDrafts } from '@/presentation/hooks/editor/useDocumentPersistence';
@@ -39,9 +40,10 @@ const DocumentEditorSession: React.FC<{ docId?: string }> = ({ docId }) => {
 
     const search = window.location.search; // сохраняем ?schemaId=...&tab=data
     void workspaceApi
-      .createDocument('Новый документ', null)
+      .createDocument('Новый документ', workspaceStore.getState().activeFolderId)
       .then((newDoc) => {
         if (cancelled) return;
+        void workspaceStore.refresh();
         navigate(`/app/editor/${newDoc.id}${search}`, { replace: true });
       })
       .catch((err: Error) => {

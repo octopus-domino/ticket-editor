@@ -100,7 +100,7 @@ export const JsonImporterPanel: React.FC<{
               {schemaWarning}
             </div>
           )}
-          <div className="schema-hint">✓ {preview.length} моделей найдено</div>
+          <div className="schema-hint">✓ Найдено наборов данных: {preview.length}</div>
           <button className="schema-btn-submit" onClick={() => void apply()} disabled={busy}>
             {busy ? 'Импорт…' : 'Импортировать'}
           </button>

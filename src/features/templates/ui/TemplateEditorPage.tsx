@@ -10,6 +10,7 @@ import { authStore } from '@/auth/store';
 import { reachGoal } from '@/shared/analytics/metrika';
 import { templateStore } from '../state/TemplateStore';
 import { useStore } from '@/shared/store/store';
+import { workspaceStore } from '@/workspace/store';
 import './template-journey.css';
 
 function TemplateEditorSession({ templateId }: { templateId: string }) {
@@ -41,6 +42,7 @@ function TemplateEditorSession({ templateId }: { templateId: string }) {
             bindings: draft.snapshot.bindings ?? [],
           };
         schemaStore.setActive(value.schemaId);
+        workspaceStore.setActiveFolder(value.folderId ?? null);
         setTemplate(value);
         setSavedSchemaId(value.schemaId);
         void templateStore.select(value.id);

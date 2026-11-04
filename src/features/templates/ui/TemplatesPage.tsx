@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useStore } from '@/shared/store/store';
 import { templateStore } from '../state/TemplateStore';
-import { schemaStore } from '@/features/schemas/state/SchemaStore';
 import { useSchemas } from '@/features/schemas/state/useSchemas';
 import type { TemplateSummary } from '../domain/Template';
 import {
@@ -17,21 +16,27 @@ export const TemplatesPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const highlightId = searchParams.get('highlight');
-  const { schemas, activeSchema } = useSchemas();
+  const { schemas } = useSchemas();
+  const [schemaFilter, setSchemaFilter] = useState('');
 
-  const items = useStore(templateStore, (s) => s.items);
+  const allItems = useStore(templateStore, (s) => s.items);
+  const items = allItems.filter(
+    (item) =>
+      !schemaFilter ||
+      (schemaFilter === '__none__' ? !item.schemaId : item.schemaId === schemaFilter),
+  );
   const loading = useStore(templateStore, (s) => s.loading);
   const error = useStore(templateStore, (s) => s.error);
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
 
   useEffect(() => {
-    void templateStore.loadAll(activeSchema?.id);
-  }, [activeSchema?.id]);
+    void templateStore.loadAll();
+  }, []);
 
   useEffect(() => {
     setSelectedIds(new Set());
-  }, [activeSchema?.id]);
+  }, [schemaFilter]);
 
   useEffect(() => {
     if (!highlightId || loading) return;
@@ -103,21 +108,20 @@ export const TemplatesPage: React.FC = () => {
           <select
             className="gen-select"
             style={{ minWidth: 220 }}
-            value={activeSchema?.id ?? ''}
-            onChange={(e) => {
-              const id = e.target.value;
-              if (id) schemaStore.setActive(id);
-            }}
+            aria-label="Фильтр по схеме данных"
+            value={schemaFilter}
+            onChange={(e) => setSchemaFilter(e.target.value)}
           >
+            <option value="">Все схемы данных</option>
+            <option value="__none__">Без схемы данных</option>
             {schemas.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}
               </option>
             ))}
-            {schemas.length === 0 && <option value="">— нет схем —</option>}
           </select>
           <Link
-            to={`/app/templates/new${activeSchema ? `?schemaId=${encodeURIComponent(activeSchema.id)}` : ''}`}
+            to={`/app/templates/new${schemaFilter && schemaFilter !== '__none__' ? `?schemaId=${encodeURIComponent(schemaFilter)}` : ''}`}
             className="schema-btn-fill"
           >
             + Создать шаблон

@@ -37,7 +37,7 @@ export const SchemasPage: React.FC = () => {
         confirm: (ids) => ({
           title: `Удалить ${ids.length} ${plural(ids.length)}?`,
           description:
-            'Схемы, к которым привязаны модели данных, удалить нельзя — сначала удалите модели.',
+            'Схемы, к которым привязаны наборы данных данных, удалить нельзя — сначала удалите наборы данных.',
         }),
         onRun: async (ids) => {
           const result = await runBulk(ids, (id) => schemaStore.delete(id));

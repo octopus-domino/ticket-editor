@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useStore } from '@/shared/store/store';
 import { schemaStore } from './SchemaStore';
@@ -9,10 +9,11 @@ export interface UseSchemasResult {
   activeSchema: ReturnType<typeof schemaStore.getActive>;
   loading: boolean;
   error: string | null;
+  selectSchema: (id: string) => void;
 }
 
 export function useSchemas(): UseSchemasResult {
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const requestedSchemaId = params.get('schemaId');
   const schemas = useStore(schemaStore, (s) => s.schemas);
   const activeId = useStore(schemaStore, (s) => s.activeId);
@@ -36,5 +37,16 @@ export function useSchemas(): UseSchemasResult {
       schemaStore.setActive(requestedSchemaId);
     }
   }, [requestedSchemaId, activeId, schemas]);
-  return { schemas, activeId, activeSchema, loading, error };
+  const selectSchema = useCallback(
+    (id: string) => {
+      schemaStore.setActive(id || null);
+      const next = new URLSearchParams(params);
+      if (id) next.set('schemaId', id);
+      else next.delete('schemaId');
+      next.delete('modelId');
+      setParams(next, { replace: true });
+    },
+    [params, setParams],
+  );
+  return { schemas, activeId, activeSchema, loading, error, selectSchema };
 }

@@ -10,7 +10,7 @@ test('landing works on mobile and preserves creation intent across auth screens'
   );
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
-  await expect(page).toHaveTitle(/CoDoc.*генератор PDF/);
+  await expect(page).toHaveTitle(/CoDoc.*генерация PDF/);
   await expect(page.locator('h1')).toContainText('Документы разные.');
   await expect(page.locator('.codoc-hero-art img')).toHaveJSProperty('naturalWidth', 1536);
   expect(
@@ -70,7 +70,7 @@ test('creates an actual reusable template directly and opens its editor', async 
   await page.goto('/app/templates');
   await page.getByRole('link', { name: '+ Создать шаблон' }).click();
   await page.getByLabel('Название шаблона').fill('Сертификат участника');
-  await page.getByLabel('Поля данных').selectOption('');
+  await page.getByLabel('Схема данных').selectOption('');
   await page.getByRole('button', { name: 'Создать и открыть редактор' }).click();
   await expect(page).toHaveURL('/app/templates/created-template/edit');
   await expect(page.locator('.template-editor-toolbar')).toContainText('Сертификат участника');

@@ -20,7 +20,7 @@ import { runBulk } from '@/shared/utils/bulk';
 export const DataPanel: React.FC = () => {
   const docStore = useDocumentStore();
   const location = useLocation();
-  const { schemas, activeSchema, loading, error } = useSchemas();
+  const { schemas, activeSchema, loading, error, selectSchema } = useSchemas();
 
   const models = useStore(modelStore, (s) => s.models);
   const activeModelId = useStore(modelStore, (s) => s.selectedId);
@@ -68,10 +68,7 @@ export const DataPanel: React.FC = () => {
           const result = await runBulk(ids, (id) => modelStore.remove(id));
           if (result.ok > 0) toast.success(`Удалено: ${result.ok}`);
           if (result.failed.length > 0) {
-            toast.error(
-              `Не удалось удалить: ${result.failed.length}`,
-              result.failed[0].message,
-            );
+            toast.error(`Не удалось удалить: ${result.failed.length}`, result.failed[0].message);
           }
           setSelectedModelIds((prev) => {
             const next = new Set(prev);
@@ -93,10 +90,11 @@ export const DataPanel: React.FC = () => {
     }
     setUiError(null);
     try {
-      await schemaStore.create({
+      const created = await schemaStore.create({
         name: `Схема ${new Date().toLocaleDateString('ru-RU')}`,
         fields: inferred,
       });
+      selectSchema(created.id);
     } catch (e) {
       setUiError((e as Error).message);
     }
@@ -105,13 +103,14 @@ export const DataPanel: React.FC = () => {
   const createEmpty = async (): Promise<void> => {
     setUiError(null);
     try {
-      await schemaStore.create({
+      const created = await schemaStore.create({
         name: 'Новая схема',
         fields: [
           { path: 'title', type: 'string', required: true, label: 'Заголовок' },
           { path: 'subtitle', type: 'string', required: false, label: 'Подзаголовок' },
         ],
       });
+      selectSchema(created.id);
     } catch (e) {
       setUiError((e as Error).message);
     }
@@ -122,7 +121,7 @@ export const DataPanel: React.FC = () => {
     setCreating(true);
     setUiError(null);
     try {
-      await modelStore.create(activeSchema.id, 'Новая модель', {});
+      await modelStore.create(activeSchema.id, 'Новый набор данных', {});
     } catch (e) {
       setUiError((e as Error).message);
     } finally {
@@ -176,8 +175,18 @@ export const DataPanel: React.FC = () => {
     e.dataTransfer.effectAllowed = 'copy';
   };
 
-  if (loading) return <div className="dp-container"><div className="schema-hint">Загрузка…</div></div>;
-  if (error) return <div className="dp-container"><div className="schema-error">{error}</div></div>;
+  if (loading)
+    return (
+      <div className="dp-container">
+        <div className="schema-hint">Загрузка…</div>
+      </div>
+    );
+  if (error)
+    return (
+      <div className="dp-container">
+        <div className="schema-error">{error}</div>
+      </div>
+    );
 
   if (!activeSchema) {
     return (
@@ -189,10 +198,16 @@ export const DataPanel: React.FC = () => {
             className="dp-select-model"
             aria-label="Схема данных"
             value=""
-            onChange={(event) => schemaStore.setActive(event.target.value)}
+            onChange={(event) => selectSchema(event.target.value)}
           >
-            <option value="" disabled>Выберите схему</option>
-            {schemas.map((schema) => <option key={schema.id} value={schema.id}>{schema.name}</option>)}
+            <option value="" disabled>
+              Выберите схему
+            </option>
+            {schemas.map((schema) => (
+              <option key={schema.id} value={schema.id}>
+                {schema.name}
+              </option>
+            ))}
           </select>
         )}
         {uiError && <div className="schema-error">{uiError}</div>}
@@ -210,7 +225,9 @@ export const DataPanel: React.FC = () => {
     );
   }
 
-  const leafFields = flattenFields(activeSchema.fields).filter((f) => f.type !== 'object' && f.type !== 'array');
+  const leafFields = flattenFields(activeSchema.fields).filter(
+    (f) => f.type !== 'object' && f.type !== 'array',
+  );
   const arrayFields = flattenFields(activeSchema.fields).filter((f) => f.type === 'array');
 
   return (
@@ -220,9 +237,13 @@ export const DataPanel: React.FC = () => {
           className="dp-select-model"
           aria-label="Схема данных"
           value={activeSchema.id}
-          onChange={(e) => schemaStore.setActive(e.target.value)}
+          onChange={(e) => selectSchema(e.target.value)}
         >
-          {schemas.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          {schemas.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name}
+            </option>
+          ))}
         </select>
         <div style={{ display: 'flex', gap: 6, fontSize: 11 }}>
           <Link
@@ -279,12 +300,12 @@ export const DataPanel: React.FC = () => {
           marginTop: 12,
         }}
       >
-        <span>Модели данных</span>
+        <span>Наборы данных</span>
         <button
           className="dp-btn"
           onClick={() => void createModel()}
           disabled={creating}
-          title="Создать новую модель"
+          title="Создать новый набор данных"
           style={{ fontSize: 11 }}
         >
           {creating ? '…' : '+ Новая'}
@@ -299,12 +320,11 @@ export const DataPanel: React.FC = () => {
         activeId={activeModelId}
         onItemClick={(m) => modelStore.select(m.id)}
         bulkActions={modelBulkActions}
-        searchPlaceholder="Поиск по названию модели…"
+        searchPlaceholder="Поиск по названию набора данных…"
         emptyText={
           <span>
-            Нет моделей. Создайте через{' '}
-            <Link to="/app/data-models">Данные</Link>{' '}
-            или нажмите «+ Новая».
+            Нет наборов данных. Создайте через <Link to="/app/data-models">Данные</Link> или нажмите
+            «+ Новая».
           </span>
         }
         maxHeight={240}
@@ -342,7 +362,7 @@ export const DataPanel: React.FC = () => {
             onClick={() => docStore.applyModelToSlides(activeModel.values)}
             style={{ marginTop: 8 }}
           >
-            Применить модель к холсту
+            Применить набор данных к холсту
           </button>
         </>
       )}
@@ -355,7 +375,7 @@ export const DataPanel: React.FC = () => {
 function pluralModels(n: number): string {
   const m10 = n % 10;
   const m100 = n % 100;
-  if (m10 === 1 && m100 !== 11) return 'модель';
-  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return 'модели';
-  return 'моделей';
+  if (m10 === 1 && m100 !== 11) return 'набор данных';
+  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return 'набора данных';
+  return 'наборов данных';
 }

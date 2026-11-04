@@ -24,6 +24,7 @@ const STORAGE_KEY = 'ticket-editor:schemaId';
 export class SchemaStore extends SimpleStore<SchemaState> {
   private epoch = 0;
   private loadRevision = 0;
+  private selectionRevision = 0;
   reset(): void {
     this.epoch++;
     this.loadRevision++;
@@ -36,12 +37,15 @@ export class SchemaStore extends SimpleStore<SchemaState> {
 
   async loadAll(): Promise<void> {
     const revision = ++this.loadRevision;
+    const selectionRevision = this.selectionRevision;
     this.setState((s) => ({ ...s, loading: true, error: null }));
     try {
       const schemas = await httpSchemaRepository.list();
       if (revision !== this.loadRevision) return;
       const savedId = this.getSavedId();
-      const activeId = schemas.find((x) => x.id === savedId)?.id ?? schemas[0]?.id ?? null;
+      const activeId = selectionRevision !== this.selectionRevision
+        ? this.getState().activeId
+        : schemas.find((x) => x.id === savedId)?.id ?? schemas[0]?.id ?? null;
       if (activeId) this.setSavedId(activeId);
       this.setState({ schemas, activeId, loading: false, loaded: true, error: null });
     } catch (e) {
@@ -51,6 +55,7 @@ export class SchemaStore extends SimpleStore<SchemaState> {
   }
 
   setActive(id: string | null): void {
+    this.selectionRevision++;
     if (id) this.setSavedId(id);
     else this.removeSavedId();
     this.setState((s) => ({ ...s, activeId: id }));
@@ -84,6 +89,7 @@ export class SchemaStore extends SimpleStore<SchemaState> {
     const epoch = this.epoch;
     const created = await httpSchemaRepository.create(input);
     if (epoch !== this.epoch) return created;
+    this.selectionRevision++;
     this.setSavedId(created.id);
     this.setState((s) => ({
       ...s,

@@ -72,7 +72,7 @@ export class TemplateStore extends SimpleStore<TemplateState> {
       this.setState((s) => ({ ...s, activeId: null, active: null }));
       return;
     }
-    this.setState((s) => ({ ...s, activeId: id }));
+    this.setState((s) => ({ ...s, activeId: id, active: s.active?.id === id ? s.active : null }));
     try {
       const t = await this.repo.get(id);
       if (revision !== this.revision) return;

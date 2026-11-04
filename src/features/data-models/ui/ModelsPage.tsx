@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useStore } from '@/shared/store/store';
 import { useSchemas } from '@/features/schemas/state/useSchemas';
-import { schemaStore } from '@/features/schemas/state/SchemaStore';
 import { modelStore } from '../state/ModelStore';
 import { modelIO } from '../api/ModelIO';
 import type { DataModel } from '../domain/DataModel';
@@ -17,7 +16,7 @@ import { toast } from '@/presentation/components/toast';
 import { runBulk } from '@/shared/utils/bulk';
 
 export const ModelsPage: React.FC = () => {
-  const { schemas, activeSchema, loading: schemasLoading } = useSchemas();
+  const { schemas, activeSchema, loading: schemasLoading, selectSchema } = useSchemas();
   const [importerOpen, setImporterOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
 
@@ -97,9 +96,9 @@ export const ModelsPage: React.FC = () => {
   const create = useCallback(async (): Promise<void> => {
     if (!activeSchema) return;
     try {
-      await modelStore.create(activeSchema.id, 'Новая модель', {});
+      await modelStore.create(activeSchema.id, 'Новый набор данных', {});
     } catch (e) {
-      toast.error('Не удалось создать модель', (e as Error).message);
+      toast.error('Не удалось создать набор данных', (e as Error).message);
     }
   }, [activeSchema]);
 
@@ -109,7 +108,7 @@ export const ModelsPage: React.FC = () => {
       try {
         await modelStore.importMany(activeSchema.id, items);
         setImporterOpen(false);
-        toast.success(`Импортировано моделей: ${items.length}`);
+        toast.success(`Импортировано наборов данных: ${items.length}`);
       } catch (e) {
         toast.error('Не удалось импортировать', (e as Error).message);
       }
@@ -132,8 +131,8 @@ export const ModelsPage: React.FC = () => {
   if (schemas.length === 0) {
     return (
       <div className="schema-page">
-        <h2>Модели данных</h2>
-        <p>Модели данных привязаны к схеме. Сначала создайте схему.</p>
+        <h2>Наборы данных</h2>
+        <p>Наборы данных привязаны к схеме. Сначала создайте схему.</p>
         <Link to="/app/schemas/new" className="schema-btn-submit">
           + Создать первую схему
         </Link>
@@ -141,7 +140,27 @@ export const ModelsPage: React.FC = () => {
     );
   }
 
-  if (!activeSchema) return <div className="schema-page">Схема не выбрана</div>;
+  if (!activeSchema)
+    return (
+      <div className="schema-page">
+        <h2>Наборы данных</h2>
+        <p>Выберите схему данных — она определяет поля, которые нужно заполнить.</p>
+        <label htmlFor="data-schema">Схема данных</label>
+        <select id="data-schema" value="" onChange={(event) => selectSchema(event.target.value)}>
+          <option value="" disabled>
+            Выберите схему данных
+          </option>
+          {schemas.map((schema) => (
+            <option key={schema.id} value={schema.id}>
+              {schema.name}
+            </option>
+          ))}
+        </select>
+        <Link to="/app/schemas/new" state={{ from: '/app/data-models' }}>
+          + Создать схему данных
+        </Link>
+      </div>
+    );
 
   return (
     <div className="dm-page">
@@ -150,7 +169,8 @@ export const ModelsPage: React.FC = () => {
           <select
             className="gen-select"
             value={activeSchema.id}
-            onChange={(e) => schemaStore.setActive(e.target.value)}
+            aria-label="Схема данных"
+            onChange={(e) => selectSchema(e.target.value)}
           >
             {schemas.map((s) => (
               <option key={s.id} value={s.id}>
@@ -191,8 +211,8 @@ export const ModelsPage: React.FC = () => {
           activeId={activeModelId}
           onItemClick={(m) => modelStore.select(m.id)}
           bulkActions={bulkActions}
-          searchPlaceholder="Поиск по названию модели…"
-          emptyText="Моделей нет. Создайте новую или импортируйте JSON."
+          searchPlaceholder="Поиск по названию набора данных…"
+          emptyText="Наборов данных нет. Создайте новую или импортируйте JSON."
           loading={loading}
         />
       </aside>
@@ -216,7 +236,7 @@ export const ModelsPage: React.FC = () => {
             />
           </div>
         ) : (
-          <div className="dm-empty">Выберите модель или создайте новую</div>
+          <div className="dm-empty">Выберите набор данных или создайте новый</div>
         )}
       </main>
     </div>
@@ -226,7 +246,7 @@ export const ModelsPage: React.FC = () => {
 function plural(n: number): string {
   const m10 = n % 10;
   const m100 = n % 100;
-  if (m10 === 1 && m100 !== 11) return 'модель';
-  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return 'модели';
-  return 'моделей';
+  if (m10 === 1 && m100 !== 11) return 'набор данных';
+  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return 'набора данных';
+  return 'наборов данных';
 }

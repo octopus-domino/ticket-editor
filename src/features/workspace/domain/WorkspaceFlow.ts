@@ -40,14 +40,14 @@ export const FLOW_STEPS: FlowStepDef[] = [
   },
   {
     id: 'schema',
-    label: 'Поля',
-    emptyLabel: '+ Поля',
+    label: 'Схема данных',
+    emptyLabel: '+ Схема данных',
     hint: 'Опишите поля, которые будут меняться в документах',
   },
   {
     id: 'models',
-    label: 'Данные',
-    emptyLabel: '+ Данные',
+    label: 'Наборы данных',
+    emptyLabel: '+ Наборы данных',
     hint: 'Заполните значения для генерации',
   },
   {
@@ -109,7 +109,7 @@ export function stepStatus(step: FlowStep, ctx: FlowContext): 'empty' | 'ready' 
     case 'models':
       return ctx.modelCount > 0 ? 'ready' : 'empty';
     case 'generate':
-      return ctx.templateId && ctx.modelCount > 0 ? 'ready' : 'empty';
+      return ctx.templateId ? 'ready' : 'empty';
   }
 }
 

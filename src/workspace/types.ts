@@ -1,6 +1,6 @@
 export interface TreeNode {
   id: string;
-  type: 'folder' | 'document';
+  type: 'folder' | 'document' | 'template';
   name: string;
   parentId: string | null;
   updatedAt: string | null;

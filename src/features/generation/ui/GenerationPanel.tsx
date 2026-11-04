@@ -23,7 +23,8 @@ export const GenerationPanel: React.FC = () => {
   const [params, setParams] = useSearchParams();
 
   const { activeSchema } = useSchemas();
-  const models = useStore(modelStore, (s) => s.models);
+  const allModels = useStore(modelStore, (s) => s.models);
+  const models = allModels.filter((model) => model.schemaId === activeSchema?.id);
   const selectedId = useStore(modelStore, (s) => s.selectedId);
   const saveStatus = useStore(modelStore, (s) => s.saveStatus);
 
@@ -95,16 +96,13 @@ export const GenerationPanel: React.FC = () => {
 
   const validationIssues = useMemo(
     () =>
-      activeSchema
-        ? validateGeneration({
-            schema: activeSchema,
-            bindings: resolveBindings(slides, docStore.getState().bindings),
-            selectedModels:
-              pickedModels.length > 0 ? pickedModels : activeModel ? [activeModel] : [],
-            format,
-            supportedFormats: [...SUPPORTED],
-          })
-        : [],
+      validateGeneration({
+        schema: activeSchema,
+        bindings: resolveBindings(slides, docStore.getState().bindings),
+        selectedModels: pickedModels.length > 0 ? pickedModels : activeModel ? [activeModel] : [],
+        format,
+        supportedFormats: [...SUPPORTED],
+      }),
     [activeSchema, slides, pickedModels, activeModel, format, docStore],
   );
 
@@ -113,7 +111,7 @@ export const GenerationPanel: React.FC = () => {
       return [
         {
           kind: 'format' as const,
-          message: 'Для «Один файл» выберите ровно одну модель.',
+          message: 'Для «Один файл» выберите ровно один набор данных.',
         },
       ];
     }
@@ -126,7 +124,7 @@ export const GenerationPanel: React.FC = () => {
   const useAsync = pickedModels.length > 100;
 
   const run = useCallback(async (): Promise<void> => {
-    if (!activeSchema || !canRun) return;
+    if (!canRun) return;
 
     const modelsToRender =
       pickedModels.length > 0
@@ -138,7 +136,7 @@ export const GenerationPanel: React.FC = () => {
                 id: '__empty__',
                 name: 'empty',
                 values: {},
-                schemaId: activeSchema.id,
+                schemaId: activeSchema?.id ?? '',
                 createdAt: '',
                 updatedAt: '',
               },
@@ -149,7 +147,7 @@ export const GenerationPanel: React.FC = () => {
     }));
 
     const req = {
-      schemaId: activeSchema.id,
+      schemaId: activeSchema?.id,
       bindings: resolveBindings(slides, docStore.getState().bindings),
       inlineSlides: slides,
       items,
@@ -199,67 +197,76 @@ export const GenerationPanel: React.FC = () => {
     try {
       await modelStore.importMany(activeSchema.id, items);
       setImporterOpen(false);
-      toast.success(`Импортировано моделей: ${items.length}`);
+      toast.success(`Импортировано наборов данных: ${items.length}`);
     } catch (e) {
       toast.error('Не удалось импортировать', (e as Error).message);
     }
   };
 
-  if (!activeSchema) {
-    return (
-      <div className="dp-container">
-        <div className="schema-error">
-          Схема не выбрана. Откройте вкладку «Данные» и выберите схему.
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="dp-container" style={{ overflowY: 'auto' }}>
       <div className="gen-preview">
-        <div style={{ fontWeight: 600 }}>📄 {activeSchema.name}</div>
+        <div style={{ fontWeight: 600 }}>
+          📄 {activeSchema?.name ?? 'Документ без подстановки данных'}
+        </div>
         <div className="schema-hint">
-          Слайдов: {slides.length} · Моделей: {models.length}
+          Слайдов: {slides.length} · Наборов данных: {models.length}
         </div>
       </div>
-
-      <div
-        className="dp-section-title"
-        style={{ display: 'flex', justifyContent: 'space-between' }}
-      >
-        <span>Модели</span>
-        <span style={{ display: 'flex', gap: 4 }}>
-          <button className="dp-btn" onClick={() => setImporterOpen((v) => !v)} title="Импорт JSON">
-            📥
-          </button>
-          <button
-            className="dp-btn"
-            onClick={() => modelIO.download(models, `${activeSchema.name}-models.json`)}
-            title="Экспорт JSON"
+      {!activeSchema && (
+        <p className="schema-hint">
+          Будет создан один документ из текущего макета. Для персонализации выберите или создайте
+          схему данных во вкладке «Данные».
+        </p>
+      )}
+      {activeSchema && (
+        <>
+          <div
+            className="dp-section-title"
+            style={{ display: 'flex', justifyContent: 'space-between' }}
           >
-            📤
-          </button>
-        </span>
-      </div>
+            <span>Наборы данных</span>
+            <span style={{ display: 'flex', gap: 4 }}>
+              <button
+                className="dp-btn"
+                onClick={() => setImporterOpen((v) => !v)}
+                title="Импорт JSON"
+              >
+                📥
+              </button>
+              <button
+                className="dp-btn"
+                onClick={() => modelIO.download(models, `${activeSchema.name}-models.json`)}
+                title="Экспорт JSON"
+              >
+                📤
+              </button>
+            </span>
+          </div>
 
-      {importerOpen && <JsonImporterPanel schemaId={activeSchema?.id} onImport={importModels} />}
+          {importerOpen && (
+            <JsonImporterPanel schemaId={activeSchema?.id} onImport={importModels} />
+          )}
 
-      <SearchSelectList<DataModel>
-        items={models}
-        adapter={modelAdapter}
-        selectedIds={pickedIds}
-        onSelectionChange={setPickedIds}
-        activeId={selectedId}
-        onItemClick={(m) => modelStore.select(m.id)}
-        bulkActions={[]}
-        searchPlaceholder="Поиск по названию модели…"
-        emptyText={
-          <span>Моделей нет. Создайте в разделе «Данные» или нажмите 📥 для импорта.</span>
-        }
-        maxHeight={260}
-        minHeight={140}
-      />
+          <SearchSelectList<DataModel>
+            items={models}
+            adapter={modelAdapter}
+            selectedIds={pickedIds}
+            onSelectionChange={setPickedIds}
+            activeId={selectedId}
+            onItemClick={(m) => modelStore.select(m.id)}
+            bulkActions={[]}
+            searchPlaceholder="Поиск по названию набора данных…"
+            emptyText={
+              <span>
+                Наборов данных нет. Создайте в разделе «Данные» или нажмите 📥 для импорта.
+              </span>
+            }
+            maxHeight={260}
+            minHeight={140}
+          />
+        </>
+      )}
 
       {blockingIssues.length > 0 && (
         <div className="schema-error" style={{ marginTop: 12 }}>
@@ -278,7 +285,7 @@ export const GenerationPanel: React.FC = () => {
         </div>
       )}
 
-      {activeModel && (
+      {activeModel && activeSchema && (
         <div style={{ marginTop: 12 }}>
           <div
             className="dp-section-title"
@@ -326,7 +333,7 @@ export const GenerationPanel: React.FC = () => {
           onChange={(e) => updateParams({ packAs: e.target.value })}
         >
           <option value="zip">ZIP</option>
-          <option value="single">Один файл (если 1 модель)</option>
+          <option value="single">Один файл (если 1 набор данных)</option>
         </select>
       </label>
 

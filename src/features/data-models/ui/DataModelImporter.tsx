@@ -94,7 +94,7 @@ export const DataModelImporter: React.FC<Props> = ({ onImport }) => {
       {preview && (
         <div style={{ marginTop: 8 }}>
           <div style={{ fontSize: 12, color: '#16a34a', marginBottom: 6 }}>
-            ✓ Найдено {preview.length} моделей
+            ✓ Найдено {preview.length} наборов данных
           </div>
           <button
             onClick={() => void apply()}

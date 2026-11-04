@@ -5,6 +5,7 @@ import { authStore } from '@/auth/store';
 import { workspaceStore } from '../store';
 import { workspaceApi } from '../api';
 import type { TreeNode } from '../types';
+import { templateStore } from '@/features/templates/state/TemplateStore';
 
 function findPathToNode(tree: TreeNode[], targetId: string): string[] | null {
   for (const node of tree) {
@@ -20,16 +21,16 @@ function findPathToNode(tree: TreeNode[], targetId: string): string[] | null {
 const WorkspaceNav: React.FC = () => (
   <nav className="workspace-nav" style={{ gridTemplateColumns: '1fr 1fr' }}>
     <NavLink to="/app" end className={({ isActive }) => (isActive ? 'active' : '')}>
-      📁 Проекты
+      📁 Документы
     </NavLink>
     <NavLink to="/app/schemas" className={({ isActive }) => (isActive ? 'active' : '')}>
-      📋 Поля данных
+      📋 Схемы данных
     </NavLink>
     <NavLink to="/app/templates" className={({ isActive }) => (isActive ? 'active' : '')}>
       🎨 Шаблоны
     </NavLink>
     <NavLink to="/app/data-models" className={({ isActive }) => (isActive ? 'active' : '')}>
-      📊 Данные
+      📊 Наборы данных
     </NavLink>
     <NavLink to="/app/generate" className={({ isActive }) => (isActive ? 'active' : '')}>
       ⚡ Генерация
@@ -126,6 +127,7 @@ const TreeItem: React.FC<{
     if (name === node.name) { setRenaming(false); return; }
     try {
       if (isFolder) await workspaceApi.renameFolder(node.id, name);
+      else if (node.type === 'template') await templateStore.rename(node.id, name);
       else await workspaceApi.renameDocument(node.id, name);
       await workspaceStore.refresh();
     } catch (err) {
@@ -139,6 +141,7 @@ const TreeItem: React.FC<{
     if (offline) return;
     try {
       if (isFolder) await workspaceApi.deleteFolder(node.id);
+      else if (node.type === 'template') await templateStore.delete(node.id);
       else await workspaceApi.deleteDocument(node.id);
       await workspaceStore.refresh();
     } catch (err) {
@@ -176,7 +179,13 @@ const TreeItem: React.FC<{
           fontWeight: isFolder ? 600 : 400,
           color: isActiveDoc ? 'var(--accent-hover)' : 'var(--text)',
         }}
-        onClick={() => { if (isFolder) handleToggleFolder(); else navigate(`/app/editor/${node.id}`); }}
+        onClick={() => {
+          if (isFolder) handleToggleFolder();
+          else {
+            workspaceStore.setActiveFolder(node.parentId);
+            navigate(node.type === 'template' ? `/app/templates/${node.id}/edit` : `/app/editor/${node.id}`);
+          }
+        }}
         onDoubleClick={() => { if (!offline) setRenaming(true); }}
       >
         {isFolder ? (
@@ -245,20 +254,21 @@ const TreeItem: React.FC<{
 
 export const WorkspaceSidebar: React.FC = () => {
   const tree = useStore(workspaceStore, (s) => s.tree);
+  const templateItems = useStore(templateStore, (s) => s.items);
   const loading = useStore(workspaceStore, (s) => s.loading);
   const activeFolderId = useStore(workspaceStore, (s) => s.activeFolderId);
   const user = useStore(authStore, (s) => s.user);
   const offline = useStore(authStore, (s) => s.offline);
 
   const navigate = useNavigate();
-  const { docId } = useParams();
-  const currentDocId = docId ?? null;
+  const { docId, templateId } = useParams();
+  const currentDocId = docId ?? templateId ?? null;
 
   const [creatingRoot, setCreatingRoot] = useState<'folder' | 'document' | null>(null);
 
   useEffect(() => {
     if (!offline) void workspaceStore.refresh();
-  }, [offline]);
+  }, [offline, templateItems]);
 
   useEffect(() => {
     if (!currentDocId || tree.length === 0) return;
@@ -308,11 +318,11 @@ export const WorkspaceSidebar: React.FC = () => {
         {!offline && (
           <div style={{ display: 'flex', gap: 4 }}>
             <button
-              onClick={() => { setCreatingRoot('document'); workspaceStore.setActiveFolder(null); }}
+              onClick={() => { setCreatingRoot('document'); }}
               style={{ flex: 1, padding: '6px 0', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
             >+ Документ</button>
             <button
-              onClick={() => { setCreatingRoot('folder'); workspaceStore.setActiveFolder(null); }}
+              onClick={() => { setCreatingRoot('folder'); }}
               style={{ flex: 1, padding: '6px 0', background: 'var(--panel-alt)', border: '1px solid var(--border-strong)', borderRadius: 4, cursor: 'pointer', fontSize: 12, color: 'var(--text)' }}
             >+ Папка</button>
           </div>
@@ -320,6 +330,7 @@ export const WorkspaceSidebar: React.FC = () => {
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: 8 }}>
+        <button type="button" onClick={() => workspaceStore.setActiveFolder(null)} aria-pressed={activeFolderId === null} style={{ marginBottom: 8 }}>Все документы (корневая папка)</button>
         {loading && !offline && <div style={{ fontSize: 12, color: 'var(--text-soft)', padding: 8 }}>Загрузка…</div>}
         {!offline && creatingRoot && (
           <InlineInput

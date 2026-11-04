@@ -28,7 +28,7 @@ function downloadBlob(blob: Blob, filename: string): void {
 
 export const GenerationPage: React.FC = () => {
   const [params, setParams] = useSearchParams();
-  const { activeSchema } = useSchemas();
+  const { schemas, loading: schemasLoading } = useSchemas();
 
   const templates = useStore(templateStore, (s) => s.items);
   const activeTemplateId = useStore(templateStore, (s) => s.activeId);
@@ -36,10 +36,13 @@ export const GenerationPage: React.FC = () => {
   const templatesLoading = useStore(templateStore, (s) => s.loading);
   const templatesError = useStore(templateStore, (s) => s.error);
 
-  const models = useStore(modelStore, (s) => s.models);
+  const allModels = useStore(modelStore, (s) => s.models);
   const modelsLoading = useStore(modelStore, (s) => s.loading);
   const modelsError = useStore(modelStore, (s) => s.error);
   const saveStatus = useStore(modelStore, (s) => s.saveStatus);
+  const activeSchema = schemas.find((schema) => schema.id === activeTemplate?.schemaId) ?? null;
+  const models = allModels.filter((model) => model.schemaId === activeTemplate?.schemaId);
+  const withoutData = Boolean(activeTemplate && !activeTemplate.schemaId);
 
   const urlTemplateId = params.get('templateId');
   const formatFromUrl = (params.get('format') as Format | null) ?? 'pdfa';
@@ -65,8 +68,8 @@ export const GenerationPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    void templateStore.loadAll(activeSchema?.id);
-  }, [activeSchema?.id]);
+    void templateStore.loadAll();
+  }, []);
 
   useEffect(() => {
     if (activeSchema) void modelStore.load(activeSchema.id);
@@ -75,19 +78,10 @@ export const GenerationPage: React.FC = () => {
 
   useEffect(() => {
     const targetId = urlTemplateId ?? activeTemplateId;
-    if (targetId && targetId !== activeTemplateId) {
+    if (targetId && (targetId !== activeTemplateId || activeTemplate?.id !== targetId)) {
       void templateStore.select(targetId);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [urlTemplateId]);
-
-  useEffect(() => {
-    if (!activeTemplateId) return;
-    const next = new URLSearchParams(params);
-    next.set('templateId', activeTemplateId);
-    setParams(next, { replace: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTemplateId]);
+  }, [urlTemplateId, activeTemplateId, activeTemplate?.id]);
 
   const updateUrl = useCallback(
     (patch: Record<string, string | null>) => {
@@ -135,7 +129,9 @@ export const GenerationPage: React.FC = () => {
   );
 
   const blockingReasons = useMemo(() => {
-    if (!activeTemplate) return ['Template required'];
+    if (!activeTemplate) return ['Выберите шаблон'];
+    if (activeTemplate.schemaId && !activeSchema)
+      return [schemasLoading ? 'Загрузка схемы данных…' : 'Схема данных шаблона недоступна'];
     return validateGeneration({
       schema: activeSchema,
       bindings: activeTemplate.bindings.length
@@ -145,7 +141,7 @@ export const GenerationPage: React.FC = () => {
       format,
       supportedFormats: [...SUPPORTED],
     }).map((issue) => issue.message);
-  }, [activeTemplate, activeSchema, pickedModels, format]);
+  }, [activeTemplate, activeSchema, pickedModels, format, schemasLoading]);
   const canRun = blockingReasons.length === 0 && !busy && !phase.endsWith('running');
 
   const run = useCallback(async (): Promise<void> => {
@@ -157,7 +153,9 @@ export const GenerationPage: React.FC = () => {
       templateId: activeTemplate.id,
       schemaId: activeTemplate.schemaId ?? undefined,
       inlineSlides: activeTemplate.slides,
-      items: pickedModels.map((m) => ({ inlineValues: m.values })),
+      items: withoutData
+        ? [{ inlineValues: {} }]
+        : pickedModels.map((m) => ({ inlineValues: m.values })),
       format,
       packAs,
       filenamePattern,
@@ -172,7 +170,7 @@ export const GenerationPage: React.FC = () => {
     } finally {
       setBusy(false);
     }
-  }, [canRun, activeTemplate, pickedModels, format, packAs, filenamePattern]);
+  }, [canRun, activeTemplate, pickedModels, format, packAs, filenamePattern, withoutData]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -190,20 +188,22 @@ export const GenerationPage: React.FC = () => {
       <main className="gen-main">
         <h2 className="gen-title">Генерация документов</h2>
         <p className="gen-subtitle">
-          Шаблон × модели данных → документы. Формат: <b>{format.toUpperCase()}</b>, упаковка:{' '}
+          Шаблон × наборы данных → документы. Формат: <b>{format.toUpperCase()}</b>, упаковка:{' '}
           <b>{packAs}</b>.
         </p>
 
         {templatesLoading && <div className="schema-hint">Загрузка шаблонов…</div>}
         {templatesError && <div className="schema-error">{templatesError}</div>}
-        {modelsLoading && <div className="schema-hint">Загрузка моделей…</div>}
-        {modelsError && <div className="schema-error">{modelsError}</div>}
+        {!withoutData && modelsLoading && (
+          <div className="schema-hint">Загрузка наборов данных…</div>
+        )}
+        {!withoutData && modelsError && <div className="schema-error">{modelsError}</div>}
 
         {activeTemplate && (
           <div className="gen-preview">
             <div style={{ fontWeight: 600 }}>📄 {activeTemplate.name}</div>
             <div className="schema-hint">
-              Слайдов: {activeTemplate.slides.length} · Моделей: {models.length} · Выбрано:{' '}
+              Слайдов: {activeTemplate.slides.length} · Наборов данных: {models.length} · Выбрано:{' '}
               {pickedModels.length}
             </div>
           </div>
@@ -255,7 +255,10 @@ export const GenerationPage: React.FC = () => {
         <select
           className="gen-select"
           value={activeTemplateId ?? ''}
-          onChange={(e) => void templateStore.select(e.target.value || null)}
+          onChange={(e) => {
+            updateUrl({ templateId: e.target.value });
+            setPickedIds(new Set());
+          }}
         >
           <option value="" disabled>
             — выберите шаблон —
@@ -267,26 +270,36 @@ export const GenerationPage: React.FC = () => {
           ))}
         </select>
 
-        <h3 className="gen-section-title">Модели данных</h3>
+        <h3 className="gen-section-title">Наборы данных</h3>
+        {withoutData ? (
+          <p className="schema-hint">
+            У шаблона нет схемы данных. Будет создан один документ из макета без подстановки
+            значений.
+          </p>
+        ) : (
+          <>
+            <SearchSelectList<DataModel>
+              items={models}
+              adapter={modelAdapter}
+              selectedIds={pickedIds}
+              onSelectionChange={setPickedIds}
+              rowClickTogglesSelection={true}
+              bulkActions={[]}
+              searchPlaceholder="Поиск по названию набора данных…"
+              emptyText={
+                <span>
+                  Наборов данных нет. Создайте в <Link to="/app/data-models">Данные</Link>.
+                </span>
+              }
+              maxHeight={300}
+              minHeight={160}
+            />
 
-        <SearchSelectList<DataModel>
-          items={models}
-          adapter={modelAdapter}
-          selectedIds={pickedIds}
-          onSelectionChange={setPickedIds}
-          rowClickTogglesSelection={true}
-          bulkActions={[]}
-          searchPlaceholder="Поиск по названию модели…"
-          emptyText={
-            <span>
-              Моделей нет. Создайте в <Link to="/app/data-models">Данные</Link>.
-            </span>
-          }
-          maxHeight={300}
-          minHeight={160}
-        />
-
-        {saveStatus === 'saving' && <div className="schema-hint">💾 сохранение модели…</div>}
+            {saveStatus === 'saving' && (
+              <div className="schema-hint">💾 сохранение набора данных…</div>
+            )}
+          </>
+        )}
 
         <h3 className="gen-section-title">Параметры</h3>
 
@@ -311,7 +324,7 @@ export const GenerationPage: React.FC = () => {
             onChange={(e) => updateUrl({ packAs: e.target.value })}
           >
             <option value="zip">ZIP</option>
-            <option value="single">Один файл (1 модель)</option>
+            <option value="single">Один файл (1 набор данных)</option>
           </select>
         </label>
 

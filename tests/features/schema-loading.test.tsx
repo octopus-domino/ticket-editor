@@ -26,3 +26,15 @@ it('treats an empty schema list as a completed load rather than loading forever'
   expect(repository.list).toHaveBeenCalledTimes(1);
   unmount();
 });
+
+it('does not attach the first schema when a document explicitly cleared its schema during loading', async () => {
+  schemaStore.reset();
+  let complete!: (schemas: unknown[]) => void;
+  repository.list.mockReturnValue(new Promise((resolve) => { complete = resolve; }));
+  const loading = schemaStore.loadAll();
+  schemaStore.setActive(null);
+  complete([{ id: 'S', name: 'Unrelated schema', fields: [] }]);
+  await loading;
+  expect(schemaStore.getState().schemas).toHaveLength(1);
+  expect(schemaStore.getState().activeId).toBeNull();
+});

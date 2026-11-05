@@ -9,6 +9,7 @@ import { SimpleStore } from '@/shared/store/store';
 import type { GraphicStyle, SymbolDef } from '@/shared/types';
 import { generateIdWithPrefix } from '@/shared/utils/id';
 import { logger } from '@/shared/logger';
+import { isGuest,guestRead,guestWrite } from '@/shared/session/guest';
 
 const STORAGE_KEY = 'ticket-editor:graphics:v1';
 
@@ -19,7 +20,7 @@ export interface GraphicsState {
 
 function loadFromStorage(): GraphicsState {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = isGuest()?guestRead(STORAGE_KEY):localStorage.getItem(STORAGE_KEY);
     if (!raw) return { styles: [], symbols: [] };
     const parsed = JSON.parse(raw);
     return {
@@ -34,7 +35,7 @@ function loadFromStorage(): GraphicsState {
 
 function saveToStorage(state: GraphicsState): void {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    if(isGuest())guestWrite(STORAGE_KEY,JSON.stringify(state));else localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch (err) {
     logger.warn('graphics.save_failed', { error: String(err) });
   }

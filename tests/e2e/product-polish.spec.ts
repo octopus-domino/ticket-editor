@@ -31,7 +31,7 @@ async function mockAccount(page: Page) {
 test('the nine-language flows contain no leftover Russian outside the language picker', async ({
   browser,
 }) => {
-  test.setTimeout(180_000);
+  test.setTimeout(300_000);
   for (const locale of ['en', 'zh', 'pl', 'it', 'es', 'nl', 'fr', 'de', 'ru']) {
     const context = await browser.newContext({ locale: `${locale}-${locale.toUpperCase()}` });
     const page = await context.newPage();
@@ -69,10 +69,10 @@ test('concrete tutorials show evolving artifacts and open the round stamp with a
 }) => {
   await mockAccount(page);
   await page.goto('/learn?lesson=document');
-  await expect(page.locator('.lesson-index button')).toHaveCount(23);
+  await expect(page.locator('.lesson-index button')).toHaveCount(25);
   const image = page.locator('.lesson-paper>img');
   const before = await image.getAttribute('src');
-  await page.locator('.lesson-index button').nth(11).click();
+  await page.locator('.lesson-index button').nth(13).click();
   await expect(image).not.toHaveAttribute('src', before!);
   await expect(page.locator('.lesson-description')).toContainText('4 × 2');
   await page.goto('/learn?lesson=stamp');

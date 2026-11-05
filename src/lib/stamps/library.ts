@@ -14,6 +14,7 @@ import { SPECIAL_STAMPS } from './specialStamps';
 import { BANKING_STAMPS_WITH_IMAGES } from './bankingStampsWithImages';
 import type { StampTemplate } from './types';
 import { essentialStamps } from './essential';
+import { isGuest,guestRead,guestWrite } from '@/shared/session/guest';
 
 export type { StampTemplate } from './types';
 
@@ -118,7 +119,7 @@ export const BUILTIN_STAMPS: StampTemplate[] = [
 
 export function loadCustomStamps(): StampTemplate[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = isGuest()?guestRead(STORAGE_KEY):localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
     const arr = JSON.parse(raw);
     return Array.isArray(arr) ? arr : [];
@@ -126,7 +127,7 @@ export function loadCustomStamps(): StampTemplate[] {
 }
 
 export function saveCustomStamps(stamps: StampTemplate[]): void {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(stamps)); } catch { /* ignore */ }
+  try { if(isGuest())guestWrite(STORAGE_KEY,JSON.stringify(stamps));else localStorage.setItem(STORAGE_KEY, JSON.stringify(stamps)); } catch { /* ignore */ }
 }
 
 /* ------------------------------------------------------------

@@ -2,6 +2,7 @@ import { SimpleStore } from '@/shared/store/store';
 import type { DataSchema, FieldDef } from '../domain/DataSchema';
 import { httpSchemaRepository } from '../api/HttpSchemaRepository';
 import { reachGoal } from '@/shared/analytics/metrika';
+import { isGuest,guestRead,guestWrite,guestRemove } from '@/shared/session/guest';
 
 export interface SchemaState {
   schemas: DataSchema[];
@@ -126,21 +127,21 @@ export class SchemaStore extends SimpleStore<SchemaState> {
 
   private getSavedId(): string | null {
     try {
-      return localStorage.getItem(STORAGE_KEY);
+      return isGuest()?guestRead(STORAGE_KEY):localStorage.getItem(STORAGE_KEY);
     } catch {
       return null;
     }
   }
   private setSavedId(id: string): void {
     try {
-      localStorage.setItem(STORAGE_KEY, id);
+      if(isGuest())guestWrite(STORAGE_KEY,id);else localStorage.setItem(STORAGE_KEY, id);
     } catch {
       /* ignore */
     }
   }
   private removeSavedId(): void {
     try {
-      localStorage.removeItem(STORAGE_KEY);
+      if(isGuest())guestRemove(STORAGE_KEY);else localStorage.removeItem(STORAGE_KEY);
     } catch {
       /* ignore */
     }

@@ -10,6 +10,7 @@ import { hydrateDocument, type HydratedDocument } from '../hydrateDocument';
 import { documentDrafts } from '@/presentation/hooks/editor/useDocumentPersistence';
 import { authStore } from '@/auth/store';
 import { useStore } from '@/shared/store/store';
+import { ResourceHistoryPanel } from '@/features/history/ResourceHistoryPanel';
 import { schemaStore } from '@/features/schemas/state/SchemaStore';
 import { modelStore } from '@/features/data-models/state/ModelStore';
 import {
@@ -206,9 +207,10 @@ const DocumentEditorSession: React.FC<{ docId?: string }> = ({ docId }) => {
         <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
           {doc.name} {isLocal && __tr("(Сохранено локально)")}
         </span>
+        {!isLocal && <ResourceHistoryPanel kind="document" id={docId} />}
       </div>
       <div style={{ flex: 1, minHeight: 0 }}>
-        <Editor key={docId} documentId={docId} initialDoc={initial} onSave={handleSave} />
+        <Editor key={docId} documentId={docId} initialDoc={initial} onSave={handleSave} saveContext={activeSchemaId} />
       </div>
     </div>
   );

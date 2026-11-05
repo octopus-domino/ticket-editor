@@ -5,6 +5,7 @@ export type PersistenceStatus = 'saving' | 'saved' | 'error';
 /** Persist a local recovery copy before enqueueing a serialized remote write. */
 export class DocumentPersistence<T> {
   private revision = 0;
+  private lastContent: string | undefined;
   private readonly session = crypto.randomUUID();
   private local: Promise<void> = Promise.resolve();
   private readonly queue: RevisionSaveQueue<{ revision: number; snapshot: T }>;
@@ -28,7 +29,10 @@ export class DocumentPersistence<T> {
       }
     }, 1500);
   }
-  update(snapshot: T): void {
+  update(snapshot: T, context?: string | null): void {
+    const content = JSON.stringify([context, snapshot]);
+    if (content === this.lastContent) return;
+    this.lastContent = content;
     const revision = ++this.revision;
     this.notify('saving');
     this.local = this.local

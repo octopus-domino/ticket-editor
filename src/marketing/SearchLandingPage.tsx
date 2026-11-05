@@ -45,6 +45,7 @@ export function SearchLandingPage() {
         </Link>
       </header>
       <main className="codoc-container search-main">
+        <p className="codoc-micro">{__tr('Free to use')}</p>
         <nav className="search-breadcrumbs" aria-label={__tr("Хлебные крошки")}>
           <Link to="/">{__tr("Главная")}</Link>
           <span aria-hidden="true">/</span>

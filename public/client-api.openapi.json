@@ -1,0 +1,23 @@
+{
+  "openapi": "3.0.3",
+  "info": { "title": "CoDoc client API", "version": "1.0.0", "description": "Private-owner document generation through Tyk OSS. Limits: 60 requests/minute and 10000/month per key, plus application generation limits. Send X-API-Key over HTTPS. Create/revoke keys in the CoDoc account portal." },
+  "servers": [{ "url": "/client-api" }],
+  "security": [{ "ClientKey": [] }],
+  "paths": {
+    "/templates": { "get": { "summary": "List your templates (read scope)", "responses": { "200": { "description": "Template summaries" }, "401": { "description": "Invalid, expired or revoked key" }, "403": { "description": "Missing read scope" }, "429": { "description": "Rate limit or quota exceeded" } } } },
+    "/templates/{id}": { "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "get": { "summary": "Get your template (read scope)", "responses": { "200": { "description": "Template including slides and bindings" }, "404": { "description": "Not found or not owned by this account" } } } },
+    "/schemas": { "get": { "summary": "List your data schemas (read scope)", "responses": { "200": { "description": "Schemas and field definitions" } } } },
+    "/data-models": {
+      "get": { "summary": "List your data models (read scope)", "parameters": [{ "name": "schemaId", "in": "query", "schema": { "type": "string" } }], "responses": { "200": { "description": "Data models" } } },
+      "post": { "summary": "Create a data model (data:write scope)", "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["schemaId", "name", "values"], "properties": { "schemaId": { "type": "string" }, "name": { "type": "string", "maxLength": 200 }, "values": { "type": "object", "maxProperties": 500 } } } } } }, "responses": { "201": { "description": "Created model" }, "400": { "description": "Invalid model or schema" } } }
+    },
+    "/generate/sync": { "post": { "summary": "Generate up to 100 documents (generate scope)", "requestBody": { "$ref": "#/components/requestBodies/Generation" }, "responses": { "200": { "description": "PDF, SVG or ZIP. Counts and item errors in X-Generation-* headers.", "content": { "application/pdf": { "schema": { "type": "string", "format": "binary" } }, "application/zip": { "schema": { "type": "string", "format": "binary" } }, "image/svg+xml": { "schema": { "type": "string" } } } }, "400": { "description": "Validation failed or all items failed" }, "413": { "description": "Use async for more than 100 items" } } } },
+    "/generate": { "post": { "summary": "Start async generation of up to 10000 items (generate scope)", "requestBody": { "$ref": "#/components/requestBodies/Generation" }, "responses": { "202": { "description": "Job ID and initial status" }, "409": { "description": "Two active jobs already exist for this account" } } } },
+    "/generate/{jobId}": { "parameters": [{ "name": "jobId", "in": "path", "required": true, "schema": { "type": "string" } }], "get": { "summary": "Poll your job (read scope)", "responses": { "200": { "description": "Progress, item errors, expiry and result URL" } } }, "delete": { "summary": "Cancel your job (generate scope)", "responses": { "200": { "description": "Cancellation requested" } } } },
+    "/generate/{jobId}/result": { "parameters": [{ "name": "jobId", "in": "path", "required": true, "schema": { "type": "string" } }], "get": { "summary": "Download your completed result (read scope)", "responses": { "200": { "description": "Binary result" }, "404": { "description": "Unknown or expired result" } } } }
+  },
+  "components": {
+    "securitySchemes": { "ClientKey": { "type": "apiKey", "in": "header", "name": "X-API-Key" } },
+    "requestBodies": { "Generation": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["templateId", "items", "format", "packAs"], "properties": { "templateId": { "type": "string" }, "items": { "type": "array", "minItems": 1, "maxItems": 10000, "items": { "type": "object", "properties": { "dataModelId": { "type": "string" }, "inlineValues": { "type": "object" }, "filenameOverride": { "type": "string" } } } }, "format": { "type": "string", "enum": ["svg", "pdf", "pdfa"] }, "packAs": { "type": "string", "enum": ["single", "zip", "multipage-pdf"] }, "filenamePattern": { "type": "string", "example": "document-{{name}}" }, "options": { "type": "object", "properties": { "embedImages": { "type": "boolean", "default": true }, "pdfVersion": { "type": "string", "enum": ["pdf/a-2b"] } } } } } } } } }
+  }
+}

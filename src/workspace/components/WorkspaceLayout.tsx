@@ -1,7 +1,7 @@
 import { t as __tr } from '@/shared/i18n';
 // src/workspace/components/WorkspaceLayout.tsx
 import React, { useEffect } from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Link, Outlet, useNavigate,useLocation } from 'react-router-dom';
 import { WorkspaceFlowBreadcrumbs } from './WorkspaceFlowBreadcrumbs';
 import { WorkspaceSidebar } from './WorkspaceSidebar';
 import { useStore } from '@/shared/store/store';
@@ -14,10 +14,13 @@ import { FeedbackWidget } from '@/features/feedback/ui/FeedbackWidget';
 import { LanguageSwitcher } from '@/shared/i18n/LanguageSwitcher';
 import { t } from '@/shared/i18n';
 import { useMobilePanel, toggleMobilePanel, closeMobilePanel } from '@/shared/mobile/panels';
+import { isGuest } from '@/shared/session/guest';
 
 export const WorkspaceLayout: React.FC = () => {
   const mobilePanel = useMobilePanel();
   const navigate = useNavigate();
+  const location=useLocation();
+  useEffect(()=>closeMobilePanel(),[location.pathname]);
   const { schemas, activeSchema } = useSchemas();
   const user = useStore(authStore, (s) => s.user);
   const offline = useStore(authStore, (s) => s.offline);
@@ -41,6 +44,7 @@ export const WorkspaceLayout: React.FC = () => {
 
   return (
     <div className="workspace-layout" data-mobile-panel={mobilePanel || undefined}>
+      {isGuest()&&<div className="guest-session-note" role="status">{t('Guest session: changes are not saved to the server.')}</div>}
       <header className="workspace-header">
         <button type="button" className="mobile-menu-button" aria-label={t('Documents')} onClick={() => toggleMobilePanel('documents')}>☰</button>
         <div className="logo">CoDoc</div>
@@ -52,12 +56,14 @@ export const WorkspaceLayout: React.FC = () => {
           <FeedbackWidget surface="workspace" />
           {user ? (
             <>
+              <Link className="workspace-profile-link" to={isGuest()?'/login':'/app/profile'} aria-label={t('Client profile')}>
               <span className="workspace-avatar" title={displayName}>
                 {displayName.charAt(0).toUpperCase()}
               </span>
               <span className="workspace-username" title={displayName}>
                 {displayName}
               </span>
+              </Link>
               <button
                 type="button"
                 className="workspace-login-btn"

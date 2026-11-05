@@ -2,6 +2,7 @@ import { SimpleStore } from '@/shared/store/store';
 import type { User } from './types';
 import { authApi } from './api';
 import { configureHttpSession } from '@/shared/api/session';
+import { isGuest,startGuest,endGuest } from '@/shared/session/guest';
 
 export interface AuthState {
   user: User | null;
@@ -43,6 +44,7 @@ export class AuthStore extends SimpleStore<AuthState> {
   }
 
   setSession(accessToken: string, user: User): void {
+    endGuest();
     this.setState({
       user,
       accessToken,
@@ -63,6 +65,7 @@ export class AuthStore extends SimpleStore<AuthState> {
   }
 
   async bootstrap(): Promise<void> {
+    if(isGuest()){this.enterGuest();return;}
     // Хостинг статики (GH Pages и т.п.) — бэкенда нет by design.
     // Не стучимся в /api, сразу локальный режим.
     if (isStaticHost()) {
@@ -82,6 +85,7 @@ export class AuthStore extends SimpleStore<AuthState> {
 
     try {
       const data = await authApi.refresh();
+      if(isGuest()){this.enterGuest();return;}
       if (data) {
         this.setSession(data.accessToken, data.user);
       } else {
@@ -137,9 +141,11 @@ export class AuthStore extends SimpleStore<AuthState> {
   }
 
   async logout(): Promise<void> {
-    await authApi.logout().catch(() => undefined);
+    if(!isGuest())await authApi.logout().catch(() => undefined);
+    endGuest();
     this.clear();
   }
+  enterGuest():void{startGuest();this.setState({user:{id:'guest',name:'Guest',email:''},accessToken:null,booting:false,error:null,offline:false});}
 }
 
 export const authStore = new AuthStore();

@@ -1,5 +1,8 @@
 import { getHttpSession } from './session';
 import { t } from '@/shared/i18n/core';
+import { isGuest } from '@/shared/session/guest';
+import { guestApi,guestGenerationBody } from './guestApi';
+import { describeApiFailure } from './businessErrors';
 
 const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? '';
 
@@ -23,6 +26,14 @@ export async function authFetch(
   input: RequestInfo | URL,
   init: RequestInit = {},
 ): Promise<Response> {
+  if(isGuest()){
+    const guestUrl=new URL(String(input),window.location.origin);
+    if(guestUrl.pathname.startsWith('/api/export/')||guestUrl.pathname.startsWith('/api/recognition')||['/api/generate/sync','/api/generate/preview'].includes(guestUrl.pathname)){
+      const body=guestUrl.pathname.startsWith('/api/generate/')?JSON.stringify(guestGenerationBody(String(init.body))):init.body;
+      return fetch(API_BASE+guestUrl.pathname.replace('/api/','/api/guest/')+guestUrl.search,{...init,body,credentials:'omit',headers:{'Content-Type':'application/json'},signal:init.signal??AbortSignal.timeout(60000)}).then(describeApiFailure);
+    }
+    return guestApi(guestUrl,init);
+  }
   const url = typeof input === 'string' && input.startsWith('/') ? API_BASE + input : input;
 
   const doFetch = async (token: string | null) => {
@@ -55,7 +66,7 @@ export async function authFetch(
       getHttpSession().clear();
     }
   }
-  return res;
+  return describeApiFailure(res);
 }
 
 export { API_BASE };

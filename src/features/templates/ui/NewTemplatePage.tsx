@@ -10,6 +10,10 @@ import { DOCUMENT_PRESETS } from '../../../templates/catalog';
 import { t } from '@/shared/i18n';
 import './template-journey.css';
 import { buildTutorialBrochure } from '../../../templates/tutorials';
+import { ImageTemplateImport } from '@/features/image-template/ui/ImageTemplateImport';
+import type { Slide } from '@/shared/types';
+import { resolveBindings } from '@/features/bindings/domain/BindingResolver';
+import { productGoal } from '@/shared/analytics/ProductMetrics';
 
 export function NewTemplatePage() {
   const navigate = useNavigate();
@@ -22,20 +26,25 @@ export function NewTemplatePage() {
   const [schemaId, setSchemaId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [recognized, setRecognized] = useState<Slide | null>(null);
+  const [recognizing, setRecognizing] = useState(false);
   const selectedSchema = schemaId ?? params.get('schemaId') ?? (tutorial ? '' : activeSchema?.id) ?? '';
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (busy || !name.trim()) return;
+    if (busy || recognizing || !name.trim() || presetId === '__image__' && !recognized) return;
     setBusy(true);
     setError(null);
     try {
+      const slides = presetId === '__image__' && recognized ? [recognized] : tutorial ? buildTutorialBrochure() : DOCUMENT_PRESETS.find((preset) => preset.id === presetId)?.build() ?? [createSlide(1)];
       const template = await templateStore.create({
         name: name.trim(),
         folderId,
         schemaId: schemas.some((s) => s.id === selectedSchema) ? selectedSchema : null,
-        slides: tutorial ? buildTutorialBrochure() : DOCUMENT_PRESETS.find((preset) => preset.id === presetId)?.build() ?? [createSlide(1)],
-        bindings: [],
+        slides,
+        bindings: resolveBindings(slides),
       });
+      const preset=DOCUMENT_PRESETS.find(item=>item.id===presetId);
+      if(preset)productGoal('preset_used',{category:preset.category,count:template.slides.length});
       if (folderId) workspaceStore.expandFolders([folderId]);
       await workspaceStore.refresh();
       navigate(`/app/templates/${encodeURIComponent(template.id)}/edit${tutorial ? '?lesson=brochure' : ''}`, { replace: true });
@@ -59,7 +68,8 @@ export function NewTemplatePage() {
       </p>
       <form onSubmit={(event) => void submit(event)} className="template-form">
         <label htmlFor="document-preset">{t('Starting layout')}</label>
-        <select id="document-preset" value={presetId} onChange={(event) => setPresetId(event.target.value)} disabled={busy || tutorial}>{tutorial && <option value="tutorial-brochure">{t('Workshop handout brochure')}</option>}<option value="">{t('Blank document')}</option>{DOCUMENT_PRESETS.map((preset) => <option key={preset.id} value={preset.id}>{t(preset.name)}</option>)}</select>
+        <select id="document-preset" value={presetId} onChange={(event) => setPresetId(event.target.value)} disabled={busy || recognizing || tutorial}>{tutorial && <option value="tutorial-brochure">{t('Workshop handout brochure')}</option>}<option value="">{t('Blank document')}</option><option value="__image__">{t('Create a template from an image')}</option>{DOCUMENT_PRESETS.map((preset) => <option key={preset.id} value={preset.id}>{t(preset.name)}</option>)}</select>
+        {presetId === '__image__' && <ImageTemplateImport onDraft={setRecognized} onBusy={setRecognizing} />}
         <label htmlFor="template-name">{__tr("Название шаблона")}</label>
         <input
           id="template-name"
@@ -99,7 +109,7 @@ export function NewTemplatePage() {
             {error}
           </p>
         )}
-        <button className="schema-btn-fill" type="submit" disabled={busy || !name.trim()}>
+        <button className="schema-btn-fill" type="submit" disabled={busy || recognizing || !name.trim() || presetId === '__image__' && !recognized}>
           {busy ? __tr("Создаём шаблон…") : __tr("Создать и открыть редактор →")}
         </button>
       </form>

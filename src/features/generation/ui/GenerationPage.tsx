@@ -13,6 +13,7 @@ import type { GenerationRequest } from '../api/GenerationClient';
 import { SearchSelectList, type ListItemAdapter } from '@/presentation/components/list';
 import { toast } from '@/presentation/components/toast';
 import { SignGeneratedLink } from '@/features/signing/SignGeneratedLink';
+import { GenerationPreview } from './GenerationPreview';
 
 const SUPPORTED = ['pdfa', 'pdf', 'svg'] as const;
 type Format = (typeof SUPPORTED)[number];
@@ -145,6 +146,11 @@ export const GenerationPage: React.FC = () => {
     }).map((issue) => issue.message);
   }, [activeTemplate, activeSchema, pickedModels, format, schemasLoading]);
   const canRun = blockingReasons.length === 0 && !busy && !phase.endsWith('running');
+  const previewRequest = useMemo<GenerationRequest | null>(() => activeTemplate ? ({
+    templateId: activeTemplate.id, schemaId: activeTemplate.schemaId ?? undefined, inlineSlides: activeTemplate.slides,
+    items: withoutData ? [{ inlineValues: {} }] : pickedModels.slice(0, 1).map((model) => ({ inlineValues: model.values })),
+    format, packAs, filenamePattern,
+  }) : null, [activeTemplate, withoutData, pickedModels, format, packAs, filenamePattern]);
 
   const run = useCallback(async (): Promise<void> => {
     if (!canRun || !activeTemplate) return;
@@ -188,6 +194,7 @@ export const GenerationPage: React.FC = () => {
   return (
     <div className="gen-page">
       <main className="gen-main">
+        <GenerationPreview request={previewRequest} disabled={!canRun} />
         <h2 className="gen-title">{__tr("Генерация документов")}</h2>
         <p className="gen-subtitle">
           {__tr("Шаблон × наборы данных → документы. Формат:")}<b>{format.toUpperCase()}</b>{__tr(", упаковка:")}{' '}
@@ -239,6 +246,7 @@ export const GenerationPage: React.FC = () => {
             <button className="dp-btn" onClick={() => downloadBlob(result.blob, result.filename)}>
               {__tr("Скачать снова")}</button>
             <SignGeneratedLink />
+            {result.historyId==='unavailable'&&<p role="alert">{__tr('The file was generated, but history storage is unavailable. Keep your downloaded copy.')}</p>}
           </div>
         )}
 

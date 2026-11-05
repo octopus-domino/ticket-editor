@@ -8,6 +8,7 @@ import { workspaceApi } from '../api';
 import type { TreeNode } from '../types';
 import { templateStore } from '@/features/templates/state/TemplateStore';
 import { t } from '@/shared/i18n';
+import './workspace-sidebar.css';
 
 function findPathToNode(tree: TreeNode[], targetId: string): string[] | null {
   for (const node of tree) {
@@ -27,8 +28,8 @@ const WorkspaceNav: React.FC = () => {
   <nav className="workspace-nav" style={{ gridTemplateColumns: '1fr 1fr' }}>
     <NavLink to="/app" end className={({ isActive }) => (isActive ? 'active' : '')}>
       ⌂ {t('Workspace')}</NavLink>
-    <NavLink to="/app/schemas" className={({ isActive }) => (isActive ? 'active' : '')}>
-      {__tr("📋 Схемы данных")}</NavLink>
+    <NavLink to="/app/data" className={({ isActive }) => (isActive ? 'active' : '')}>
+      📊 {t('Data')}</NavLink>
     <NavLink to="/app/library?view=mine" className={({ isActive }) => (isActive && mine ? 'active' : '')}>
       🎨 {t('My documents')}
     </NavLink>
@@ -36,8 +37,11 @@ const WorkspaceNav: React.FC = () => {
     <NavLink to="/app/stamps">◎ {t('Stamps')}</NavLink>
     <NavLink to="/app/learn">? {t('Learning center')}</NavLink>
     <NavLink to="/app/sign">✍ {t('Electronic signature')}</NavLink>
-    <NavLink to="/app/data-models" className={({ isActive }) => (isActive ? 'active' : '')}>
-      {__tr("📊 Наборы данных")}</NavLink>
+    <NavLink to="/app/profile">◉ {t('Client profile')}</NavLink>
+    <NavLink to="/app/api-access">⌘ {t('Client API')}</NavLink>
+    <NavLink to="/app/integrations">⇄ {t('Data connections')}</NavLink>
+    <NavLink to="/app/libraries">▦ {t('Shared libraries')}</NavLink>
+    <NavLink to="/app/history">◷ {t('Generation history')}</NavLink>
     <NavLink to="/app/generate" className={({ isActive }) => (isActive ? 'active' : '')}>
       {__tr("⚡ Генерация")}</NavLink>
   </nav>
@@ -335,7 +339,10 @@ export const WorkspaceSidebar: React.FC = () => {
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: 8 }}>
-        <button type="button" onClick={() => workspaceStore.setActiveFolder(null)} aria-pressed={activeFolderId === null} style={{ marginBottom: 8 }}>{__tr("Все документы (корневая папка)")}</button>
+        <button className="workspace-root" type="button" onClick={() => workspaceStore.setActiveFolder(null)} aria-pressed={activeFolderId === null} title={__tr("Все документы (корневая папка)")}>
+          <span aria-hidden="true">⌂</span><span>{t('Documents')}</span>
+          <span className="workspace-root-count">{tree.length}</span>
+        </button>
         {loading && !offline && <div style={{ fontSize: 12, color: 'var(--text-soft)', padding: 8 }}>{__tr("Загрузка…")}</div>}
         {!offline && creatingRoot && (
           <InlineInput

@@ -15,6 +15,7 @@ export function AuthProductAside() {
         <p>{__tr("Соберите макет в своём стиле. Подставьте данные. Получите готовые документы.")}</p>
       </div>
       <ul className="auth-features">
+        <li><span className="check">✓</span>{__tr('Free to use')}</li>
         <li>
           <span className="check">✓</span> {__tr("Визуальный редактор шаблонов")}</li>
         <li>

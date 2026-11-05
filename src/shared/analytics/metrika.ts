@@ -93,7 +93,9 @@ export function reachGoal(
     | 'generation_failed'
     | 'generation_cancelled'
     | 'feedback_opened'
-    | 'feedback_form_opened',
+    | 'feedback_form_opened'
+    | 'library_opened' | 'preset_used' | 'stamp_created' | 'stamp_exported'
+    | 'lesson_started' | 'lesson_completed' | 'excel_import_validated' | 'excel_import_failed',
   params?: Record<string, string>,
 ): void {
   try {

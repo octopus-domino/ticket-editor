@@ -138,7 +138,7 @@ test('data section offers schema selection after opening a template without sche
   await page.getByRole('button', { name: 'Создать и открыть редактор' }).click();
   await expect(page).toHaveURL(/templates\/T\/edit/);
   await expect(page.getByRole('application')).toBeVisible();
-  await page.locator('.workspace-nav').getByRole('link', { name: 'Наборы данных' }).click();
+  await page.locator('.workspace-nav').getByRole('link', { name: /Данные/ }).click();
   await page.getByLabel('Схема данных').selectOption('S');
   await expect(page.getByText('Alice', { exact: true }).first()).toBeVisible();
   await expect(page).toHaveURL(/schemaId=S/);

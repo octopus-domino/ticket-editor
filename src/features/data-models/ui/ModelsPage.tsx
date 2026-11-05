@@ -113,6 +113,7 @@ export const ModelsPage: React.FC = () => {
         toast.success(__tr("Импортировано наборов данных: {0}", items.length));
       } catch (e) {
         toast.error(__tr("Не удалось импортировать"), (e as Error).message);
+        throw e;
       }
     },
     [activeSchema],
@@ -187,7 +188,7 @@ export const ModelsPage: React.FC = () => {
             <button
               className="dm-btn-icon"
               onClick={() => setImporterOpen((v) => !v)}
-              title={__tr("Импорт JSON")}
+              title={__tr('Import Excel or JSON')}
             >
               📥
             </button>

@@ -5,6 +5,34 @@
   padding: 36px 24px 60px;
   overflow: auto;
 }
+.template-new { box-sizing: border-box; color: var(--text); }
+.template-new :is(input, select, textarea) {
+  box-sizing: border-box; min-width: 0; max-width: 100%; font: inherit;
+  padding: 10px 12px; border: 1px solid var(--border-strong); border-radius: 8px;
+  background: var(--panel); color: var(--text);
+}
+.template-new > label { display: grid; gap: 7px; margin: 16px 0; font-size: 14px; font-weight: 600; }
+.template-new button {
+  min-height: 40px; padding: 9px 14px; margin: 4px 6px 4px 0;
+  border: 1px solid var(--border-strong); border-radius: 8px;
+  background: var(--panel); color: var(--text); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.template-new button:hover:not(:disabled) { background: var(--accent-light); border-color: var(--accent); }
+.template-new button[type='submit'] { background: var(--accent); border-color: var(--accent); color: white; }
+.template-new button[type='submit']:hover:not(:disabled) { filter: brightness(.94); background: var(--accent); }
+.template-new button:disabled { opacity: .5; cursor: not-allowed; }
+.template-new :is(button, input, select, summary):focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.template-new fieldset { min-width: 0; border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; }
+.template-new fieldset label { align-items: center; }
+.template-new input[type='checkbox'] { width: auto; accent-color: var(--accent); }
+.template-new summary { padding: 12px 0; cursor: pointer; color: var(--accent); font-weight: 600; }
+.template-new :is(p, code, strong) { overflow-wrap: anywhere; }
+.template-new [role='alert'] { color: #b42318; background: #fff1f0; padding: 12px; border-radius: 8px; }
+.template-new > [role='status'] { background: var(--accent-light); padding: 12px; border-radius: 8px; }
+@media (max-width: 600px) {
+  .template-new { padding: 20px 16px 40px; }
+  .template-new .template-form { padding: 16px; }
+}
 .template-new > a {
   color: var(--accent);
   text-decoration: none;

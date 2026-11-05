@@ -113,8 +113,9 @@ function stripDraft(fields: DraftField[]): FieldDef[] {
   return out;
 }
 
-export const SchemaEditorPage: React.FC = () => {
-  const { schemaId } = useParams<{ schemaId?: string }>();
+export const SchemaEditorPage: React.FC<{schemaIdOverride?:string|null;onSaved?:(id:string)=>void;onClose?:()=>void}> = ({schemaIdOverride,onSaved,onClose}) => {
+  const route = useParams<{ schemaId?: string }>();
+  const schemaId=schemaIdOverride===undefined?route.schemaId:schemaIdOverride??undefined;
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -181,12 +182,14 @@ export const SchemaEditorPage: React.FC = () => {
     try {
       if (schemaId) {
         await schemaStore.update(schemaId, { name: name.trim(), fields: out });
+        if(onSaved){onSaved(schemaId);return;}
         navigate(backPath);
       } else {
         const created = await schemaStore.create({
           name: name.trim(),
           fields: out,
         });
+        if(onSaved){onSaved(created.id);return;}
         // Для новой схемы возвращаемся туда, откуда пришли, если есть from;
         // иначе — в редактор новой схемы (чтобы пользователь мог продолжить).
         if (fromState) {
@@ -207,7 +210,7 @@ export const SchemaEditorPage: React.FC = () => {
       <button
         type="button"
         className="schema-btn-add"
-        onClick={() => navigate(backPath)}
+        onClick={() => onClose?onClose():navigate(backPath)}
         style={{ alignSelf: 'flex-start', marginBottom: 16 }}
       >
         {__tr("← Назад")}</button>

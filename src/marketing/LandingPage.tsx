@@ -57,6 +57,8 @@ export function LandingPage() {
                 {__tr("Как это работает ↓")}</a>
             </div>
             <p className="codoc-micro">{__tr("Визуальный редактор · Свои данные · PDF и SVG")}</p>
+            <p className="codoc-micro">{__tr('Free to use. Guest work stays in this browser tab session and is never saved to the server.')}</p>
+            <button type="button" className="codoc-button" onClick={()=>{authStore.enterGuest();window.location.assign('/app');}}>{__tr('Continue without registration')}</button>
           </div>
           <div className="codoc-hero-art">
             <img

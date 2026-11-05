@@ -104,9 +104,6 @@ export function newShape(shape: BasicShape, x = 200, y = 200): ShapeElement {
   if (shape === 'star') {
     base.innerRadiusRatio = 1 / 2.4;
   }
-  if (shape === 'triangle') {
-    base.polygonPoints = [75, 0, 150, 150, 0, 150];
-  }
   return base;
 }
 

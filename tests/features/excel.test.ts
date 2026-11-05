@@ -27,7 +27,7 @@ describe('Excel interchange', () => {
     const result = readWorkbook(bytes, schema);
     expect(result.ok).toBe(true);
     expect(result.issues).toEqual([]);
-    expect(result.models?.[0]).toMatchObject({ name: 'Person 1', values: model.values });
+    expect(result.models?.[0]).toMatchObject({ id:'M', name: 'Person 1', values: model.values });
     expect(strFromU8(files['xl/worksheets/sheet1.xml'])).not.toContain('<f>');
   });
   it('provides stable schema-path headers, separate field instructions and no dummy import row', () => {
@@ -37,9 +37,10 @@ describe('Excel interchange', () => {
     expect(result.issues).toEqual([]);
   });
   it('rejects workbook formulas and reports the source row before saving any records', () => {
-    const result = readWorkbook(editWorkbook((xml) => xml.replace('<c r="C2" t="inlineStr">', '<c r="C2" t="inlineStr"><f>HYPERLINK("https://example.invalid")</f>')), schema);
+    const result = readWorkbook(editWorkbook((xml) => xml.replace('<c r="D2" t="inlineStr">', '<c r="D2" t="inlineStr"><f>HYPERLINK("https://example.invalid")</f>')), schema);
     expect(result.ok).toBe(false);
     expect(result.issues?.[0].index).toBe(2);
+    expect(result.repairable).toBe(false);
   });
   it('rejects an unknown column rather than silently ignoring user data', () => {
     const result = readWorkbook(editWorkbook((xml) => xml.replace('person.code', 'other.code')), schema);
@@ -50,6 +51,8 @@ describe('Excel interchange', () => {
     const result = readWorkbook(editWorkbook((xml) => xml.replace('<v>123.45</v>', '<v>not-a-number</v>')), schema);
     expect(result.ok).toBe(false);
     expect(result.issues?.[0].index).toBe(2);
+    expect(result.repairable).toBe(true);
+    expect(result.models?.[0].values.amount).toBe('not-a-number');
   });
   it('rejects unsafe schema paths', () => {
     expect(() => createWorkbook({ ...schema, fields: [{ path: '__proto__.polluted', type: 'string', required: false }] })).toThrow();

@@ -54,15 +54,15 @@ export function loadCryptoPro(): Promise<{ api: CryptoProPlugin }> {
       });
     const plugin = window.cadesplugin;
     if (!plugin) throw new Error(t('CryptoPro plugin is unavailable'));
-    await Promise.race([
-      Promise.resolve(plugin),
-      new Promise((_, reject) =>
-        window.setTimeout(
-          () => reject(new Error(t('Signing plugin connection timed out'))),
-          20_000,
-        ),
-      ),
-    ]);
+    let timeout: number | undefined;
+    try {
+      await Promise.race([
+        Promise.resolve(plugin),
+        new Promise((_, reject) => {
+          timeout = window.setTimeout(() => reject(new Error(t('Signing plugin connection timed out'))), 20_000);
+        }),
+      ]);
+    } finally { window.clearTimeout(timeout); }
     return { api: plugin };
   })().catch((error) => {
     loading = null;

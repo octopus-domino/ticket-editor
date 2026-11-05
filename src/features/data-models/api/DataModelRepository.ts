@@ -12,7 +12,7 @@ export interface DataModelRepository {
   delete(id: string): Promise<void>;
   importMany?(
     schemaId: string,
-    items: { name: string; values: Record<string, unknown> }[],
+    items: { id?: string; name: string; values: Record<string, unknown> }[],
   ): Promise<{
     imported: number;
     issues: { index: number; message: string }[];

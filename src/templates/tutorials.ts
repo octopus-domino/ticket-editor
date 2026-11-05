@@ -14,9 +14,18 @@ import { newStampFromTemplate } from '@/lib/stamps/factories';
 import { essentialStamps } from '@/lib/stamps/essential';
 import type { StampTemplate } from '@/lib/stamps/types';
 import { t } from '@/shared/i18n';
+import { measureText } from '@/lib/richText/measure';
 
 const navy = '#183c39',
   orange = '#e76837';
+export const TUTORIAL_PAGE = { width: 1123, height: 794, margin: 28 } as const;
+export function tutorialFocusBounds(focus: [number, number, number, number]): [number, number, number, number] {
+  // Include the focus outline itself inside the printable area.
+  const inset = TUTORIAL_PAGE.margin + 3;
+  const x = Math.max(inset, Math.min(TUTORIAL_PAGE.width - inset, focus[0]));
+  const y = Math.max(inset, Math.min(TUTORIAL_PAGE.height - inset, focus[1]));
+  return [x, y, Math.max(0, Math.min(TUTORIAL_PAGE.width - inset, focus[0] + focus[2]) - x), Math.max(0, Math.min(TUTORIAL_PAGE.height - inset, focus[1] + focus[3]) - y)];
+}
 export const TUTORIAL_LOGO = `data:image/svg+xml;charset=utf-8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160"><path d="M80 135V65M80 95C24 96 20 44 28 27c38 2 59 27 52 68ZM80 115c56-1 60-53 52-70-38 2-59 27-52 70Z" fill="none" stroke="#244f91" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></svg>')}`;
 export function buildTutorialStamp(stage = 12): StampTemplate {
   const stamp = essentialStamps()[0];
@@ -68,12 +77,12 @@ export function buildTutorialBrochure(stage = 24): Slide[] {
   const makePage = (name: string): Slide => ({
     id: crypto.randomUUID(),
     name,
-    width: 1123,
-    height: 794,
+    width: TUTORIAL_PAGE.width,
+    height: TUTORIAL_PAGE.height,
     format: 'a4',
     orientation: 'landscape',
     background: '#fffdf8',
-    padding: { top: 28, right: 28, bottom: 28, left: 28 },
+    padding: { top: TUTORIAL_PAGE.margin, right: TUTORIAL_PAGE.margin, bottom: TUTORIAL_PAGE.margin, left: TUTORIAL_PAGE.margin },
     elements: [],
   });
   const front = makePage(t('Front')),
@@ -88,22 +97,36 @@ export function buildTutorialBrochure(stage = 24): Slide[] {
     fontSize: number,
     fill = navy,
     bold = false,
-  ) =>
+  ) => {
+    const content = t(value);
+    // Keep a long translated word intact rather than splitting it at the panel edge.
+    while (fontSize > 12 && content.split(/\s+/).some((word) => measureText(word, fontSize, 'Arial', bold ? 'bold' : 'normal') > width)) fontSize--;
+    let lines = 0;
+    for (const paragraph of content.split('\n')) {
+      let line = ''; lines++;
+      for (const word of paragraph.split(/\s+/)) {
+        const next = line ? `${line} ${word}` : word;
+        if (line && measureText(next, fontSize, 'Arial', bold ? 'bold' : 'normal') > width) { lines++; line = word; }
+        else line = next;
+      }
+    }
     add(slide, {
       ...newSimpleText(x, y),
-      text: t(value),
+      text: content,
       width,
-      height: fontSize * 3,
+      height: Math.ceil(fontSize * 1.3 * lines + 2),
+      lineHeight: 1.3,
       fontSize,
       fill,
       fontStyle: bold ? 'bold' : 'normal',
       padding: { top: 0, right: 0, bottom: 0, left: 0 },
     });
+  };
   const box = (slide: Slide, x: number, y: number, width: number, height: number, fill: string) =>
     add(slide, { ...newShape('rect', x, y), width, height, fill, stroke: 'none', strokeWidth: 0 });
   if (stage >= 1) {
-    box(front, 748, 0, 375, 794, navy);
-    box(front, 374, 0, 374, 794, '#f2eadc');
+    box(front, 748, 28, 347, 738, navy);
+    box(front, 374, 28, 374, 738, '#f2eadc');
   }
   if (stage >= 2) {
     text(front, 'BOTANICAL\nWORKSHOP', 785, 210, 310, 42, '#fffdf8', true);
@@ -113,7 +136,7 @@ export function buildTutorialBrochure(stage = 24): Slide[] {
   if (stage >= 3) {
     text(front, 'Welcome', 408, 60, 300, 32, navy, true);
     const rich = {
-      ...newText(408, 135),
+      ...newText(408, 175),
       width: 292,
       height: 255,
       fontSize: 20,
@@ -152,7 +175,7 @@ export function buildTutorialBrochure(stage = 24): Slide[] {
   }
   if (stage >= 7)
     add(front, {
-      ...newPath(785, 500),
+      ...newPath(785, 465),
       width: 280,
       height: 130,
       d: 'M 0 120 Q 70 0 140 70 T 280 10',
@@ -162,7 +185,7 @@ export function buildTutorialBrochure(stage = 24): Slide[] {
     });
   if (stage >= 8)
     add(front, {
-      ...newStampFromTemplate(buildTutorialStamp(), 830, 610),
+      ...newStampFromTemplate(buildTutorialStamp(), 830, 590),
       width: 135,
       height: 135,
     });
@@ -170,7 +193,7 @@ export function buildTutorialBrochure(stage = 24): Slide[] {
   if (stage >= 10) {
     text(back, 'Your workshop guide', 36, 38, 1000, 38, navy, true);
     for (let col = 0; col < 3; col++)
-      box(back, 36 + col * 374, 110, 330, 4, col === 1 ? orange : navy);
+      box(back, 36 + col * 374, 110, 310, 4, col === 1 ? orange : navy);
   }
   if (stage >= 11) {
     const table = {

@@ -41,6 +41,10 @@ for (const name of [
   'marketing-messages.ts',
   'extra-messages.ts',
   'tutorial-messages.ts',
+  'recognition-messages.ts',
+  'api-messages.ts',
+  'workflow-messages.ts',
+  'steering-messages.ts',
 ]) {
   const source = await readFile(`src/shared/i18n/${name}`, 'utf8').catch(() => '');
   const rows = [...source.matchAll(/String\.raw`([\s\S]*?)`/g)].flatMap((match) =>
@@ -78,6 +82,7 @@ async function inspect(directory) {
       }
     }
     function visit(node) {
+      if(ts.isVariableDeclaration(node)&&node.name.getText(file)==='PROFESSIONAL_COPY'&&node.initializer&&ts.isArrayLiteralExpression(node.initializer))for(const item of node.initializer.elements)key(item);
       if (
         filename.replaceAll('\\', '/').endsWith('shared/constants/index.ts') &&
         ts.isPropertyAssignment(node) &&

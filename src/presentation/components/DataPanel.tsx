@@ -246,14 +246,16 @@ export const DataPanel: React.FC = () => {
           className="dp-select-model"
           aria-label={__tr('Схема данных')}
           value={activeSchema.id}
-          onChange={(e) => selectSchema(e.target.value)}
+          onChange={(e) => {selectSchema(e.target.value);modelStore.select(null);}}
         >
+          <option value="">{__tr('No linked schema')}</option>
           {schemas.map((s) => (
             <option key={s.id} value={s.id}>
               {s.name}
             </option>
           ))}
         </select>
+        <button type="button" className="dp-btn" onClick={()=>{selectSchema('');modelStore.select(null);}}>{__tr('Detach schema')}</button>
         <div style={{ display: 'flex', gap: 6, fontSize: 11 }}>
           <Link
             to={`/app/schemas/${activeSchema.id}`}

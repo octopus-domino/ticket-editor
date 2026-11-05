@@ -23,7 +23,9 @@ const StampStraightTextViewInner: React.FC<Props> = ({
     onDblTap: (e: Konva.KonvaEventObject<MouseEvent>) => { e.cancelBubble = true; onDblClick(); },
   }), [onSelect, onDblClick]);
 
-  const height = text.fontSize * 1.4;
+  const textRef=React.useRef<Konva.Text>(null);
+  const [height,setHeight]=React.useState(()=>text.text.split(/\r?\n/).length*text.fontSize*1.2);
+  React.useLayoutEffect(()=>{if(textRef.current)setHeight(textRef.current.height());},[text.text,text.fontSize,text.fontFamily,text.fontStyle,text.width]);
 
   return (
     <Group
@@ -44,10 +46,11 @@ const StampStraightTextViewInner: React.FC<Props> = ({
       />
 
       <Text
+        ref={textRef}
         x={0}
         y={0}
         width={text.width}
-        height={height}
+        lineHeight={1.2}
         text={text.text}
         fontSize={text.fontSize}
         fontFamily={text.fontFamily}

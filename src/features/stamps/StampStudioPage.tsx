@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   getAllStamps,
@@ -22,6 +22,7 @@ import { useStore } from '@/shared/store/store';
 import { useSearchParams } from 'react-router-dom';
 import { buildTutorialStamp } from '../../templates/tutorials';
 import { TutorialCoach } from '@/features/learning/TutorialCoach';
+import { productGoal } from '@/shared/analytics/ProductMetrics';
 
 function stampSlide(stamp: StampTemplate): Slide {
   return {
@@ -40,6 +41,7 @@ function preview(stamp: StampTemplate) {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(serializeSlideToSvg(stampSlide(stamp)))}`;
 }
 export function StampStudioPage() {
+  useEffect(()=>productGoal('library_opened',{kind:'stamps'}),[]);
   const locale = useLocale();
   const [params] = useSearchParams();
   const user = useStore(authStore, (state) => state.user);
@@ -65,7 +67,7 @@ export function StampStudioPage() {
   const save = (data: Omit<StampTemplate, 'id'>) => {
     if (!selected) return;
     if (selected.custom) updateCustomStamp(selected.id, data);
-    else addCustomStamp({ ...data, id: `custom-${crypto.randomUUID()}`, custom: true });
+    else {addCustomStamp({ ...data, id: `custom-${crypto.randomUUID()}`, custom: true });productGoal('stamp_created',{count:data.shapes.length+data.texts.length+(data.images?.length??0)});}
     setSelected(null);
     setVersion((value) => value + 1);
   };
@@ -135,12 +137,12 @@ export function StampStudioPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() =>
+                  onClick={() => {
                     downloadFile(
                       new Blob([serializeSlideToSvg(stampSlide(stamp))], { type: 'image/svg+xml' }),
                       `${stamp.name}.svg`,
-                    )
-                  }
+                    );productGoal('stamp_exported',{format:'svg',count:1});
+                  }}
                 >
                   SVG
                 </button>
@@ -151,7 +153,7 @@ export function StampStudioPage() {
                     setBusy(true);
                     setError('');
                     void svgToPng(serializeSlideToSvg(stampSlide(stamp)), stamp.width, stamp.height)
-                      .then((blob) => downloadFile(blob, `${stamp.name}.png`))
+                      .then((blob) => {downloadFile(blob, `${stamp.name}.png`);productGoal('stamp_exported',{format:'png',count:1});})
                       .catch((reason: Error) => setError(reason.message))
                       .finally(() => setBusy(false));
                   }}
@@ -166,6 +168,7 @@ export function StampStudioPage() {
                       setBusy(true);
                       setError('');
                       void exportPdfServer([stampSlide(stamp)])
+                        .then(()=>productGoal('stamp_exported',{format:'pdf',count:1}))
                         .catch((reason: Error) => setError(reason.message))
                         .finally(() => setBusy(false));
                     }}

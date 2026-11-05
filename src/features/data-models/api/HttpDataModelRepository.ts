@@ -13,7 +13,7 @@ async function json<T>(res: Response): Promise<T> {
 export class HttpDataModelRepository implements DataModelRepository {
   async importMany(
     schemaId: string,
-    items: { name: string; values: Record<string, unknown> }[],
+    items: { id?: string; name: string; values: Record<string, unknown> }[],
   ): Promise<{
     imported: number;
     issues: { index: number; message: string }[];

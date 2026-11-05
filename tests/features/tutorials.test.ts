@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildTutorialBrochure, buildTutorialStamp } from '../../src/templates/tutorials';
+import { buildTutorialBrochure, buildTutorialStamp, tutorialFocusBounds } from '../../src/templates/tutorials';
 import { DocumentSchema } from '@/shared/schemas/document';
 import { lessons } from '../../src/features/learning/lessons';
 import { LANGUAGES, setLocale, t } from '@/shared/i18n';
@@ -8,6 +8,29 @@ import { newSimpleText } from '@/lib/factories';
 import { appendPlaceholderPatch } from '@/lib/modelBinding';
 
 describe('editable tutorial examples', () => {
+  it('keeps every training stage and its focus outline within printable margins', () => {
+    for (const [locale] of LANGUAGES) {
+      setLocale(locale);
+      for (const step of lessons().document.steps) {
+        for (const slide of buildTutorialBrochure(step.stage)) {
+          for (const element of slide.elements) {
+            expect(element.x, `${locale}/${step.stage}/${element.type}`).toBeGreaterThanOrEqual(slide.padding.left);
+            expect(element.y).toBeGreaterThanOrEqual(slide.padding.top);
+            expect(element.x + element.width).toBeLessThanOrEqual(slide.width-slide.padding.right+.01);
+            expect(element.y + element.height).toBeLessThanOrEqual(slide.height-slide.padding.bottom+.01);
+          }
+        }
+        if (step.focus) {
+          const [x,y,w,h] = tutorialFocusBounds(step.focus);
+          expect(x-2.5).toBeGreaterThanOrEqual(28);
+          expect(y-2.5).toBeGreaterThanOrEqual(28);
+          expect(x+w+2.5).toBeLessThanOrEqual(1123-28);
+          expect(y+h+2.5).toBeLessThanOrEqual(794-28);
+        }
+      }
+    }
+    setLocale('ru');
+  });
   it('opens a valid two-page brochure in every language with the promised object types', () => {
     for (const [locale] of LANGUAGES) {
       setLocale(locale);
@@ -32,7 +55,8 @@ describe('editable tutorial examples', () => {
         'diagram',
       ] as const)
         expect(types.has(type), type).toBe(true);
-      expect(lessons().document.steps).toHaveLength(23);
+      expect(lessons().document.steps).toHaveLength(25);
+      expect(lessons().document.steps.some(step=>step.interaction==='drag')).toBe(true);
       expect(buildTutorialStamp().images).toHaveLength(1);
     }
   });

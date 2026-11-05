@@ -10,6 +10,7 @@ import { t } from '@/shared/i18n';
 const MAX_BYTES = 20 * 1024 * 1024;
 const MAX_ROWS = 10_000;
 const NAME = '__codoc_name';
+const ID = '__codoc_id';
 const NS = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main';
 const escape = (value: unknown) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' })[char]!);
 const safePath = (path: string) => path.split('.').every((part) => part && !['__proto__','prototype','constructor'].includes(part));
@@ -17,7 +18,7 @@ function fields(schema: DataSchema): FieldDef[] {
   const flat = flattenFields(schema.fields);
   const arrays = flat.filter((field) => field.type === 'array').map((field) => field.path + '.');
   const result = flat.filter((field) => field.type !== 'object' && !arrays.some((path) => field.path.startsWith(path)));
-  if (result.length > 500 || result.some((field) => !safePath(field.path) || field.path === NAME)) throw new Error(t('Unsupported schema for Excel'));
+  if (result.length > 500 || result.some((field) => !safePath(field.path) || field.path === NAME || field.path === ID)) throw new Error(t('Unsupported schema for Excel'));
   return result;
 }
 function column(index: number): string {
@@ -38,7 +39,7 @@ export function createWorkbook(schema: DataSchema, models: readonly DataModel[] 
   if (models.length > MAX_ROWS || models.some((model) => model.schemaId !== schema.id)) throw new Error(t('Select data sets from one schema'));
   const schemaFields = fields(schema);
   const sheets: unknown[][][] = [
-    [[NAME, ...schemaFields.map((field) => field.path)], ...models.map((model) => [model.name, ...schemaFields.map((field) => getPath(model.values, field.path))])],
+    [[NAME, ID, ...schemaFields.map((field) => field.path)], ...models.map((model) => [model.name, model.id, ...schemaFields.map((field) => getPath(model.values, field.path))])],
     [[t('Field'), t('Label'), t('Type'), t('Required')], ...schemaFields.map((field) => [field.path, field.label || field.path, field.type, field.required])],
     [[t('Instructions')], [t('Keep column identifiers unchanged. One row creates one data set.')], [t('Dates: YYYY-MM-DD. Arrays: JSON. Formulas are not imported.')], [t('Empty rows are ignored. Import shows validation errors before saving.')], ['schemaId', schema.id], ['schemaName', schema.name], ['version', '1.0']],
   ];
@@ -90,7 +91,7 @@ export function readWorkbook(bytes: Uint8Array, schema: DataSchema): ImportResul
         if (cell.getElementsByTagName('f').length) throw new Error(t('Formulas are not imported'));
         const letters = cell.getAttribute('r')?.match(/^[A-Z]+/)?.[0] ?? '';
         let index = 0; for (const letter of letters) index = index * 26 + letter.charCodeAt(0) - 64;
-        if (!index || index > 501) throw new Error(t('Maximum 500 fields'));
+        if (!index || index > 502) throw new Error(t('Maximum 500 fields'));
         const type = cell.getAttribute('t'), raw = cell.getElementsByTagName('v')[0]?.textContent ?? '';
         values[index - 1] = type === 's' ? shared[Number(raw)] ?? '' : type === 'inlineStr' ? cell.getElementsByTagName('is')[0]?.textContent ?? '' : type === 'b' ? raw === '1' : raw;
       }
@@ -98,9 +99,10 @@ export function readWorkbook(bytes: Uint8Array, schema: DataSchema): ImportResul
     };
     if (!rows.length) throw new Error(t('Empty workbook'));
     const headers = readRow(rows[0]).map(String), schemaFields = fields(schema), byPath = new Map(schemaFields.map((field) => [field.path, field]));
-    if (new Set(headers).size !== headers.length || headers.some((header) => header !== NAME && !byPath.has(header))) throw new Error(t('Column identifiers do not match the schema'));
+    if (new Set(headers).size !== headers.length || headers.some((header) => header !== NAME && header !== ID && !byPath.has(header))) throw new Error(t('Column identifiers do not match the schema'));
     for (const field of schemaFields) if (field.required && !headers.includes(field.path)) throw new Error(`${t('Missing required column')}: ${field.path}`);
     const issues: { index: number; message: string }[] = [], models: ImportedModel[] = [];
+    let structuralErrors=false;
     const date1904 = book.getElementsByTagName('workbookPr')[0]?.getAttribute('date1904') === '1';
     rows.slice(1).forEach((row, rowIndex) => {
       try {
@@ -108,23 +110,23 @@ export function readWorkbook(bytes: Uint8Array, schema: DataSchema): ImportResul
         if (cells.every((value) => value === '' || value === undefined)) return;
         const values: Record<string, unknown> = {};
         headers.forEach((path, col) => {
-          if (path === NAME) return;
+          if (path === NAME || path === ID) return;
           const field = byPath.get(path)!, raw = cells[col];
           if (raw === '' || raw === undefined) return;
           let value: unknown = raw;
-          if (field.type === 'number') { value = Number(raw); if (!Number.isFinite(value)) throw new Error(`${path}: ${t('Expected a number')}`); }
-          if (field.type === 'boolean') { if (typeof raw === 'boolean') value = raw; else if (/^(true|1)$/i.test(String(raw))) value = true; else if (/^(false|0)$/i.test(String(raw))) value = false; else throw new Error(`${path}: ${t('Expected true or false')}`); }
+          if (field.type === 'number') { const numeric=Number(raw);value=Number.isFinite(numeric)?numeric:raw; }
+          if (field.type === 'boolean') { if (typeof raw === 'boolean') value = raw; else if (/^(true|1)$/i.test(String(raw))) value = true; else if (/^(false|0)$/i.test(String(raw))) value = false; }
           if (field.type === 'date' && /^\d+(\.\d+)?$/.test(String(raw))) value = new Date((Number(raw) - (date1904 ? 24107 : 25569)) * 86400000).toISOString().slice(0,10);
-          if (field.type === 'array') { value = JSON.parse(String(raw)); if (!Array.isArray(value)) throw new Error(`${path}: ${t('Expected a JSON array')}`); }
+          if (field.type === 'array') { try{value=JSON.parse(String(raw)) as unknown;}catch{value=raw;} }
           put(values, path, value);
         });
-        const model = { id: '', schemaId: schema.id, name: String(cells[headers.indexOf(NAME)] ?? '').trim() || `${t('Data set')} ${rowIndex + 1}`, values, createdAt: '', updatedAt: '' };
+        const model = { id: String(cells[headers.indexOf(ID)] ?? '').trim(), schemaId: schema.id, name: String(cells[headers.indexOf(NAME)] ?? '').trim() || `${t('Data set')} ${rowIndex + 1}`, values, createdAt: '', updatedAt: '' };
         const errors = validateModel(model, schema);
-        if (errors.length) throw new Error(errors.map((error) => `${error.path}: ${error.message}`).join('; '));
+        if (errors.length) issues.push({index:Number(row.getAttribute('r'))||rowIndex+2,message:errors.map(error=>`${error.path}: ${error.message}`).join('; ')});
         models.push(model);
-      } catch (error) { issues.push({ index: Number(row.getAttribute('r')) || rowIndex + 2, message: (error as Error).message }); }
+      } catch (error) { structuralErrors=true;issues.push({ index: Number(row.getAttribute('r')) || rowIndex + 2, message: (error as Error).message }); }
     });
-    return { ok: models.length > 0 && issues.length === 0, schemaId: schema.id, models, issues };
+    return { ok: models.length > 0 && issues.length === 0, repairable: !structuralErrors&&models.length>0, schemaId: schema.id, models, issues };
   } catch (error) { return { ok: false, issues: [{ index: 0, message: (error as Error).message }] }; }
 }
 export function downloadWorkbook(schema: DataSchema, models: readonly DataModel[] = []) {

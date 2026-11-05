@@ -90,7 +90,9 @@ export function changeFormat(
  */
 export function changeOrientation(slide: Slide, orientation: Orientation): Slide {
   if (slide.orientation === orientation) return slide;
-  const customSize = slide.format === 'custom' ? { w: slide.height, h: slide.width } : undefined;
+  const customSize = slide.format === 'custom'
+    ? { w: Math.min(slide.width, slide.height), h: Math.max(slide.width, slide.height) }
+    : undefined;
   const { w, h } = getFormatSize(slide.format, orientation, customSize);
   return {
     ...slide,

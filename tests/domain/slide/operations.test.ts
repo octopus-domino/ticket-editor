@@ -17,6 +17,15 @@ function makeFakeElement(overrides: Partial<CanvasElement> = {}): CanvasElement 
 }
 
 describe('domain/slide/operations', () => {
+  it('changes custom page orientation on the first click and round-trips dimensions', () => {
+    const slide = { ...createSlide(1), format: 'custom' as const, width: 400, height: 600 };
+    const landscape = changeOrientation(slide, 'landscape');
+    expect([landscape.width, landscape.height]).toEqual([600, 400]);
+    const portrait = changeOrientation(landscape, 'portrait');
+    expect([portrait.width, portrait.height]).toEqual([400, 600]);
+    expect(changeOrientation(portrait, 'landscape')).toEqual(landscape);
+    expect(landscape.elements).toBe(slide.elements);
+  });
   it('createSlide возвращает валидный слайд с уникальным id', () => {
     const a = createSlide(1);
     const b = createSlide(2);

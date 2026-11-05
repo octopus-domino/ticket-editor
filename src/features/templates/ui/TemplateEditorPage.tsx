@@ -14,6 +14,7 @@ import { useStore } from '@/shared/store/store';
 import { workspaceStore } from '@/workspace/store';
 import './template-journey.css';
 import { TutorialCoach } from '@/features/learning/TutorialCoach';
+import { ResourceHistoryPanel } from '@/features/history/ResourceHistoryPanel';
 
 function TemplateEditorSession({ templateId }: { templateId: string }) {
   const activeSchemaId = useStore(schemaStore, (state) => state.activeId);
@@ -61,7 +62,7 @@ function TemplateEditorSession({ templateId }: { templateId: string }) {
       if (!template) return;
       const updated = await templateStore.update(template.id, {
         ...template,
-        schemaId: activeSchemaId ?? template.schemaId,
+        schemaId: activeSchemaId,
         slides: document.slides,
         bindings: resolveBindings(document.slides, document.bindings),
       });
@@ -79,10 +80,10 @@ function TemplateEditorSession({ templateId }: { templateId: string }) {
       <header className="template-editor-toolbar">
         <Link to="/app/library">← {__tr('Document library')}</Link>
         <strong>{template.name}</strong>
+        <ResourceHistoryPanel kind="template" id={template.id} />
         <span>{__tr("Макет → Данные → Документы")}</span>
       </header>
-      {saved && (
-        <div className="template-next" role="status">
+        <div className="template-next" role="status" style={{ visibility: saved ? 'visible' : 'hidden' }}>
           <strong>{__tr("Шаблон сохранён")}</strong>
           <Link
             to={`/app/data-models${savedSchemaId ? `?schemaId=${encodeURIComponent(savedSchemaId)}` : ''}`}
@@ -93,7 +94,6 @@ function TemplateEditorSession({ templateId }: { templateId: string }) {
           >
             {__tr("Перейти к генерации →")}</Link>
         </div>
-      )}
       <div className="template-editor-canvas">
         <Editor
           key={template.id}
@@ -105,6 +105,7 @@ function TemplateEditorSession({ templateId }: { templateId: string }) {
             bindings: template.bindings,
           }}
           onSave={save}
+          saveContext={activeSchemaId}
         />
       </div>
     </div>

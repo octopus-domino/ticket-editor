@@ -7,12 +7,14 @@ import { IndexedDraftRepository } from '@/infra/state/IndexedDraftRepository';
 import type { EditorInitialDoc } from '@/shared/types/document';
 import { documentPreview } from '@/application/use-cases/DocumentPreview';
 import { registerLanguageSave } from '@/shared/i18n';
+import { isGuest } from '@/shared/session/guest';
 
 export const documentDrafts = new IndexedDraftRepository<EditorInitialDoc>();
 export function useDocumentPersistence(
   id: string,
   snapshot: EditorInitialDoc,
   save?: (value: EditorInitialDoc) => Promise<void>,
+  saveContext?: string | null,
 ) {
   const [status, setStatus] = useState<PersistenceStatus>('saved');
   const [error, setError] = useState<string | undefined>();
@@ -28,7 +30,7 @@ export function useDocumentPersistence(
         ? new DocumentPersistence(
             id,
             documentDrafts,
-            (value) => target.save!(value),
+            (value) => id.startsWith('guest:')&&!isGuest()?Promise.resolve():target.save!(value),
             (next, reason) => {
               setStatus(next);
               setError(reason);
@@ -43,8 +45,8 @@ export function useDocumentPersistence(
     documentPreview.set(id.split(':')[0], slides);
   }, [id, slides]);
   useEffect(() => {
-    persistence?.update({ slides, data, activeId, bindings });
-  }, [persistence, slides, data, activeId, bindings, save]);
+    persistence?.update({ slides, data, activeId, bindings }, saveContext);
+  }, [persistence, slides, data, activeId, bindings, saveContext]);
   useEffect(() => {
     const flush = () => {
       void persistence?.flush().catch(() => undefined);

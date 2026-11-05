@@ -151,10 +151,10 @@ export const LeftPanel: React.FC = () => {
     docStore.commit((draft) => {
       const s = draft.slides.find((x) => x.id === draft.activeId);
       if (!s) return;
-      const newW = s.orientation === 'portrait' ? w : h;
-      const newH = s.orientation === 'portrait' ? h : w;
-      s.width = newW;
-      s.height = newH;
+      if (!Number.isFinite(w) || !Number.isFinite(h) || w < 50 || h < 50) return;
+      s.width = w;
+      s.height = h;
+      s.orientation = w > h ? 'landscape' : 'portrait';
     }, 'custom-size');
   };
 

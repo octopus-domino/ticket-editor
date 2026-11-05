@@ -7,6 +7,7 @@ import { workspaceStore } from '@/workspace/store';
 import { useStore } from '@/shared/store/store';
 import type { TreeNode } from '@/workspace/types';
 import './product-library.css';
+import { productGoal } from '@/shared/analytics/ProductMetrics';
 import { serializeSlideToSvg } from '@/lib/svg/serialize';
 
 export function DocumentPreview({ slide }: { slide: Slide }) {
@@ -17,6 +18,7 @@ export function DocumentPreview({ slide }: { slide: Slide }) {
   return <img className="document-preview" src={preview} alt="" loading="lazy" />;
 }
 export function DocumentLibraryPage() {
+  useEffect(()=>productGoal('library_opened',{kind:'documents'}),[]);
   const locale = useLocale();
   const catalog = useMemo(() => {
     void locale;
@@ -50,6 +52,7 @@ export function DocumentLibraryPage() {
           <p>{t('Choose a starting point. Every layout is fully editable.')}</p>
         </div>
         <Link to="/app/templates/new">{t('Blank document')} +</Link>
+        <Link to="/app/templates/new?preset=__image__">{t('Create from image')}</Link>
       </header>
       <nav className="library-tabs" aria-label={t('Library')}>
         <button type="button" aria-pressed={!mine} onClick={() => setParams({})}>

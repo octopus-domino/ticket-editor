@@ -19,6 +19,7 @@ export interface MigratedDocument {
  */
 export function fixGroupBoundsInPlace(elements: any[]): void {
   if (!Array.isArray(elements) || elements.length === 0) return;
+  for(const element of elements)if(element?.type==='shape'&&element.shape==='triangle'&&Array.isArray(element.polygonPoints)&&element.polygonPoints.length===6&&element.polygonPoints.every((value:number,index:number)=>value===[75,0,150,150,0,150][index]))delete element.polygonPoints;
 
   for (let iter = 0; iter < 5; iter++) {
     let changed = false;

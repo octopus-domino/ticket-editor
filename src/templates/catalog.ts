@@ -1,6 +1,8 @@
 import type { Slide, CanvasElement } from '@/shared/types';
 import { makeText, makeShape, makeTable, uid } from './helpers';
 import { t } from '@/shared/i18n';
+import { measureText } from '@/lib/richText/measure';
+import { professionalPreset,addPresetDetails } from './professional';
 
 export interface DocumentPreset {
   id: string;
@@ -24,8 +26,11 @@ function page(name: string, width: number, height: number): Slide {
   };
 }
 function box(slide: Slide, x: number, y: number, width: number, height: number, fill: string) {
+  const left = Math.max(x, slide.padding.left), top = Math.max(y, slide.padding.top);
+  const right = Math.min(x + width, slide.width - slide.padding.right);
+  const bottom = Math.min(y + height, slide.height - slide.padding.bottom);
   slide.elements.push(
-    makeShape({ x, y, width, height, fill, stroke: 'transparent', strokeWidth: 0 }),
+    makeShape({ x: left, y: top, width: right - left, height: bottom - top, fill, stroke: 'transparent', strokeWidth: 0 }),
   );
 }
 function text(
@@ -38,22 +43,38 @@ function text(
   color = '#20283e',
   bold = false,
 ) {
+  const content = t(value);
+  const fontStyle = bold ? 'bold' : 'normal';
+  const linesAt = (fontSize: number) => content.split('\n').reduce((count, paragraph) => {
+    let line = '', lines = 1;
+    for (const word of paragraph.split(/\s+/)) {
+      const next = line ? `${line} ${word}` : word;
+      if (line && measureText(next, fontSize, 'Arial', fontStyle) > width) { lines++; line = word; }
+      else line = next;
+    }
+    return count + lines;
+  }, 0);
+  const maxLines = Math.max(2, content.split('\n').length);
+  while (size > 12 && (linesAt(size) > maxLines || content.split(/\s+/).some((word) => measureText(word, size, 'Arial', fontStyle) > width))) size--;
+  const height = Math.ceil(linesAt(size) * size * 1.3 + 2);
   slide.elements.push(
     makeText({
       x,
       y,
       width,
-      height: size * 3,
-      text: t(value),
+      height,
+      text: content,
+      richText: false,
+      lineHeight: 1.3,
       fontSize: size,
       fill: color,
-      fontStyle: bold ? 'bold' : 'normal',
+      fontStyle,
       padding: { top: 0, right: 0, bottom: 0, left: 0 },
     }),
   );
 }
 function heading(slide: Slide, title: string, accent = '#6554c0') {
-  box(slide, 0, 0, 14, slide.height, accent);
+  box(slide, 24, 24, 8, slide.height - 48, accent);
   text(slide, 'YOUR COMPANY', 48, 36, slide.width - 96, 16, accent, true);
   text(slide, title, 48, 100, slide.width - 96, 38, '#20283e', true);
 }
@@ -95,17 +116,23 @@ const definitions: [string, string, DocumentPreset['category'], string][] = [
   ['calendar', 'Monthly calendar', 'personal', 'A4 landscape'],
   ['coupon', 'Gift voucher', 'marketing', '180 × 80 mm'],
   ['label', 'Shipping label', 'business', '100 × 150 mm'],
+  ['service-act','Service acceptance act','business','A4'],
+  ['delivery-note','Delivery note','business','A4'],
+  ['company-details','Company details','business','A4'],
+  ['project-brief','Project brief','business','A4'],
+  ['meeting-notes','Meeting notes','business','A4'],
 ];
 
 function build(id: string, name: string): Slide[] {
+  const professional=professionalPreset(id,name);if(professional)return professional;
   if (id === 'business-card') {
     const front = page(name, mm(90), mm(50)),
       back = page('Back side', mm(90), mm(50));
     box(front, 0, 0, front.width, front.height, '#20283e');
-    box(front, 22, 26, 5, 130, '#bbf0d4');
-    text(front, 'YOUR NAME', 40, 34, 280, 24, '#ffffff', true);
-    text(front, 'Your profession', 40, 70, 260, 13, '#bbf0d4');
-    text(front, 'hello@example.com\n+00 123 456 789', 40, 120, 260, 12, '#ffffff');
+    box(front, 28, 28, 4, 128, '#bbf0d4');
+    text(front, 'YOUR NAME', 44, 34, front.width - 72, 24, '#ffffff', true);
+    text(front, 'Your profession', 44, 76, front.width - 72, 13, '#bbf0d4');
+    text(front, 'hello@example.com\n+00 123 456 789', 44, 120, front.width - 72, 12, '#ffffff');
     text(back, 'YOUR COMPANY', 28, 52, 280, 25, '#20283e', true);
     text(back, 'Your next great idea starts here.', 28, 100, 280, 12);
     return [front, back];
@@ -186,7 +213,7 @@ function build(id: string, name: string): Slide[] {
     const [w, h] = dims[id],
       slide = page(name, w, h);
     box(slide, 0, 0, w, Math.min(90, h / 3), '#20283e');
-    text(slide, name, 22, 24, w - 44, Math.min(29, w / 15), '#ffffff', true);
+    text(slide, name, 30, 32, w - 60, Math.min(24, w / 17), '#ffffff', true);
     text(
       slide,
       id === 'label'
@@ -194,9 +221,9 @@ function build(id: string, name: string): Slide[] {
         : id === 'badge'
           ? 'YOUR NAME'
           : 'A moment worth celebrating',
-      22,
+      30,
       120,
-      w - 44,
+      w - 60,
       Math.min(29, w / 14),
       '#20283e',
       true,
@@ -206,9 +233,9 @@ function build(id: string, name: string): Slide[] {
       id === 'label'
         ? 'Street, building, apartment\nCity, postal code\nCountry'
         : 'Date · Time · Location',
-      22,
+      30,
       Math.min(210, h - 78),
-      w - 44,
+      w - 60,
       16,
     );
     return [slide];
@@ -303,7 +330,7 @@ function build(id: string, name: string): Slide[] {
   return [slide];
 }
 export const DOCUMENT_PRESETS: readonly DocumentPreset[] = definitions.map(
-  ([id, name, category, size]) => ({ id, name, category, size, build: () => build(id, name) }),
+  ([id, name, category, size]) => ({ id, name, category, size, build: () => addPresetDetails(build(id, name),id) }),
 );
 export function presetText(elements: readonly CanvasElement[]) {
   return elements

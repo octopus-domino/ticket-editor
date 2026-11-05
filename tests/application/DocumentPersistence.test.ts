@@ -2,6 +2,19 @@ import { describe, expect, it, vi } from 'vitest';
 import { DocumentPersistence } from '@/application/use-cases/DocumentPersistence';
 
 describe('document durability', () => {
+  it('does not save unchanged content again but persists a schema-only change', async () => {
+    const drafts = { write: vi.fn().mockResolvedValue(undefined), read: vi.fn(), remove: vi.fn().mockResolvedValue(undefined) };
+    const save = vi.fn().mockResolvedValue(undefined), notify = vi.fn();
+    const persistence = new DocumentPersistence('A', drafts, save, notify);
+    persistence.update({ text: 'hello' }, 'schema-a');
+    await persistence.flush();
+    persistence.update({ text: 'hello' }, 'schema-a');
+    await persistence.flush();
+    expect(save).toHaveBeenCalledTimes(1);
+    persistence.update({ text: 'hello' }, null);
+    await persistence.flush();
+    expect(save).toHaveBeenCalledTimes(2);
+  });
   it('keeps a recovery copy when remote saving fails, and clears it after retry', async () => {
     const drafts = {
       write: vi.fn().mockResolvedValue(undefined),

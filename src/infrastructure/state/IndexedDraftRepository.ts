@@ -1,4 +1,5 @@
 import type { Draft, DraftRepository } from '@/application/ports/DraftRepository';
+import { isGuest,guestRead,guestWrite,guestRemove } from '@/shared/session/guest';
 
 /** IndexedDB performs structured persistence without synchronous JSON/localStorage writes. */
 export class IndexedDraftRepository<T> implements DraftRepository<T> {
@@ -26,12 +27,18 @@ export class IndexedDraftRepository<T> implements DraftRepository<T> {
     });
   }
   async read(id: string): Promise<Draft<T> | null> {
+    if(id.startsWith('guest:')&&!isGuest())return null;
+    if(isGuest())return JSON.parse(guestRead(`draft:${id}`)??'null') as Draft<T>|null;
     return (await this.transaction('readonly', (store) => store.get(id))) ?? null;
   }
   async write(id: string, draft: Draft<T>): Promise<void> {
+    if(id.startsWith('guest:')&&!isGuest())return;
+    if(isGuest()){guestWrite(`draft:${id}`,JSON.stringify(draft));return;}
     await this.transaction('readwrite', (store) => store.put(draft, id));
   }
   async remove(id: string, revision?: string): Promise<void> {
+    if(id.startsWith('guest:')&&!isGuest())return;
+    if(isGuest()){const draft=await this.read(id);if(!revision||draft?.revision===revision)guestRemove(`draft:${id}`);return;}
     const database = await this.open();
     await new Promise<void>((resolve, reject) => {
       const transaction = database.transaction('drafts', 'readwrite');

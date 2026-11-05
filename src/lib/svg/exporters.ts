@@ -174,8 +174,12 @@ function shapePrimitiveLocal(
     }
     case 'circle':
       return `<circle cx="${w / 2}" cy="${h / 2}" r="${Math.min(w, h) / 2}"${common} />`;
-    case 'triangle':
+    case 'triangle': {
+      const points=el.polygonPoints;
+      const legacy=points?.length===6&&points.every((value,index)=>value===[75,0,150,150,0,150][index]);
+      if(points&&points.length>=6&&!legacy)return `<polygon points="${points.join(' ')}"${common} />`;
       return `<polygon points="${w / 2},0 ${w},${h} 0,${h}"${common} />`;
+    }
     case 'polygon': {
       const subpaths = el.polygonSubpaths || (el.polygonPoints ? [el.polygonPoints] : []);
       if (subpaths.length === 0) return '';

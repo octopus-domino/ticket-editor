@@ -9,6 +9,7 @@ import globals from 'globals';
 export default defineConfig(
   {
     ignores: [
+      'public/vendor/cadesplugin_api.js',
       'dist/**', 'node_modules/**', 'coverage/**', 'scripts/**', 'src/.*.cjs',
       '.imports-backup/**', '**/.imports-backup/**', 'src/.imports-backup/**',
       'eslint.config.js', 'vite.config.ts', 'vitest.config.ts',

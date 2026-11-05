@@ -13,6 +13,7 @@ const Item = z.object({
 export type ImportedModel = z.infer<typeof Item>;
 export interface ImportResult {
   readonly ok: boolean;
+  readonly repairable?: boolean;
   readonly schemaId?: string;
   readonly models?: ImportedModel[];
   readonly issues?: readonly { index: number; message: string }[];

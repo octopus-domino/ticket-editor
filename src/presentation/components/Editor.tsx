@@ -65,6 +65,7 @@ export interface EditorProps {
   documentId?: string;
   initialDoc?: EditorInitialDoc;
   onSave?: (state: EditorInitialDoc) => Promise<void>;
+  saveContext?: string | null;
 }
 
 function buildTextPatch(patch: TextStylePatch): Partial<TextElement> {
@@ -106,9 +107,10 @@ function applyTextStylePatch(el: CanvasElement, patch: TextStylePatch): Partial<
 interface EditorLayoutProps {
   documentId: string;
   onSave?: (state: EditorInitialDoc) => Promise<void>;
+  saveContext?: string | null;
 }
 
-const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave, documentId }) => {
+const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave, documentId, saveContext }) => {
   const docStore = useDocumentStore();
   const selStore = useSelectionStore();
   const modalsStore = useModalsStore();
@@ -183,6 +185,7 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave, documentId }) => {
     `${authStore.getState().user?.id ?? 'local'}:${documentId}`,
     { slides, data, activeId, bindings },
     onSave,
+    saveContext,
   );
 
   const commitEditing = useEditingCommit(docStore);
@@ -389,7 +392,7 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave, documentId }) => {
       )}
 
       {onSave && persistence.status !== 'saved' && (
-        <div role="status" style={{ padding: '4px 12px' }}>
+        <div role="status" className={`editor-save-status ${persistence.status}`}>
           {persistence.status === 'saving' ? __tr("Сохранение…") : __tr("Не удалось сохранить")}
           {persistence.error && (
             <>
@@ -613,7 +616,7 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave, documentId }) => {
   );
 };
 
-export const Editor: React.FC<EditorProps> = ({ documentId, initialDoc, onSave }) => {
+export const Editor: React.FC<EditorProps> = ({ documentId, initialDoc, onSave, saveContext }) => {
   const stores = useMemo(
     () => {
       const initial: InitialDocument | undefined = initialDoc
@@ -648,6 +651,7 @@ export const Editor: React.FC<EditorProps> = ({ documentId, initialDoc, onSave }
         key={documentId ?? 'local'}
         documentId={documentId ?? 'local'}
         onSave={onSave}
+        saveContext={saveContext}
       />
     </EditorProvider>
   );

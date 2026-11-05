@@ -24,6 +24,7 @@ export interface GenerationResult {
   count: number;
   failed: number;
   errors?: { index: number; message: string }[];
+  historyId?: string;
 }
 
 export interface GenerationJobStatus {

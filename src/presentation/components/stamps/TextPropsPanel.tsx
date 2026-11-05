@@ -5,6 +5,7 @@ import { t as __tr } from '@/shared/i18n';
    ============================================================ */
 
 import React from 'react';
+import { StampFontSizeInput } from './StampFontSizeInput';
 import type { StampTextItem, TextAlign } from '@/shared/types';
 import {
   MIN_ARC_SPAN_DEG, MAX_ARC_SPAN_DEG, type ArcDirection,
@@ -163,7 +164,7 @@ export const TextPropsPanel: React.FC<Props> = ({ text, onChange }) => {
 
       <h4>{__tr("Стиль")}</h4>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-        <label>{__tr("Размер")}<input type="number" min="6" value={text.fontSize} onChange={(e) => onChange({ fontSize: +e.target.value })} /></label>
+        <label>{__tr("Размер")}<StampFontSizeInput value={text.fontSize} onChange={fontSize=>onChange({fontSize})}/></label>
         <label>
           {__tr("Шрифт")}<select value={text.fontFamily} onChange={(e) => onChange({ fontFamily: e.target.value })}>
             <option value="Arial">Arial</option>

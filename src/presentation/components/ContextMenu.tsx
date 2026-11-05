@@ -58,8 +58,8 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
     };
   }, [onClose]);
 
-  const clampedX = Math.min(x, window.innerWidth - 240);
-  const clampedY = Math.min(y, window.innerHeight - 560);
+  const clampedX = Math.max(8,Math.min(x, window.innerWidth - 248));
+  const clampedY = Math.max(8,Math.min(y, window.innerHeight - 568));
   const hasSelection = selectedElements.length > 0;
   const isLine = selectedElements.length === 1 && selectedElements[0].type === 'line';
 
@@ -77,7 +77,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
   };
 
   return (
-    <div ref={menuRef} className="context-menu" style={{ left: clampedX, top: clampedY }}>
+    <div ref={menuRef} role="menu" className="context-menu" style={{ left: clampedX, top: clampedY,maxHeight:'calc(100dvh - 16px)',overflowY:'auto' }}>
       {hasSelection && (
         <>
           <div className="context-menu-item" onClick={onCut}>

@@ -8,7 +8,7 @@ export const StampInlineTextEditor: React.FC<Props> = ({ text, zoom, pan, onChan
   let left = 0, top = 0, width = 200, height = 30;
   if (text.mode === 'straight') {
     left = text.x * zoom + pan.x; top = text.y * zoom + pan.y;
-    width = Math.max(80, text.width * zoom); height = Math.max(20, text.fontSize * 1.5 * zoom);
+    width = Math.max(80, text.width * zoom); height = Math.max(32, text.text.split(/\r?\n/).length*text.fontSize * 1.3 * zoom+8);
   } else {
     const rx = text.arcRx ?? text.arcRadius; const ry = text.arcRy ?? text.arcRadius;
     const bb = arcTextBBox({ text: text.text, arcCx: text.arcCx, arcCy: text.arcCy, arcRadius: text.arcRadius, arcRx: rx, arcRy: ry, arcStartDeg: text.arcStartDeg, arcEndDeg: text.arcEndDeg, fontSize: text.fontSize });

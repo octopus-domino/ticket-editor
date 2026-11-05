@@ -22,15 +22,6 @@ const WorkspaceHome = lazy(() =>
 const EditorPage = lazy(() =>
   import('./workspace/components/EditorPage').then((m) => ({ default: m.EditorPage })),
 );
-const SchemasPage = lazy(() =>
-  import('@/features/schemas/ui/SchemasPage').then((m) => ({ default: m.SchemasPage })),
-);
-const SchemaEditorPage = lazy(() =>
-  import('@/features/schemas/ui/SchemaEditorPage').then((m) => ({ default: m.SchemaEditorPage })),
-);
-const ModelsPage = lazy(() =>
-  import('@/features/data-models/ui/ModelsPage').then((m) => ({ default: m.ModelsPage })),
-);
 const GenerationPage = lazy(() =>
   import('@/features/generation/ui/GenerationPage').then((m) => ({ default: m.GenerationPage })),
 );
@@ -49,6 +40,12 @@ const DocumentLibraryPage = lazy(() => import('./features/library/DocumentLibrar
 const StampStudioPage = lazy(() => import('./features/stamps/StampStudioPage').then((module) => ({ default: module.StampStudioPage })));
 const LearningPage = lazy(() => import('./features/learning/LearningPage').then((module) => ({ default: module.LearningPage })));
 const SigningPage = lazy(() => import('./features/signing/SigningPage').then((module) => ({ default: module.SigningPage })));
+const ApiAccessPage = lazy(() => import('./features/client-api/ApiAccessPage').then((module) => ({ default: module.ApiAccessPage })));
+const ConnectorPage = lazy(() => import('./features/connectors/ConnectorPage').then((module) => ({ default: module.ConnectorPage })));
+const GenerationHistoryPage = lazy(() => import('./features/history/GenerationHistoryPage').then((module) => ({ default: module.GenerationHistoryPage })));
+const AssetLibrariesPage = lazy(() => import('./features/asset-libraries/AssetLibrariesPage').then((module) => ({ default: module.AssetLibrariesPage })));
+const DataWorkspacePage = lazy(() => import('./features/data-models/ui/DataWorkspacePage').then((module) => ({ default: module.DataWorkspacePage })));
+const ProfilePage = lazy(() => import('./features/profile/ProfilePage').then((module) => ({ default: module.ProfilePage })));
 
 const App: React.FC = () => {
   const offline = useStore(authStore, (s) => s.offline);
@@ -104,12 +101,18 @@ const App: React.FC = () => {
               <Route path="stamps" element={<StampStudioPage />} />
               <Route path="learn" element={<LearningPage />} />
               <Route path="sign" element={<SigningPage />} />
+              <Route path="api-access" element={<ApiAccessPage />} />
+              <Route path="integrations" element={<ConnectorPage />} />
+              <Route path="history" element={<GenerationHistoryPage />} />
+              <Route path="libraries" element={<AssetLibrariesPage />} />
               <Route path="templates/new" element={<NewTemplatePage />} />
               <Route path="templates/:templateId/edit" element={<TemplateEditorPage />} />
-              <Route path="schemas" element={<SchemasPage />} />
-              <Route path="schemas/new" element={<SchemaEditorPage />} />
-              <Route path="schemas/:schemaId" element={<SchemaEditorPage />} />
-              <Route path="data-models" element={<ModelsPage />} />
+              <Route path="schemas" element={<DataWorkspacePage />} />
+              <Route path="schemas/new" element={<DataWorkspacePage />} />
+              <Route path="schemas/:schemaId" element={<DataWorkspacePage />} />
+              <Route path="data-models" element={<DataWorkspacePage />} />
+              <Route path="data" element={<DataWorkspacePage />} />
+              <Route path="profile" element={<ProfilePage />} />
               <Route path="generate" element={<GenerationPage />} />
             </Route>
 

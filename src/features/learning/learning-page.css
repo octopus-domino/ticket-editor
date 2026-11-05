@@ -252,17 +252,25 @@
   padding: 32px 24px;
   background: #e9edf2;
 }
+.lesson-demo-canvas:has(.lesson-interaction){flex-direction:column;gap:18px}
+.lesson-interaction{display:flex;align-items:center;justify-content:center;gap:28px;width:100%;padding:12px;background:#fff;color:#334155;border:1px solid #cbd5e1;border-radius:8px}
+.lesson-interaction>span:first-child{border:1px solid #94a3b8;padding:8px;border-radius:5px}
+.lesson-drag-arrow{animation:lesson-drag 2s ease-in-out infinite}
+@keyframes lesson-drag{50%{transform:translateX(12px)}}
+@media(prefers-reduced-motion:reduce){.lesson-drag-arrow{animation:none}}
 .lesson-paper {
   position: relative;
   width: 100%;
   box-shadow: 0 4px 18px #0f172a1a;
   animation: lesson-reveal 0.3s ease;
 }
+.lesson-page-setup{position:absolute;inset:12%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;border:2px dashed #94a3b8;color:#334155;background:#f8fafc;font-size:clamp(12px,2vw,20px)}
 .lesson-paper > img {
   width: 100%;
   display: block;
 }
-.lesson-paper > .lesson-focus {
+.lesson-paper > .lesson-focus,
+.lesson-paper > .lesson-margin-guide {
   position: absolute;
   inset: 0;
   width: 100%;

@@ -164,7 +164,7 @@ export class ModelStore extends SimpleStore<ModelState> {
 
   async importMany(
     schemaId: string,
-    items: { name: string; values: Record<string, unknown> }[],
+    items: { id?: string; name: string; values: Record<string, unknown> }[],
   ): Promise<void> {
     const session = this.sessionVersion;
     if (this.repo.importMany) {

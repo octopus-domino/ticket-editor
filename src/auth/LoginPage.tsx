@@ -39,6 +39,8 @@ export const LoginPage: React.FC = () => {
       <main className="auth-right">
         <div className="auth-form-wrap">
           <LanguageSwitcher />
+          <button type="button" className="auth-submit" onClick={()=>{authStore.enterGuest();navigate(destination,{replace:true});}}>{__tr('Continue without registration')}</button>
+          <p>{__tr('Free to use. Guest work stays in this browser tab session and is never saved to the server.')}</p>
           <Link to="/" className="auth-back">
             {__tr("← На главную")}</Link>
 

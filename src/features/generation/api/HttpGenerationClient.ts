@@ -1,4 +1,5 @@
 import { authFetch } from '@/shared/api/client';
+import { businessError } from '@/shared/api/businessErrors';
 import type {
   GenerationClient,
   GenerationRequest,
@@ -73,6 +74,7 @@ export class HttpGenerationClient implements GenerationClient {
     const m = /filename="([^"]+)"/.exec(disposition);
     return {
       blob: await res.blob(),
+      historyId: res.headers.get('X-Generation-History') ?? undefined,
       errors: this.readErrors(res.headers.get('X-Generation-Errors')),
       filename: m ? m[1] : 'documents.zip',
       count: Number(res.headers.get('X-Generation-Count') ?? 0),
@@ -82,9 +84,10 @@ export class HttpGenerationClient implements GenerationClient {
   private readErrors(encoded: string | null): { index: number; message: string }[] {
     if (!encoded) return [];
     try {
-      return JSON.parse(
+      const parsed=JSON.parse(
         new TextDecoder().decode(Uint8Array.from(atob(encoded), (char) => char.charCodeAt(0))),
-      );
+      ) as {index:number;message:string}[];
+      return parsed.map(issue=>({...issue,message:businessError(issue.message)}));
     } catch {
       return [];
     }

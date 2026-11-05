@@ -41,8 +41,8 @@ function demonstration(topic: LessonTopic, current: LessonStep): string {
   return serializeSlideToSvg(slide);
 }
 export function LessonPlayer() {
-  const locale = useLocale(),
-    [params, setParams] = useSearchParams();
+  const locale = useLocale();
+  const [params, setParams] = useSearchParams();
   const library = useMemo(() => {
     void locale;
     return lessons();
@@ -51,15 +51,24 @@ export function LessonPlayer() {
   const requested = params.get('lesson') ?? 'document';
   const topic: LessonTopic = requested in library ? (requested as LessonTopic) : 'document';
   const lesson = library[topic];
-  const [step, setStep] = useState(0),
-    [playing, setPlaying] = useState(false);
+  const [step, setStep] = useState(0);
+  const [playing, setPlaying] = useState(false);
   const current = lesson.steps[Math.min(step, lesson.steps.length - 1)];
-  const focus = current.focus && topic === 'document' ? tutorialFocusBounds(current.focus) : current.focus;
-  const trackedTopic=useRef<LessonTopic|null>(null),completedTopics=useRef(new Set<LessonTopic>());
-  useEffect(()=>{
-    if(trackedTopic.current!==topic){trackedTopic.current=topic;productGoal('lesson_started',{topic});return;}
-    if(step===lesson.steps.length-1&&!completedTopics.current.has(topic)){completedTopics.current.add(topic);productGoal('lesson_completed',{topic,count:lesson.steps.length});}
-  },[topic,step,lesson.steps.length]);
+  const focus =
+    current.focus && topic === 'document' ? tutorialFocusBounds(current.focus) : current.focus;
+  const trackedTopic = useRef<LessonTopic | null>(null);
+  const completedTopics = useRef(new Set<LessonTopic>());
+  useEffect(() => {
+    if (trackedTopic.current !== topic) {
+      trackedTopic.current = topic;
+      productGoal('lesson_started', { topic });
+      return;
+    }
+    if (step === lesson.steps.length - 1 && !completedTopics.current.has(topic)) {
+      completedTopics.current.add(topic);
+      productGoal('lesson_completed', { topic, count: lesson.steps.length });
+    }
+  }, [topic, step, lesson.steps.length]);
   useEffect(() => {
     setStep(0);
     setPlaying(false);
@@ -126,7 +135,13 @@ export function LessonPlayer() {
             </span>
           </div>
           <div className={`lesson-demo-canvas lesson-demo-${topic}`} key={`${topic}-${step}`}>
-            {current.interaction&&<div className="lesson-interaction" role="img" aria-label={current.title}><span>{t('Tools')}</span><span className={current.interaction==='drag'?'lesson-drag-arrow':''}>➜</span><strong>{current.interaction==='drag'?t('Canvas'):t('Properties')}</strong></div>}
+            {current.interaction && (
+              <div className="lesson-interaction" role="img" aria-label={current.title}>
+                <span>{t('Tools')}</span>
+                <span className={current.interaction === 'drag' ? 'lesson-drag-arrow' : ''}>➜</span>
+                <strong>{current.interaction === 'drag' ? t('Canvas') : t('Properties')}</strong>
+              </div>
+            )}
             {topic === 'data' ? (
               <table>
                 <thead>
@@ -149,10 +164,33 @@ export function LessonPlayer() {
             ) : (
               <div className="lesson-paper">
                 <img src={preview} alt={current.title} />
-                {topic==='document'&&<svg className="lesson-margin-guide" viewBox={`0 0 ${TUTORIAL_PAGE.width} ${TUTORIAL_PAGE.height}`} aria-label={t('Margins')}>
-                  <rect x={TUTORIAL_PAGE.margin} y={TUTORIAL_PAGE.margin} width={TUTORIAL_PAGE.width-2*TUTORIAL_PAGE.margin} height={TUTORIAL_PAGE.height-2*TUTORIAL_PAGE.margin} fill="none" stroke="#3b82f6" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeDasharray="6 4"/>
-                </svg>}
-                {topic==='document'&&current.stage===0&&<div className="lesson-page-setup"><strong>{t('Page setup')}</strong><span>A4 · 297 × 210 mm</span><span>{t('Margins')}: 28 px</span><span>↔ {t('Landscape')}</span></div>}
+                {topic === 'document' && (
+                  <svg
+                    className="lesson-margin-guide"
+                    viewBox={`0 0 ${TUTORIAL_PAGE.width} ${TUTORIAL_PAGE.height}`}
+                    aria-label={t('Margins')}
+                  >
+                    <rect
+                      x={TUTORIAL_PAGE.margin}
+                      y={TUTORIAL_PAGE.margin}
+                      width={TUTORIAL_PAGE.width - 2 * TUTORIAL_PAGE.margin}
+                      height={TUTORIAL_PAGE.height - 2 * TUTORIAL_PAGE.margin}
+                      fill="none"
+                      stroke="#3b82f6"
+                      strokeWidth="1"
+                      vectorEffect="non-scaling-stroke"
+                      strokeDasharray="6 4"
+                    />
+                  </svg>
+                )}
+                {topic === 'document' && current.stage === 0 && (
+                  <div className="lesson-page-setup">
+                    <strong>{t('Page setup')}</strong>
+                    <span>A4 · 297 × 210 mm</span>
+                    <span>{t('Margins')}: 28 px</span>
+                    <span>↔ {t('Landscape')}</span>
+                  </div>
+                )}
                 {focus && (
                   <svg className="lesson-focus" viewBox="0 0 1123 794" aria-hidden="true">
                     <rect

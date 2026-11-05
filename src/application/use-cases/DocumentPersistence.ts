@@ -30,6 +30,8 @@ export class DocumentPersistence<T> {
     }, 1500);
   }
   update(snapshot: T, context?: string | null): void {
+    // React can provide new references for unchanged content. The schema context still
+    // participates so attaching/detaching a schema persists even without a layout edit.
     const content = JSON.stringify([context, snapshot]);
     if (content === this.lastContent) return;
     this.lastContent = content;

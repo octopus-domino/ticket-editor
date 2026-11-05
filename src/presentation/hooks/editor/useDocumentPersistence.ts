@@ -19,6 +19,7 @@ export function useDocumentPersistence(
   const [status, setStatus] = useState<PersistenceStatus>('saved');
   const [error, setError] = useState<string | undefined>();
   const targetRef = useRef({ id, save });
+  // Freeze a separate target per document; a late flush must never save into the next one.
   if (targetRef.current.id !== id || Boolean(targetRef.current.save) !== Boolean(save)) {
     targetRef.current = { id, save };
   } else targetRef.current.save = save;
@@ -30,7 +31,8 @@ export function useDocumentPersistence(
         ? new DocumentPersistence(
             id,
             documentDrafts,
-            (value) => id.startsWith('guest:')&&!isGuest()?Promise.resolve():target.save!(value),
+            (value) =>
+              id.startsWith('guest:') && !isGuest() ? Promise.resolve() : target.save!(value),
             (next, reason) => {
               setStatus(next);
               setError(reason);
@@ -40,11 +42,18 @@ export function useDocumentPersistence(
     [id, enabled, target],
   );
   const { slides, data, activeId, bindings } = snapshot;
-  useEffect(() => registerLanguageSave(async () => { await persistence?.flush(); }), [persistence]);
+  useEffect(
+    () =>
+      registerLanguageSave(async () => {
+        await persistence?.flush();
+      }),
+    [persistence],
+  );
   useEffect(() => {
     documentPreview.set(id.split(':')[0], slides);
   }, [id, slides]);
   useEffect(() => {
+    // Callback identity is not a content change. Schema-only edits use saveContext instead.
     persistence?.update({ slides, data, activeId, bindings }, saveContext);
   }, [persistence, slides, data, activeId, bindings, saveContext]);
   useEffect(() => {

@@ -6,11 +6,11 @@ import './learning-page.css';
 
 export function TutorialCoach({ topic }: { topic: 'document' | 'stamp' }) {
   const [params, setParams] = useSearchParams();
-  const [index, setIndex] = useState(0),
-    [expanded, setExpanded] = useState(() => !window.matchMedia('(max-width: 760px)').matches);
+  const [index, setIndex] = useState(0);
+  const [expanded, setExpanded] = useState(() => !window.matchMedia('(max-width: 760px)').matches);
   if (!params.has('lesson')) return null;
-  const list = lessons()[topic].steps,
-    current = list[index];
+  const list = lessons()[topic].steps;
+  const current = list[index];
   return (
     <aside className="tutorial-coach" aria-label={t('Learn step by step')}>
       <div>

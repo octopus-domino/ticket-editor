@@ -16,15 +16,22 @@ import type { StampTemplate } from '@/lib/stamps/types';
 import { t } from '@/shared/i18n';
 import { measureText } from '@/lib/richText/measure';
 
-const navy = '#183c39',
-  orange = '#e76837';
+const navy = '#183c39';
+const orange = '#e76837';
 export const TUTORIAL_PAGE = { width: 1123, height: 794, margin: 28 } as const;
-export function tutorialFocusBounds(focus: [number, number, number, number]): [number, number, number, number] {
+export function tutorialFocusBounds(
+  focus: [number, number, number, number],
+): [number, number, number, number] {
   // Include the focus outline itself inside the printable area.
   const inset = TUTORIAL_PAGE.margin + 3;
   const x = Math.max(inset, Math.min(TUTORIAL_PAGE.width - inset, focus[0]));
   const y = Math.max(inset, Math.min(TUTORIAL_PAGE.height - inset, focus[1]));
-  return [x, y, Math.max(0, Math.min(TUTORIAL_PAGE.width - inset, focus[0] + focus[2]) - x), Math.max(0, Math.min(TUTORIAL_PAGE.height - inset, focus[1] + focus[3]) - y)];
+  return [
+    x,
+    y,
+    Math.max(0, Math.min(TUTORIAL_PAGE.width - inset, focus[0] + focus[2]) - x),
+    Math.max(0, Math.min(TUTORIAL_PAGE.height - inset, focus[1] + focus[3]) - y),
+  ];
 }
 export const TUTORIAL_LOGO = `data:image/svg+xml;charset=utf-8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160"><path d="M80 135V65M80 95C24 96 20 44 28 27c38 2 59 27 52 68ZM80 115c56-1 60-53 52-70-38 2-59 27-52 70Z" fill="none" stroke="#244f91" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></svg>')}`;
 export function buildTutorialStamp(stage = 12): StampTemplate {
@@ -82,11 +89,16 @@ export function buildTutorialBrochure(stage = 24): Slide[] {
     format: 'a4',
     orientation: 'landscape',
     background: '#fffdf8',
-    padding: { top: TUTORIAL_PAGE.margin, right: TUTORIAL_PAGE.margin, bottom: TUTORIAL_PAGE.margin, left: TUTORIAL_PAGE.margin },
+    padding: {
+      top: TUTORIAL_PAGE.margin,
+      right: TUTORIAL_PAGE.margin,
+      bottom: TUTORIAL_PAGE.margin,
+      left: TUTORIAL_PAGE.margin,
+    },
     elements: [],
   });
-  const front = makePage(t('Front')),
-    back = makePage(t('Back side'));
+  const front = makePage(t('Front'));
+  const back = makePage(t('Back side'));
   const add = (slide: Slide, el: CanvasElement) => slide.elements.push(el);
   const text = (
     slide: Slide,
@@ -100,14 +112,23 @@ export function buildTutorialBrochure(stage = 24): Slide[] {
   ) => {
     const content = t(value);
     // Keep a long translated word intact rather than splitting it at the panel edge.
-    while (fontSize > 12 && content.split(/\s+/).some((word) => measureText(word, fontSize, 'Arial', bold ? 'bold' : 'normal') > width)) fontSize--;
+    while (
+      fontSize > 12 &&
+      content
+        .split(/\s+/)
+        .some((word) => measureText(word, fontSize, 'Arial', bold ? 'bold' : 'normal') > width)
+    )
+      fontSize--;
     let lines = 0;
     for (const paragraph of content.split('\n')) {
-      let line = ''; lines++;
+      let line = '';
+      lines++;
       for (const word of paragraph.split(/\s+/)) {
         const next = line ? `${line} ${word}` : word;
-        if (line && measureText(next, fontSize, 'Arial', bold ? 'bold' : 'normal') > width) { lines++; line = word; }
-        else line = next;
+        if (line && measureText(next, fontSize, 'Arial', bold ? 'bold' : 'normal') > width) {
+          lines++;
+          line = word;
+        } else line = next;
       }
     }
     add(slide, {

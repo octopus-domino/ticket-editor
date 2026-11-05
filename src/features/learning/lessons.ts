@@ -7,7 +7,7 @@ export interface LessonStep {
   stage: number;
   side?: number;
   focus?: [number, number, number, number];
-  interaction?:'drag'|'configure';
+  interaction?: 'drag' | 'configure';
 }
 const step = (
   title: string,
@@ -16,8 +16,16 @@ const step = (
   stage: number,
   side = 0,
   focus?: LessonStep['focus'],
-  interaction?:LessonStep['interaction'],
-): LessonStep => ({ title: t(title), detail: t(detail), tool: t(tool), stage, side, focus,interaction });
+  interaction?: LessonStep['interaction'],
+): LessonStep => ({
+  title: t(title),
+  detail: t(detail),
+  tool: t(tool),
+  stage,
+  side,
+  focus,
+  interaction,
+});
 export function lessons() {
   return {
     document: {
@@ -46,8 +54,24 @@ export function lessons() {
           0,
           [780, 200, 320, 240],
         ),
-        step('Drag components onto the page','Open Tools, choose Shapes, hold a component and drag it onto the page. Release at the target position. On a phone, open Tools and tap a component to insert it.','Shapes',2,0,[780,200,310,240],'drag'),
-        step('Configure the selected component','Select the component on the page. Open Properties to change its size, position, fill and outline. For text, choose the font and size; double-click to edit the text.','Properties',2,0,[780,200,310,240],'configure'),
+        step(
+          'Drag components onto the page',
+          'Open Tools, choose Shapes, hold a component and drag it onto the page. Release at the target position. On a phone, open Tools and tap a component to insert it.',
+          'Shapes',
+          2,
+          0,
+          [780, 200, 310, 240],
+          'drag',
+        ),
+        step(
+          'Configure the selected component',
+          'Select the component on the page. Open Properties to change its size, position, fill and outline. For text, choose the font and size; double-click to edit the text.',
+          'Properties',
+          2,
+          0,
+          [780, 200, 310, 240],
+          'configure',
+        ),
         step(
           'Formatted text',
           'Add formatted text to the middle panel. Double-click to edit paragraphs, emphasis, alignment and line spacing.',

@@ -1,4 +1,3 @@
-import { z } from 'zod';
 import type { CanvasElement, Slide } from '@/shared/types';
 import { CanvasElementSchema } from '@/shared/schemas/document';
 import {
@@ -13,251 +12,409 @@ import {
   newFooter,
 } from '@/lib/factories';
 import { measureText } from '@/lib/richText/measure';
+import { recognizedHtml } from './recognizedHtml';
+import { RecognitionError } from './RecognitionError';
+import {
+  clampBounds,
+  normalizeAlign,
+  normalizeChartKind,
+  normalizeColor,
+  normalizeFontFamily,
+  normalizeFontStyle,
+  normalizeNumberArray,
+  normalizePalette,
+  normalizeQrFormat,
+  normalizeShape,
+  normalizeStampShape,
+  normalizeTextDecoration,
+  numberInRange,
+} from './normalize';
+import {
+  ELEMENT_TYPES,
+  MAX_PAGE_DIMENSION,
+  draftSchema,
+  type ElementType,
+  type RecognizedDraft,
+  type RecognizedElement,
+} from './recognizedDraft';
 
-const color = z.string().regex(/^(#[a-f\d]{3}|#[a-f\d]{6}|transparent|none)$/i);
-const text = z.string().max(20000);
-const properties = z.object({
-  text: text.optional(),
-  fontSize: z.number().positive().max(512).optional(),
-  fill: color.optional(),
-  fontStyle: z.enum(['normal', 'bold', 'italic', 'bold italic']).optional(),
-  fontFamily: z.enum(['Arial', 'Times New Roman', 'Georgia', 'Verdana', 'Courier New']).optional(),
-  align: z.enum(['left', 'center', 'right']).optional(),
-  shape: z.enum(['rect', 'roundRect', 'circle', 'oval', 'triangle', 'star', 'arrow']).optional(),
-  stroke: color.optional(),
-  strokeWidth: z.number().min(0).max(100).optional(),
-  radius: z.number().min(0).max(1000).optional(),
-  data: z.array(z.array(text).min(1).max(30)).min(1).max(100).optional(),
-  borderColor: color.optional(),
-  headerBg: color.optional(),
-  src: z
-    .string()
-    .max(12_000_000)
-    .regex(/^data:image\/(png|jpeg);base64,[a-z\d+/=]+$/i)
-    .optional(),
-  topText: text.optional(),
-  centerText: text.optional(),
-  bottomText: text.optional(),
-  stampColor: color.optional(),
-  kind: z.enum(['bar', 'donut']).optional(),
-  values: z.array(z.number().finite()).max(100).optional(),
-  palette: z.array(color).max(100).optional(),
-  format: z.enum(['QR', 'DATA_MATRIX', 'AZTEC', 'PDF_417']).optional(),
-  d: z
-    .string()
-    .max(20000)
-    .regex(/^[MmZzLlHhVvCcSsQqTtAa\d\s.,+eE-]+$/)
-    .optional(),
-  bgColor: color.optional(),
-  confidence: z.number().finite().optional(),
-});
-const draftSchema = z.object({
-  width: z.number().min(32).max(4096),
-  height: z.number().min(32).max(4096),
-  elements: z
-    .array(
-      z.object({
-        type: z.enum([
-          'text',
-          'shape',
-          'line',
-          'table',
-          'image',
-          'stamp',
-          'chart',
-          'qr',
-          'path',
-          'footer',
-        ]),
-        x: z.number().nonnegative(),
-        y: z.number().nonnegative(),
-        width: z.number().positive(),
-        height: z.number().positive(),
-        properties,
-      }),
-    )
-    .min(1)
-    .max(300),
-  warnings: z.array(z.string().max(100)).max(20),
-  engine: z.enum(['ocr', 'ollama']),
-});
-export type RecognizedDraft = z.infer<typeof draftSchema>;
-export function recognizedSlide(
-  input: unknown,
-  name: string,
-): { slide: Slide; warnings: string[] } {
-  const draft = draftSchema.parse(input);
-  const scale = Math.min(1, 1552 / Math.max(draft.width, draft.height));
-  const margin = 0;
+export type { RecognizedDraft } from './recognizedDraft';
+
+export interface BuildResult {
+  slide: Slide;
+  warnings: string[];
+}
+
+/* ---------- public boundary ---------- */
+
+export function recognizedSlide(input: unknown, name: string): BuildResult {
+  const draft = normalizeDraft(input);
+  return buildSlide(draft, name);
+}
+
+/* ---------- normalisation (raw → contract) ---------- */
+
+function normalizeDraft(input: unknown): RecognizedDraft {
+  if (!isRecord(input)) {
+    throw new RecognitionError('recognition.invalid_result', 'draft is not an object');
+  }
+  const width = clampPageDimension(input.width);
+  const height = clampPageDimension(input.height);
+  if (!width || !height) {
+    throw new RecognitionError('recognition.invalid_result', 'draft size missing');
+  }
+  const rawElements = Array.isArray(input.elements) ? input.elements : [];
+  const elements = rawElements
+    .slice(0, 300)
+    .map(normalizeElement)
+    .filter((e): e is RecognizedElement => e !== null);
+  if (!elements.length) {
+    throw new RecognitionError('recognition.invalid_result', 'no usable elements');
+  }
+  const warnings = Array.isArray(input.warnings)
+    ? input.warnings
+        .filter((w): w is string => typeof w === 'string')
+        .slice(0, 20)
+        .map((w) => w.slice(0, 100))
+    : [];
+  const engine =
+    input.engine === 'ollama' || input.engine === 'dual' ? input.engine : 'ocr';
+  return draftSchema.parse({ width, height, elements, warnings, engine });
+}
+
+function normalizeElement(raw: unknown): RecognizedElement | null {
+  if (!isRecord(raw)) return null;
+  if (typeof raw.type !== 'string') return null;
+  if (!(ELEMENT_TYPES as readonly string[]).includes(raw.type)) return null;
+  const x = finite(raw.x);
+  const y = finite(raw.y);
+  const width = positive(raw.width);
+  const height = positive(raw.height);
+  if (x === null || y === null || width === null || height === null) return null;
+  return {
+    type: raw.type as ElementType,
+    x,
+    y,
+    width,
+    height,
+    properties: isRecord(raw.properties) ? raw.properties : {},
+  };
+}
+
+function clampPageDimension(value: unknown): number | null {
+  const n = finite(value);
+  if (n === null || n <= 0) return null;
+  return Math.min(MAX_PAGE_DIMENSION, Math.max(32, n));
+}
+
+/* ---------- build (contract → Slide) ---------- */
+
+const TARGET_MAX_SIDE = 1552;
+
+function buildSlide(draft: RecognizedDraft, name: string): BuildResult {
+  const scale = Math.min(1, TARGET_MAX_SIDE / Math.max(draft.width, draft.height));
   const slide: Slide = {
     id: crypto.randomUUID(),
     name,
     format: 'custom',
     orientation: draft.width > draft.height ? 'landscape' : 'portrait',
-    width: Math.ceil(draft.width * scale) + margin * 2,
-    height: Math.ceil(draft.height * scale) + margin * 2,
-    padding: { top: margin, right: margin, bottom: margin, left: margin },
+    width: Math.ceil(draft.width * scale),
+    height: Math.ceil(draft.height * scale),
+    padding: { top: 0, right: 0, bottom: 0, left: 0 },
     background: '#ffffff',
     elements: [],
   };
+  const warnings = new Set<string>(draft.warnings);
   for (const item of draft.elements) {
-    if (item.x + item.width > draft.width + 1 || item.y + item.height > draft.height + 1)
-      throw new Error('recognition.invalid_result');
-    const p = item.properties;
-    const bounds = {
-      id: crypto.randomUUID(),
-      x: margin + item.x * scale,
-      y: margin + item.y * scale,
-      width: Math.min(item.width, draft.width - item.x) * scale,
-      height: Math.min(item.height, draft.height - item.y) * scale,
-      rotation: 0,
-    };
-    const fontSize = (p.fontSize ?? 16) * scale;
-    let element: CanvasElement;
-    switch (item.type) {
-      case 'text': {
-        if (p.text === undefined) throw new Error('recognition.invalid_result');
-        const longest = Math.max(
-          ...p.text
-            .split('\n')
-            .map((line) =>
-              measureText(line, fontSize, p.fontFamily ?? 'Arial', p.fontStyle ?? 'normal'),
-            ),
-        );
-        const fitted = Math.min(
-          fontSize,
-          (fontSize * bounds.width) / Math.max(1, longest),
-          bounds.height / (p.text.split('\n').length * 1.2),
-        );
-        element = {
-          ...newSimpleText(),
-          ...bounds,
-          text: p.text,
-          autoHeight: false,
-          fontSize: fitted,
-          fontFamily: p.fontFamily ?? 'Arial',
-          fontStyle: p.fontStyle ?? 'normal',
-          align: p.align ?? 'left',
-          fill: p.fill ?? '#202020',
-          lineHeight: 1.2,
-          padding: { top: 0, right: 0, bottom: 0, left: 0 },
-        };
-        break;
-      }
-      case 'shape':
-        element = {
-          ...newShape(p.shape === 'oval' ? 'circle' : (p.shape ?? 'rect')),
-          ...bounds,
-          fill: p.fill ?? 'transparent',
-          stroke: p.stroke ?? 'none',
-          strokeWidth: (p.strokeWidth ?? 0) * scale,
-          radius: (p.radius ?? 0) * scale,
-        };
-        break;
-      case 'line':
-        element = {
-          ...newLine(),
-          ...bounds,
-          points: [
-            0,
-            0,
-            bounds.width > bounds.height ? bounds.width : 0,
-            bounds.height > bounds.width ? bounds.height : 0,
-          ],
-          stroke: p.stroke ?? '#555555',
-          strokeWidth: (p.strokeWidth ?? 1) * scale,
-        };
-        break;
-      case 'table': {
-        if (!p.data || p.data.some((row) => row.length !== p.data![0].length))
-          throw new Error('recognition.invalid_result');
-        element = {
-          ...newTable(),
-          ...bounds,
-          data: p.data,
-          rows: p.data.length,
-          cols: p.data[0].length,
-          fontSize,
-          borderColor: p.borderColor ?? '#777777',
-          headerBg: p.headerBg ?? '#ffffff',
-        };
-        break;
-      }
-      case 'image':
-        if (!p.src) throw new Error('recognition.invalid_result');
-        element = { type: 'image', ...bounds, src: p.src };
-        break;
-      case 'stamp': {
-        const shape =
-          p.shape && ['circle', 'oval', 'rect', 'triangle'].includes(p.shape)
-            ? (p.shape as 'circle' | 'oval' | 'rect' | 'triangle')
-            : 'circle';
-        element = {
-          ...newStamp(shape),
-          ...bounds,
-          topText: p.topText ?? '',
-          centerText: p.centerText ?? '',
-          bottomText: p.bottomText ?? '',
-          stampColor: p.stampColor ?? '#244f91',
-        };
-        break;
-      }
-      case 'chart':
-        if (!p.values?.length) throw new Error('recognition.invalid_result');
-        element = {
-          ...newChart(p.kind ?? 'bar'),
-          ...bounds,
-          values: p.values,
-          palette: p.palette?.length ? p.palette : ['#244f91', '#e76837'],
-        };
-        break;
-      case 'qr':
-        if (!p.text) throw new Error('recognition.invalid_result');
-        element = { ...newQr(), ...bounds, text: p.text, format: p.format ?? 'QR' };
-        break;
-      case 'path':
-        if (!p.d) throw new Error('recognition.invalid_result');
-        // Path coordinates are local to the object's original bounding box.
-        element = {
-          ...newPath(),
-          ...bounds,
-          d: scalePath(p.d, scale),
-          fill: p.fill ?? 'none',
-          stroke: p.stroke ?? '#202020',
-          strokeWidth: (p.strokeWidth ?? 1) * scale,
-        };
-        break;
-      case 'footer':
-        element = {
-          ...newFooter(slide),
-          ...bounds,
-          text: p.text ?? '',
-          fontSize,
-          fill: p.fill ?? '#202020',
-          bgColor: p.bgColor ?? '#ffffff',
-        };
-        break;
-    }
-    slide.elements.push(CanvasElementSchema.parse(element) as CanvasElement);
+    const element = safeBuildElement(item, draft, scale, slide);
+    if (element) slide.elements.push(element);
+    else warnings.add('recognition.element_skipped');
   }
-  return { slide, warnings: draft.warnings };
+  if (slide.elements.length === 0) {
+    throw new RecognitionError('recognition.invalid_result', 'no elements survived');
+  }
+  return { slide, warnings: [...warnings] };
 }
 
-function scalePath(d: string, scale: number): string {
+interface BuildContext {
+  readonly draft: RecognizedDraft;
+  readonly scale: number;
+  readonly slide: Slide;
+  readonly bounds: {
+    id: string;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    rotation: number;
+  };
+}
+
+/**
+ * Per-element fail-soft: one bad element (e.g. broken SVG path) is logged
+ * and skipped, never aborts the whole image.
+ */
+function safeBuildElement(
+  item: RecognizedElement,
+  draft: RecognizedDraft,
+  scale: number,
+  slide: Slide,
+): CanvasElement | null {
+  const bbox = clampBounds(item, draft.width, draft.height);
+  if (!bbox) {
+    warn(item, 'element outside page');
+    return null;
+  }
+  const ctx: BuildContext = {
+    draft,
+    scale,
+    slide,
+    bounds: {
+      id: crypto.randomUUID(),
+      x: bbox.x * scale,
+      y: bbox.y * scale,
+      width: bbox.width * scale,
+      height: bbox.height * scale,
+      rotation: 0,
+    },
+  };
+  try {
+    const element = BUILDERS[item.type](ctx, item.properties);
+    if (!element) return null;
+    return CanvasElementSchema.parse(element) as CanvasElement;
+  } catch (err) {
+    warn(item, err);
+    return null;
+  }
+}
+
+function warn(item: RecognizedElement, reason: unknown): void {
+  // eslint-disable-next-line no-console -- Diagnostics for a recoverable path.
+  console.warn('[recognition] element skipped', { type: item.type, reason });
+}
+
+/* ---------- per-type builders (Registry pattern for OCP) ---------- */
+
+type Builder = (
+  ctx: BuildContext,
+  p: Readonly<Record<string, unknown>>,
+) => CanvasElement | null;
+
+const BUILDERS: Record<ElementType, Builder> = {
+  text: buildText,
+  shape: buildShape,
+  line: buildLine,
+  table: buildTable,
+  image: buildImage,
+  stamp: buildStamp,
+  chart: buildChart,
+  qr: buildQr,
+  path: buildPath,
+  footer: buildFooter,
+};
+
+function buildText(ctx: BuildContext, p: Record<string, unknown>): CanvasElement | null {
+  if (typeof p.text !== 'string') return null;
+  const fontSize = numberInRange(p.fontSize, 1, 512, 16) * ctx.scale;
+  const fontFamily = normalizeFontFamily(p.fontFamily);
+  const fontStyle = normalizeFontStyle(p.fontStyle);
+
+  let html: string | undefined;
+  if (typeof p.html === 'string' && p.html.trim()) {
+    try {
+      html = recognizedHtml(p.html, ctx.scale);
+    } catch (err) {
+      // Keep the text content even if the markup was rejected.
+      warn({ type: 'text', x: 0, y: 0, width: 1, height: 1, properties: {} } as RecognizedElement, err);
+      html = undefined;
+    }
+  }
+
+  const longest = longestLine(p.text, fontSize, fontFamily, fontStyle);
+  const fitted = Math.min(
+    fontSize,
+    (fontSize * ctx.bounds.width) / Math.max(1, longest),
+    ctx.bounds.height / Math.max(1, p.text.split('\n').length * 1.2),
+  );
+  return {
+    ...newSimpleText(),
+    ...ctx.bounds,
+    text: p.text,
+    html,
+    richText: Boolean(html),
+    autoHeight: false,
+    fontSize: html ? fontSize : Math.max(4, fitted),
+    fontFamily,
+    fontStyle,
+    textDecoration: normalizeTextDecoration(p.textDecoration),
+    align: normalizeAlign(p.align),
+    fill: normalizeColor(p.fill),
+    lineHeight: 1.2,
+    padding: { top: 0, right: 0, bottom: 0, left: 0 },
+  };
+}
+
+function buildShape(ctx: BuildContext, p: Record<string, unknown>): CanvasElement {
+  return {
+    ...newShape(normalizeShape(p.shape) === 'oval' ? 'circle' : (normalizeShape(p.shape) as never)),
+    ...ctx.bounds,
+    fill: normalizeColor(p.fill, 'transparent'),
+    stroke: normalizeColor(p.stroke, 'none'),
+    strokeWidth: numberInRange(p.strokeWidth, 0, 100, 0) * ctx.scale,
+    radius: numberInRange(p.radius, 0, 1000, 0) * ctx.scale,
+  };
+}
+
+function buildLine(ctx: BuildContext, p: Record<string, unknown>): CanvasElement {
+  const points =
+    Array.isArray(p.points) && p.points.length >= 4
+      ? p.points.map((n) => Number(n)).map((n) => (Number.isFinite(n) ? n : 0))
+      : [
+          0,
+          0,
+          ctx.bounds.width > ctx.bounds.height ? ctx.bounds.width : 0,
+          ctx.bounds.height > ctx.bounds.width ? ctx.bounds.height : 0,
+        ];
+  return {
+    ...newLine(),
+    ...ctx.bounds,
+    points,
+    stroke: normalizeColor(p.stroke, '#555555'),
+    strokeWidth: numberInRange(p.strokeWidth, 0, 100, 1) * ctx.scale,
+  };
+}
+
+function buildTable(ctx: BuildContext, p: Record<string, unknown>): CanvasElement | null {
+  if (!Array.isArray(p.data)) return null;
+  const rows = p.data.filter(Array.isArray).map((row) => row.map((c) => String(c ?? '')));
+  if (!rows.length) return null;
+  const cols = Math.max(...rows.map((r) => r.length));
+  const data = rows.map((r) => [...r, ...Array(cols - r.length).fill('')]);
+  return {
+    ...newTable(),
+    ...ctx.bounds,
+    data,
+    rows: data.length,
+    cols,
+    fontSize: numberInRange(p.fontSize, 1, 512, 16) * ctx.scale,
+    borderColor: normalizeColor(p.borderColor, '#777777'),
+    headerBg: normalizeColor(p.headerBg, '#ffffff'),
+  };
+}
+
+function buildImage(ctx: BuildContext, p: Record<string, unknown>): CanvasElement | null {
+  if (typeof p.src !== 'string' || !p.src) return null;
+  return { type: 'image', ...ctx.bounds, src: p.src };
+}
+
+function buildStamp(ctx: BuildContext, p: Record<string, unknown>): CanvasElement {
+  return {
+    ...newStamp(normalizeStampShape(p.shape)),
+    ...ctx.bounds,
+    topText: typeof p.topText === 'string' ? p.topText : '',
+    centerText: typeof p.centerText === 'string' ? p.centerText : '',
+    bottomText: typeof p.bottomText === 'string' ? p.bottomText : '',
+    stampColor: normalizeColor(p.stampColor, '#244f91'),
+  };
+}
+
+function buildChart(ctx: BuildContext, p: Record<string, unknown>): CanvasElement | null {
+  const values = normalizeNumberArray(p.values);
+  if (!values.length) return null;
+  return {
+    ...newChart(normalizeChartKind(p.kind)),
+    ...ctx.bounds,
+    values,
+    palette: normalizePalette(p.palette),
+  };
+}
+
+function buildQr(ctx: BuildContext, p: Record<string, unknown>): CanvasElement | null {
+  if (typeof p.text !== 'string' || !p.text) return null;
+  return {
+    ...newQr(),
+    ...ctx.bounds,
+    text: p.text,
+    format: normalizeQrFormat(p.format),
+  };
+}
+
+function buildPath(ctx: BuildContext, p: Record<string, unknown>): CanvasElement | null {
+  if (typeof p.d !== 'string' || !p.d) return null;
+  return {
+    ...newPath(),
+    ...ctx.bounds,
+    d: scalePath(p.d, ctx.scale, 0, 0),
+    fill: normalizeColor(p.fill, 'none'),
+    stroke: normalizeColor(p.stroke, '#202020'),
+    strokeWidth: numberInRange(p.strokeWidth, 0, 100, 1) * ctx.scale,
+  };
+}
+
+function buildFooter(ctx: BuildContext, p: Record<string, unknown>): CanvasElement {
+  return {
+    ...newFooter(ctx.slide),
+    ...ctx.bounds,
+    text: typeof p.text === 'string' ? p.text : '',
+    fontSize: numberInRange(p.fontSize, 1, 512, 16) * ctx.scale,
+    fill: normalizeColor(p.fill),
+    bgColor: normalizeColor(p.bgColor, '#ffffff'),
+  };
+}
+
+/* ---------- helpers ---------- */
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function finite(value: unknown): number | null {
+  const n = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+function positive(value: unknown): number | null {
+  const n = finite(value);
+  return n !== null && n > 0 ? n : null;
+}
+
+function longestLine(text: string, size: number, family: string, style: string): number {
+  return Math.max(
+    ...text.split('\n').map((line) => measureText(line, size, family, style)),
+  );
+}
+
+/** Path coords are local; multiply every coordinate but leave arc radii / angles. */
+function scalePath(d: string, scale: number, originX = 0, originY = 0): string {
+  if (scale === 1 && !originX && !originY) return d;
   let command = '';
   let index = 0;
+  let relative = false;
+  let firstCommand = true;
+  let initialRelativeMove = false;
   return d.replace(
     /[MmZzLlHhVvCcSsQqTtAa]|[-+]?(?:\d*\.\d+|\d+\.?\d*)(?:[eE][-+]?\d+)?/g,
     (token) => {
       if (/^[a-z]$/i.test(token)) {
         command = token.toUpperCase();
+        relative = token !== command;
+        initialRelativeMove = firstCommand && token === 'm';
+        firstCommand = false;
         index = 0;
         return token;
       }
-      const position = index++ % 7;
-      return command === 'A' && [2, 3, 4].includes(position)
-        ? token
-        : String(Number(token) * scale);
+      const position = index++;
+      const arcPosition = position % 7;
+      if (command === 'A' && [2, 3, 4].includes(arcPosition)) return token;
+      const coordinate = command !== 'A' || arcPosition >= 5;
+      const xAxis =
+        command === 'H' ||
+        (command !== 'V' &&
+          (command === 'A' ? arcPosition === 5 : position % 2 === 0));
+      const translate = coordinate && (!relative || (initialRelativeMove && position < 2));
+      return String(
+        (Number(token) - (translate ? (xAxis ? originX : originY) : 0)) * scale,
+      );
     },
   );
 }

@@ -27,6 +27,9 @@ async function exportedSlides(page: Page) {
       fontFamily?: string;
       fontStyle?: string;
       src?: string;
+      html?: string;
+      richText?: boolean;
+      d?: string;
     }[];
   }[];
 }
@@ -75,7 +78,7 @@ for (const kind of ['document', 'template'] as const) {
           json: {
             width: 400,
             height: 300,
-            engine: 'ocr',
+            engine: 'dual',
             warnings: [],
             elements: [
               {
@@ -90,6 +93,21 @@ for (const kind of ['document', 'template'] as const) {
                   fill: '#ab1234',
                   fontFamily: 'Georgia',
                   fontStyle: 'bold italic',
+                  richText: true,
+                  html: '<div><span style="font-family:Georgia;font-size:24px;font-weight:700;font-style:italic;color:#ab1234">Colored</span> <span style="font-family:Arial;font-size:18px;text-decoration:underline">title</span></div>',
+                },
+              },
+              {
+                type: 'path',
+                x: 34,
+                y: 180,
+                width: 200,
+                height: 62,
+                properties: {
+                  d: 'M34 180 L234 180 L234 242 L34 242 Z',
+                  fill: '#eae7e0',
+                  stroke: 'transparent',
+                  strokeWidth: 0,
                 },
               },
             ],
@@ -164,7 +182,11 @@ for (const kind of ['document', 'template'] as const) {
         fill: '#ab1234',
         fontFamily: 'Georgia',
         fontStyle: 'bold italic',
+        richText: true,
       });
+      expect(slides[1].elements[0].html).toContain('font-size: 24px');
+      expect(slides[1].elements[0].html).toContain('text-decoration: underline');
+      expect(slides[1].elements[1].d).toBe('M0 0 L200 0 L200 62 L0 62 Z');
     }
     await page.locator('.toolbar').getByRole('button', { name: '↶', exact: true }).click();
     await expect(page.locator('.slide-thumb')).toHaveCount(1);

@@ -109,8 +109,11 @@ export function parseHtmlToRuns(html: string, base: BaseStyle): TextRun[] {
       if (s.fontFamily) next.fontFamily = s.fontFamily.replace(/["']/g, '').split(',')[0].trim();
       const fw = s.fontWeight;
       if (fw === 'bold' || (fw && parseInt(fw, 10) >= 600)) next.bold = true;
+      else if (fw === 'normal' || (fw && parseInt(fw, 10) < 600)) next.bold = false;
       if (s.fontStyle === 'italic') next.italic = true;
+      else if (s.fontStyle === 'normal') next.italic = false;
       const td = s.textDecoration || '';
+      if (td.includes('none')) { next.underline = false; next.strike = false; }
       if (td.includes('underline')) next.underline = true;
       if (td.includes('line-through')) next.strike = true;
     }

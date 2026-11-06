@@ -1,3 +1,4 @@
+import { RecognitionError } from '../domain/RecognitionError';
 import { authFetch } from '@/shared/api/client';
 import { recognizedSlide } from '../domain/recognizedLayout';
 
@@ -41,11 +42,19 @@ export async function recognizeImage(
     signal,
   });
   const payload: unknown = await response.json();
-  if (!response.ok) throw new Error((payload as { error?: string }).error ?? 'recognition.failed');
+  if (!response.ok) {
+    throw new Error((payload as { error?: string }).error ?? 'recognition.failed');
+  }
   try {
     return recognizedSlide(payload, name);
-  } catch {
-    throw new Error('recognition.invalid_result');
+  } catch (error) {
+    // Boundary: convert domain / Zod errors to a single typed error that
+    // carries the underlying cause. `console.error` gives developers the
+    // exact field that failed; the user still sees a friendly message.
+    const detail = error instanceof Error ? error.message : String(error);
+    console.error('[recognition] result rejected', { detail, error });
+    if (error instanceof RecognitionError) throw error;
+    throw new RecognitionError('recognition.invalid_result', detail, error);
   }
 }
 

@@ -24,63 +24,24 @@ const messages: Record<string, string> = {
     'Review text, positions and data bindings before saving. Recognition can make mistakes.',
 };
 
-/* ============================================================
-   Color / background heuristics
-   ============================================================ */
-
-const LIGHTNESS_THRESHOLD = 0.75;
-const DARKNESS_THRESHOLD = 0.4;
-const DEFAULT_TEXT_FILL = '#202020';
 const CORRUPT_AREA_RATIO = 0.4;
-
-function hexChannels(fill: string): { r: number; g: number; b: number } | null {
-  const v = fill.trim().toLowerCase();
-  if (!/^#[a-f\d]{3,8}$/i.test(v)) return null;
-  const hex = v.length === 4 ? v.replace(/^#(.)(.)(.)$/, '#$1$1$2$2$3$3') : v.slice(0, 7);
-  return {
-    r: parseInt(hex.slice(1, 3), 16) / 255,
-    g: parseInt(hex.slice(3, 5), 16) / 255,
-    b: parseInt(hex.slice(5, 7), 16) / 255,
-  };
-}
-
-function isLightColor(fill: string): boolean {
-  const v = fill.trim().toLowerCase();
-  if (v === 'white') return true;
-  const rgb = hexChannels(v);
-  if (!rgb) return false;
-  return rgb.r * 0.299 + rgb.g * 0.587 + rgb.b * 0.114 > LIGHTNESS_THRESHOLD;
-}
 
 function isDarkColor(fill: string | undefined | null): boolean {
   if (!fill) return false;
   const v = fill.trim().toLowerCase();
-  if (v === 'black') return true;
-  const rgb = hexChannels(v);
-  if (!rgb) return false;
-  return rgb.r * 0.299 + rgb.g * 0.587 + rgb.b * 0.114 < DARKNESS_THRESHOLD;
-}
-
-function stripInvertedColors(html: string): string {
-  return html
-    .replace(/\s*background-color\s*:[^;"']*;?/gi, '')
-    .replace(
-      /\s*color\s*:\s*(?:#fff(?:fff)?|white|rgba?\(\s*255\s*,\s*255\s*,\s*255[^)]*\))\s*;?/gi,
-      '',
-    );
+  if (v === 'black' || v === '#000' || v === '#000000') return true;
+  if (!/^#[a-f\d]{3,8}$/i.test(v)) return false;
+  const hex = v.length === 4 ? v.replace(/^#(.)(.)(.)$/, '#$1$1$2$2$3$3') : v.slice(0, 7);
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  return (r * 0.299 + g * 0.587 + b * 0.114) < 0.4;
 }
 
 function normalizeForComposite(el: CanvasElement): CanvasElement {
   if (el.type !== 'text' && el.type !== 'footer') return el;
   const text = el as TextElement;
-  const background =
-    text.background && isDarkColor(text.background) ? 'transparent' : text.background;
-  return {
-    ...text,
-    background,
-    fill: isLightColor(text.fill) ? DEFAULT_TEXT_FILL : text.fill,
-    html: text.html ? stripInvertedColors(text.html) : text.html,
-  };
+  return { ...text, background: 'transparent' };
 }
 
 function composeWithBackground(slide: Slide, imageSrc: string): Slide {
@@ -95,17 +56,12 @@ function composeWithBackground(slide: Slide, imageSrc: string): Slide {
     src: imageSrc,
   };
 
-  // Whitelist approach: keep only the elements we genuinely want on top of
-  // the original raster. Everything else (images, shapes, paths, diagrams)
-  // is already baked into the raster — re-emitting it would duplicate it.
   const foreground = slide.elements
-    .filter((el) => ['text', 'table', 'line', 'footer', 'qr'].includes(el.type))
+    .filter((el) => ['text', 'table'].includes(el.type))
     .map(normalizeForComposite);
 
   return { ...slide, elements: [image, ...foreground] };
 }
-
-/* ============================================================ */
 
 export function ImageTemplateImport({
   onDraft,

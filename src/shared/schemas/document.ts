@@ -109,6 +109,7 @@ export const TextElementSchema = z
   .object({
     ...BaseElementFields,
     type: z.literal('text'),
+    autoHeight: z.boolean().optional(),
     text: z.string(),
     html: z.string().optional(),
     richText: z.boolean().optional(),

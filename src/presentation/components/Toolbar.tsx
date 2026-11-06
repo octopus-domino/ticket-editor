@@ -14,6 +14,7 @@ import { materializeSlide } from '@/features/generation/ui/materializeSlide';
 import { modelStore } from '@/features/data-models/state/ModelStore';
 import { GenerationMetrics } from '@/shared/analytics/GenerationMetrics';
 import { PowerPointActions } from './PowerPointActions';
+import { ImageImportActions } from './ImageImportActions';
 
 export const Toolbar: React.FC = () => {
   const docStore = useDocumentStore();
@@ -126,6 +127,7 @@ export const Toolbar: React.FC = () => {
       <h1>{__tr("Редактор шаблонов")}</h1>
       <div className="toolbar-actions">
         <PowerPointActions/>
+        <ImageImportActions />
         <button className="toolbar-btn" onClick={() => docStore.undo()} disabled={!canUndo}>
           ↶
         </button>

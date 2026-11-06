@@ -20,7 +20,8 @@ const properties = z.object({
   text: text.optional(),
   fontSize: z.number().positive().max(512).optional(),
   fill: color.optional(),
-  fontStyle: z.enum(['normal', 'bold']).optional(),
+  fontStyle: z.enum(['normal', 'bold', 'italic', 'bold italic']).optional(),
+  fontFamily: z.enum(['Arial', 'Times New Roman', 'Georgia', 'Verdana', 'Courier New']).optional(),
   align: z.enum(['left', 'center', 'right']).optional(),
   shape: z.enum(['rect', 'roundRect', 'circle', 'oval', 'triangle', 'star', 'arrow']).optional(),
   stroke: color.optional(),
@@ -87,7 +88,7 @@ export function recognizedSlide(
 ): { slide: Slide; warnings: string[] } {
   const draft = draftSchema.parse(input);
   const scale = Math.min(1, 1552 / Math.max(draft.width, draft.height));
-  const margin = 24;
+  const margin = 0;
   const slide: Slide = {
     id: crypto.randomUUID(),
     name,
@@ -119,7 +120,9 @@ export function recognizedSlide(
         const longest = Math.max(
           ...p.text
             .split('\n')
-            .map((line) => measureText(line, fontSize, 'Arial', p.fontStyle ?? 'normal')),
+            .map((line) =>
+              measureText(line, fontSize, p.fontFamily ?? 'Arial', p.fontStyle ?? 'normal'),
+            ),
         );
         const fitted = Math.min(
           fontSize,
@@ -130,7 +133,9 @@ export function recognizedSlide(
           ...newSimpleText(),
           ...bounds,
           text: p.text,
+          autoHeight: false,
           fontSize: fitted,
+          fontFamily: p.fontFamily ?? 'Arial',
           fontStyle: p.fontStyle ?? 'normal',
           align: p.align ?? 'left',
           fill: p.fill ?? '#202020',

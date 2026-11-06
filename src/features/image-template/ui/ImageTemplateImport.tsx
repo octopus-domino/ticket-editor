@@ -3,7 +3,7 @@ import type { Slide } from '@/shared/types';
 import { t } from '@/shared/i18n';
 import { authFetch } from '@/shared/api/client';
 import { serializeSlideToSvg } from '@/lib/svg/serialize';
-import { prepareImage, recognizeImage } from '../api/recognitionClient';
+import { originalImageSlide, prepareImage, recognizeImage } from '../api/recognitionClient';
 import './image-template.css';
 
 const messages: Record<string, string> = {
@@ -26,9 +26,11 @@ const messages: Record<string, string> = {
 export function ImageTemplateImport({
   onDraft,
   onBusy,
+  context = 'template',
 }: {
   onDraft(slide: Slide | null): void;
   onBusy(value: boolean): void;
+  context?: 'template' | 'document';
 }) {
   const [source, setSource] = useState('');
   const [filename, setFilename] = useState('');
@@ -130,9 +132,29 @@ export function ImageTemplateImport({
       }
     }
   }
+  async function keepOriginal() {
+    reset();
+    const current = revision.current;
+    setBusy(true);
+    onBusy(true);
+    try {
+      const original = await originalImageSlide(source, filename);
+      if (current === revision.current) {
+        setSlide(original);
+        onDraft(original);
+      }
+    } catch {
+      if (current === revision.current) setError('recognition.invalid_image');
+    } finally {
+      if (current === revision.current) {
+        setBusy(false);
+        onBusy(false);
+      }
+    }
+  }
   return (
     <section className="image-template-import" aria-busy={busy}>
-      <h2>{t('Create a template from an image')}</h2>
+      {context === 'template' && <h2>{t('Create a template from an image')}</h2>}
       <p>{t('Recognition runs on your own server. No external AI service receives the image.')}</p>
       <label>
         {t('Document image')}
@@ -175,6 +197,9 @@ export function ImageTemplateImport({
         </label>
       )}
       <div className="image-template-actions">
+        <button type="button" disabled={!source || busy} onClick={() => void keepOriginal()}>
+          {t('Keep original appearance')}
+        </button>
         <button type="button" disabled={!source || busy} onClick={() => void recognize()}>
           {t(busy ? 'Recognizing…' : 'Recognize locally')}
         </button>
@@ -191,6 +216,11 @@ export function ImageTemplateImport({
           </button>
         )}
       </div>
+      <p>
+        {t(
+          'Keep the original as an image, or recognize editable objects with approximate formatting.',
+        )}
+      </p>
       {busy && (
         <p role="status">
           {t('Reading text and reconstructing the layout. This may take up to a minute.')}
@@ -219,7 +249,7 @@ export function ImageTemplateImport({
       {warnings.map((warning) => (
         <p key={warning}>{t(messages[warning] ?? warning)}</p>
       ))}
-      {slide && (
+      {slide && context === 'template' && (
         <p>
           {t(
             'Create the template to edit objects, add fields and connect your data in the editor.',

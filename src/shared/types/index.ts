@@ -94,6 +94,8 @@ export interface BaseElement extends Bounds {
 }
 
 export interface TextElement extends BaseElement {
+  /** False preserves an imported text box instead of resizing it during rendering. */
+  autoHeight?: boolean;
   type: 'text';
   text: string;
   html?: string;

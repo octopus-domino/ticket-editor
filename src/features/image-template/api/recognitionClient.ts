@@ -1,6 +1,32 @@
 import { authFetch } from '@/shared/api/client';
 import { recognizedSlide } from '../domain/recognizedLayout';
 
+/** Keep the prepared pixels when fidelity is more important than editable text. */
+export async function originalImageSlide(source: string, name: string) {
+  const image = new Image();
+  image.src = source;
+  await image.decode();
+  return recognizedSlide(
+    {
+      width: image.naturalWidth,
+      height: image.naturalHeight,
+      elements: [
+        {
+          type: 'image',
+          x: 0,
+          y: 0,
+          width: image.naturalWidth,
+          height: image.naturalHeight,
+          properties: { src: source },
+        },
+      ],
+      warnings: [],
+      engine: 'ocr',
+    },
+    name,
+  ).slide;
+}
+
 export async function recognizeImage(
   image: string,
   language: string,

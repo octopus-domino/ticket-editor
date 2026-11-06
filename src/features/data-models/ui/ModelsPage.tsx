@@ -148,7 +148,7 @@ export const ModelsPage: React.FC = () => {
         <h2>{__tr("Наборы данных")}</h2>
         <p>{__tr("Выберите схему данных — она определяет поля, которые нужно заполнить.")}</p>
         <label htmlFor="data-schema">{__tr("Схема данных")}</label>
-        <select id="data-schema" value="" onChange={(event) => selectSchema(event.target.value)}>
+        <select id="data-schema" className="gen-select" value="" onChange={(event) => selectSchema(event.target.value)}>
           <option value="" disabled>
             {__tr("Выберите схему данных")}</option>
           {schemas.map((schema) => (

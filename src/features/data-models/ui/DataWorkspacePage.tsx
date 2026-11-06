@@ -43,7 +43,7 @@ export function DataWorkspacePage() {
           >
             {schema.name}
             <small>
-              {schema.fields.length} В· {t('Fields')}
+              {schema.fields.length} · {t('Fields')}
             </small>
           </button>
         ))}

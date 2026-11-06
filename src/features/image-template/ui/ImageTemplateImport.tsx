@@ -61,22 +61,6 @@ function isDarkColor(fill: string | undefined | null): boolean {
   return rgb.r * 0.299 + rgb.g * 0.587 + rgb.b * 0.114 < DARKNESS_THRESHOLD;
 }
 
-function isCorruptBackground(el: CanvasElement, slide: Slide): boolean {
-  if (el.type === 'group' || el.type === 'connector' || el.type === 'line') return false;
-
-  const covers = el.width * el.height > slide.width * slide.height * CORRUPT_AREA_RATIO;
-  if (!covers) return false;
-
-  if (el.type === 'shape' || el.type === 'path') {
-    const fill = (el as { fill?: string }).fill;
-    if (isDarkColor(fill)) return true;
-  }
-  if (el.type === 'image') {
-    return true;
-  }
-  return false;
-}
-
 function stripInvertedColors(html: string): string {
   return html
     .replace(/\s*background-color\s*:[^;"']*;?/gi, '')
@@ -110,9 +94,14 @@ function composeWithBackground(slide: Slide, imageSrc: string): Slide {
     rotation: 0,
     src: imageSrc,
   };
+
+  // Whitelist approach: keep only the elements we genuinely want on top of
+  // the original raster. Everything else (images, shapes, paths, diagrams)
+  // is already baked into the raster — re-emitting it would duplicate it.
   const foreground = slide.elements
-    .filter((el) => !isCorruptBackground(el, slide))
+    .filter((el) => ['text', 'table', 'line', 'footer', 'qr'].includes(el.type))
     .map(normalizeForComposite);
+
   return { ...slide, elements: [image, ...foreground] };
 }
 

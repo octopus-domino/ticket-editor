@@ -25,50 +25,56 @@ const messages: Record<string, string> = {
 };
 
 /* ============================================================
-   Composite mode
-   ============================================================
-
-   Complex scanned documents (bank statements, invoices, official
-   letterheads) often come back from the vision engine with only a
-   handful of text elements and — worse — inverted colours (white
-   text on black). The frontend cannot invent graphic objects, but
-   it can restore the *visual* graphics by keeping the original
-   raster as a background and overlaying only the editable text.
-   That matches the user's expectation "graphics as before, text
-   still editable".
-
-   The composite pass:
-     • prepends the original image (fitted to slide dimensions)
-     • drops shapes that cover > 50% of the page in black — those
-       are corrupt backgrounds produced by the engine's colour bug
-     • forces light text to dark so it stays readable on the raster
-     • strips inverted inline colours (background-color / white
-       text) from the text HTML, preserving bold / italic / size /
-       underline
+   Color / background heuristics
    ============================================================ */
 
 const LIGHTNESS_THRESHOLD = 0.75;
+const DARKNESS_THRESHOLD = 0.4;
 const DEFAULT_TEXT_FILL = '#202020';
+const CORRUPT_AREA_RATIO = 0.4;
+
+function hexChannels(fill: string): { r: number; g: number; b: number } | null {
+  const v = fill.trim().toLowerCase();
+  if (!/^#[a-f\d]{3,8}$/i.test(v)) return null;
+  const hex = v.length === 4 ? v.replace(/^#(.)(.)(.)$/, '#$1$1$2$2$3$3') : v.slice(0, 7);
+  return {
+    r: parseInt(hex.slice(1, 3), 16) / 255,
+    g: parseInt(hex.slice(3, 5), 16) / 255,
+    b: parseInt(hex.slice(5, 7), 16) / 255,
+  };
+}
 
 function isLightColor(fill: string): boolean {
   const v = fill.trim().toLowerCase();
   if (v === 'white') return true;
-  if (!/^#[a-f\d]{3,8}$/i.test(v)) return false;
-  const hex =
-    v.length === 4
-      ? v.replace(/^#(.)(.)(.)$/, '#$1$1$2$2$3$3')
-      : v.slice(0, 7);
-  const r = parseInt(hex.slice(1, 3), 16) / 255;
-  const g = parseInt(hex.slice(3, 5), 16) / 255;
-  const b = parseInt(hex.slice(5, 7), 16) / 255;
-  return r * 0.299 + g * 0.587 + b * 0.114 > LIGHTNESS_THRESHOLD;
+  const rgb = hexChannels(v);
+  if (!rgb) return false;
+  return rgb.r * 0.299 + rgb.g * 0.587 + rgb.b * 0.114 > LIGHTNESS_THRESHOLD;
+}
+
+function isDarkColor(fill: string | undefined | null): boolean {
+  if (!fill) return false;
+  const v = fill.trim().toLowerCase();
+  if (v === 'black') return true;
+  const rgb = hexChannels(v);
+  if (!rgb) return false;
+  return rgb.r * 0.299 + rgb.g * 0.587 + rgb.b * 0.114 < DARKNESS_THRESHOLD;
 }
 
 function isCorruptBackground(el: CanvasElement, slide: Slide): boolean {
-  if (el.type !== 'shape') return false;
-  const covers = el.width * el.height > slide.width * slide.height * 0.5;
-  const dark = el.fill === '#000' || el.fill === '#000000' || el.fill === 'black';
-  return covers && dark;
+  if (el.type === 'group' || el.type === 'connector' || el.type === 'line') return false;
+
+  const covers = el.width * el.height > slide.width * slide.height * CORRUPT_AREA_RATIO;
+  if (!covers) return false;
+
+  if (el.type === 'shape' || el.type === 'path') {
+    const fill = (el as { fill?: string }).fill;
+    if (isDarkColor(fill)) return true;
+  }
+  if (el.type === 'image') {
+    return true;
+  }
+  return false;
 }
 
 function stripInvertedColors(html: string): string {
@@ -81,10 +87,13 @@ function stripInvertedColors(html: string): string {
 }
 
 function normalizeForComposite(el: CanvasElement): CanvasElement {
-  if (el.type !== 'text') return el;
+  if (el.type !== 'text' && el.type !== 'footer') return el;
   const text = el as TextElement;
+  const background =
+    text.background && isDarkColor(text.background) ? 'transparent' : text.background;
   return {
     ...text,
+    background,
     fill: isLightColor(text.fill) ? DEFAULT_TEXT_FILL : text.fill,
     html: text.html ? stripInvertedColors(text.html) : text.html,
   };
@@ -106,6 +115,8 @@ function composeWithBackground(slide: Slide, imageSrc: string): Slide {
     .map(normalizeForComposite);
   return { ...slide, elements: [image, ...foreground] };
 }
+
+/* ============================================================ */
 
 export function ImageTemplateImport({
   onDraft,
@@ -152,9 +163,7 @@ export function ImageTemplateImport({
         if (response.ok && !abort.signal.aborted)
           setVision(((await response.json()) as { ollama?: boolean }).ollama === true);
       })
-      .catch(() => {
-        /* OCR can still return a specific setup error on request. */
-      });
+      .catch(() => {});
     return () => {
       abort.abort();
       controller.current?.abort();
@@ -215,10 +224,18 @@ export function ImageTemplateImport({
       if (current === revision.current) {
         setRawSlide(result.slide);
         setWarnings(result.warnings);
-        // Auto-enable composite mode for vision engines that frequently
-        // return incomplete graphics on complex scans.
-        const nonText = result.slide.elements.filter((e) => e.type !== 'text').length;
-        if (engine !== 'ocr' && nonText < 3) setKeepBackground(true);
+
+        const elements = result.slide.elements;
+        const hasHugeDarkElement = elements.some(
+          (el) =>
+            (el.type === 'shape' || el.type === 'path') &&
+            el.width * el.height > result.slide.width * result.slide.height * CORRUPT_AREA_RATIO &&
+            isDarkColor((el as { fill?: string }).fill),
+        );
+        const nonText = elements.filter((el) => el.type !== 'text').length;
+        if (hasHugeDarkElement || (engine !== 'ocr' && nonText < 3)) {
+          setKeepBackground(true);
+        }
       }
     } catch (reason) {
       if (current === revision.current)

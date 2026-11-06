@@ -1,8 +1,13 @@
-import { RecognitionError } from '../domain/RecognitionError';
 import { authFetch } from '@/shared/api/client';
-import { recognizedSlide } from '../domain/recognizedLayout';
+import { RecognitionError } from '../domain/RecognitionError';
+import {
+  recognizedSlide,
+  type RecognizedSlideResult,
+} from '../domain/recognizedLayout';
 
-/** Keep the prepared pixels when fidelity is more important than editable text. */
+/**
+ * Keep the prepared pixels when fidelity is more important than editable text.
+ */
 export async function originalImageSlide(source: string, name: string) {
   const image = new Image();
   image.src = source;
@@ -34,7 +39,7 @@ export async function recognizeImage(
   engine: string,
   name: string,
   signal: AbortSignal,
-) {
+): Promise<RecognizedSlideResult> {
   const response = await authFetch('/api/recognition', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -42,15 +47,15 @@ export async function recognizeImage(
     signal,
   });
   const payload: unknown = await response.json();
-  if (!response.ok) {
+  if (!response.ok)
     throw new Error((payload as { error?: string }).error ?? 'recognition.failed');
-  }
+
   try {
     return recognizedSlide(payload, name);
   } catch (error) {
-    // Boundary: convert domain / Zod errors to a single typed error that
-    // carries the underlying cause. `console.error` gives developers the
-    // exact field that failed; the user still sees a friendly message.
+    // Boundary: preserve the domain `RecognitionError`, otherwise wrap the
+    // unexpected throw so the cause survives. `console.error` gives the
+    // developer the exact field that failed; the UI still shows a friendly code.
     const detail = error instanceof Error ? error.message : String(error);
     console.error('[recognition] result rejected', { detail, error });
     if (error instanceof RecognitionError) throw error;
@@ -59,11 +64,18 @@ export async function recognizeImage(
 }
 
 export async function prepareImage(file: File): Promise<string> {
-  if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type) || file.size > 8 * 1024 * 1024)
+  if (
+    !['image/png', 'image/jpeg', 'image/webp'].includes(file.type) ||
+    file.size > 8 * 1024 * 1024
+  )
     throw new Error('recognition.invalid_image');
   const bitmap = await createImageBitmap(file);
   try {
-    if (bitmap.width < 32 || bitmap.height < 32 || bitmap.width * bitmap.height > 30_000_000)
+    if (
+      bitmap.width < 32 ||
+      bitmap.height < 32 ||
+      bitmap.width * bitmap.height > 30_000_000
+    )
       throw new Error('recognition.invalid_image');
     const ratio = Math.min(1, 2048 / Math.max(bitmap.width, bitmap.height));
     const canvas = document.createElement('canvas');

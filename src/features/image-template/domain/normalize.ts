@@ -4,15 +4,12 @@
  * Pure, side-effect-free adapters between the loose OCR payload and the
  * editor's strict domain types.
  *
- * SRP: one normalizer per field family.
- * LSP: every function returns a value satisfying its declared return type —
- *      never throws on malformed input; falls back to a documented default.
- * OCP: new synonyms are added to the alias tables, not to distant switches.
- *
- * Rationale: a single bad field (e.g. `"italic bold"` word order) must not
- * reject an otherwise usable document. Preserving strictness in the Zod
- * schema would be correct for internal data, but backend OCR is an
- * untrusted adapter boundary — that is what this module exists to normalise.
+ * Scope:
+ *   • Only lossless syntax normalisation lives here.
+ *   • Security / correctness contracts (engine enum, image src scheme,
+ *     page-bounds tolerance, path char-set, ragged tables) are enforced
+ *     inside `recognizedLayout.ts` and MUST throw — they do not belong
+ *     to this lenient layer.
  */
 
 export const DEFAULT_TEXT_COLOR = '#202020';
@@ -37,11 +34,6 @@ export function numberInRange(
   return Math.max(min, Math.min(max, n));
 }
 
-export function positiveNumber(value: unknown, fallback = 0): number {
-  const n = finite(value);
-  return n !== null && n > 0 ? n : fallback;
-}
-
 /* ---------- color ---------- */
 
 const NAMED_COLORS: Readonly<Record<string, string>> = {
@@ -57,10 +49,6 @@ const NAMED_COLORS: Readonly<Record<string, string>> = {
   none: 'none',
 };
 
-/**
- * Any CSS color form OCR might emit → `#RRGGBB`, `transparent` or `none`.
- * Hex, 8-hex (alpha dropped), `rgb()/rgba()`, and a small named-color table.
- */
 export function normalizeColor(input: unknown, fallback = DEFAULT_TEXT_COLOR): string {
   if (typeof input !== 'string') return fallback;
   const v = input.trim().toLowerCase();
@@ -112,7 +100,6 @@ export function normalizeFontFamily(input: unknown): AllowedFont {
 
 export type FontStyle = 'normal' | 'bold' | 'italic' | 'bold italic';
 
-/** Order-insensitive: `"italic bold"` and `"bold italic"` both yield `bold italic`. */
 export function normalizeFontStyle(input: unknown): FontStyle {
   if (typeof input !== 'string') return 'normal';
   const tokens = new Set(input.toLowerCase().split(/\s+/).filter(Boolean));
@@ -180,24 +167,32 @@ export function normalizeShape(input: unknown): NormalizedShape {
 
 export type StampShape = 'circle' | 'oval' | 'rect' | 'triangle';
 
+/**
+ * A missing/unknown stamp shape falls back to `circle` (the most common
+ * seal shape) — unlike `normalizeShape`, which defaults to `rect`.
+ * Both defaults are contract with the caller and are asserted by tests.
+ */
 export function normalizeStampShape(input: unknown): StampShape {
+  if (typeof input !== 'string') return 'circle';
   const s = normalizeShape(input);
-  return s === 'roundRect' || s === 'rect'
-    ? 'rect'
-    : s === 'circle' || s === 'oval' || s === 'triangle'
-      ? s
-      : 'circle';
+  if (s === 'rect' || s === 'roundRect') return 'rect';
+  if (s === 'circle' || s === 'oval' || s === 'triangle') return s;
+  return 'circle';
 }
 
 /* ---------- QR ---------- */
 
 export type NormalizedQrFormat = 'QR' | 'DATA_MATRIX' | 'AZTEC' | 'PDF_417';
 
+/**
+ * Canonicalise format aliases: strip `_`, `-` and whitespace, then uppercase.
+ * This makes `pdf-417`, `PDF_417`, `pdf417` and `PDF 417` all resolve.
+ */
 export function normalizeQrFormat(input: unknown): NormalizedQrFormat {
   if (typeof input !== 'string') return 'QR';
-  const key = input.trim().toUpperCase().replace(/[\s-]/g, '_');
+  const key = input.trim().toUpperCase().replace(/[\s_-]/g, '');
   if (key === 'PDF417') return 'PDF_417';
-  if (key === 'QR' || key === 'QR_CODE' || key === 'QRCODE') return 'QR';
+  if (key === 'QR' || key === 'QRCODE') return 'QR';
   if (key === 'DATAMATRIX') return 'DATA_MATRIX';
   if (key === 'AZTEC') return 'AZTEC';
   return 'QR';
@@ -207,7 +202,7 @@ export function normalizeChartKind(input: unknown): 'bar' | 'donut' {
   return input === 'donut' ? 'donut' : 'bar';
 }
 
-/* ---------- collections & bounds ---------- */
+/* ---------- collections ---------- */
 
 export function normalizeNumberArray(input: unknown, maxLen = 100): number[] {
   if (!Array.isArray(input)) return [];
@@ -225,22 +220,4 @@ export function normalizePalette(input: unknown): string[] {
     .filter((c): c is string => Boolean(c))
     .slice(0, 100);
   return out.length ? out : fallback;
-}
-
-/**
- * Overhang is normalised, not rejected: OCR floats can exceed the page by a
- * pixel due to rounding. Anything that produces a zero-area element is
- * signalled by returning `null` so the caller can warn-and-skip.
- */
-export function clampBounds(
-  item: { x: number; y: number; width: number; height: number },
-  pageWidth: number,
-  pageHeight: number,
-): { x: number; y: number; width: number; height: number } | null {
-  const x = Math.max(0, Math.min(item.x, pageWidth));
-  const y = Math.max(0, Math.min(item.y, pageHeight));
-  const width = Math.min(item.width, pageWidth - x);
-  const height = Math.min(item.height, pageHeight - y);
-  if (width <= 0 || height <= 0) return null;
-  return { x, y, width, height };
 }

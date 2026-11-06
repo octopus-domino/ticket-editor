@@ -185,6 +185,8 @@ Connect certificate|Подключить сертификат|连接证书|Poł�
 Sign document|Подписать документ|签署文档|Podpisz dokument|Firma documento|Firmar documento|Document ondertekenen|Signer le document|Dokument signieren
 Signing…|Подписание…|正在签署…|Podpisywanie…|Firma in corso…|Firmando…|Ondertekenen…|Signature en cours…|Signieren…
 Trusted signing provider required|Требуется доверенный сервис подписи|需要受信任的签名服务|Wymagany zaufany dostawca podpisu|Serve un fornitore di firma affidabile|Se requiere un proveedor de firma de confianza|Vertrouwde ondertekeningsdienst vereist|Prestataire de signature de confiance requis|Vertrauenswürdiger Signaturdienst erforderlich
+Graphics from the original raster|Графика из исходного растра|来自原始光栅的图形|Grafika z oryginalnego rastra|Grafica dal raster originale|Gráficos del ráster original|Grafische elementen uit de oorspronkelijke rasterafbeelding|Graphiques issus du raster d'origine|Grafiken aus dem Original-Raster
+Keep original as background (editable text over the raster)|Оставить оригинал фоном (редактируемый текст поверх растра)|保留原图为背景（可编辑文字叠加在光栅图上）|Zachowaj oryginał jako tło (edytowalny tekst na rastrze)|Mantieni l'originale come sfondo (testo modificabile sopra il raster)|Mantener el original como fondo (texto editable sobre el ráster)|Origineel als achtergrond behouden (bewerkbare tekst over de rasterafbeelding)|Conserver l'original en arrière-plan (texte modifiable sur le raster)|Original als Hintergrund beibehalten (bearbeitbarer Text über dem Raster)
 `;
 const languages = ['en', 'ru', 'zh', 'pl', 'it', 'es', 'nl', 'fr', 'de'];
 export const MESSAGE_CATALOGS: Record<string, Record<string, string>> = Object.fromEntries(

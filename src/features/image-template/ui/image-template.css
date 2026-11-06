@@ -7,3 +7,25 @@
 .image-template-comparison figcaption { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
 .image-template-comparison img { display: block; width: 100%; max-height: 340px; object-fit: contain; background: white; border: 1px solid var(--border); }
 @media (max-width: 600px) { .image-template-comparison { grid-template-columns: 1fr; } }
+.image-template-keep-bg {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+  padding: 8px 0;
+}
+
+.image-template-keep-bg input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.image-template-keep-bg:has(input:disabled) {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

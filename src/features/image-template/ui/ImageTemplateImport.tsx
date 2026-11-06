@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { Slide } from '@/shared/types';
+import type { Slide, CanvasElement, ImageElement, TextElement } from '@/shared/types';
 import { t } from '@/shared/i18n';
 import { authFetch } from '@/shared/api/client';
 import { serializeSlideToSvg } from '@/lib/svg/serialize';
@@ -23,6 +23,90 @@ const messages: Record<string, string> = {
   'recognition.review_required':
     'Review text, positions and data bindings before saving. Recognition can make mistakes.',
 };
+
+/* ============================================================
+   Composite mode
+   ============================================================
+
+   Complex scanned documents (bank statements, invoices, official
+   letterheads) often come back from the vision engine with only a
+   handful of text elements and — worse — inverted colours (white
+   text on black). The frontend cannot invent graphic objects, but
+   it can restore the *visual* graphics by keeping the original
+   raster as a background and overlaying only the editable text.
+   That matches the user's expectation "graphics as before, text
+   still editable".
+
+   The composite pass:
+     • prepends the original image (fitted to slide dimensions)
+     • drops shapes that cover > 50% of the page in black — those
+       are corrupt backgrounds produced by the engine's colour bug
+     • forces light text to dark so it stays readable on the raster
+     • strips inverted inline colours (background-color / white
+       text) from the text HTML, preserving bold / italic / size /
+       underline
+   ============================================================ */
+
+const LIGHTNESS_THRESHOLD = 0.75;
+const DEFAULT_TEXT_FILL = '#202020';
+
+function isLightColor(fill: string): boolean {
+  const v = fill.trim().toLowerCase();
+  if (v === 'white') return true;
+  if (!/^#[a-f\d]{3,8}$/i.test(v)) return false;
+  const hex =
+    v.length === 4
+      ? v.replace(/^#(.)(.)(.)$/, '#$1$1$2$2$3$3')
+      : v.slice(0, 7);
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  return r * 0.299 + g * 0.587 + b * 0.114 > LIGHTNESS_THRESHOLD;
+}
+
+function isCorruptBackground(el: CanvasElement, slide: Slide): boolean {
+  if (el.type !== 'shape') return false;
+  const covers = el.width * el.height > slide.width * slide.height * 0.5;
+  const dark = el.fill === '#000' || el.fill === '#000000' || el.fill === 'black';
+  return covers && dark;
+}
+
+function stripInvertedColors(html: string): string {
+  return html
+    .replace(/\s*background-color\s*:[^;"']*;?/gi, '')
+    .replace(
+      /\s*color\s*:\s*(?:#fff(?:fff)?|white|rgba?\(\s*255\s*,\s*255\s*,\s*255[^)]*\))\s*;?/gi,
+      '',
+    );
+}
+
+function normalizeForComposite(el: CanvasElement): CanvasElement {
+  if (el.type !== 'text') return el;
+  const text = el as TextElement;
+  return {
+    ...text,
+    fill: isLightColor(text.fill) ? DEFAULT_TEXT_FILL : text.fill,
+    html: text.html ? stripInvertedColors(text.html) : text.html,
+  };
+}
+
+function composeWithBackground(slide: Slide, imageSrc: string): Slide {
+  const image: ImageElement = {
+    id: crypto.randomUUID(),
+    type: 'image',
+    x: 0,
+    y: 0,
+    width: slide.width,
+    height: slide.height,
+    rotation: 0,
+    src: imageSrc,
+  };
+  const foreground = slide.elements
+    .filter((el) => !isCorruptBackground(el, slide))
+    .map(normalizeForComposite);
+  return { ...slide, elements: [image, ...foreground] };
+}
+
 export function ImageTemplateImport({
   onDraft,
   onBusy,
@@ -34,22 +118,32 @@ export function ImageTemplateImport({
 }) {
   const [source, setSource] = useState('');
   const [filename, setFilename] = useState('');
-  const [slide, setSlide] = useState<Slide | null>(null);
+  const [rawSlide, setRawSlide] = useState<Slide | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [language, setLanguage] = useState('rus+eng');
   const [engine, setEngine] = useState('ocr');
   const [vision, setVision] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [keepBackground, setKeepBackground] = useState(false);
   const controller = useRef<AbortController | null>(null);
   const revision = useRef(0);
+
+  const composedSlide = useMemo<Slide | null>(() => {
+    if (!rawSlide) return null;
+    return keepBackground && source
+      ? composeWithBackground(rawSlide, source)
+      : rawSlide;
+  }, [rawSlide, keepBackground, source]);
+
   const preview = useMemo(
     () =>
-      slide
-        ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(serializeSlideToSvg(slide))}`
+      composedSlide
+        ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(serializeSlideToSvg(composedSlide))}`
         : '',
-    [slide],
+    [composedSlide],
   );
+
   useEffect(() => {
     const lifecycle = revision;
     const abort = new AbortController();
@@ -68,14 +162,21 @@ export function ImageTemplateImport({
       onBusy(false);
     };
   }, [onBusy]);
+
+  useEffect(() => {
+    onDraft(composedSlide);
+  }, [composedSlide, onDraft]);
+
   function reset() {
     controller.current?.abort();
     revision.current++;
-    setSlide(null);
+    setRawSlide(null);
     setWarnings([]);
     setError('');
+    setKeepBackground(false);
     onDraft(null);
   }
+
   async function select(file?: File) {
     reset();
     setSource('');
@@ -100,6 +201,7 @@ export function ImageTemplateImport({
       }
     }
   }
+
   async function recognize() {
     reset();
     const current = revision.current;
@@ -111,9 +213,12 @@ export function ImageTemplateImport({
     try {
       const result = await recognizeImage(source, language, engine, filename, abort.signal);
       if (current === revision.current) {
-        setSlide(result.slide);
+        setRawSlide(result.slide);
         setWarnings(result.warnings);
-        onDraft(result.slide);
+        // Auto-enable composite mode for vision engines that frequently
+        // return incomplete graphics on complex scans.
+        const nonText = result.slide.elements.filter((e) => e.type !== 'text').length;
+        if (engine !== 'ocr' && nonText < 3) setKeepBackground(true);
       }
     } catch (reason) {
       if (current === revision.current)
@@ -132,6 +237,7 @@ export function ImageTemplateImport({
       }
     }
   }
+
   async function keepOriginal() {
     reset();
     const current = revision.current;
@@ -140,8 +246,7 @@ export function ImageTemplateImport({
     try {
       const original = await originalImageSlide(source, filename);
       if (current === revision.current) {
-        setSlide(original);
-        onDraft(original);
+        setRawSlide(original);
       }
     } catch {
       if (current === revision.current) setError('recognition.invalid_image');
@@ -152,6 +257,10 @@ export function ImageTemplateImport({
       }
     }
   }
+
+  const hasRecognizedText =
+    rawSlide !== null && rawSlide.elements.some((el) => el.type === 'text');
+
   return (
     <section className="image-template-import" aria-busy={busy}>
       {context === 'template' && <h2>{t('Create a template from an image')}</h2>}
@@ -194,6 +303,17 @@ export function ImageTemplateImport({
             <option value="ocr">{t('Local OCR')}</option>
             <option value="ollama">Ollama</option>
           </select>
+        </label>
+      )}
+      {hasRecognizedText && (
+        <label className="image-template-keep-bg">
+          <input
+            type="checkbox"
+            checked={keepBackground}
+            disabled={busy}
+            onChange={(event) => setKeepBackground(event.target.checked)}
+          />
+          {t('Keep original as background (editable text over the raster)')}
         </label>
       )}
       <div className="image-template-actions">
@@ -241,15 +361,21 @@ export function ImageTemplateImport({
           )}
         </div>
       )}
-      {slide && (
+      {composedSlide && (
         <p role="status">
-          {t('Editable objects')}: {slide.elements.length}
+          {t('Editable objects')}: {composedSlide.elements.length}
+          {keepBackground && (
+            <>
+              {' · '}
+              {t('Graphics from the original raster')}
+            </>
+          )}
         </p>
       )}
       {warnings.map((warning) => (
         <p key={warning}>{t(messages[warning] ?? warning)}</p>
       ))}
-      {slide && context === 'template' && (
+      {composedSlide && context === 'template' && (
         <p>
           {t(
             'Create the template to edit objects, add fields and connect your data in the editor.',

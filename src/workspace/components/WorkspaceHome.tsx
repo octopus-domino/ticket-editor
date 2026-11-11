@@ -1,7 +1,8 @@
 import { t as __tr } from '@/shared/i18n';
 // src/workspace/components/WorkspaceHome.tsx
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import '../../marketing/journey-discovery.css';
 import { useStore } from '@/shared/store/store';
 import { authStore } from '@/auth/store';
 
@@ -57,6 +58,16 @@ export const WorkspaceHome: React.FC = () => {
         </button>
       </div>
 
+      <section className="workspace-services">
+        <h2>{__tr('Ready-to-use services')}</h2>
+        <p>{__tr('Choose an invitation, certificates or a QR menu. Fill in a form and get a page, PDF and a link to share.')}</p>
+        <div className="workspace-services-links">
+          <Link to="/sites/new">{__tr('Create a website')} ↗</Link>
+          <Link to="/start/invite">{__tr('Create an invitation')}</Link>
+          <Link to="/start/certificates">{__tr('Create certificates')}</Link>
+          <Link to="/start/menu">{__tr('Create a QR menu')}</Link>
+        </div>
+      </section>
       <div className="workspace-home-hint">
         <strong>{__tr("Совет:")}</strong> {__tr("если не знаете, с чего начать, — начните с шаблона. Схема данных и наборы данных создаются прямо в редакторе, никуда не нужно уходить.")}</div>
     </div>

@@ -10,6 +10,12 @@ import { RegisterPage } from './auth/RegisterPage';
 import { OAuth2RedirectPage } from './auth/OAuth2RedirectPage';
 import { ProtectedRoute } from './auth/ProtectedRoute';
 import { RouteMetadata } from './marketing/RouteMetadata';
+import { defaultJourney } from './features/journeys/domain/definitions';
+import { JOURNEY_PAGES } from './marketing/journeyPages';
+import { JourneyMarketingPage } from './marketing/JourneyMarketingPage';
+const JourneyApp = lazy(() => import('./features/journeys/JourneyApp'));
+const WorkflowBuilder = lazy(() => import('./features/workflows/WorkflowBuilder'));
+const WorkflowRunner = lazy(() => import('./features/workflows/WorkflowRunner'));
 import { SearchLandingPage, NotFoundPage } from './marketing/SearchLandingPage';
 import { SEARCH_PAGES } from './marketing/searchPages';
 
@@ -72,7 +78,15 @@ const App: React.FC = () => {
         >
           <Routes>
             {/* Публичные страницы */}
-            <Route path="/" element={<LandingPage />} />
+            <Route path="/" element={window.location.hostname.endsWith('.codoc.site') && !['www','app','api','drawio','go'].includes(window.location.hostname.split('.')[0]) ? <JourneyApp mode={defaultJourney(window.location.hostname)?'wizard':'custom'} /> : <LandingPage />} />
+            <Route path="/start/:kind" element={<JourneyApp />} />
+            {JOURNEY_PAGES.map(page => <Route key={page.path} path={page.path} element={<JourneyMarketingPage/>} />)}
+            <Route path="/s/:slug" element={<JourneyApp mode="custom" />} />
+            <Route path="/sites/new" element={<JourneyApp mode="builder" />} />
+            <Route path="/flows/:slug" element={<WorkflowRunner />} />
+            <Route path="/d/:id" element={<JourneyApp mode="public" />} />
+            <Route path="/manage/:id" element={<JourneyApp mode="manage" />} />
+            <Route path="/issues/:id" element={<JourneyApp mode="batch" />} />
             {SEARCH_PAGES.map((page) => (
               <Route key={page.path} path={page.path} element={<SearchLandingPage />} />
             ))}
@@ -97,6 +111,7 @@ const App: React.FC = () => {
               />
               <Route path="editor/:docId" element={<EditorPage />} />
               <Route path="templates" element={<TemplatesPage />} />
+              <Route path="workflows" element={<WorkflowBuilder />} />
               <Route path="library" element={<DocumentLibraryPage />} />
               <Route path="stamps" element={<StampStudioPage />} />
               <Route path="learn" element={<LearningPage />} />

@@ -1,6 +1,6 @@
 import type { Slide, CanvasElement, BasicShape } from '@/shared/types';
 import { DocumentSchema } from '@/shared/schemas/document';
-import { newSimpleText, newShape, newTable, newChart } from '@/lib/factories';
+import { newSimpleText, newShape, newTable, newChart, newLine } from '@/lib/factories';
 import { unpack, parseXml, readRelationships, fingerprint } from './package';
 import { strFromU8 } from 'fflate';
 
@@ -200,6 +200,33 @@ function readTextOrShape(
   const outline = shapeProps
     ? Array.from(shapeProps.children).find((e) => e.localName === 'ln')
     : undefined;
+  if (geom === 'line' || node.localName === 'cxnSp') {
+    const extent = first(first(node, 'xfrm') ?? node, 'ext');
+    const width = toPixels(attributeNumber(extent, 'cx')) * origin.sx;
+    const height = toPixels(attributeNumber(extent, 'cy')) * origin.sy;
+    const angle = (bounds.rotation * Math.PI) / 180;
+    return {
+      ...newLine(),
+      ...bounds,
+      x: bounds.x + width / 2 - (Math.cos(angle) * width) / 2 + (Math.sin(angle) * height) / 2,
+      y: bounds.y + height / 2 - (Math.sin(angle) * width) / 2 - (Math.cos(angle) * height) / 2,
+      // Bake flips into endpoints: native canvas polylines use their actual points.
+      points: [
+        bounds.flipX ? width : 0,
+        bounds.flipY ? height : 0,
+        bounds.flipX ? 0 : width,
+        bounds.flipY ? 0 : height,
+      ],
+      flipX: false,
+      flipY: false,
+      stroke: outline && first(outline, 'noFill') ? 'transparent' : color(outline, '#000000'),
+      strokeWidth: toPixels(attributeNumber(outline, 'w', 9525)),
+      isArrow: Boolean(
+        first(node, 'tailEnd')?.getAttribute('type') &&
+        first(node, 'tailEnd')?.getAttribute('type') !== 'none',
+      ),
+    };
+  }
   const preset: Record<string, BasicShape> = {
     rect: 'rect',
     roundRect: 'roundRect',
@@ -217,6 +244,7 @@ function readTextOrShape(
       ...bounds,
       text,
       richText: false,
+      autoHeight: false,
       fontSize,
       fontFamily: fontFamily.startsWith('+') ? 'Arial' : fontFamily,
       fontStyle: style,

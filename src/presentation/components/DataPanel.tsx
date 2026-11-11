@@ -29,7 +29,7 @@ export const DataPanel: React.FC = () => {
   const activeModelId = useStore(modelStore, (s) => s.selectedId);
 
   const [uiError, setUiError] = useState<string | null>(null);
-  const [valuesOpen, setValuesOpen] = useState(false);
+  const [valuesOpen, setValuesOpen] = useState(true);
   const [importerOpen, setImporterOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [selectedModelIds, setSelectedModelIds] = useState<Set<string>>(() => new Set());
@@ -46,6 +46,9 @@ export const DataPanel: React.FC = () => {
   }, [activeSchema?.id]);
 
   const activeModel = models.find((m) => m.id === activeModelId);
+  useEffect(() => {
+    setValuesOpen(true);
+  }, [activeModelId]);
 
   const modelAdapter = useMemo<ListItemAdapter<DataModel>>(
     () => ({
@@ -246,7 +249,10 @@ export const DataPanel: React.FC = () => {
           className="dp-select-model"
           aria-label={__tr('Схема данных')}
           value={activeSchema.id}
-          onChange={(e) => {selectSchema(e.target.value);modelStore.select(null);}}
+          onChange={(e) => {
+            selectSchema(e.target.value);
+            modelStore.select(null);
+          }}
         >
           <option value="">{__tr('No linked schema')}</option>
           {schemas.map((s) => (
@@ -255,7 +261,16 @@ export const DataPanel: React.FC = () => {
             </option>
           ))}
         </select>
-        <button type="button" className="dp-btn" onClick={()=>{selectSchema('');modelStore.select(null);}}>{__tr('Detach schema')}</button>
+        <button
+          type="button"
+          className="dp-btn"
+          onClick={() => {
+            selectSchema('');
+            modelStore.select(null);
+          }}
+        >
+          {__tr('Detach schema')}
+        </button>
         <div style={{ display: 'flex', gap: 6, fontSize: 11 }}>
           <Link
             to={`/app/schemas/${activeSchema.id}`}
@@ -335,7 +350,7 @@ export const DataPanel: React.FC = () => {
           title={__tr('Создать новый набор данных')}
           style={{ fontSize: 11 }}
         >
-          {creating ? '…' : __tr('+ Новая')}
+          {creating ? '…' : __tr('+ New data set')}
         </button>
       </div>
 

@@ -10,7 +10,7 @@ export default defineConfig(
   {
     ignores: [
       'public/vendor/cadesplugin_api.js',
-      'dist/**', 'node_modules/**', 'coverage/**', 'scripts/**', 'src/.*.cjs',
+      'dist/**', 'node_modules/**', 'coverage/**', 'test-results/**', 'playwright-report/**', 'scripts/**', 'src/.*.cjs',
       '.imports-backup/**', '**/.imports-backup/**', 'src/.imports-backup/**',
       'eslint.config.js', 'vite.config.ts', 'vitest.config.ts',
       'playwright.config.ts', '.dependency-cruiser.cjs',
@@ -25,9 +25,11 @@ export default defineConfig(
     languageOptions: {
       globals: { ...globals.browser, ...globals.node },
       parserOptions: {
-        projectService: true,
+        // Current rules are syntax-only; tsc checks types separately.
+        // Creating three TS programs here wastes RAM on the 4 GB build host.
+        projectService: false,
+        project: false,
         tsconfigRootDir: import.meta.dirname,
-        allowDefaultProject: ['eslint.config.js'],
       },
     },
     plugins: { react, 'react-hooks': reactHooks },
@@ -52,7 +54,7 @@ export default defineConfig(
       globals: { ...globals.browser, ...globals.node },
       parserOptions: {
         projectService: false,
-        project: './tsconfig.test.json',
+        project: false,
         tsconfigRootDir: import.meta.dirname,
       },
     },
@@ -70,7 +72,7 @@ export default defineConfig(
       globals: { ...globals.browser, ...globals.node },
       parserOptions: {
         projectService: false,
-        project: './tsconfig.e2e.json', // <--- Указываем новый конфиг
+        project: false,
         tsconfigRootDir: import.meta.dirname,
       },
     },

@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
+import type {} from '../../src/features/signing/CryptoProProvider';
 
 test('image import becomes editable objects, generates a PDF and signs its original bytes', async ({ page }) => {
   page.on('pageerror', (error) => console.error('Browser error:', error.message));

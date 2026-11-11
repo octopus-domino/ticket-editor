@@ -1,4 +1,4 @@
-import sources from './remaining-source.json';
+import sources from './remaining-source.json' with { type: 'json' };
 import { REMAINING_TRANSLATIONS } from './remaining-translations';
 
 export const REMAINING_MESSAGES =

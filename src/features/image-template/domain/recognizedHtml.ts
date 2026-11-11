@@ -50,7 +50,7 @@ export function recognizedHtml(html: string, scale: number): string {
     if (/^(normal|italic)$/.test(style.fontStyle)) clean.style.fontStyle = style.fontStyle;
     const decoration = style.textDecoration
       .split(/\s+/)
-      .filter((value) => ['underline', 'line-through'].includes(value));
+      .filter((value) => ['underline', 'line-through', 'none'].includes(value));
     if (decoration.length) clean.style.textDecoration = decoration.join(' ');
     if (/^(left|center|right|justify)$/.test(style.textAlign))
       clean.style.textAlign = style.textAlign;

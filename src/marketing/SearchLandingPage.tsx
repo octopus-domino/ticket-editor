@@ -29,6 +29,7 @@ export function SearchLandingPage() {
           CoDoc.
         </Link>
         <nav aria-label={__tr("Разделы сайта")}>
+          <Link to="/solutions/">{__tr('Ready-to-use services')}</Link>
           {SEARCH_PAGES.map((item) => (
             <Link
               to={item.path}

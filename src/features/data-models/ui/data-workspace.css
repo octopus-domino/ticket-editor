@@ -1,13 +1,111 @@
-.data-workspace{height:100%;min-height:0;display:grid;grid-template-columns:220px minmax(0,1fr);overflow:hidden;background:var(--bg)}
-.data-schema-list{display:flex;flex-direction:column;gap:8px;padding:16px;overflow:auto;background:var(--panel);border-right:1px solid var(--border)}
-.data-schema-list h1{font-size:22px;margin:0}.data-schema-list p{color:var(--text-muted);line-height:1.5}.data-schema-list button{text-align:left;padding:10px;border:1px solid var(--border);border-radius:6px;background:var(--panel);color:var(--text);overflow-wrap:anywhere}.data-schema-list button[aria-pressed=true]{border-color:var(--accent);background:var(--accent-light)}.data-schema-list small{display:block;color:var(--text-muted);margin-top:4px}
-.data-workspace-content{display:flex;flex-direction:column;min-width:0;min-height:0;overflow:auto}.data-schema-editor{max-height:55%;overflow:auto;flex:0 0 auto;border-bottom:1px solid var(--border)}.data-workspace-models{min-height:300px;flex:1;overflow:auto}.data-workspace-models>.dm-page{height:100%}
-@media(max-width:760px){.data-workspace{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}.data-schema-list{max-height:180px;display:flex;flex-direction:row;flex-wrap:wrap;border-bottom:1px solid var(--border)}.data-schema-list h1,.data-schema-list>p{width:100%}.data-schema-list>button{max-width:48%;flex:1 0 120px}.data-schema-editor{max-height:65%}}
+.data-workspace {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  overflow: hidden;
+  background: var(--bg);
+}
+.data-schema-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  overflow: auto;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+}
+.data-schema-list h1 {
+  font-size: 22px;
+  margin: 0;
+}
+.data-schema-list p {
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.data-schema-list button {
+  text-align: left;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.data-schema-list button[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+.data-schema-list small {
+  display: block;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+.data-workspace-content {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+}
+.data-schema-editor {
+  max-height: 55%;
+  overflow: auto;
+  flex: 0 0 auto;
+  border-bottom: 1px solid var(--border);
+}
+.data-workspace-models {
+  min-height: 300px;
+  flex: 1;
+  overflow: auto;
+}
+.data-workspace-models > .dm-page {
+  height: 100%;
+}
+@media (max-width: 760px) {
+  .data-workspace {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  .data-schema-list {
+    max-height: 180px;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--border);
+  }
+  .data-schema-list h1,
+  .data-schema-list > p {
+    width: 100%;
+  }
+  .data-schema-list > button {
+    max-width: 48%;
+    flex: 1 0 120px;
+  }
+  .data-schema-editor {
+    max-height: 65%;
+  }
+}
 
 /* Size the nested list and editor against their available workspace width. */
 .data-workspace-models {
   container-type: inline-size;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.data-workspace-models > .dm-page {
+  flex: 1 1 0;
+  min-height: 0;
+  height: auto;
+}
+.data-workspace-models .dm-sidebar > .ssl-root {
+  min-height: 160px;
+}
+.data-workspace-models .dm-sidebar .ssl-list {
+  overflow-y: auto;
+  min-height: 100px;
 }
 
 .data-workspace-models .dm-sidebar > .excel-actions {
@@ -49,4 +147,40 @@
   .data-workspace-models .dm-editor {
     padding: 16px 12px;
   }
+}
+
+.data-schema-row {
+  display: flex;
+  gap: 4px;
+  min-width: 0;
+  flex-shrink: 0;
+}
+.data-schema-row > button:first-child {
+  flex: 1;
+  min-width: 0;
+}
+.data-schema-row > button:last-child {
+  flex: 0 0 36px;
+  text-align: center;
+}
+.schema-delete-panel {
+  padding: 12px;
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 12px;
+}
+.schema-dependency {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+  overflow-wrap: anywhere;
+}
+.schema-dependency a {
+  min-width: 0;
+}
+.schema-dependency button {
+  flex-shrink: 0;
 }

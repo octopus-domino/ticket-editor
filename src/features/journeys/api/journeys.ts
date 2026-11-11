@@ -1,0 +1,147 @@
+import { publicFetch } from './publicFetch';
+import { journeyError } from './errorMessage';
+import { API_BASE } from '@/shared/api/client';
+import { normalizedProposalData } from '../domain/proposal';
+import type {
+  CreatedJourney,
+  GuestReply,
+  JourneyDefinition,
+  JourneyDocument,
+  JourneyKind,
+  JourneyBatch,
+  JourneyStatus,
+} from '../domain/definitions';
+async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const response = await publicFetch(`${API_BASE}${path}`, {
+    ...init,
+    headers: { 'Content-Type': 'application/json', ...init.headers },
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw Object.assign(new Error(journeyError(response.status, body.error)), {
+      status: response.status,
+    });
+  }
+  const body = await response.text();
+  return body ? (JSON.parse(body) as T) : (undefined as T);
+}
+export const journeyApi = {
+  batch: (id: string, key: string) =>
+    request<JourneyBatch>(`/api/journeys/batches/${encodeURIComponent(id)}`, {
+      headers: { 'X-Management-Key': key },
+    }),
+  status: (id: string) => request<JourneyStatus>(`/api/journeys/${encodeURIComponent(id)}/status`),
+  consume: (id: string, key: string) =>
+    request<JourneyStatus>(`/api/journeys/${encodeURIComponent(id)}/consume`, {
+      method: 'POST',
+      headers: { 'X-Management-Key': key },
+    }),
+  batchPdf: async (id: string, key: string) => {
+    const response = await publicFetch(
+      `${API_BASE}/api/journeys/batches/${encodeURIComponent(id)}/pdf`,
+      {
+        headers: { 'X-Management-Key': key },
+      },
+    );
+    if (!response.ok)
+      throw new Error(
+        response.status === 429
+          ? 'Подготовка занята. Повторите чуть позже.'
+          : 'Не удалось подготовить выпуск. Проверьте ссылку управления.',
+      );
+    return response.blob();
+  },
+  create: (
+    kind: JourneyKind,
+    title: string,
+    data: Record<string, string>,
+    recipients: string[],
+    rows?: Record<string, string>[],
+  ) =>
+    request<CreatedJourney[]>('/api/journeys', {
+      method: 'POST',
+      body: JSON.stringify({
+        kind,
+        title,
+        data: kind === 'PROPOSAL' ? normalizedProposalData(data) : data,
+        recipients,
+        rows,
+      }),
+    }),
+  get: (id: string) => request<JourneyDocument>(`/api/journeys/${encodeURIComponent(id)}`),
+  manage: (id: string, key: string) =>
+    request<JourneyDocument>(`/api/journeys/${encodeURIComponent(id)}/manage`, {
+      headers: { 'X-Management-Key': key },
+    }),
+  update: (document: JourneyDocument, key: string) =>
+    request<JourneyDocument>(`/api/journeys/${encodeURIComponent(document.id)}`, {
+      method: 'PUT',
+      headers: { 'X-Management-Key': key },
+      body: JSON.stringify({
+        ...document,
+        data: document.kind === 'PROPOSAL' ? normalizedProposalData(document.data) : document.data,
+      }),
+    }),
+  revoke: (id: string, key: string) =>
+    request<void>(`/api/journeys/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: { 'X-Management-Key': key },
+    }),
+  guests: (id: string, key: string) =>
+    request<GuestReply[]>(`/api/journeys/${encodeURIComponent(id)}/responses`, {
+      headers: { 'X-Management-Key': key },
+    }),
+  respond: (id: string, name: string, attending: boolean, responseKey: string) =>
+    request<void>(`/api/journeys/${encodeURIComponent(id)}/responses`, {
+      method: 'POST',
+      body: JSON.stringify({ name, attending, responseKey }),
+    }),
+  site: (slug: string) =>
+    request<JourneyDefinition>(`/api/journey-sites/${encodeURIComponent(slug)}`),
+  createSite: (site: JourneyDefinition) =>
+    request<{ site: JourneyDefinition; managementKey: string }>('/api/journey-sites', {
+      method: 'POST',
+      body: JSON.stringify(site),
+    }),
+  updateSite: (site: JourneyDefinition, key: string) =>
+    request<JourneyDefinition>(`/api/journey-sites/${encodeURIComponent(site.slug)}`, {
+      method: 'PUT',
+      headers: { 'X-Management-Key': key },
+      body: JSON.stringify(site),
+    }),
+};
+export const pdfUrl = (id: string, archive = false) =>
+  `${API_BASE}/api/journeys/${encodeURIComponent(id)}/pdf${archive ? '?archive=true' : ''}`;
+const domain = (import.meta.env.VITE_PUBLIC_DOMAIN as string | undefined) ?? 'codoc.site';
+const deployed = () =>
+  window.location.hostname === domain || window.location.hostname.endsWith(`.${domain}`);
+export const publicUrl = (id: string) =>
+  deployed()
+    ? `https://go.${domain}/${encodeURIComponent(id)}`
+    : `${window.location.origin}/d/${encodeURIComponent(id)}`;
+export const siteUrl = (slug: string) =>
+  deployed()
+    ? `https://${slug}.${domain}`
+    : `${window.location.origin}/s/${encodeURIComponent(slug)}`;
+export function managementUrl(id: string, key: string) {
+  return `${window.location.origin}/manage/${encodeURIComponent(id)}#key=${encodeURIComponent(key)}`;
+}
+export function rememberKey(id: string, key: string) {
+  try {
+    localStorage.setItem(`codoc:journey:${id}`, key);
+  } catch {
+    /* The management link remains available for copying. */
+  }
+}
+export function managementKey(id: string) {
+  const hash = new URLSearchParams(window.location.hash.slice(1));
+  let key = hash.get('key') ?? '';
+  if (!key)
+    try {
+      key = localStorage.getItem(`codoc:journey:${id}`) ?? '';
+    } catch {
+      /* Fragment links work without browser storage. */
+    }
+  if (key) rememberKey(id, key);
+  return key;
+}

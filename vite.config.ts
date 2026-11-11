@@ -55,7 +55,7 @@ export default defineConfig({
   },
   build: {
     target: 'es2020',
-    sourcemap: true,
+    sourcemap: process.env.VITE_BUILD_SOURCEMAP !== 'false',
     chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {

@@ -8,6 +8,7 @@ import type { EditorInitialDoc } from '@/shared/types/document';
 import { documentPreview } from '@/application/use-cases/DocumentPreview';
 import { registerLanguageSave } from '@/shared/i18n';
 import { isGuest } from '@/shared/session/guest';
+import { withBrowserTextLayout } from '@/lib/browserTextLayout';
 
 export const documentDrafts = new IndexedDraftRepository<EditorInitialDoc>();
 export function useDocumentPersistence(
@@ -54,7 +55,7 @@ export function useDocumentPersistence(
   }, [id, slides]);
   useEffect(() => {
     // Callback identity is not a content change. Schema-only edits use saveContext instead.
-    persistence?.update({ slides, data, activeId, bindings }, saveContext);
+    persistence?.update({ slides: withBrowserTextLayout(slides), data, activeId, bindings }, saveContext);
   }, [persistence, slides, data, activeId, bindings, saveContext]);
   useEffect(() => {
     const flush = () => {

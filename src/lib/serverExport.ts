@@ -11,12 +11,13 @@ import type { Slide } from '../shared/types';
 import { CONFIG } from '../shared/config';
 import { authFetch } from '@/shared/api/client';
 import { embedImagesInSlide } from './embedImages';
+import { withBrowserTextLayout } from './browserTextLayout';
 
 const TIMEOUT_MS = 30_000;
 
 function buildPayload(slides: Slide[], extraOptions: Record<string, unknown> = {}) {
   return {
-    slides,
+    slides: withBrowserTextLayout(slides),
     options: {
       embedImages: true,
       prettyPrint: false,

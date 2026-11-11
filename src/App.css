@@ -1044,7 +1044,7 @@ input, select, textarea { font-family: inherit; }
 .stamp-zoom-label { font-size: 12px; min-width: 40px; text-align: center; }
 .stamp-editor-body {
   display: grid;
-  grid-template-columns: 260px 1fr 300px;
+  grid-template-columns: minmax(170px, 240px) minmax(0, 1fr) minmax(220px, 280px);
   flex: 1;
   min-height: 0;
   overflow: hidden;
@@ -1311,6 +1311,8 @@ input, select, textarea { font-family: inherit; }
   background: var(--panel);
   gap: 6px;
 }
+.dp-container > * { flex-shrink: 0; }
+.dp-field-chip { flex-shrink: 0; min-height: 32px; user-select: none; }
 .dp-toolbar {
   display: flex;
   gap: 4px;
@@ -2296,3 +2298,7 @@ input, select, textarea { font-family: inherit; }
 .mv-table.mv-table-wide .dp-input {
   min-width: 90px;
 }
+
+.stamp-editor-canvas, .stamp-editor-center, .stamp-editor-right { min-width: 0; min-height: 0; }
+.stamp-editor-left { overflow-x: hidden; }
+.rt-toolbar, .text-toolbar { max-width: calc(100vw - 16px); overflow-x: auto; }

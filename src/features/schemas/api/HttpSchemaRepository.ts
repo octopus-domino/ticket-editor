@@ -1,6 +1,7 @@
 import { authFetch } from '@/shared/api/client';
 import type { DataSchema, FieldDef } from '../domain/DataSchema';
 import type { SchemaRepository } from './SchemaRepository';
+import { t } from '@/shared/i18n';
 
 async function json<T>(res: Response): Promise<T> {
   if (!res.ok) {
@@ -31,7 +32,11 @@ export class HttpSchemaRepository implements SchemaRepository {
   }
   async delete(id: string): Promise<void> {
     const res = await authFetch(`/api/schemas/${encodeURIComponent(id)}`, { method: 'DELETE' });
-    if (!res.ok && res.status !== 404) throw new Error(`HTTP ${res.status}`);
+    if (res.status === 409) throw new Error(t('This schema is used by data sets or templates. Remove the dependencies before deleting it.'));
+    if (!res.ok && res.status !== 404) {
+      const body = await res.json().catch(() => ({})) as { error?: string };
+      throw new Error(body.error ?? t('Could not delete the schema. Please try again.'));
+    }
   }
 }
 

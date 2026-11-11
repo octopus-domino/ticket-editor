@@ -9,6 +9,7 @@ import './landing-people.css';
 import { FeedbackWidget } from '@/features/feedback/ui/FeedbackWidget';
 import { SEARCH_PAGES } from './searchPages';
 import { LanguageSwitcher } from '@/shared/i18n/LanguageSwitcher';
+import { JourneyDiscovery } from './JourneyDiscovery';
 
 export function LandingPage() {
   const user = useStore(authStore, (s) => s.user);
@@ -29,6 +30,7 @@ export function LandingPage() {
           <span aria-hidden="true">co</span>CoDoc.
         </Link>
         <nav aria-label={__tr("Основная навигация")}>
+          <Link to="/solutions/">{__tr('Ready-to-use services')}</Link>
           <a href="#possibilities">{__tr("Возможности")}</a>
           <a href="#stamps">{__tr("Штампы и печати")}</a>
           <a href="#workflow">{__tr("Как это работает")}</a>
@@ -51,6 +53,7 @@ export function LandingPage() {
             <p className="codoc-lead">
               {__tr("Создавайте билеты, сертификаты, штампы и печати онлайн. Соберите макет, подставьте данные и получите готовые PDF — без ручной правки каждого файла.")}</p>
             <div className="codoc-actions">
+              <Link className="codoc-button" to="/sites/new" onClick={()=>reachGoal('start_site',{placement:'hero'})}>{__tr('Create a website')} ↗</Link>
               <Link className="codoc-button codoc-primary" to={startHref} onClick={cta('hero')}>
                 {__tr("Создать свой шаблон ↗")}</Link>
               <a className="codoc-text-link" href="#workflow">
@@ -89,6 +92,7 @@ export function LandingPage() {
           <i aria-hidden="true">✳</i>
           <strong>PDF / PDF/A / SVG</strong>
         </div>
+        <JourneyDiscovery />
         <section className="codoc-section codoc-container" id="possibilities">
           <div className="codoc-section-heading">
             <div>
@@ -275,6 +279,8 @@ export function LandingPage() {
         </Link>
         <span>{__tr("Редактор шаблонов и генератор PDF онлайн")}</span>
         <nav className="codoc-footer-pages" aria-label={__tr("Возможности CoDoc")}>
+          <Link to="/solutions/">{__tr('Ready-to-use services')}</Link>
+          <Link to="/website-builder/">{__tr('Website builder')}</Link>
           {SEARCH_PAGES.map((page) => (
             <Link key={page.path} to={page.path}>
               {page.label}

@@ -23,6 +23,8 @@ import {
   useCanvasDblClick,
 } from '@/ui/hooks/canvas';
 import type { ElementSelectEvent } from './elements/types';
+import { useCanvasTransform } from '../hooks/canvas/useCanvasTransform';
+import { canvasMode } from '@/shared/mobile/canvasMode';
 
 interface Props {
   slide: Slide;
@@ -45,6 +47,7 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
   const stageRef = useRef<Konva.Stage>(null);
   const trRef = useRef<Konva.Transformer>(null);
   const isDraggingRef = useRef(false);
+  const pendingToggle = useRef<string | null>(null);
 
   const elementsRef = useRef(slide.elements);
   if (elementsRef.current !== slide.elements) elementsRef.current = slide.elements;
@@ -58,8 +61,15 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
   const editorMode = useStore(modalsStore, (s) => s.editorMode);
   const dataHighlight = useStore(modalsStore, (s) => s.dataHighlight);
 
-  const viewport = useCanvasViewport({ wrapRef, zoom, onZoomChange, stageRef });
+  const transformSelection = useCanvasTransform(docStore, trRef);
   const drag = useCanvasDrag({ docStore, selStore, modalsStore, slide });
+  const viewport = useCanvasViewport({
+    wrapRef,
+    zoom,
+    onZoomChange,
+    stageRef,
+    onGestureStart: drag.cancel,
+  });
   const rubber = useCanvasRubberBand({ selStore });
   const fill = useCanvasFillMode({ docStore, modalsStore, slide, stageRef });
   const draft = useCanvasConnectorDraft({ docStore, slide });
@@ -73,14 +83,11 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
     if (!tr || !stage) return;
 
     const apply = () => {
-      if (selectedIds.length !== 1) {
-        tr.nodes([]);
-        tr.getLayer()?.batchDraw();
-        return;
-      }
-      const node = stage.findOne(`#${selectedIds[0]}`);
-      if (node) {
-        tr.nodes([node]);
+      const nodes = selectedIds
+        .map((id) => stage.findOne(`#${id}`))
+        .filter((node): node is Konva.Node => Boolean(node));
+      if (nodes.length) {
+        tr.nodes(nodes);
         tr.forceUpdate();
         tr.getLayer()?.batchDraw();
       } else {
@@ -114,6 +121,7 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
   const onStageDown = useCallback(
     (e: Konva.KonvaEventObject<MouseEvent>) => {
       if (editing?.isRich) return;
+      if ('button' in e.evt && e.evt.button !== 0) return;
 
       isDraggingRef.current = false;
       if (viewport.isPanning) {
@@ -161,6 +169,11 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
   const onStageUp = useCallback(
     (e: Konva.KonvaEventObject<MouseEvent>) => {
       if (viewport.isPanning) return;
+      if (pendingToggle.current && !isDraggingRef.current) {
+        const id = pendingToggle.current;
+        pendingToggle.current = null;
+        selStore.setIds(selStore.getState().selectedIds.filter((selected) => selected !== id));
+      }
       if (draft.isDrafting()) {
         const stage = e.target.getStage();
         const p = stage?.getPointerPosition();
@@ -168,17 +181,33 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
       }
       if (rubber.isActive()) rubber.finish(slide.elements);
     },
-    [zoom, draft, rubber, slide.elements, viewport.isPanning],
+    [zoom, draft, rubber, slide.elements, viewport.isPanning, selStore],
   );
 
   const handleSelect = (el: CanvasElement, e?: ElementSelectEvent) => {
-    if (viewport.isPanning) return;
+    if (viewport.isPanning || el.locked) return;
     const nativeEvt = e && 'evt' in e ? e.evt : undefined;
-    const multi = isMultiSelectEvent(nativeEvt);
+    const multi = isMultiSelectEvent(nativeEvt) || canvasMode.getState().multiselect;
     const current = selStore.getState().selectedIds;
+    if (nativeEvt instanceof MouseEvent && nativeEvt.button === 2) {
+      pendingToggle.current = null;
+      modalsStore.setFloatingPos(null);
+      if (!current.includes(el.id)) selStore.setIds([el.id]);
+      return;
+    }
 
     if (multi) {
       const exists = current.includes(el.id);
+      modalsStore.setFloatingPos(null);
+      if (
+        exists &&
+        nativeEvt instanceof MouseEvent &&
+        nativeEvt.type === 'mousedown' &&
+        nativeEvt.button === 0
+      ) {
+        pendingToggle.current = el.id;
+        return;
+      }
       selStore.setIds(exists ? current.filter((x) => x !== el.id) : [...current, el.id]);
       return;
     }
@@ -186,10 +215,17 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
     if (!current.includes(el.id)) {
       selStore.setIds([el.id]);
     }
-    if (el.type !== 'text' && el.type !== 'footer' && nativeEvt instanceof MouseEvent) {
+    if (
+      current.length <= 1 &&
+      el.type !== 'text' &&
+      el.type !== 'footer' &&
+      nativeEvt instanceof MouseEvent &&
+      nativeEvt.button === 0
+    ) {
+      const rect = stageRef.current?.container().getBoundingClientRect();
       modalsStore.setFloatingPos({
-        x: nativeEvt.clientX,
-        y: nativeEvt.clientY,
+        x: (rect?.left ?? 0) + el.x * zoom,
+        y: (rect?.top ?? 0) + el.y * zoom,
       });
     }
   };
@@ -207,7 +243,7 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
       className="stage-wrap"
       data-fill-mode={fillMode || undefined}
       role="presentation"
-      aria-label={__tr("Холст, {0} элементов", slide.elements.length)}
+      aria-label={__tr('Холст, {0} элементов', slide.elements.length)}
       onDragOver={drop.onDragOver}
       onDrop={drop.onDrop}
       style={{ position: 'relative' }}
@@ -221,9 +257,18 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
         onMouseDown={onStageDown}
         onMouseMove={onStageMove}
         onMouseUp={onStageUp}
-        onTouchStart={(event) => { if (event.evt.touches.length === 1 && !viewport.isPinching()) onStageDown(event as unknown as Konva.KonvaEventObject<MouseEvent>); }}
-        onTouchMove={(event) => { if (event.evt.touches.length === 1 && !viewport.isPinching()) onStageMove(event as unknown as Konva.KonvaEventObject<MouseEvent>); }}
-        onTouchEnd={(event) => { if (!viewport.isPinching()) onStageUp(event as unknown as Konva.KonvaEventObject<MouseEvent>); }}
+        onTouchStart={(event) => {
+          if (event.evt.touches.length === 1 && !viewport.isPinching())
+            onStageDown(event as unknown as Konva.KonvaEventObject<MouseEvent>);
+        }}
+        onTouchMove={(event) => {
+          if (event.evt.touches.length === 1 && !viewport.isPinching())
+            onStageMove(event as unknown as Konva.KonvaEventObject<MouseEvent>);
+        }}
+        onTouchEnd={(event) => {
+          if (!viewport.isPinching())
+            onStageUp(event as unknown as Konva.KonvaEventObject<MouseEvent>);
+        }}
         onContextMenu={(e) => {
           if (e.target !== e.target.getStage()) return;
           e.evt.preventDefault();
@@ -261,6 +306,7 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
               element={el}
               elements={elementsRef.current}
               isSelected={selectedSet.has(el.id)}
+              interactionVersion={`${zoom}:${viewport.isPanning}`}
               isEditing={editing?.id === el.id}
               onSelect={(e) => handleSelect(el, e)}
               onUpdate={(patch, newElement) => {
@@ -287,7 +333,13 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
                 });
               }}
               onDragStart={(e) => {
-                if (draft.isDrafting() || viewport.isPanning) {
+                pendingToggle.current = null;
+                if (
+                  draft.isDrafting() ||
+                  viewport.isPanning ||
+                  viewport.isPinching() ||
+                  el.locked
+                ) {
                   e.target.stopDrag();
                   return;
                 }
@@ -302,6 +354,7 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
               onContextMenu={(ev: Konva.KonvaEventObject<PointerEvent>) => {
                 ev.evt.preventDefault();
                 ev.cancelBubble = true;
+                modalsStore.setFloatingPos(null);
                 const current = selStore.getState().selectedIds;
                 if (!current.includes(el.id)) selStore.setIds([el.id]);
                 modalsStore.setContextMenu({
@@ -336,81 +389,7 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
               if (Math.abs(newBox.width) < 20 || Math.abs(newBox.height) < 20) return oldBox;
               return newBox;
             }}
-            onTransformEnd={(e) => {
-              const node = e.target;
-              const id = node.id();
-              const sx = node.scaleX();
-              const sy = node.scaleY();
-              const rotation = node.rotation();
-
-              node.scaleX(1);
-              node.scaleY(1);
-
-              docStore.commit((d) => {
-                const s = d.slides.find((x) => x.id === d.activeId);
-                if (!s) return;
-                const target = s.elements.find((x) => x.id === id);
-                if (!target) return;
-
-                const oldX = target.x;
-                const oldY = target.y;
-                const newWidth = Math.max(20, target.width * sx);
-                const newHeight = Math.max(20, target.height * sy);
-
-                target.x = node.x();
-                target.y = node.y();
-                target.width = newWidth;
-                target.height = newHeight;
-                target.rotation = rotation;
-
-                if (target.type === 'group') {
-                  const group = target;
-                  for (const child of s.elements) {
-                    if (group.children.includes(child.id)) {
-                      const relX = child.x - oldX;
-                      const relY = child.y - oldY;
-                      child.x = target.x + relX * sx;
-                      child.y = target.y + relY * sy;
-                      child.width = Math.max(20, child.width * sx);
-                      child.height = Math.max(20, child.height * sy);
-                    }
-                  }
-                } else {
-                  if (
-                    target.type === 'shape' &&
-                    (target.shape === 'polygon' || target.shape === 'triangle')
-                  ) {
-                    const shape = target;
-                    if (Array.isArray(shape.polygonPoints) && shape.polygonPoints.length > 0) {
-                      const pts = shape.polygonPoints;
-                      for (let i = 0; i < pts.length; i += 2) {
-                        pts[i] = Math.round(pts[i] * sx);
-                        pts[i + 1] = Math.round(pts[i + 1] * sy);
-                      }
-                    }
-                    if (Array.isArray(shape.polygonSubpaths)) {
-                      for (const ring of shape.polygonSubpaths) {
-                        for (let i = 0; i < ring.length; i += 2) {
-                          ring[i] = Math.round(ring[i] * sx);
-                          ring[i + 1] = Math.round(ring[i + 1] * sy);
-                        }
-                      }
-                    }
-                  }
-                  if (target.clipPathId) {
-                    const clipper = s.elements.find((e) => e.id === target.clipPathId);
-                    if (clipper) {
-                      const relX = clipper.x - oldX;
-                      const relY = clipper.y - oldY;
-                      clipper.x = target.x + relX * sx;
-                      clipper.y = target.y + relY * sy;
-                      clipper.width = Math.max(1, clipper.width * sx);
-                      clipper.height = Math.max(1, clipper.height * sy);
-                    }
-                  }
-                }
-              }, `trans-${id}`);
-            }}
+            onTransformEnd={transformSelection}
           />
         </Layer>
 

@@ -184,7 +184,7 @@ export const ModelsPage: React.FC = () => {
               disabled={!activeSchema}
               onClick={() => void create()}
             >
-              {__tr("+ Новая")}</button>
+              + {__tr('New data set')}</button>
             <button
               className="dm-btn-icon"
               onClick={() => setImporterOpen((v) => !v)}

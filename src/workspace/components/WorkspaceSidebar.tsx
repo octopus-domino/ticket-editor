@@ -26,6 +26,9 @@ const WorkspaceNav: React.FC = () => {
   const mine = new URLSearchParams(search).get('view') === 'mine';
   return (
   <nav className="workspace-nav" style={{ gridTemplateColumns: '1fr 1fr' }}>
+    <NavLink to="/sites/new">↗ {t('Website builder')}</NavLink>
+    <NavLink to="/app/workflows">{t('Конструктор клиентских путей')}</NavLink>
+    <NavLink to="/solutions/">✳ {t('Ready-to-use services')}</NavLink>
     <NavLink to="/app" end className={({ isActive }) => (isActive ? 'active' : '')}>
       ⌂ {t('Workspace')}</NavLink>
     <NavLink to="/app/data" className={({ isActive }) => (isActive ? 'active' : '')}>
@@ -37,7 +40,6 @@ const WorkspaceNav: React.FC = () => {
     <NavLink to="/app/stamps">◎ {t('Stamps')}</NavLink>
     <NavLink to="/app/learn">? {t('Learning center')}</NavLink>
     <NavLink to="/app/sign">✍ {t('Electronic signature')}</NavLink>
-    <NavLink to="/app/profile">◉ {t('Client profile')}</NavLink>
     <NavLink to="/app/api-access">⌘ {t('Client API')}</NavLink>
     <NavLink to="/app/integrations">⇄ {t('Data connections')}</NavLink>
     <NavLink to="/app/libraries">▦ {t('Shared libraries')}</NavLink>

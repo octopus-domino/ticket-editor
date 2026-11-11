@@ -17,6 +17,8 @@ import { CONFIG } from '@/shared/config';
 import { toast } from '@/presentation/components/toast';
 import { importElements } from '@/application/use-cases/importElements';
 import { measureEditorExport } from '@/shared/analytics/GenerationMetrics';
+import { modelStore } from '@/features/data-models/state/ModelStore';
+import { materializeSlide } from '@/lib/materialize';
 
 /* ---------- helpers ---------- */
 
@@ -100,7 +102,7 @@ export function useFileIO() {
 
       if (file.size > CONFIG.MAX_IMPORT_SIZE) {
         const mb = (CONFIG.MAX_IMPORT_SIZE / 1024 / 1024).toFixed(0);
-        toast.error(__tr("Файл слишком большой"), __tr("Максимум {0} MB", mb));
+        toast.error(__tr('Файл слишком большой'), __tr('Максимум {0} MB', mb));
         return;
       }
 
@@ -133,9 +135,9 @@ export function useFileIO() {
         }, 'import-json');
 
         clearUiState();
-        toast.success(__tr("Документ импортирован"));
+        toast.success(__tr('Документ импортирован'));
       } catch (err) {
-        toast.error(__tr("Ошибка импорта"), (err as Error).message);
+        toast.error(__tr('Ошибка импорта'), (err as Error).message);
       }
     };
     input.click();
@@ -164,13 +166,23 @@ export function useFileIO() {
   const exportPdfaServer = useCallback(async () => {
     const state = docStore.getState();
     if (!state.slides || state.slides.length === 0) return;
-    await measureEditorExport('pdfa', 'sync', () => doExportPdfaServer(state.slides));
+    const models = modelStore.getState();
+    const model = models.models.find((item) => item.id === models.selectedId);
+    const slides = model
+      ? state.slides.map((slide) => materializeSlide(slide, model.values, state.bindings))
+      : state.slides;
+    await measureEditorExport('pdfa', 'sync', () => doExportPdfaServer(slides));
   }, [docStore]);
 
   const exportPdfServer = useCallback(async () => {
     const state = docStore.getState();
     if (!state.slides || state.slides.length === 0) return;
-    await measureEditorExport('pdf', 'sync', () => doExportPdfServer(state.slides));
+    const models = modelStore.getState();
+    const model = models.models.find((item) => item.id === models.selectedId);
+    const slides = model
+      ? state.slides.map((slide) => materializeSlide(slide, model.values, state.bindings))
+      : state.slides;
+    await measureEditorExport('pdf', 'sync', () => doExportPdfServer(slides));
   }, [docStore]);
 
   const addImage = useCallback(
@@ -221,7 +233,7 @@ export function useFileIO() {
             }
           }, 'add-image');
         } catch (err) {
-          toast.error(__tr("Не удалось загрузить картинку"), (err as Error).message);
+          toast.error(__tr('Не удалось загрузить картинку'), (err as Error).message);
         }
       };
       input.click();
@@ -243,7 +255,7 @@ export function useFileIO() {
           if (s) s.backgroundImage = src;
         }, 'set-bg');
       } catch (err) {
-        toast.error(__tr("Не удалось установить фон"), (err as Error).message);
+        toast.error(__tr('Не удалось установить фон'), (err as Error).message);
       }
     };
     input.click();

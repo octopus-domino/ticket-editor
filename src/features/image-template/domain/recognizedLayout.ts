@@ -109,8 +109,7 @@ function parseDraft(input: unknown): ParsedDraft {
   if (typeof input.engine !== 'string' || !ENGINES.has(input.engine))
     throw invalid('unknown engine');
 
-  if (!Array.isArray(input.elements) || input.elements.length === 0)
-    throw invalid('no elements');
+  if (!Array.isArray(input.elements) || input.elements.length === 0) throw invalid('no elements');
 
   return {
     width,
@@ -178,10 +177,8 @@ function buildElement(
   const h = numeric(raw.height);
   if (w <= 0 || h <= 0) throw invalid('element bounds missing');
 
-  if (x + w > base.width + OVERFLOW_TOLERANCE_PX)
-    throw invalid('element overflows page (x)');
-  if (y + h > base.height + OVERFLOW_TOLERANCE_PX)
-    throw invalid('element overflows page (y)');
+  if (x + w > base.width + OVERFLOW_TOLERANCE_PX) throw invalid('element overflows page (x)');
+  if (y + h > base.height + OVERFLOW_TOLERANCE_PX) throw invalid('element overflows page (y)');
 
   const properties = isRecord(raw.properties) ? raw.properties : {};
   return BUILDERS[type](
@@ -296,8 +293,7 @@ function buildTable(ctx: BuildContext, p: Record<string, unknown>): CanvasElemen
 }
 
 function buildImage(ctx: BuildContext, p: Record<string, unknown>): CanvasElement {
-  if (typeof p.src !== 'string' || !IMAGE_SRC_RE.test(p.src))
-    throw invalid('image src invalid');
+  if (typeof p.src !== 'string' || !IMAGE_SRC_RE.test(p.src)) throw invalid('image src invalid');
   return { type: 'image', ...ctx.bounds, src: p.src };
 }
 
@@ -380,9 +376,7 @@ function numeric(value: unknown): number {
 }
 
 function longestLine(text: string, size: number, family: string, style: string): number {
-  return Math.max(
-    ...text.split('\n').map((line) => measureText(line, size, family, style)),
-  );
+  return Math.max(...text.split('\n').map((line) => measureText(line, size, family, style)));
 }
 
 /**

@@ -67,10 +67,11 @@ function initialize(): boolean {
 }
 
 export function analyticsPath(path: string): string {
-  return path.replace(/\/(editor|templates|schemas)\/[^/]+/g, '/$1/:id');
+  return path.replace(/\/(editor|templates|schemas|d|manage|s|issues|flows)\/[^/]+/g, '/$1/:id');
 }
 
 export function trackPage(path: string): void {
+  if (path.startsWith('/manage/') || path.startsWith('/issues/') || path.startsWith('/sites/new')) return;
   const safePath = analyticsPath(path);
   if (!initialize() || safePath === previousPath) return;
   window.ym?.(counterId!, 'hit', `${window.location.origin}${safePath}`, {
@@ -84,6 +85,7 @@ export function trackPage(path: string): void {
 export function reachGoal(
   goal:
     | 'start_template'
+    | 'start_site' | 'start_journey'
     | 'template_created'
     | 'template_saved'
     | 'schema_created'

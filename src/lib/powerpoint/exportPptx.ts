@@ -112,6 +112,28 @@ export async function exportPptx(slides: readonly Slide[]): Promise<PptxExport> 
       if (el.type === 'group') continue;
       const currentId = id++;
       const xfrm = transform(el, scale, dx, dy);
+      if (el.type === 'line' && el.points.length === 4) {
+        const [x1, y1, x2, y2] = el.points;
+        const width = Math.abs(x2 - x1),
+          height = Math.abs(y2 - y1);
+        const angle = ((el.rotation ?? 0) * Math.PI) / 180;
+        const centerX = (x1 + x2) / 2,
+          centerY = (y1 + y2) / 2;
+        // PowerPoint rotates around the center; canvas rotates around its origin.
+        const line = {
+          ...el,
+          x: el.x + Math.cos(angle) * centerX - Math.sin(angle) * centerY - width / 2,
+          y: el.y + Math.sin(angle) * centerX + Math.cos(angle) * centerY - height / 2,
+          width,
+          height,
+          flipX: x2 < x1,
+          flipY: y2 < y1,
+        };
+        objects.push(
+          `<p:cxnSp><p:nvCxnSpPr><p:cNvPr id="${currentId}" name="Line"/><p:cNvCxnSpPr/><p:nvPr/></p:nvCxnSpPr><p:spPr>${transform(line, scale, dx, dy)}<a:prstGeom prst="line"><a:avLst/></a:prstGeom><a:ln w="${emu(el.strokeWidth * scale)}">${solid(el.stroke)}${el.isArrow ? '<a:tailEnd type="triangle"/>' : ''}</a:ln></p:spPr></p:cxnSp>`,
+        );
+        continue;
+      }
       if (el.type === 'text' && !el.richText) {
         objects.push(
           `<p:sp>${nv(currentId, el.text.slice(0, 40), true)}<p:spPr>${xfrm}<a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></p:spPr>${textBody(el, scale)}</p:sp>`,

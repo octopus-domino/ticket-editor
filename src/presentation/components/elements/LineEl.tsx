@@ -57,32 +57,6 @@ export const LineEl: React.FC<Props> = ({
     onUpdate({ points: np });
   };
 
-  const handleTransformEnd = (e: any) => {
-    const n = e.target;
-    const sx = n.scaleX();
-    const sy = n.scaleY();
-    n.scaleX(1);
-    n.scaleY(1);
-
-    const scaledPoints = points.map((v, i) => (i % 2 === 0 ? v * sx : v * sy));
-
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    for (let i = 0; i < scaledPoints.length; i += 2) {
-      const px = scaledPoints[i] ?? 0;
-      const py = scaledPoints[i + 1] ?? 0;
-      if (px < minX) minX = px;
-      if (py < minY) minY = py;
-      if (px > maxX) maxX = px;
-      if (py > maxY) maxY = py;
-    }
-    const newW = Math.max(10, maxX - minX);
-    const newH = Math.max(10, maxY - minY);
-
-    onUpdate({
-      x: n.x(), y: n.y(), rotation: n.rotation(),
-      width: newW, height: newH, points: scaledPoints,
-    });
-  };
 
   return (
     <Group
@@ -98,7 +72,6 @@ export const LineEl: React.FC<Props> = ({
       onContextMenu={onContextMenu}
       onDblClick={handleDblClick}
       onDblTap={handleDblClick}
-      onTransformEnd={handleTransformEnd}
     >
       <PolylineRenderer
         points={points}

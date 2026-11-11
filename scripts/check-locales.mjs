@@ -45,6 +45,8 @@ for (const name of [
   'api-messages.ts',
   'workflow-messages.ts',
   'steering-messages.ts',
+  'journey-messages.ts',
+  'journey-extra-messages.ts',
 ]) {
   const source = await readFile(`src/shared/i18n/${name}`, 'utf8').catch(() => '');
   const rows = [...source.matchAll(/String\.raw`([\s\S]*?)`/g)].flatMap((match) =>

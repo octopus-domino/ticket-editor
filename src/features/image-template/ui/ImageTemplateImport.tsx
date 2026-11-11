@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { Slide, CanvasElement, ImageElement, TextElement } from '@/shared/types';
+import type { Slide, ImageElement } from '@/shared/types';
 import { t } from '@/shared/i18n';
 import { authFetch } from '@/shared/api/client';
 import { serializeSlideToSvg } from '@/lib/svg/serialize';
@@ -24,26 +24,6 @@ const messages: Record<string, string> = {
     'Review text, positions and data bindings before saving. Recognition can make mistakes.',
 };
 
-const CORRUPT_AREA_RATIO = 0.4;
-
-function isDarkColor(fill: string | undefined | null): boolean {
-  if (!fill) return false;
-  const v = fill.trim().toLowerCase();
-  if (v === 'black' || v === '#000' || v === '#000000') return true;
-  if (!/^#[a-f\d]{3,8}$/i.test(v)) return false;
-  const hex = v.length === 4 ? v.replace(/^#(.)(.)(.)$/, '#$1$1$2$2$3$3') : v.slice(0, 7);
-  const r = parseInt(hex.slice(1, 3), 16) / 255;
-  const g = parseInt(hex.slice(3, 5), 16) / 255;
-  const b = parseInt(hex.slice(5, 7), 16) / 255;
-  return (r * 0.299 + g * 0.587 + b * 0.114) < 0.4;
-}
-
-function normalizeForComposite(el: CanvasElement): CanvasElement {
-  if (el.type !== 'text' && el.type !== 'footer') return el;
-  const text = el as TextElement;
-  return { ...text, background: 'transparent' };
-}
-
 function composeWithBackground(slide: Slide, imageSrc: string): Slide {
   const image: ImageElement = {
     id: crypto.randomUUID(),
@@ -56,11 +36,7 @@ function composeWithBackground(slide: Slide, imageSrc: string): Slide {
     src: imageSrc,
   };
 
-  const foreground = slide.elements
-    .filter((el) => ['text', 'table'].includes(el.type))
-    .map(normalizeForComposite);
-
-  return { ...slide, elements: [image, ...foreground] };
+  return { ...slide, elements: [image] };
 }
 
 export function ImageTemplateImport({
@@ -87,9 +63,7 @@ export function ImageTemplateImport({
 
   const composedSlide = useMemo<Slide | null>(() => {
     if (!rawSlide) return null;
-    return keepBackground && source
-      ? composeWithBackground(rawSlide, source)
-      : rawSlide;
+    return keepBackground && source ? composeWithBackground(rawSlide, source) : rawSlide;
   }, [rawSlide, keepBackground, source]);
 
   const preview = useMemo(
@@ -169,18 +143,6 @@ export function ImageTemplateImport({
       if (current === revision.current) {
         setRawSlide(result.slide);
         setWarnings(result.warnings);
-
-        const elements = result.slide.elements;
-        const hasHugeDarkElement = elements.some(
-          (el) =>
-            (el.type === 'shape' || el.type === 'path') &&
-            el.width * el.height > result.slide.width * result.slide.height * CORRUPT_AREA_RATIO &&
-            isDarkColor((el as { fill?: string }).fill),
-        );
-        const nonText = elements.filter((el) => el.type !== 'text').length;
-        if (hasHugeDarkElement || (engine !== 'ocr' && nonText < 3)) {
-          setKeepBackground(true);
-        }
       }
     } catch (reason) {
       if (current === revision.current)
@@ -220,8 +182,7 @@ export function ImageTemplateImport({
     }
   }
 
-  const hasRecognizedText =
-    rawSlide !== null && rawSlide.elements.some((el) => el.type === 'text');
+  const hasRecognizedText = rawSlide !== null && rawSlide.elements.some((el) => el.type === 'text');
 
   return (
     <section className="image-template-import" aria-busy={busy}>
@@ -275,7 +236,7 @@ export function ImageTemplateImport({
             disabled={busy}
             onChange={(event) => setKeepBackground(event.target.checked)}
           />
-          {t('Keep original as background (editable text over the raster)')}
+          {t('Keep original appearance')}
         </label>
       )}
       <div className="image-template-actions">
@@ -329,7 +290,7 @@ export function ImageTemplateImport({
           {keepBackground && (
             <>
               {' · '}
-              {t('Graphics from the original raster')}
+              {t('Original image only; text is not editable in this mode.')}
             </>
           )}
         </p>

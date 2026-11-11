@@ -15,6 +15,7 @@ export interface ElementRendererProps {
   elements?: CanvasElement[];
   isSelected: boolean;
   isEditing?: boolean;
+  interactionVersion?: string;
   onSelect: (e?: ElementSelectEvent) => void;
   onUpdate: (patch: Partial<CanvasElement>, newElement?: CanvasElement) => void;
   onDblClick?: (e?: ElementSelectEvent) => void;
@@ -101,6 +102,7 @@ const ElementRendererInner: React.FC<ElementRendererProps> = ({
 };
 
 export const ElementRenderer = React.memo(ElementRendererInner, (prev, next) => {
+  if (prev.interactionVersion !== next.interactionVersion) return false;
   if (prev.element !== next.element) return false;
   if (prev.isSelected !== next.isSelected) return false;
   if (prev.isEditing !== next.isEditing) return false;

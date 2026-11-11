@@ -46,6 +46,9 @@ import { useDocumentPersistence } from '../hooks/editor/useDocumentPersistence';
 import { authStore } from '@/auth/store';
 import { resetFillRasterizer } from '@/lib/stamps/fillRasterizer';
 import { MobileEditorControls } from './MobileEditorControls';
+import { CanvasDock } from './CanvasDock';
+import { useCanvasMode } from '@/shared/mobile/canvasMode';
+import { toggleMobilePanel } from '@/shared/mobile/panels';
 
 const InlineEditorHost = lazy(() =>
   import('./InlineEditorHost').then((m) => ({ default: m.InlineEditorHost })),
@@ -111,6 +114,8 @@ interface EditorLayoutProps {
 }
 
 const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave, documentId, saveContext }) => {
+  const canvasMode = useCanvasMode();
+  const [toolsOpen, setToolsOpen] = useState(true);
   const docStore = useDocumentStore();
   const selStore = useSelectionStore();
   const modalsStore = useModalsStore();
@@ -384,7 +389,8 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave, documentId, saveCon
   const showPlainInlineEditor = !!editing && !editing.isRich;
 
   return (
-    <div className="editor-shell" role="application" aria-label={__tr("Редактор билетов")}>
+    <div className="editor-shell" data-canvas-fullscreen={canvasMode.fullscreen} data-tools-open={toolsOpen} role="application" aria-label={__tr("Редактор билетов")}>
+      <CanvasDock onTools={() => { if (window.innerWidth <= 760) toggleMobilePanel('tools'); else setToolsOpen(value => !value); }} onGroup={groupSelected} onMenu={() => modalsStore.setContextMenu({ x: Math.min(window.innerWidth - 250, 80), y: 140, elementId: selectedIds[0] ?? null })} />
       {isFeatureEnabled('FEATURE_SHOW_MIGRATION_BANNER') && (
         <MigrationBanner
           rollbackUrl={isFeatureEnabled('FEATURE_SHOW_ROLLBACK_BUTTON') ? '/?legacy=1' : undefined}

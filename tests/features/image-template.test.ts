@@ -18,6 +18,40 @@ const draft = (elements: unknown[]) => ({
   engine: 'ocr',
 });
 describe('image to editable template', () => {
+  it('fits plain OCR text into its original box and preserves explicit inline style resets', () => {
+    const { slide } = recognizedSlide(
+      {
+        ...draft([
+          item('text', { text: 'A deliberately narrow OCR box', fontSize: 24 }),
+          item('text', {
+            text: 'Bold plain',
+            fontStyle: 'bold',
+            textDecoration: 'underline',
+            html: '<div style="font-weight:700;text-decoration:underline"><span>Bold</span><span style="font-weight:400;font-style:normal;text-decoration:none">plain</span></div>',
+          }),
+        ]),
+        engine: 'dual',
+      },
+      'Styles',
+    );
+    expect(slide.elements[0]).toMatchObject({ x: 20, y: 20, width: 200, height: 40 });
+    if (slide.elements[0].type !== 'text') throw new Error('Expected text');
+    expect(slide.elements[0].fontSize).toBeLessThanOrEqual(24);
+    const text = slide.elements[1];
+    if (text.type !== 'text') throw new Error('Expected text');
+    const runs = parseHtmlToRuns(text.html!, {
+      fontSize: text.fontSize,
+      fontFamily: text.fontFamily,
+      fontStyle: text.fontStyle,
+      textDecoration: text.textDecoration,
+      fill: text.fill,
+    });
+    expect(runs.find((run) => run.text === 'plain')).toMatchObject({
+      bold: false,
+      italic: false,
+      underline: false,
+    });
+  });
   it('accepts the dual-engine contract and preserves mixed inline styles without shrinking all text', () => {
     const { slide } = recognizedSlide(
       {

@@ -1,5 +1,6 @@
 import { SEARCH_PAGES } from './searchPages';
 import { t, getLocale } from '@/shared/i18n';
+import { JOURNEY_PAGES, JOURNEY_FAQ } from './journeyPages';
 
 export const SITE_URL = 'https://codoc.site';
 export interface PageMetadata {
@@ -11,14 +12,18 @@ export interface PageMetadata {
 export const HOME_METADATA: PageMetadata = {
   path: '/',
   title: t('CoDoc — шаблоны документов, штампы и генерация PDF онлайн'),
-  description:
-    t('Создавайте документы, билеты, сертификаты, штампы и печати в редакторе CoDoc. Свои макеты, текст по дуге, данные и пакетная генерация PDF, PDF/A и SVG.'),
+  description: JOURNEY_PAGES[0].description + ` ${t('Website builder')}, PDF/A, SVG.`,
   index: true,
 };
 
 export function getPageMetadata(pathname: string): PageMetadata {
   const path = pathname.replace(/\/+$/, '') || '/';
   if (path === '/') return HOME_METADATA;
+  const journey = JOURNEY_PAGES.find(page => page.path.replace(/\/$/, '') === path);
+  if (journey) return {path:journey.path,title:`${journey.heading} — CoDoc`,description:journey.description,index:true};
+  if (path === '/sites/new') return {path,title:`${t('Website builder')} — CoDoc`,description:JOURNEY_PAGES[4].description,index:false};
+  if (path.startsWith('/start/')) return {path,title:`${t('Ready-to-use services')} — CoDoc`,description:JOURNEY_PAGES[0].description,index:false};
+  if (/^\/(s|d|manage|issues|flows)\//.test(path)) return {path,title:`${t('Document')} — CoDoc`,description:t('Create documents from templates and data.'),index:false};
   if (path === '/learn' || path === '/stamp-editor') return { path, title: `CoDoc — ${t(path === '/learn' ? 'Learning center' : 'Stamp studio')}`, description: t('Create documents from templates and data.'), index: false };
   const page = SEARCH_PAGES.find((item) => item.path.replace(/\/$/, '') === path);
   if (page)
@@ -34,6 +39,7 @@ export function getPageMetadata(pathname: string): PageMetadata {
 
 export function structuredData(meta: PageMetadata) {
   if (!meta.index) return null;
+  const journey = JOURNEY_PAGES.find(page=>page.path===meta.path);
   const website = {
     '@type': 'WebSite',
     '@id': `${SITE_URL}/#website`,
@@ -70,7 +76,7 @@ export function structuredData(meta: PageMetadata) {
               name: meta.title,
               description: meta.description,
               url: SITE_URL + meta.path,
-              inLanguage: 'ru',
+              inLanguage: getLocale(),
               isPartOf: { '@id': `${SITE_URL}/#website` },
             },
             {
@@ -85,6 +91,14 @@ export function structuredData(meta: PageMetadata) {
                 },
               ],
             },
+            ...(journey ? [{
+              '@type':'WebApplication',name:journey.label,url:SITE_URL+journey.path,
+              description:journey.description,applicationCategory:'BusinessApplication',operatingSystem:'Web',
+            },{
+              '@type':'FAQPage',mainEntity:JOURNEY_FAQ.map(([question,answer])=>({
+                '@type':'Question',name:question,acceptedAnswer:{'@type':'Answer',text:answer},
+              })),
+            }] : []),
           ],
   };
 }

@@ -4,6 +4,7 @@ import { useSchemas } from '@/features/schemas/state/useSchemas';
 import { schemaStore } from '@/features/schemas/state/SchemaStore';
 import { SchemaEditorPage } from '@/features/schemas/ui/SchemaEditorPage';
 import { ModelsPage } from './ModelsPage';
+import { SchemaDeletionPanel } from '@/features/schemas/ui/SchemaDeletionPanel';
 import { t } from '@/shared/i18n';
 import './data-workspace.css';
 
@@ -17,7 +18,7 @@ export function DataWorkspacePage() {
     location.pathname.endsWith('/new') ? 'new' : (schemaId ?? null),
   );
   const [remove, setRemove] = useState(false);
-  const [failure, setFailure] = useState('');
+
   useEffect(() => {
     if (schemaId && schemaStore.getState().activeId !== schemaId) schemaStore.setActive(schemaId);
   }, [schemaId]);
@@ -35,51 +36,47 @@ export function DataWorkspacePage() {
           {t('Create data schema')}
         </button>
         {schemas.map((schema) => (
-          <button
-            type="button"
-            key={schema.id}
-            aria-pressed={activeSchema?.id === schema.id}
-            onClick={() => choose(schema.id)}
-          >
-            {schema.name}
-            <small>
-              {schema.fields.length} · {t('Fields')}
-            </small>
-          </button>
+          <div className="data-schema-row" key={schema.id}>
+            <button
+              type="button"
+              key={schema.id}
+              aria-pressed={activeSchema?.id === schema.id}
+              onClick={() => choose(schema.id)}
+            >
+              {schema.name}
+              <small>
+                {schema.fields.length} · {t('Fields')}
+              </small>
+            </button>
+            <button
+              type="button"
+              title={t('Delete schema {0}?', schema.name)}
+              aria-label={t('Delete schema {0}?', schema.name)}
+              onClick={() => {
+                choose(schema.id);
+                setRemove(true);
+              }}
+            >
+              ⋯
+            </button>
+          </div>
         ))}
         {activeSchema && (
           <>
             <button type="button" className="dp-btn" onClick={() => setEditing(activeSchema.id)}>
               {t('Edit schema')}
             </button>
-            <button type="button" className="dp-btn" onClick={() => setRemove(true)}>
-              {t('Delete')}
-            </button>
           </>
         )}
         {remove && activeSchema && (
-          <div role="alert">
-            <p>{t('Delete schema {0}?', activeSchema.name)}</p>
-            <button
-              type="button"
-              onClick={() =>
-                void schemaStore
-                  .delete(activeSchema.id)
-                  .then(() => {
-                    setRemove(false);
-                    setEditing(null);
-                  })
-                  .catch((e: Error) => setFailure(e.message))
-              }
-            >
-              {t('Delete')}
-            </button>
-            <button type="button" onClick={() => setRemove(false)}>
-              {t('Cancel')}
-            </button>
-          </div>
+          <SchemaDeletionPanel
+            key={activeSchema.id}
+            schemaId={activeSchema.id}
+            name={activeSchema.name}
+            onClose={() => setRemove(false)}
+          />
         )}
-        {(failure || error) && <p role="alert">{failure || error}</p>}
+        {error && <p role="alert">{error}</p>}
       </aside>
       <section className="data-workspace-content">
         {editing && (

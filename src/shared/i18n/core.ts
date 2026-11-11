@@ -88,6 +88,8 @@ export function setLocale(next: Locale): void {
 }
 export function t(source: string, ...values: unknown[]): string {
   let result = dictionaries[locale]?.[source];
+  // Normalized aliases may belong to uppercase headings; preserve an exact Russian label.
+  if (!result && locale === 'ru' && /[А-Яа-яЁё]/.test(source)) result = source;
   if (!result) {
     const key = normalized(source),
       translated = indexes[locale]?.get(key) ?? indexes.en?.get(key);

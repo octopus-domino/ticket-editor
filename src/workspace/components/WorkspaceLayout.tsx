@@ -47,7 +47,7 @@ export const WorkspaceLayout: React.FC = () => {
       {isGuest()&&<div className="guest-session-note" role="status">{t('Guest session: changes are not saved to the server.')}</div>}
       <header className="workspace-header">
         <button type="button" className="mobile-menu-button" aria-label={t('Documents')} onClick={() => toggleMobilePanel('documents')}>☰</button>
-        <div className="logo">CoDoc</div>
+        <Link to="/" className="logo" style={{ color: 'inherit', textDecoration: 'none' }}>CoDoc</Link>
 
         <WorkspaceFlowBreadcrumbs />
 

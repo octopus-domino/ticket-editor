@@ -3,7 +3,7 @@ import { webcrypto } from 'node:crypto';
 import { exportPptx } from '@/lib/powerpoint/exportPptx';
 import { importPptx } from '@/lib/powerpoint/importPptx';
 import { unpack, pack, parseXml } from '@/lib/powerpoint/package';
-import { newSimpleText, newShape, newTable } from '@/lib/factories';
+import { newSimpleText, newShape, newTable, newLine } from '@/lib/factories';
 import type { Slide } from '@/shared/types';
 const slide: Slide = {
   id: 'S',
@@ -38,6 +38,62 @@ const slide: Slide = {
 };
 beforeAll(() => vi.stubGlobal('crypto', webcrypto));
 describe('PowerPoint interchange', () => {
+  it.each([
+    [240, 130],
+    [-240, 130],
+    [240, -130],
+    [-240, -130],
+    [240, 0],
+    [0, 130],
+  ])('preserves world endpoints for a rotated line ending at %s,%s', async (dx, dy) => {
+    const original = { ...newLine(300, 220), points: [0, 0, dx, dy], rotation: 23 };
+    const exported = await exportPptx([{ ...slide, elements: [original] }]);
+    const files = unpack(exported.bytes);
+    delete files['codoc/source.json'];
+    const imported = (await importPptx(pack(files))).slides[0].elements[0];
+    expect(imported.type).toBe('line');
+    if (imported.type !== 'line') throw new Error('Expected native line');
+    function world(line: typeof original, index: number) {
+      const angle = (line.rotation * Math.PI) / 180,
+        x = line.points[index],
+        y = line.points[index + 1];
+      return [
+        line.x + Math.cos(angle) * x - Math.sin(angle) * y,
+        line.y + Math.sin(angle) * x + Math.cos(angle) * y,
+      ];
+    }
+    for (const index of [0, 2]) {
+      const expected = world(original, index),
+        actual = world(imported, index);
+      expect(actual[0]).toBeCloseTo(expected[0], 1);
+      expect(actual[1]).toBeCloseTo(expected[1], 1);
+    }
+  });
+  it('keeps diagonal line geometry, rotation, color and width without native metadata', async () => {
+    const line = {
+      ...newLine(50, 70),
+      points: [0, 0, 240, 130],
+      width: 240,
+      height: 130,
+      stroke: '#c42769',
+      strokeWidth: 3,
+      rotation: 17,
+      isArrow: true,
+    };
+    const exported = await exportPptx([{ ...slide, elements: [line] }]);
+    const files = unpack(exported.bytes);
+    delete files['codoc/source.json'];
+    const imported = await importPptx(pack(files));
+    const importedLine = imported.slides[0].elements[0];
+    expect(importedLine).toMatchObject({
+      type: 'line',
+      points: [0, 0, 240, 130],
+      strokeWidth: 3,
+      rotation: 17,
+      isArrow: true,
+    });
+    expect('stroke' in importedLine && importedLine.stroke?.toLowerCase()).toBe('#c42769');
+  });
   it('uses changed slide XML instead of stale native metadata', async () => {
     const exported = await exportPptx([slide]);
     const files = unpack(exported.bytes);

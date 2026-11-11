@@ -17,6 +17,8 @@ try {
     '/src/marketing/SearchLandingPage.tsx',
   );
   const { SEARCH_PAGES } = await vite.ssrLoadModule('/src/marketing/searchPages.ts');
+  const { JOURNEY_PAGES } = await vite.ssrLoadModule('/src/marketing/journeyPages.ts');
+  const { JourneyMarketingPage } = await vite.ssrLoadModule('/src/marketing/JourneyMarketingPage.tsx');
   const { getPageMetadata, renderSeoHead, SITE_URL } =
     await vite.ssrLoadModule('/src/marketing/seo.ts');
   const template = await readFile(new URL('../dist/index.html', import.meta.url), 'utf8');
@@ -25,6 +27,7 @@ try {
   const pages = [
     { path: '/', Component: LandingPage },
     ...SEARCH_PAGES.map((page) => ({ path: page.path, Component: SearchLandingPage })),
+    ...JOURNEY_PAGES.map(page => ({path:page.path,Component:JourneyMarketingPage})),
     { path: '/404/', Component: NotFoundPage },
   ];
   for (const { path, Component } of pages) {

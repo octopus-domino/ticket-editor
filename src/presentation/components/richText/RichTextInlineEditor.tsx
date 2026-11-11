@@ -172,18 +172,23 @@ export const RichTextInlineEditor: React.FC<Props> = ({
     const updatePos = () => {
       if (!overlayRef.current) return;
       const rect = overlayRef.current.getBoundingClientRect();
-      let top = rect.top - TOOLBAR_HEIGHT - TOOLBAR_GAP;
-      if (top < 8) top = 8;
+      const height = toolbarRef.current?.offsetHeight || TOOLBAR_HEIGHT;
+      let top = rect.top - height - TOOLBAR_GAP;
+      if (top < 8) top = rect.bottom + TOOLBAR_GAP;
+      if (top + height > window.innerHeight - 8) top = Math.max(8, window.innerHeight - height - 8);
 
       let left = Math.max(16, rect.left);
       const toolbarWidth = toolbarRef.current?.offsetWidth || 800;
       if (left + toolbarWidth > window.innerWidth - 16) {
-        left = window.innerWidth - toolbarWidth - 16;
+        left = Math.max(8, window.innerWidth - toolbarWidth - 16);
       }
       setToolbarPos({ top, left });
     };
 
     updatePos();
+    const observer = new ResizeObserver(updatePos);
+    if (overlayRef.current) observer.observe(overlayRef.current);
+    if (toolbarRef.current) observer.observe(toolbarRef.current);
     const canvasArea = overlayRef.current?.closest('.canvas-area');
     if (canvasArea) {
       canvasArea.addEventListener('scroll', updatePos, { passive: true });
@@ -191,12 +196,13 @@ export const RichTextInlineEditor: React.FC<Props> = ({
     window.addEventListener('resize', updatePos);
 
     return () => {
+      observer.disconnect();
       if (canvasArea) {
         canvasArea.removeEventListener('scroll', updatePos);
       }
       window.removeEventListener('resize', updatePos);
     };
-  }, [zoom, element.x, element.y, element.width, element.height]);
+  }, [editor, zoom, element.x, element.y, element.width, element.height]);
 
   if (!editor) return null;
 

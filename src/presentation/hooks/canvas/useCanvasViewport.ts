@@ -16,6 +16,7 @@ interface Args {
   stageRef: React.RefObject<Konva.Stage>;
   minZoom?: number;
   maxZoom?: number;
+  onGestureStart?: () => void;
 }
 
 const STEP = 0.05;
@@ -27,6 +28,7 @@ export function useCanvasViewport({
   stageRef: _stageRef,
   minZoom = 0.2,
   maxZoom = 10,
+  onGestureStart,
 }: Args) {
   const [isPanning, setIsPanning] = useState(false);
   const panStart = useRef({ x: 0, y: 0, scrollLeft: 0, scrollTop: 0 });
@@ -39,9 +41,12 @@ export function useCanvasViewport({
   const pendingMouseRef = useRef({ x: 0, y: 0 });
   const rafRef = useRef<number | null>(null);
   const pinching = useRef(false);
-  const pinchTarget = useRef<{ x: number; y: number; originX: number; originY: number } | null>(null);
+  const pinchTarget = useRef<{ x: number; y: number; originX: number; originY: number } | null>(
+    null,
+  );
   useLayoutEffect(() => {
-    const target = pinchTarget.current, wrap = wrapRef.current;
+    const target = pinchTarget.current,
+      wrap = wrapRef.current;
     if (target && wrap) {
       wrap.scrollLeft = target.originX * zoom - target.x;
       wrap.scrollTop = target.originY * zoom - target.y;
@@ -53,46 +58,75 @@ export function useCanvasViewport({
     let gesture: { distance: number; zoom: number; originX: number; originY: number } | null = null;
     let frame: number | null = null;
     const point = (event: TouchEvent) => {
-      const [a, b] = [event.touches[0], event.touches[1]], rect = wrap.getBoundingClientRect();
-      return { distance: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY), x: (a.clientX + b.clientX) / 2 - rect.left, y: (a.clientY + b.clientY) / 2 - rect.top };
+      const [a, b] = [event.touches[0], event.touches[1]],
+        rect = wrap.getBoundingClientRect();
+      return {
+        distance: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY),
+        x: (a.clientX + b.clientX) / 2 - rect.left,
+        y: (a.clientY + b.clientY) / 2 - rect.top,
+      };
     };
     const start = (event: TouchEvent) => {
       if (event.touches.length !== 2) return;
       event.preventDefault();
-      _stageRef.current?.find((node: Konva.Node) => node.isDragging()).forEach((node) => node.stopDrag());
+      event.stopPropagation();
+      pinching.current = true;
+      onGestureStart?.();
+      _stageRef.current
+        ?.find((node: Konva.Node) => node.isDragging())
+        .forEach((node) => node.stopDrag());
       const p = point(event);
-      gesture = { distance: Math.max(1, p.distance), zoom: zoomRef.current, originX: (wrap.scrollLeft + p.x) / zoomRef.current, originY: (wrap.scrollTop + p.y) / zoomRef.current };
+      gesture = {
+        distance: Math.max(1, p.distance),
+        zoom: zoomRef.current,
+        originX: (wrap.scrollLeft + p.x) / zoomRef.current,
+        originY: (wrap.scrollTop + p.y) / zoomRef.current,
+      };
       pinching.current = true;
     };
     const move = (event: TouchEvent) => {
       if (!gesture || event.touches.length !== 2) return;
       event.preventDefault();
-      const p = point(event), next = Math.max(minZoom, Math.min(maxZoom, gesture.zoom * p.distance / gesture.distance));
+      event.stopPropagation();
+      const p = point(event),
+        next = Math.max(minZoom, Math.min(maxZoom, (gesture.zoom * p.distance) / gesture.distance));
       pinchTarget.current = { x: p.x, y: p.y, originX: gesture.originX, originY: gesture.originY };
       if (frame !== null) cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
         frame = null;
         onZoomChange(next);
         const target = pinchTarget.current;
-        if (target) { wrap.scrollLeft = target.originX * next - target.x; wrap.scrollTop = target.originY * next - target.y; }
+        if (target) {
+          wrap.scrollLeft = target.originX * next - target.x;
+          wrap.scrollTop = target.originY * next - target.y;
+        }
       });
     };
     const end = (event: TouchEvent) => {
       if (event.touches.length >= 2) return;
-      gesture = null; pinching.current = false;
+      gesture = null;
+      if (pinching.current) event.stopPropagation();
+      if (!event.touches.length) pinching.current = false;
       // Keep the last frame until layout has applied the final zoom.
-      if (!event.touches.length) requestAnimationFrame(() => { pinchTarget.current = null; });
+      if (!event.touches.length)
+        requestAnimationFrame(() => {
+          pinchTarget.current = null;
+        });
     };
     wrap.addEventListener('touchstart', start, { passive: false, capture: true });
     wrap.addEventListener('touchmove', move, { passive: false, capture: true });
-    wrap.addEventListener('touchend', end); wrap.addEventListener('touchcancel', end);
+    wrap.addEventListener('touchend', end, true);
+    wrap.addEventListener('touchcancel', end, true);
     return () => {
       if (frame !== null) cancelAnimationFrame(frame);
-      wrap.removeEventListener('touchstart', start, true); wrap.removeEventListener('touchmove', move, true);
-      wrap.removeEventListener('touchend', end); wrap.removeEventListener('touchcancel', end);
-      pinchTarget.current = null; pinching.current = false;
+      wrap.removeEventListener('touchstart', start, true);
+      wrap.removeEventListener('touchmove', move, true);
+      wrap.removeEventListener('touchend', end, true);
+      wrap.removeEventListener('touchcancel', end, true);
+      pinchTarget.current = null;
+      pinching.current = false;
     };
-  }, [wrapRef, _stageRef, onZoomChange, minZoom, maxZoom]);
+  }, [wrapRef, _stageRef, onZoomChange, minZoom, maxZoom, onGestureStart]);
 
   useLayoutEffect(() => {
     const pending = pendingScrollRef.current;
@@ -188,48 +222,58 @@ export function useCanvasViewport({
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
-      if (e.code === 'Space' && !e.repeat && target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
+      if (
+        e.code === 'Space' &&
+        !e.repeat &&
+        !target.closest('input,textarea,select,[contenteditable="true"]')
+      ) {
         setIsPanning(true);
       }
     };
     const onKeyUp = (e: KeyboardEvent) => {
       if (e.code === 'Space') setIsPanning(false);
     };
+    const onBlur = () => setIsPanning(false);
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
+    window.addEventListener('blur', onBlur);
     return () => {
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
+      window.removeEventListener('blur', onBlur);
     };
   }, []);
 
-  const handleMouseDown = useCallback((e: React.MouseEvent | any) => {
-    if (!isPanning) return;
-    const container = wrapRef.current;
-    if (!container) return;
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent | any) => {
+      if (!isPanning) return;
+      const container = wrapRef.current;
+      if (!container) return;
 
-    panStart.current = {
-      x: e.clientX,
-      y: e.clientY,
-      scrollLeft: container.scrollLeft,
-      scrollTop: container.scrollTop,
-    };
+      panStart.current = {
+        x: e.clientX,
+        y: e.clientY,
+        scrollLeft: container.scrollLeft,
+        scrollTop: container.scrollTop,
+      };
 
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      const dx = moveEvent.clientX - panStart.current.x;
-      const dy = moveEvent.clientY - panStart.current.y;
-      container.scrollLeft = panStart.current.scrollLeft - dx;
-      container.scrollTop = panStart.current.scrollTop - dy;
-    };
+      const handleMouseMove = (moveEvent: MouseEvent) => {
+        const dx = moveEvent.clientX - panStart.current.x;
+        const dy = moveEvent.clientY - panStart.current.y;
+        container.scrollLeft = panStart.current.scrollLeft - dx;
+        container.scrollTop = panStart.current.scrollTop - dy;
+      };
 
-    const handleMouseUp = () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
+      const handleMouseUp = () => {
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+      };
 
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
-  }, [isPanning, wrapRef]);
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    },
+    [isPanning, wrapRef],
+  );
 
   return { isPanning, handleMouseDown, isPinching: () => pinching.current };
 }

@@ -1,5 +1,6 @@
 ﻿import { useCallback, useRef } from 'react';
 import Konva from 'konva';
+import { useEffect } from 'react';
 import type { DocumentStore } from '@/infra/state/DocumentStore';
 import type { SelectionStore } from '@/ui/stores/SelectionStore';
 import type { ModalsStore } from '@/ui/stores/ModalsStore';
@@ -30,6 +31,8 @@ interface DragState {
   origCount: number;
   layer: Konva.Layer | null;
   dragLayer: Konva.Layer | null;
+  transformer: Konva.Transformer | null;
+  transformerNodes: Konva.Node[];
   pendingX: number;
   pendingY: number;
   rafId: number | null;
@@ -84,8 +87,9 @@ export function useCanvasDrag(params: {
   selStore: SelectionStore;
   modalsStore: ModalsStore;
   slide: Slide;
+  transformerRef: React.RefObject<Konva.Transformer>;
 }) {
-  const { docStore, selStore, modalsStore, slide } = params;
+  const { docStore, selStore, modalsStore, slide, transformerRef } = params;
   const state = useRef<DragState | null>(null);
 
   const slideRef = useRef(slide);
@@ -93,6 +97,7 @@ export function useCanvasDrag(params: {
 
   const onDragStart = useCallback(
     (el: CanvasElement, e: any) => {
+      if (state.current) return;
       modalsStore.setFloatingPos(null);
       const current = selStore.getState().selectedIds;
       const byId = new Map(slideRef.current.elements.map((element) => [element.id, element]));
@@ -131,6 +136,11 @@ export function useCanvasDrag(params: {
       const startY = origEl ? origEl.y : e.target.y();
       if (!isFinite(startX) || !isFinite(startY)) return;
       const stage = layer?.getStage();
+      const transformer = transformerRef.current;
+      const transformerNodes = transformer?.nodes().slice() ?? [];
+      // Transformer also implements multi-node dragging. This session owns that
+      // movement, so detach its proxies until all nodes return to their layer.
+      transformer?.nodes([]);
       const dragLayer = stage ? new Konva.Layer({ listening: false }) : null;
       if (stage && dragLayer) {
         stage.add(dragLayer);
@@ -148,6 +158,8 @@ export function useCanvasDrag(params: {
         origCount: Object.keys(orig).length,
         layer,
         dragLayer,
+        transformer,
+        transformerNodes,
         pendingX: startX,
         pendingY: startY,
         rafId: null,
@@ -159,12 +171,12 @@ export function useCanvasDrag(params: {
         height: el.height,
       };
     },
-    [selStore, modalsStore],
+    [selStore, modalsStore, transformerRef],
   );
 
   const onDragMove = useCallback((e: any) => {
     const curr = state.current;
-    if (!curr) return;
+    if (!curr || e.target.id() !== curr.id) return;
     curr.lastEvt = e.evt;
 
     if (!curr.snapCache) {
@@ -309,7 +321,7 @@ export function useCanvasDrag(params: {
   const onDragEnd = useCallback(
     (_e: any) => {
       const s = state.current;
-      if (!s) return;
+      if (!s || (_e?.target && _e.target.id() !== s.id)) return;
       if (s.rafId !== null) cancelAnimationFrame(s.rafId);
       state.current = null;
       restoreLayer(s);
@@ -342,12 +354,38 @@ export function useCanvasDrag(params: {
     for (const original of Object.values(current.orig))
       original.node?.position({ x: original.x, y: original.y });
     restoreLayer(current);
-    current.layer?.listening(true);
-    current.layer?.batchDraw();
+    current.orig[current.id]?.node?.stopDrag();
     guidesStore.clear();
     dragLiveStore.clear();
   }, []);
-  return { onDragStart, onDragMove, onDragEnd, cancel };
+  const isActive = useCallback(() => state.current !== null, []);
+  useEffect(() => {
+    let release: ReturnType<typeof setTimeout> | undefined;
+    const finish = () => {
+      const session = state.current;
+      if (!session) return;
+      // A DOM control can stop mouseup before Konva's window bubble listener.
+      // Finish after normal dispatch, only if that listener did not finish it.
+      release = setTimeout(() => {
+        if (state.current !== session) return;
+        onDragEnd(undefined);
+        session.orig[session.id]?.node?.stopDrag();
+      }, 0);
+    };
+    window.addEventListener('mouseup', finish, true);
+    window.addEventListener('touchend', finish, true);
+    window.addEventListener('pointercancel', cancel, true);
+    window.addEventListener('blur', cancel);
+    return () => {
+      clearTimeout(release);
+      window.removeEventListener('mouseup', finish, true);
+      window.removeEventListener('touchend', finish, true);
+      window.removeEventListener('pointercancel', cancel, true);
+      window.removeEventListener('blur', cancel);
+      cancel();
+    };
+  }, [cancel, onDragEnd]);
+  return { onDragStart, onDragMove, onDragEnd, cancel, isActive };
 }
 
 function restoreLayer(state: DragState) {
@@ -355,7 +393,10 @@ function restoreLayer(state: DragState) {
     const originals = Object.values(state.orig).sort((a, b) => a.index - b.index);
     originals.forEach((value) => value.node?.moveTo(state.layer!));
     originals.forEach((value) => value.node?.zIndex(value.index));
-    state.layer.batchDraw();
+    state.layer.draw();
   }
   state.dragLayer?.destroy();
+  state.transformer?.nodes(state.transformerNodes.filter((node) => !!node.getStage()));
+  state.transformer?.forceUpdate();
+  state.transformer?.getLayer()?.batchDraw();
 }

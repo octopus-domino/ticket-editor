@@ -115,7 +115,7 @@ interface EditorLayoutProps {
 
 const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave, documentId, saveContext }) => {
   const canvasMode = useCanvasMode();
-  const [toolsOpen, setToolsOpen] = useState(true);
+  const [toolsOpen, setToolsOpen] = useState(false);
   const docStore = useDocumentStore();
   const selStore = useSelectionStore();
   const modalsStore = useModalsStore();
@@ -390,7 +390,6 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave, documentId, saveCon
 
   return (
     <div className="editor-shell" data-canvas-fullscreen={canvasMode.fullscreen} data-tools-open={toolsOpen} role="application" aria-label={__tr("Редактор билетов")}>
-      <CanvasDock onTools={() => { if (window.innerWidth <= 760) toggleMobilePanel('tools'); else setToolsOpen(value => !value); }} onGroup={groupSelected} onMenu={() => modalsStore.setContextMenu({ x: Math.min(window.innerWidth - 250, 80), y: 140, elementId: selectedIds[0] ?? null })} />
       {isFeatureEnabled('FEATURE_SHOW_MIGRATION_BANNER') && (
         <MigrationBanner
           rollbackUrl={isFeatureEnabled('FEATURE_SHOW_ROLLBACK_BUTTON') ? '/?legacy=1' : undefined}
@@ -411,6 +410,7 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave, documentId, saveCon
       <Toolbar />
       <MobileEditorControls />
       <div className="editor-layout">
+        <CanvasDock onTools={() => { if (window.innerWidth <= 760) toggleMobilePanel('tools'); else setToolsOpen(value => !value); }} onGroup={groupSelected} onMenu={() => modalsStore.setContextMenu({ x: Math.min(window.innerWidth - 250, 80), y: 140, elementId: selectedIds[0] ?? null })} />
         <ErrorBoundary fallback={<div style={{ padding: 20 }}>{__tr("Ошибка в левой панели")}</div>}>
           <LeftPanel />
         </ErrorBoundary>

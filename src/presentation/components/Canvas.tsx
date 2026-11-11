@@ -62,7 +62,7 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
   const dataHighlight = useStore(modalsStore, (s) => s.dataHighlight);
 
   const transformSelection = useCanvasTransform(docStore, trRef);
-  const drag = useCanvasDrag({ docStore, selStore, modalsStore, slide });
+  const drag = useCanvasDrag({ docStore, selStore, modalsStore, slide, transformerRef: trRef });
   const viewport = useCanvasViewport({
     wrapRef,
     zoom,
@@ -77,12 +77,14 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
   const hover = useCanvasHoverAnchor({ slide });
   const dbl = useCanvasDblClick({ modalsStore, zoom });
 
+  const isDragActive = drag.isActive;
   useLayoutEffect(() => {
     const tr = trRef.current;
     const stage = stageRef.current;
     if (!tr || !stage) return;
 
     const apply = () => {
+      if (isDragActive()) return;
       const nodes = selectedIds
         .map((id) => stage.findOne(`#${id}`))
         .filter((node): node is Konva.Node => Boolean(node));
@@ -104,7 +106,7 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
       cancelAnimationFrame(raf1);
       cancelAnimationFrame(raf2);
     };
-  }, [selectedIds, slide.elements]);
+  }, [selectedIds, slide.elements, isDragActive]);
 
   const handleStartDraft = useCallback(
     (id: string, side: AnchorSide, _clientX: number, _clientY: number) => {

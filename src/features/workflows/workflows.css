@@ -1,4 +1,9 @@
 .workflow-page {
+  box-sizing: border-box;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  overflow-y: auto;
   max-width: 1180px;
   margin: 0 auto;
   padding: 32px 20px 80px;

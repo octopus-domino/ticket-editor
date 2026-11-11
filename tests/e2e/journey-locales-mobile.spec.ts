@@ -39,3 +39,16 @@ test('changing language keeps the unfinished site form',async({page})=>{
  await expect(page.locator('input[maxlength="120"]')).toHaveValue('My personal site');
  await expect(page.locator('input[placeholder="my-event"]')).toHaveValue('personal-site');
 });
+
+test('changing language translates untouched preset fields and keeps authored text', async ({ page }) => {
+ await page.addInitScript(() => { if (!localStorage.getItem('codoc:language')) localStorage.setItem('codoc:language', 'ru'); });
+ await page.route('**/api/journey-sites/availability?**', route => route.fulfill({ json: { status: 'available' } }));
+ await page.goto('/sites/new');
+ await page.locator('input[maxlength="120"]').fill('Our own event');
+ const fields = page.locator('.journey-builder-field input:not([type="checkbox"])');
+ expect(await fields.first().inputValue()).toMatch(/[А-Яа-я]/);
+ await page.locator('.language-switcher select').selectOption('en');
+ await expect(page.locator('.language-switcher select')).toHaveValue('en');
+ await expect(page.locator('input[maxlength="120"]')).toHaveValue('Our own event');
+ for (const field of await fields.all()) expect(await field.inputValue()).not.toMatch(/[А-Яа-я]/);
+});

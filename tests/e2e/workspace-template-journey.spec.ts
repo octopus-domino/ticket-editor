@@ -101,7 +101,10 @@ test('creates template in selected folder, reopens the same item and generates w
   expect(api.template()).toMatchObject({ folderId: 'F', schemaId: null });
   const treeItem = page.locator('aside').getByText('Certificate', { exact: true });
   await expect(treeItem).toBeVisible();
-  await page.locator('.workspace-nav').getByRole('link', { name: /Рабочая область/ }).click();
+  await page
+    .locator('.workspace-nav')
+    .getByRole('link', { name: /Рабочая область/ })
+    .click();
   await treeItem.click();
   await expect(page).toHaveURL(/templates\/T\/edit/);
   const panel = page.locator('.right-panel');
@@ -114,6 +117,9 @@ test('creates template in selected folder, reopens the same item and generates w
   await inlineDownload;
   expect(api.generated()).toMatchObject({ items: [{ inlineValues: {} }], format: 'svg' });
   expect(api.generated()?.inlineSlides).toHaveLength(1);
+  const creationTools = page.locator('.workspace-nav details').first();
+  if (!(await creationTools.evaluate((node) => (node as HTMLDetailsElement).open)))
+    await creationTools.locator('summary').click();
   await page.locator('.workspace-nav').getByRole('link', { name: 'Генерация' }).click();
   await page.locator('.gen-sidebar select').first().selectOption('T');
   await page.getByRole('combobox', { name: 'Формат', exact: true }).selectOption('svg');
@@ -138,7 +144,10 @@ test('data section offers schema selection after opening a template without sche
   await page.getByRole('button', { name: 'Создать и открыть редактор' }).click();
   await expect(page).toHaveURL(/templates\/T\/edit/);
   await expect(page.getByRole('application')).toBeVisible();
-  await page.locator('.workspace-nav').getByRole('link', { name: /Данные/ }).click();
+  await page
+    .locator('.workspace-nav')
+    .getByRole('link', { name: /Данные/ })
+    .click();
   await page.getByLabel('Схема данных').selectOption('S');
   await expect(page.getByText('Alice', { exact: true }).first()).toBeVisible();
   await expect(page).toHaveURL(/schemaId=S/);

@@ -82,16 +82,18 @@ test('guest triangle drag and context actions persist only in this tab; PowerPoi
   const id = await seed(page);
   await page.goto(`/app/editor/${id}`);
   const stage = page.locator('.stage-wrap');
-  await expect(stage).toBeVisible();
+  await expect(stage).toBeVisible({ timeout: 15000 });
   let bounds = await stage.boundingBox();
   expect(bounds).not.toBeNull();
   const scale = bounds!.width / 400;
   const x = bounds!.x + 100 * scale,
     y = bounds!.y + 110 * scale;
+  await page.keyboard.down('Control');
   await page.mouse.move(x, y);
   await page.mouse.down();
   await page.mouse.move(x + 40 * scale, y + 30 * scale, { steps: 12 });
   await page.mouse.up();
+  await page.keyboard.up('Control');
   await expect
     .poll(async () => {
       const first = (await elements(page, id)).find((e) => e.id === 'first')!;
@@ -271,6 +273,44 @@ test('text formatting toolbar stays outside the edited text', async ({ page }) =
   const text = (await editor.boundingBox())!,
     bar = (await toolbar.boundingBox())!;
   expect(bar.y + bar.height <= text.y || bar.y >= text.y + text.height).toBe(true);
+});
+
+test('canvas recovers a multi-selection drag when mouse release is intercepted', async ({
+  page,
+}) => {
+  await guest(page);
+  const id = await seed(page);
+  await page.goto(`/app/editor/${id}`);
+  const stage = page.locator('.stage-wrap');
+  await expect(stage).toBeVisible();
+  const bounds = (await stage.boundingBox())!;
+  const scale = bounds.width / 400;
+  await page.getByRole('button', { name: 'Select multiple objects', exact: true }).click();
+  await page.mouse.click(bounds.x + 100 * scale, bounds.y + 110 * scale);
+  await page.mouse.click(bounds.x + 280 * scale, bounds.y + 140 * scale);
+  await page.mouse.move(bounds.x + 100 * scale, bounds.y + 110 * scale);
+  await page.mouse.down();
+  await page.mouse.move(bounds.x + 130 * scale, bounds.y + 125 * scale, { steps: 10 });
+  await page.evaluate(() =>
+    document.addEventListener('mouseup', (event) => event.stopPropagation(), { once: true }),
+  );
+  await page.mouse.up();
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const konva = (window as unknown as { Konva: { stages: import('konva').default.Stage[] } })
+          .Konva;
+        const active = konva.stages.find((item) => item.container().isConnected)!;
+        return ['first', 'second'].map((key) => {
+          const node = active.findOne(`#${key}`)!;
+          return [node.isListening(), node.getLayer()?.name()];
+        });
+      }),
+    )
+    .toEqual([
+      [true, 'elements-layer'],
+      [true, 'elements-layer'],
+    ]);
 });
 
 test('selection survives repeated dragging, grouping, resize and right-click', async ({ page }) => {

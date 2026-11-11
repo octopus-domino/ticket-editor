@@ -24,6 +24,12 @@ try {
   const template = await readFile(new URL('../dist/index.html', import.meta.url), 'utf8');
   if (!template.includes('<div id="root"></div>') || !template.includes('<!-- codoc-seo:start -->'))
     throw new Error('Prerender placeholders missing');
+  // Dynamic routes must start with an empty shell, never the homepage markup.
+  // Keep prerendered marketing pages independent for search engines.
+  await writeFile(new URL('../dist/app.html', import.meta.url), template.replace(
+    /<meta name="robots" content="[^"]*"\s*\/>/,
+    '<meta name="robots" content="noindex, follow" />',
+  ));
   const pages = [
     { path: '/', Component: LandingPage },
     ...SEARCH_PAGES.map((page) => ({ path: page.path, Component: SearchLandingPage })),

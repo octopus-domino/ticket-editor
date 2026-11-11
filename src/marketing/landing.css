@@ -84,13 +84,13 @@
   padding: 9px 18px;
 }
 .codoc-landing .codoc-primary {
-  background: var(--codoc-purple);
+  background: var(--accent);
   color: #fff;
-  border-color: var(--codoc-purple);
+  border-color: var(--accent);
   box-shadow: 0 6px 16px #6549d51c;
 }
 .codoc-landing .codoc-primary:hover {
-  background: #5336c0;
+  background: var(--accent-hover);
 }
 .codoc-hero {
   display: grid;

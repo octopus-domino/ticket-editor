@@ -14,6 +14,7 @@ import { defaultJourney } from './features/journeys/domain/definitions';
 import { JOURNEY_PAGES } from './marketing/journeyPages';
 import { JourneyMarketingPage } from './marketing/JourneyMarketingPage';
 const JourneyApp = lazy(() => import('./features/journeys/JourneyApp'));
+const PublicationsPage = lazy(() => import('./features/journeys/ui/PublicationsPage'));
 const WorkflowBuilder = lazy(() => import('./features/workflows/WorkflowBuilder'));
 const WorkflowRunner = lazy(() => import('./features/workflows/WorkflowRunner'));
 import { SearchLandingPage, NotFoundPage } from './marketing/SearchLandingPage';
@@ -119,6 +120,7 @@ const App: React.FC = () => {
               <Route path="api-access" element={<ApiAccessPage />} />
               <Route path="integrations" element={<ConnectorPage />} />
               <Route path="history" element={<GenerationHistoryPage />} />
+              <Route path="publications" element={<PublicationsPage />} />
               <Route path="libraries" element={<AssetLibrariesPage />} />
               <Route path="templates/new" element={<NewTemplatePage />} />
               <Route path="templates/:templateId/edit" element={<TemplateEditorPage />} />

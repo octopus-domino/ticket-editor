@@ -2,10 +2,12 @@
   position: relative;
 }
 .canvas-dock {
-  position: absolute;
-  top: 110px;
-  left: 12px;
-  z-index: 60;
+  position: relative;
+  grid-area: dock;
+  align-self: start;
+  min-height: 0;
+  max-height: 100%;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -53,37 +55,43 @@
 .editor-shell[data-canvas-fullscreen='true'] .slides-panel {
   display: none !important;
 }
-.editor-shell[data-canvas-fullscreen='true'] .editor-layout {
+.editor-shell[data-canvas-fullscreen='true'][data-tools-open] .editor-layout {
   flex: 1;
   min-height: 0;
-  grid-template-columns: 1fr;
+  grid-template-columns: 54px minmax(0, 1fr);
   grid-template-rows: 1fr;
-  grid-template-areas: 'canvas';
+  grid-template-areas: 'dock canvas';
 }
 .editor-shell[data-canvas-fullscreen='true'] .canvas-area {
   width: 100%;
-  grid-column: 1/-1;
-  grid-row: 1/-1;
+  grid-column: auto;
+  grid-row: auto;
 }
 .editor-shell[data-canvas-fullscreen='true'] .canvas-dock {
-  top: 12px;
+  top: auto;
 }
 @media (min-width: 761px) {
+  .editor-shell .editor-layout {
+    grid-template-columns: 240px 54px minmax(0, 1fr) 320px;
+    grid-template-areas: 'tools dock canvas right' 'slides slides slides slides';
+  }
   .editor-shell[data-tools-open='false'] .left-panel {
     display: none;
   }
   .editor-shell[data-tools-open='false'] .editor-layout {
-    grid-template-columns: minmax(0, 1fr) 320px;
-    grid-template-areas: 'canvas right' 'slides slides';
-  }
-  .editor-shell[data-tools-open='true'] .canvas-dock {
-    left: 270px;
+    grid-template-columns: 54px minmax(0, 1fr) 320px;
+    grid-template-areas: 'dock canvas right' 'slides slides slides';
   }
 }
 @media (max-width: 760px) {
+  .editor-shell .editor-layout {
+    display: grid !important;
+    grid-template-columns: 48px minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) 84px;
+    grid-template-areas: 'dock canvas' 'slides slides';
+  }
   .canvas-dock {
-    top: 115px;
-    left: 6px;
+    padding: 5px;
     gap: 1px;
   }
   .canvas-dock button {

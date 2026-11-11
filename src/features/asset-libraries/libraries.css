@@ -1,0 +1,66 @@
+.asset-libraries-page {
+  flex: 1;
+  min-height: 0;
+  max-width: 960px;
+}
+.library-steps {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 24px 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: library-step;
+}
+.library-steps li {
+  counter-increment: library-step;
+  flex: 1;
+  min-width: 150px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  font-size: 13px;
+}
+.library-steps li::before {
+  content: counter(library-step) '. ';
+  font-weight: 700;
+  color: var(--accent);
+}
+.asset-libraries-page .template-form {
+  margin: 24px 0;
+  display: block;
+}
+.asset-libraries-page summary {
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 8px 0;
+}
+.asset-libraries-page details > label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 16px 0;
+}
+.asset-libraries-page .template-help {
+  padding: 20px;
+  margin: 12px 0;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.asset-libraries-page .template-help strong {
+  flex: 1;
+  min-width: 130px;
+}
+.asset-libraries-page .library-use {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+.asset-libraries-page .library-use:hover:not(:disabled) {
+  background: var(--accent-hover);
+  color: white;
+}

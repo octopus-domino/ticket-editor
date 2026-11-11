@@ -1,5 +1,5 @@
 import { useLanguageDraft } from '../journeys/ui/useLanguageDraft';
-import { t } from '@/shared/i18n';
+import { isTranslation, t } from '@/shared/i18n';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { httpTemplateRepository, type TemplateSummary } from '@/features/templates';
@@ -44,8 +44,29 @@ export default function WorkflowBuilder() {
   const [items, setItems] = useState<ManagedWorkflow[]>([]);
   const [catalog, setCatalog] = useState<import('./api').PublicWorkflow[]>([]);
   const [templates, setTemplates] = useState<TemplateSummary[]>([]);
-  const [draft, setDraft] = useLanguageDraft('professional:draft', empty);
   const [saved, setSaved] = useLanguageDraft<ManagedWorkflow | null>('professional:saved', null);
+  const [draft, setDraft] = useLanguageDraft('professional:draft', empty, (value) =>
+    saved
+      ? value
+      : {
+          ...value,
+          completionMessage: isTranslation('Скачайте готовый документ.', value.completionMessage)
+            ? t('Скачайте готовый документ.')
+            : value.completionMessage,
+          steps: value.steps.map((step) => ({
+            ...step,
+            title: ['Ваши данные', 'Новый шаг'].reduce(
+              (title, source) => (isTranslation(source, title) ? t(source) : title),
+              step.title,
+            ),
+            fields: step.fields.map((field) => ({
+              ...field,
+              label:
+                field.path === 'name' && isTranslation('Имя', field.label) ? t('Имя') : field.label,
+            })),
+          })),
+        },
+  );
   const [dirty, setDirty] = useLanguageDraft('professional:dirty', true);
   const [shared, setShared] = useState(false);
   const [error, setError] = useState('');

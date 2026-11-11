@@ -1,6 +1,7 @@
 import { publicFetch } from './publicFetch';
 import { journeyError } from './errorMessage';
-import { API_BASE } from '@/shared/api/client';
+import { API_BASE, authFetch } from '@/shared/api/client';
+import { getHttpSession } from '@/shared/api/session';
 import { normalizedProposalData } from '../domain/proposal';
 import type {
   CreatedJourney,
@@ -12,10 +13,14 @@ import type {
   JourneyStatus,
 } from '../domain/definitions';
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const response = await publicFetch(`${API_BASE}${path}`, {
-    ...init,
-    headers: { 'Content-Type': 'application/json', ...init.headers },
-  });
+  const authenticated = path.startsWith('/api/publications') || !!getHttpSession().token();
+  const response = await (authenticated ? authFetch : publicFetch)(
+    authenticated ? path : `${API_BASE}${path}`,
+    {
+      ...init,
+      headers: { 'Content-Type': 'application/json', ...init.headers },
+    },
+  );
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
     throw Object.assign(new Error(journeyError(response.status, body.error)), {
@@ -32,10 +37,13 @@ export const journeyApi = {
     }),
   status: (id: string) => request<JourneyStatus>(`/api/journeys/${encodeURIComponent(id)}/status`),
   consume: (id: string, key: string) =>
-    request<JourneyStatus>(`/api/journeys/${encodeURIComponent(id)}/consume`, {
-      method: 'POST',
-      headers: { 'X-Management-Key': key },
-    }),
+    request<JourneyStatus>(
+      `/api/${key ? 'journeys' : 'publications'}/${encodeURIComponent(id)}/consume`,
+      {
+        method: 'POST',
+        headers: { 'X-Management-Key': key },
+      },
+    ),
   batchPdf: async (id: string, key: string) => {
     const response = await publicFetch(
       `${API_BASE}/api/journeys/batches/${encodeURIComponent(id)}/pdf`,
@@ -70,27 +78,39 @@ export const journeyApi = {
     }),
   get: (id: string) => request<JourneyDocument>(`/api/journeys/${encodeURIComponent(id)}`),
   manage: (id: string, key: string) =>
-    request<JourneyDocument>(`/api/journeys/${encodeURIComponent(id)}/manage`, {
-      headers: { 'X-Management-Key': key },
-    }),
+    request<JourneyDocument>(
+      key
+        ? `/api/journeys/${encodeURIComponent(id)}/manage`
+        : `/api/publications/${encodeURIComponent(id)}`,
+      {
+        headers: { 'X-Management-Key': key },
+      },
+    ),
   update: (document: JourneyDocument, key: string) =>
-    request<JourneyDocument>(`/api/journeys/${encodeURIComponent(document.id)}`, {
-      method: 'PUT',
-      headers: { 'X-Management-Key': key },
-      body: JSON.stringify({
-        ...document,
-        data: document.kind === 'PROPOSAL' ? normalizedProposalData(document.data) : document.data,
-      }),
-    }),
+    request<JourneyDocument>(
+      `/api/${key ? 'journeys' : 'publications'}/${encodeURIComponent(document.id)}`,
+      {
+        method: 'PUT',
+        headers: { 'X-Management-Key': key },
+        body: JSON.stringify({
+          ...document,
+          data:
+            document.kind === 'PROPOSAL' ? normalizedProposalData(document.data) : document.data,
+        }),
+      },
+    ),
   revoke: (id: string, key: string) =>
-    request<void>(`/api/journeys/${encodeURIComponent(id)}`, {
+    request<void>(`/api/${key ? 'journeys' : 'publications'}/${encodeURIComponent(id)}`, {
       method: 'DELETE',
       headers: { 'X-Management-Key': key },
     }),
   guests: (id: string, key: string) =>
-    request<GuestReply[]>(`/api/journeys/${encodeURIComponent(id)}/responses`, {
-      headers: { 'X-Management-Key': key },
-    }),
+    request<GuestReply[]>(
+      `/api/${key ? 'journeys' : 'publications'}/${encodeURIComponent(id)}/responses`,
+      {
+        headers: { 'X-Management-Key': key },
+      },
+    ),
   respond: (id: string, name: string, attending: boolean, responseKey: string) =>
     request<void>(`/api/journeys/${encodeURIComponent(id)}/responses`, {
       method: 'POST',
@@ -104,12 +124,18 @@ export const journeyApi = {
       body: JSON.stringify(site),
     }),
   updateSite: (site: JourneyDefinition, key: string) =>
-    request<JourneyDefinition>(`/api/journey-sites/${encodeURIComponent(site.slug)}`, {
-      method: 'PUT',
-      headers: { 'X-Management-Key': key },
-      body: JSON.stringify(site),
-    }),
+    request<JourneyDefinition>(
+      key
+        ? `/api/journey-sites/${encodeURIComponent(site.slug)}`
+        : `/api/publications/sites/${encodeURIComponent(site.slug)}`,
+      {
+        method: 'PUT',
+        headers: { 'X-Management-Key': key },
+        body: JSON.stringify(site),
+      },
+    ),
 };
+export { request as journeyRequest };
 export const pdfUrl = (id: string, archive = false) =>
   `${API_BASE}/api/journeys/${encodeURIComponent(id)}/pdf${archive ? '?archive=true' : ''}`;
 const domain = (import.meta.env.VITE_PUBLIC_DOMAIN as string | undefined) ?? 'codoc.site';
@@ -123,6 +149,7 @@ export const siteUrl = (slug: string) =>
   deployed()
     ? `https://${slug}.${domain}`
     : `${window.location.origin}/s/${encodeURIComponent(slug)}`;
+export const workspaceUrl = (path: string) => (deployed() ? `https://www.${domain}${path}` : path);
 export function managementUrl(id: string, key: string) {
   return `${window.location.origin}/manage/${encodeURIComponent(id)}#key=${encodeURIComponent(key)}`;
 }

@@ -38,6 +38,39 @@ const slide: Slide = {
 };
 beforeAll(() => vi.stubGlobal('crypto', webcrypto));
 describe('PowerPoint interchange', () => {
+  it('imports theme-colored diagonal connectors and resolves theme fonts', async () => {
+    const exported = await exportPptx([{ ...slide, elements: [newLine(50, 60), newSimpleText(30, 40)] }]);
+    const files = unpack(exported.bytes);
+    delete files['codoc/source.json'];
+    const decode = new TextDecoder(), encode = new TextEncoder();
+    let xml = decode.decode(files['ppt/slides/slide1.xml']);
+    xml = xml.replace(/<a:ln w="[^"]+">[\s\S]*?<\/a:ln>/, '')
+      .replace('</p:cxnSp>', '<p:style><a:lnRef idx="1"><a:srgbClr val="c42769"/></a:lnRef></p:style></p:cxnSp>')
+      .replace(/typeface="[^"]+"/g, 'typeface="+mn-lt"');
+    files['ppt/slides/slide1.xml'] = encode.encode(xml);
+    files['ppt/theme/theme1.xml'] = encode.encode(decode.decode(files['ppt/theme/theme1.xml'])
+      .replace(/<a:minorFont>[\s\S]*?<\/a:minorFont>/, '<a:minorFont><a:latin typeface="Georgia"/></a:minorFont>'));
+    const result = (await importPptx(pack(files))).slides[0].elements;
+    expect(result[0]).toMatchObject({ type: 'line', stroke: '#c42769' });
+    expect(result[1]).toMatchObject({ type: 'text', fontFamily: 'Georgia' });
+  });
+
+  it('keeps differently styled text runs editable and escapes markup in their text', async () => {
+    const exported = await exportPptx([{ ...slide, elements: [newSimpleText(30, 40)] }]);
+    const files = unpack(exported.bytes);
+    delete files['codoc/source.json'];
+    files['ppt/slides/slide1.xml'] = new TextEncoder().encode(new TextDecoder()
+      .decode(files['ppt/slides/slide1.xml']).replace(/<a:p>[\s\S]*?<\/a:p>/,
+        '<a:p><a:r><a:rPr sz="2400" b="1"><a:solidFill><a:srgbClr val="123456"/></a:solidFill></a:rPr><a:t>Headline</a:t></a:r><a:r><a:rPr sz="1200" i="1"/><a:t>&lt;script&gt;body</a:t></a:r></a:p>'));
+    const result = (await importPptx(pack(files))).slides[0].elements[0];
+    expect(result).toMatchObject({ type: 'text', richText: true });
+    if (result.type !== 'text') throw new Error('Expected editable text');
+    expect(result.text).toContain('font-size:32px');
+    expect(result.text).toContain('font-size:16px');
+    expect(result.text).toContain('font-weight:700');
+    expect(result.text).toContain('&lt;script&gt;body');
+    expect(result.text).not.toContain('<script>');
+  });
   it.each([
     [240, 130],
     [-240, 130],

@@ -1,12 +1,21 @@
 import { useSearchParams } from 'react-router-dom';
 
 const OAUTH_DESTINATION_KEY = 'codoc:oauth-destination';
+const DESTINATIONS = new Set([
+  '/app',
+  '/app/templates/new',
+  '/app/publications',
+  '/app/workflows',
+  '/sites/new',
+]);
+const safeDestination = (value: string | null) =>
+  value && DESTINATIONS.has(value) ? value : '/app';
 
 export function consumeOAuthDestination(): string {
   try {
     const next = sessionStorage.getItem(OAUTH_DESTINATION_KEY);
     sessionStorage.removeItem(OAUTH_DESTINATION_KEY);
-    return next === '/app/templates/new' ? next : '/app';
+    return safeDestination(next);
   } catch {
     return '/app';
   }
@@ -15,7 +24,7 @@ export function consumeOAuthDestination(): string {
 /** Explicit allowlist prevents untrusted return URLs and open redirects. */
 export function useAuthDestination() {
   const [params] = useSearchParams();
-  const destination = params.get('next') === '/app/templates/new' ? '/app/templates/new' : '/app';
+  const destination = safeDestination(params.get('next'));
   const suffix = destination === '/app' ? '' : `?next=${encodeURIComponent(destination)}`;
   const rememberOAuthDestination = () => {
     try {

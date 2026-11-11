@@ -9,11 +9,14 @@ import { JourneyWizard } from './JourneyWizard';
 import { useAddressAvailability } from './useAddressAvailability';
 import { AddressFeedback } from './AddressFeedback';
 import { Link } from 'react-router-dom';
+import { localizePresetDraft } from '../domain/localizePresetDraft';
 
 export function JourneySiteBuilder() {
   const [definition, setDefinition] = useLanguageDraft<JourneyDefinition>(
     `builder:${new URLSearchParams(window.location.search).get('site') ?? 'new'}`,
     { ...JOURNEYS.invite, slug: '' },
+    (draft) =>
+      new URLSearchParams(window.location.search).has('site') ? draft : localizePresetDraft(draft),
   );
   const [preview, setPreview] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -246,6 +249,7 @@ export function JourneySiteBuilder() {
           <section role="status">
             <h2>{t('Сайт готов')}</h2>
             <a href={result}>{result}</a>
+            <p><Link to="/app/publications">{t('My sites and documents')} ↗</Link></p>
             <p>{t('Ссылка управления — сохраните её отдельно:')}</p>
             <input
               aria-label={t('Управление сайтом')}

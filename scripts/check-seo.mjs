@@ -2,6 +2,10 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const root = new URL('../dist/', import.meta.url);
+const appShell = await readFile(new URL('app.html', root), 'utf8');
+assert.match(appShell, /<div id="root"><\/div>/, 'Dynamic routes must not flash the homepage');
+assert.doesNotMatch(appShell, /<h1(?:\s|>)/, 'App shell must not contain marketing content');
+assert.match(appShell, /name="robots" content="noindex, follow"/);
 const sitemap = await readFile(new URL('sitemap.xml', root), 'utf8');
 const urls = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => new URL(match[1]));
 assert.equal(urls.length, 18, 'Expected the homepage, four editor pages and thirteen service pages');

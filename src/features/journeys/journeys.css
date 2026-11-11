@@ -58,10 +58,7 @@
   color: inherit;
   text-underline-offset: 4px;
 }
-.journey-app button,
-.journey-app input,
-.journey-app textarea,
-.journey-app select {
+:where(.journey-app button, .journey-app input, .journey-app textarea, .journey-app select) {
   font: inherit;
 }
 .journey-header {
@@ -224,16 +221,16 @@
   justify-content: space-between;
   gap: 20px;
   border: 0;
-  border-radius: 7px;
+  border-radius: var(--radius);
   padding: 14px 18px;
-  background: #285d4e;
+  background: var(--accent);
   color: #fff !important;
   text-decoration: none;
   font-weight: 600;
   font-size: 13px;
 }
 .journey-primary:hover {
-  background: #174438;
+  background: var(--accent-hover);
 }
 .journey-primary span {
   font-size: 20px;
@@ -245,7 +242,7 @@
 .journey-secondary {
   background: transparent;
   border: 1px solid #ccd6ca;
-  border-radius: 7px;
+  border-radius: var(--radius);
   padding: 12px 17px;
   color: #466456;
   margin-top: 14px;
@@ -940,7 +937,7 @@
   min-height: 42px;
   padding: 10px 18px;
   border: 1px solid #cbd5df;
-  border-radius: 10px;
+  border-radius: var(--radius);
   background: #fff;
   color: #243347;
   font: inherit;
@@ -952,12 +949,12 @@
   background: #edf2f7;
 }
 .journey-button--primary {
-  background: #25466a;
-  border-color: #25466a;
+  background: var(--accent);
+  border-color: var(--accent);
   color: white;
 }
 .journey-button--primary:hover:not(:disabled) {
-  background: #1b3552;
+  background: var(--accent-hover);
 }
 .journey-button--danger {
   color: #a12e3e;
@@ -1184,21 +1181,32 @@
   }
 }
 
-.journey-app :where(button) {
+:where(.journey-app button) {
   border: 1px solid #cbd5df;
-  border-radius: 9px;
+  border-radius: var(--radius);
   padding: 9px 15px;
   background: #fff;
   color: #243347;
   font-weight: 600;
   min-height: 40px;
 }
-.journey-app :where(button):hover:not(:disabled) {
+:where(.journey-app button:hover:not(:disabled)) {
   background: #edf2f7;
 }
-.journey-app :where(button):focus-visible {
+:where(.journey-app button):focus-visible {
   outline: 3px solid #85acd4;
   outline-offset: 3px;
+}
+
+.journey-builder-form legend {
+  float: left;
+  width: 100%;
+  margin-bottom: 20px;
+  padding: 0;
+  line-height: 1.35;
+}
+.journey-builder-form legend + * {
+  clear: both;
 }
 
 .address-feedback {

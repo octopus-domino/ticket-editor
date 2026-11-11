@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { defaultJourney, JOURNEYS } from './domain/definitions';
 import type { JourneyDefinition } from './domain/definitions';
-import { journeyApi } from './api/journeys';
+import { journeyApi, workspaceUrl } from './api/journeys';
 import { JourneyWizard } from './ui/JourneyWizard';
 import { JourneyPublic } from './ui/JourneyPublic';
 import { JourneySiteBuilder } from './ui/JourneySiteBuilder';
@@ -64,10 +64,11 @@ export default function JourneyApp({
     >
       <header className="journey-header">
         <LanguageSwitcher />
-        <Link to="/" className="journey-logo">
+        <Link to={workspaceUrl('/')} className="journey-logo">
           CoDoc<span> {t('/ для вашего события')}</span>
         </Link>
         <nav>
+          <Link to={workspaceUrl('/app/publications')}>{t('My sites and documents')}</Link>
           {mode === 'public' ? (
             <Link to="/solutions/">{t('Создать свой документ ↗')}</Link>
           ) : (

@@ -47,6 +47,7 @@ for (const name of [
   'steering-messages.ts',
   'journey-messages.ts',
   'journey-extra-messages.ts',
+  'publication-messages.ts',
 ]) {
   const source = await readFile(`src/shared/i18n/${name}`, 'utf8').catch(() => '');
   const rows = [...source.matchAll(/String\.raw`([\s\S]*?)`/g)].flatMap((match) =>
@@ -93,6 +94,8 @@ async function inspect(directory) {
         key(node.initializer);
       if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)) {
         if (['t', '__tr'].includes(node.expression.text) && node.arguments[0])
+          key(node.arguments[0]);
+        if (filename.replaceAll('\\', '/').endsWith('journeys/domain/definitions.ts') && node.expression.text === 'translate' && node.arguments[0])
           key(node.arguments[0]);
         if (
           filename.replaceAll('\\', '/').endsWith('features/learning/lessons.ts') &&

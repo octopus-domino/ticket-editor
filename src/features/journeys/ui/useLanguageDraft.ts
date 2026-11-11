@@ -5,6 +5,7 @@ import { registerLanguageSave } from '@/shared/i18n';
 export function useLanguageDraft<T>(
   key: string,
   initial: T | (() => T),
+  restore?: (value: T) => T,
 ): [T, Dispatch<SetStateAction<T>>] {
   const storageKey = `codoc:language-draft:${key}`;
   const [value, setValue] = useState<T>(() => {
@@ -12,7 +13,7 @@ export function useLanguageDraft<T>(
       const raw = sessionStorage.getItem(storageKey);
       if (raw) {
         const entry = JSON.parse(raw) as { savedAt: number; value: T };
-        if (Date.now() - entry.savedAt < 60000) return entry.value;
+        if (Date.now() - entry.savedAt < 60000) return restore ? restore(entry.value) : entry.value;
       }
     } catch {
       /* Storage is optional. */

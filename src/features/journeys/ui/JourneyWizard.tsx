@@ -276,6 +276,7 @@ export function JourneyWizard({
         </div>
       ) : (
         <section className="journey-results">
+          <Link to="/app/publications">{t('My sites and documents')} ↗</Link>
           {created[0]?.batchId && (
             <a
               className="journey-primary"

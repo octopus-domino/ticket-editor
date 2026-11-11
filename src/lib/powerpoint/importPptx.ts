@@ -3,6 +3,7 @@ import { DocumentSchema } from '@/shared/schemas/document';
 import { newSimpleText, newShape, newTable, newChart, newLine } from '@/lib/factories';
 import { unpack, parseXml, readRelationships, fingerprint } from './package';
 import { strFromU8 } from 'fflate';
+import { mixedTextRuns } from './textRuns';
 
 const descendants = (node: Element | Document, name: string) =>
   Array.from(node.getElementsByTagNameNS('*', name));
@@ -165,6 +166,7 @@ function readTextOrShape(
   origin: Mapping,
   color: ColorReader,
   warnings: Set<string>,
+  resolveFont: (name: string) => string,
 ): CanvasElement {
   const paragraphs = descendants(node, 'p');
   const text = paragraphs
@@ -182,7 +184,7 @@ function readTextOrShape(
     .join('\n');
   const rPr = first(node, 'rPr') ?? (layoutShape ? first(layoutShape, 'defRPr') : undefined);
   const fontSize = (attributeNumber(rPr, 'sz', 1800) / 75) * Math.min(origin.sx, origin.sy);
-  const fontFamily = first(node, 'latin')?.getAttribute('typeface') ?? 'Arial';
+  const fontFamily = resolveFont(first(node, 'latin')?.getAttribute('typeface') ?? '+mn-lt');
   const style =
     [rPr?.getAttribute('b') === '1' ? 'bold' : '', rPr?.getAttribute('i') === '1' ? 'italic' : '']
       .filter(Boolean)
@@ -200,6 +202,8 @@ function readTextOrShape(
   const outline = shapeProps
     ? Array.from(shapeProps.children).find((e) => e.localName === 'ln')
     : undefined;
+  const lineColor = color(outline, color(first(node, 'lnRef'), '#000000'));
+  const shapeFill = color(fill, color(first(node, 'fillRef'), 'transparent'));
   if (geom === 'line' || node.localName === 'cxnSp') {
     const extent = first(first(node, 'xfrm') ?? node, 'ext');
     const width = toPixels(attributeNumber(extent, 'cx')) * origin.sx;
@@ -219,7 +223,7 @@ function readTextOrShape(
       ],
       flipX: false,
       flipY: false,
-      stroke: outline && first(outline, 'noFill') ? 'transparent' : color(outline, '#000000'),
+      stroke: outline && first(outline, 'noFill') ? 'transparent' : lineColor,
       strokeWidth: toPixels(attributeNumber(outline, 'w', 9525)),
       isArrow: Boolean(
         first(node, 'tailEnd')?.getAttribute('type') &&
@@ -239,14 +243,21 @@ function readTextOrShape(
     first(node, 'cNvSpPr')?.getAttribute('txBox') === '1' || (text && !fill && geom === 'rect');
   if (textBox) {
     const body = first(node, 'bodyPr');
+    const richText = mixedTextRuns(
+      paragraphs,
+      rPr,
+      Math.min(origin.sx, origin.sy),
+      resolveFont,
+      color,
+    );
     return {
       ...newSimpleText(),
       ...bounds,
-      text,
-      richText: false,
+      text: richText ?? text,
+      richText: Boolean(richText),
       autoHeight: false,
       fontSize,
-      fontFamily: fontFamily.startsWith('+') ? 'Arial' : fontFamily,
+      fontFamily,
       fontStyle: style,
       fill: color(rPr, '#20283e'),
       align,
@@ -265,8 +276,11 @@ function readTextOrShape(
     return {
       ...newShape(preset[geom] ?? 'rect'),
       ...bounds,
-      fill: color(fill, 'transparent'),
-      stroke: color(outline, 'transparent'),
+      fill: shapeProps && first(shapeProps, 'noFill') && !fill ? 'transparent' : shapeFill,
+      stroke:
+        outline && first(outline, 'noFill')
+          ? 'transparent'
+          : color(outline, color(first(node, 'lnRef'), 'transparent')),
       strokeWidth: toPixels(attributeNumber(outline, 'w', 9525)),
       text,
       fontSize,
@@ -327,6 +341,14 @@ export async function importPptx(bytes: Uint8Array): Promise<PptxImport> {
     throw Error('PowerPoint import requires 1..100 slides');
   const themePath = Object.keys(files).find((path) => /^ppt\/theme\/theme\d+\.xml$/.test(path));
   const theme = themePath ? parseXml(files[themePath]) : null;
+  const fontScheme = theme ? first(theme, 'fontScheme') : undefined;
+  function resolveFont(name: string) {
+    if (!name.startsWith('+')) return name;
+    const family = fontScheme
+      ? first(fontScheme, name.startsWith('+mj') ? 'majorFont' : 'minorFont')
+      : undefined;
+    return (family ? first(family, 'latin')?.getAttribute('typeface') : undefined) || 'Arial';
+  }
   const themeColors = new Map<string, string>();
   for (const item of Array.from(first(theme ?? presentation, 'clrScheme')?.children ?? [])) {
     const c =
@@ -459,7 +481,9 @@ export async function importPptx(bytes: Uint8Array): Promise<PptxImport> {
           if (chart) elements.push(chart);
           continue;
         }
-        elements.push(readTextOrShape(node, bounds, layoutShape, origin, color, warnings));
+        elements.push(
+          readTextOrShape(node, bounds, layoutShape, origin, color, warnings, resolveFont),
+        );
       }
     }
     const origin = { x: 0, y: 0, sx: 1, sy: 1 };

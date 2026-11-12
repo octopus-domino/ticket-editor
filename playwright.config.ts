@@ -3,6 +3,8 @@ export default defineConfig({
   testDir: './tests/e2e',
   fullyParallel: false,
   workers: 1,
+  // The uncached Vite editor imports many modules on the 2 CPU test host.
+  expect: { timeout: 15000 },
   use: {
     baseURL: 'http://127.0.0.1:5187',
     headless: true,

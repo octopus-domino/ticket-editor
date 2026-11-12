@@ -116,8 +116,7 @@ export function JourneyBatch() {
                 </p>
                 {status.usedAt && (
                   <p>
-                    {t('Использован:')}
-                    {new Date(status.usedAt).toLocaleString(getLocale())}
+                    {t('Использован:')} {new Date(status.usedAt).toLocaleString(getLocale())}
                   </p>
                 )}
                 <a href={publicUrl(document.id)} target="_blank" rel="noreferrer">

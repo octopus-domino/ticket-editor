@@ -78,12 +78,14 @@ export const BindingMatrix: React.FC = () => {
 
     return (
       <div className="dp-container">
-        <div className="dp-section-title">{__tr("Матрица связей")}</div>
+        <div className="dp-section-title">{__tr('Матрица связей')}</div>
 
         <div className="schema-error">
           {hasSchemas
-            ? __tr("Схема не выбрана. Откройте раздел «Схемы» и выберите одну — или создайте новую.")
-            : __tr("Схем пока нет. Создайте первую — потом привяжете к ней поля на холсте.")}
+            ? __tr(
+                'Схема не выбрана. Откройте раздел «Схемы» и выберите одну — или создайте новую.',
+              )
+            : __tr('Схем пока нет. Создайте первую — потом привяжете к ней поля на холсте.')}
         </div>
 
         <div
@@ -96,7 +98,8 @@ export const BindingMatrix: React.FC = () => {
         >
           {hasSchemas && (
             <Link to="/app/schemas" className="dp-btn-submit" style={primaryLinkStyle}>
-              {__tr("Выбрать схему")}</Link>
+              {__tr('Выбрать схему')}
+            </Link>
           )}
           <Link
             to="/app/schemas/new"
@@ -104,7 +107,7 @@ export const BindingMatrix: React.FC = () => {
             className={hasSchemas ? 'dp-btn' : 'dp-btn-submit'}
             style={hasSchemas ? secondaryLinkStyle : primaryLinkStyle}
           >
-            {hasSchemas ? __tr("+ Создать схему") : __tr("+ Создать первую схему")}
+            {hasSchemas ? __tr('+ Создать схему') : __tr('+ Создать первую схему')}
           </Link>
         </div>
       </div>
@@ -125,7 +128,7 @@ export const BindingMatrix: React.FC = () => {
           gap: 8,
         }}
       >
-        <span>{__tr("Матрица связей")}</span>
+        <span>{__tr('Матрица связей')}</span>
         <Link
           to={`/app/schemas/${activeSchema.id}`}
           state={{ from: returnTo }}
@@ -136,23 +139,29 @@ export const BindingMatrix: React.FC = () => {
             textDecoration: 'none',
             whiteSpace: 'nowrap',
           }}
-          title={__tr("Открыть редактор схемы")}
+          title={__tr('Открыть редактор схемы')}
         >
-          {__tr("⚙ Схема")}</Link>
+          {__tr('⚙ Схема')}
+        </Link>
       </div>
 
       <div className="schema-hint" style={{ marginBottom: 8 }}>
-        {__tr("Схема:")}<b>{activeSchema.name}</b> · {known.length} {known.length === 1 ? __tr("поле") : __tr("полей")}
+        {__tr('Схема:')} <b>{activeSchema.name}</b> · {known.length}{' '}
+        {known.length === 1 ? __tr('поле') : __tr('полей')}
         {bindings.length > 0 && (
           <>
             {' '}
-            · {bindings.length} {bindings.length === 1 ? __tr("связь") : __tr("связей")}
+            · {bindings.length} {bindings.length === 1 ? __tr('связь') : __tr('связей')}
           </>
         )}
       </div>
 
       <p className="schema-hint" style={{ marginBottom: 12 }}>
-        {__tr("Связи собираются из")}<code>{'{{...}}'}</code> {__tr("и")}<code>fieldPath</code>{__tr(". Выбор сразу правит элемент (undo — Ctrl+Z).")}</p>
+        {__tr('Связи собираются из')}
+        <code>{'{{...}}'}</code> {__tr('и')}
+        <code>fieldPath</code>
+        {__tr('. Выбор сразу правит элемент (undo — Ctrl+Z).')}
+      </p>
 
       {uiError && <div className="schema-error">{uiError}</div>}
 
@@ -160,8 +169,8 @@ export const BindingMatrix: React.FC = () => {
         <table className="dm-table" style={{ fontSize: 11, width: '100%' }}>
           <thead>
             <tr>
-              <th style={{ minWidth: 100 }}>{__tr("Элемент")}</th>
-              <th>{__tr("Поле")}</th>
+              <th style={{ minWidth: 100 }}>{__tr('Элемент')}</th>
+              <th>{__tr('Поле')}</th>
             </tr>
           </thead>
           <tbody>
@@ -181,7 +190,7 @@ export const BindingMatrix: React.FC = () => {
                         className="schema-error"
                         style={{ padding: 2, marginTop: 4, fontSize: 10 }}
                       >
-                        {__tr("⚠ нет в схеме —")}{' '}
+                        {__tr('⚠ нет в схеме —')}{' '}
                         <Link
                           to={`/app/schemas/${activeSchema.id}`}
                           state={{ from: returnTo }}
@@ -189,9 +198,10 @@ export const BindingMatrix: React.FC = () => {
                             color: 'inherit',
                             textDecoration: 'underline',
                           }}
-                          title={__tr("Открыть редактор схемы")}
+                          title={__tr('Открыть редактор схемы')}
                         >
-                          {__tr("добавить")}</Link>
+                          {__tr('добавить')}
+                        </Link>
                       </div>
                     )}
                   </td>
@@ -202,7 +212,7 @@ export const BindingMatrix: React.FC = () => {
                       onChange={(e) => changeBinding(b, e.target.value)}
                       style={{ minWidth: 100 }}
                     >
-                      <option value="">{__tr("— не привязано —")}</option>
+                      <option value="">{__tr('— не привязано —')}</option>
                       {allowed.map((f) => (
                         <option key={f.path} value={f.path}>
                           {f.path}
@@ -220,9 +230,14 @@ export const BindingMatrix: React.FC = () => {
                   className="schema-hint"
                   style={{ textAlign: 'center', padding: 16 }}
                 >
-                  {__tr("Нет связей — на холсте нет")}<code>{'{{...}}'}</code> {__tr("и плейсхолдеров.")}<br />
+                  {__tr('Нет связей — на холсте нет')}
+                  <code>{'{{...}}'}</code> {__tr('и плейсхолдеров.')}
+                  <br />
                   <span style={{ fontSize: 11, color: 'var(--text-soft)' }}>
-                    {__tr("Перетащите поле из вкладки «Данные» на холст — связь появится автоматически.")}</span>
+                    {__tr(
+                      'Перетащите поле из вкладки «Данные» на холст — связь появится автоматически.',
+                    )}
+                  </span>
                 </td>
               </tr>
             )}
@@ -247,13 +262,15 @@ export const BindingMatrix: React.FC = () => {
                 fontSize: 11,
               }}
             >
-              {__tr("Редактировать схему →")}</Link>
+              {__tr('Редактировать схему →')}
+            </Link>
           </div>
         </div>
       )}
       {issues.length === 0 && bindings.length > 0 && (
         <div className="schema-hint" style={{ marginTop: 12, color: 'var(--success, #16a34a)' }}>
-          {__tr("✓ Связи валидны")}</div>
+          {__tr('✓ Связи валидны')}
+        </div>
       )}
     </div>
   );

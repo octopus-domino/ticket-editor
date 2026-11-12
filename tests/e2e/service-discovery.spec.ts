@@ -20,6 +20,7 @@ test('homepage explains the services and opens the constructor without entering 
   page,
 }) => {
   await page.goto('/');
+  await expect(page.locator('.codoc-hero h1')).toContainText('Шаблон — один');
   await expect(page.locator('#services')).toContainText('Приглашения с ответами гостей');
   await expect(page.locator('#services')).toContainText('Сертификаты с QR');
   await expect(page.locator('#services')).toContainText('QR-меню');
@@ -56,6 +57,11 @@ test('service landing pages have metadata and stay usable on a phone', async ({ 
     '/invitations-online/',
     '/certificates-with-qr/',
     '/qr-menu/',
+    '/qr-business-cards/',
+    '/product-labels/',
+    '/price-tags-with-reviews/',
+    '/property-cards/',
+    '/travel-itineraries/',
   ]) {
     await page.goto(path);
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();

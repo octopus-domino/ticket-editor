@@ -56,8 +56,11 @@ export const DataModelImporter: React.FC<Props> = ({ onImport }) => {
   return (
     <div
       style={{
-        padding: 12, background: '#f8fafc', border: '1px dashed #cbd5e1',
-        borderRadius: 6, margin: 8,
+        padding: 12,
+        background: '#f8fafc',
+        border: '1px dashed #cbd5e1',
+        borderRadius: 6,
+        margin: 8,
       }}
     >
       <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
@@ -73,47 +76,77 @@ export const DataModelImporter: React.FC<Props> = ({ onImport }) => {
       </div>
       <textarea
         value={text}
-        onChange={(e) => { setText(e.target.value); parse(e.target.value); }}
-        placeholder={__tr("Или вставьте JSON: {\"items\": [{\"name\": \"...\", \"values\": {...}}]}")}
+        onChange={(e) => {
+          setText(e.target.value);
+          parse(e.target.value);
+        }}
+        placeholder={__tr('Или вставьте JSON: {"items": [{"name": "...", "values": {...}}]}')}
         style={{
-          width: '100%', minHeight: 80, fontFamily: 'monospace', fontSize: 11,
-          padding: 6, border: '1px solid #cbd5e1', borderRadius: 4,
+          width: '100%',
+          minHeight: 80,
+          fontFamily: 'monospace',
+          fontSize: 11,
+          padding: 6,
+          border: '1px solid #cbd5e1',
+          borderRadius: 4,
         }}
       />
       {issues.length > 0 && (
         <div
           style={{
-            marginTop: 8, padding: 8, background: '#fef2f2',
-            border: '1px solid #fecaca', borderRadius: 4, fontSize: 11, color: '#991b1b',
+            marginTop: 8,
+            padding: 8,
+            background: '#fef2f2',
+            border: '1px solid #fecaca',
+            borderRadius: 4,
+            fontSize: 11,
+            color: '#991b1b',
           }}
         >
           {issues.slice(0, 5).map((i, k) => (
-            <div key={k}>#{i.index}: {i.message}</div>
+            <div key={k}>
+              #{i.index}: {i.message}
+            </div>
           ))}
         </div>
       )}
       {preview && (
         <div style={{ marginTop: 8 }}>
           <div style={{ fontSize: 12, color: '#16a34a', marginBottom: 6 }}>
-            {__tr("✓ Найдено")}{preview.length} {__tr("наборов данных")}</div>
+            {__tr('✓ Найдено')} {preview.length} {__tr('наборов данных')}
+          </div>
           <button
             onClick={() => void apply()}
             disabled={busy}
             style={{
-              padding: '6px 12px', background: '#4f46e5', color: '#fff',
-              border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12,
+              padding: '6px 12px',
+              background: '#4f46e5',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 4,
+              cursor: 'pointer',
+              fontSize: 12,
             }}
           >
-            {busy ? __tr("Импорт…") : __tr("Импортировать")}
+            {busy ? __tr('Импорт…') : __tr('Импортировать')}
           </button>
           <button
-            onClick={() => { setPreview(null); setText(''); }}
+            onClick={() => {
+              setPreview(null);
+              setText('');
+            }}
             style={{
-              marginLeft: 8, padding: '6px 12px', background: 'transparent',
-              border: '1px solid #cbd5e1', borderRadius: 4, cursor: 'pointer', fontSize: 12,
+              marginLeft: 8,
+              padding: '6px 12px',
+              background: 'transparent',
+              border: '1px solid #cbd5e1',
+              borderRadius: 4,
+              cursor: 'pointer',
+              fontSize: 12,
             }}
           >
-            {__tr("Отмена")}</button>
+            {__tr('Отмена')}
+          </button>
         </div>
       )}
     </div>

@@ -117,7 +117,7 @@ for (const kind of ['document', 'template'] as const) {
       return route.fulfill({ json: [] });
     });
     await page.goto(kind === 'document' ? '/app/editor/local' : '/app/templates/T/edit');
-    await expect(page.locator('.slide-thumb')).toHaveCount(1);
+    await expect(page.locator('.slide-thumb')).toHaveCount(1, { timeout: 15000 });
     const png = await page.evaluate(() => {
       const canvas = document.createElement('canvas');
       canvas.width = 400;

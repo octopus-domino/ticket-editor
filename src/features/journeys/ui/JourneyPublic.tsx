@@ -1,5 +1,5 @@
 import { t, getLocale } from '@/shared/i18n';
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import type { GuestReply, JourneyDocument } from '../domain/definitions';
 import { journeyApi, managementKey, pdfUrl, publicUrl } from '../api/journeys';
@@ -11,12 +11,22 @@ import { STATUS_LABELS } from './JourneyBatch';
 import type { JourneyStatus } from '../domain/definitions';
 import { API_BASE } from '@/shared/api/client';
 import { ProposalActionBar } from './ProposalActionBar';
+import { JourneyBrandingEditor } from './JourneyBrandingEditor';
+import { readBranding } from '../domain/branding';
+import { JourneyReviews } from './JourneyReviews';
+import { JourneyPrintSize } from './JourneyPrintSize';
+import { contactHref } from '../domain/contact';
+const RouteEditor = lazy(() =>
+  import('./RouteEditor').then((module) => ({ default: module.RouteEditor })),
+);
 
 export function JourneyPublic({ manage = false }: { manage?: boolean }) {
   const { id = '' } = useParams();
   const [document, setDocument] = useState<JourneyDocument | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [mediaBusy, setMediaBusy] = useState(false);
+  const [routeBusy, setRouteBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [name, setName] = useState('');
   const [attending, setAttending] = useState(true);
@@ -152,7 +162,7 @@ export function JourneyPublic({ manage = false }: { manage?: boolean }) {
               </button>
             </div>
           )}
-          {document.kind === 'BADGE' && (
+          {['BADGE', 'VCARD'].includes(document.kind) && (
             <a
               className="journey-primary"
               href={`${API_BASE}/api/journeys/${encodeURIComponent(id)}/contact`}
@@ -203,6 +213,23 @@ export function JourneyPublic({ manage = false }: { manage?: boolean }) {
             />
           )}
           <JourneyShare url={publicUrl(id)} title={document.title} />
+          {document.kind === 'PROPERTY' && contactHref(document.data.contact ?? '') && (
+            <a
+              className="journey-primary"
+              href={contactHref(document.data.contact)}
+              rel="noreferrer"
+            >
+              {t('Contact us')}
+            </a>
+          )}
+          {document.kind === 'PRICETAG' && (
+            <JourneyReviews
+              key={id}
+              id={id}
+              manage={manage}
+              managementKey={manage ? managementKey(id) : ''}
+            />
+          )}
           {!manage && document.kind === 'INVITATION' && (
             <form
               onSubmit={(event) => {
@@ -248,7 +275,22 @@ export function JourneyPublic({ manage = false }: { manage?: boolean }) {
                 />
               </label>
               {Object.entries(document.data)
-                .filter(([key]) => !['site', 'theme', 'positions', 'events'].includes(key))
+                .filter(
+                  ([key]) =>
+                    ![
+                      'site',
+                      'theme',
+                      'positions',
+                      'events',
+                      'branding',
+                      'route',
+                      'route_labels',
+                      'locale',
+                      'field_labels',
+                      'print_width',
+                      'print_height',
+                    ].includes(key),
+                )
                 .map(([key, value]) => (
                   <label key={key}>
                     {(
@@ -269,7 +311,14 @@ export function JourneyPublic({ manage = false }: { manage?: boolean }) {
                         currency: t('Валюта'),
                         portfolio: t('Портфолио'),
                         phone: t('Телефон'),
-                        email: 'Email',
+                        email: t('Email'),
+                        batch: t('Batch number'),
+                        weight: t('Weight or volume'),
+                        website: t('Website'),
+                        area: t('Area, m²'),
+                        rooms: t('Rooms'),
+                        return_date: t('End date'),
+                        price: t('Price'),
                       } as Record<string, string>
                     )[key] ?? key}
                     <textarea
@@ -284,6 +333,44 @@ export function JourneyPublic({ manage = false }: { manage?: boolean }) {
                     />
                   </label>
                 ))}
+              <JourneyBrandingEditor
+                value={readBranding(document.data.branding)}
+                onBusyChange={setMediaBusy}
+                onChange={(branding) =>
+                  setDocument((value) =>
+                    value
+                      ? {
+                          ...value,
+                          data: { ...value.data, branding: JSON.stringify(branding) },
+                        }
+                      : value,
+                  )
+                }
+              />
+              {['VCARD', 'LABEL', 'PRICETAG'].includes(document.kind) && (
+                <JourneyPrintSize
+                  kind={document.kind}
+                  data={document.data}
+                  onChange={(patch) =>
+                    setDocument((value) =>
+                      value ? { ...value, data: { ...value.data, ...patch } } : value,
+                    )
+                  }
+                />
+              )}
+              {document.kind === 'TOUR' && (
+                <Suspense fallback={<p>{t('Loading map…')}</p>}>
+                  <RouteEditor
+                    value={document.data.route ?? ''}
+                    onBusyChange={setRouteBusy}
+                    onChange={(route) =>
+                      setDocument((value) =>
+                        value ? { ...value, data: { ...value.data, route } } : value,
+                      )
+                    }
+                  />
+                </Suspense>
+              )}
               {document.kind === 'PROPOSAL' && (
                 <ProposalEditor
                   value={document.data.positions ?? '[]'}
@@ -308,7 +395,12 @@ export function JourneyPublic({ manage = false }: { manage?: boolean }) {
               <ProposalActionBar data={document.kind === 'PROPOSAL' ? document.data : undefined}>
                 <button
                   type="button"
-                  disabled={busy}
+                  disabled={
+                    busy ||
+                    mediaBusy ||
+                    routeBusy ||
+                    (document.kind === 'TOUR' && !document.data.route)
+                  }
                   className="journey-primary"
                   onClick={() => void save()}
                 >

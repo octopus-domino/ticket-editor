@@ -8,21 +8,25 @@ export function BatchRecipientsEditor({
   names,
   fields,
   onChange,
+  products = false,
+  singleRecipient,
 }: {
   names: string;
   fields: JourneyField[];
   onChange: (names: string, rows: Record<string, string>[]) => void;
+  products?: boolean;
+  singleRecipient?: string;
 }) {
   const [sheet, setSheet] = useState<string[][]>([]);
   const [mapping, setMapping] = useState<Record<string, number>>({ recipient: 0 });
   const [error, setError] = useState('');
   const columns = [
-    { name: 'recipient', label: t('Имя получателя') },
+    { name: 'recipient', label: products ? t('Product name') : t('Имя получателя') },
     ...fields.filter((f) => f.name !== 'recipient'),
   ];
   return (
     <fieldset>
-      <legend>{t('Получатели')}</legend>
+      <legend>{products ? t('Product labels') : t('Получатели')}</legend>
       <label>
         {t('Загрузить список из Excel (.xlsx)')}
         <input
@@ -42,7 +46,8 @@ export function BatchRecipientsEditor({
                     (h) =>
                       h?.trim().toLocaleLowerCase() === field.name ||
                       h?.trim().toLocaleLowerCase() === field.label.toLocaleLowerCase() ||
-                      (field.name === 'recipient' && /фио|имя|name|recipient/i.test(h)),
+                      (field.name === 'recipient' &&
+                        /фио|имя|name|recipient|товар|название|product/i.test(h)),
                   );
                   mapped[field.name] = index;
                 }
@@ -110,9 +115,11 @@ export function BatchRecipientsEditor({
         </div>
       )}
       <label>
-        {t('Имена участников — каждое с новой строки')}
+        {products
+          ? t('Product names, one per line')
+          : t('Имена участников — каждое с новой строки')}
         <textarea
-          required
+          required={!singleRecipient?.trim()}
           value={names}
           onChange={(e) => onChange(e.target.value, [])}
           placeholder={t('Анна Иванова\nМихаил Петров')}

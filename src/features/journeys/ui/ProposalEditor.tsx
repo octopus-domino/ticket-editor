@@ -126,8 +126,7 @@ export function ProposalEditor({
             </label>
           ))}
           <p>
-            {t('Будет проверено строк:')}
-            {sheet.length - headerRow - 1}
+            {t('Будет проверено строк:')} {sheet.length - headerRow - 1}
             {t('. Импорт заменит текущие позиции.')}
           </p>
           <JourneyButton variant="primary" onClick={apply}>

@@ -114,8 +114,7 @@ export function NewTemplatePage() {
           disabled={busy}
         />
         <label htmlFor="template-schema">
-          {__tr('Схема данных')}
-          <span>{__tr('(необязательно)')}</span>
+          {__tr('Схема данных')} <span>{__tr('(необязательно)')}</span>
         </label>
         <select
           id="template-schema"

@@ -34,7 +34,7 @@ test('primary journey actions remain visible after the generic button styles loa
 test('site section headings fit inside their white panels', async ({ page }) => {
   await page.goto('/sites/new');
   const panels = page.locator('.journey-builder-form fieldset');
-  await expect(panels).toHaveCount(4);
+  await expect(panels).toHaveCount(5);
   for (const panel of await panels.all()) {
     const bounds = (await panel.boundingBox())!;
     const heading = (await panel.locator('legend').boundingBox())!;

@@ -210,8 +210,7 @@ export const GenerationPage: React.FC = () => {
         <GenerationPreview request={previewRequest} disabled={!canRun} />
         <h2 className="gen-title">{__tr('Генерация документов')}</h2>
         <p className="gen-subtitle">
-          {__tr('Шаблон × наборы данных → документы. Формат:')}
-          <b>{format.toUpperCase()}</b>
+          {__tr('Шаблон × наборы данных → документы. Формат:')} <b>{format.toUpperCase()}</b>
           {__tr(', упаковка:')} <b>{packAs}</b>.
         </p>
 
@@ -226,8 +225,7 @@ export const GenerationPage: React.FC = () => {
           <div className="gen-preview">
             <div style={{ fontWeight: 600 }}>📄 {activeTemplate.name}</div>
             <div className="schema-hint">
-              {__tr('Слайдов:')}
-              {activeTemplate.slides.length} {__tr('· Наборов данных:')}
+              {__tr('Слайдов:')} {activeTemplate.slides.length} {__tr('· Наборов данных:')}{' '}
               {models.length} {__tr('· Выбрано:')} {pickedModels.length}
             </div>
           </div>
@@ -258,9 +256,7 @@ export const GenerationPage: React.FC = () => {
           <div className="gen-status done" style={{ marginTop: 12 }}>
             <strong>{result.filename}</strong>
             {' · '}
-            {__tr('Готово:')}
-            {result.count} {__tr('документ(ов), ошибок:')}
-            {result.failed}.{' '}
+            {__tr('Готово:')} {result.count} {__tr('документ(ов), ошибок:')} {result.failed}.{' '}
             <button className="dp-btn" onClick={() => downloadBlob(result.blob, result.filename)}>
               {__tr('Скачать снова')}
             </button>

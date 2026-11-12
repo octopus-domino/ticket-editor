@@ -163,7 +163,7 @@ for (const count of [0, 1])
     });
     await page.goto('/app/editor/local?tab=generate&schemaId=S');
     const selects = page.locator('.right-panel .gen-select');
-    await expect(selects.nth(0)).toHaveValue('pdf');
+    await expect(selects.nth(0)).toHaveValue('pdf', { timeout: 15000 });
     await expect(selects.nth(1)).toHaveValue('single');
     await page.route('**/api/templates/T', (route) =>
       route.fulfill({

@@ -47,6 +47,7 @@ for (const name of [
   'steering-messages.ts',
   'journey-messages.ts',
   'journey-extra-messages.ts',
+  'journey-tools-messages.ts',
   'publication-messages.ts',
 ]) {
   const source = await readFile(`src/shared/i18n/${name}`, 'utf8').catch(() => '');
@@ -95,8 +96,9 @@ async function inspect(directory) {
       if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)) {
         if (['t', '__tr'].includes(node.expression.text) && node.arguments[0])
           key(node.arguments[0]);
-        if (filename.replaceAll('\\', '/').endsWith('journeys/domain/definitions.ts') && node.expression.text === 'translate' && node.arguments[0])
+        if (/journeys\/domain\/(definitions|extraPresets)\.ts$/.test(filename.replaceAll('\\', '/')) && node.expression.text === 'translate' && node.arguments[0])
           key(node.arguments[0]);
+        if (filename.replaceAll('\\', '/').endsWith('journeys/domain/extraPresets.ts') && node.expression.text === 'field' && node.arguments[1]) key(node.arguments[1]);
         if (
           filename.replaceAll('\\', '/').endsWith('features/learning/lessons.ts') &&
           node.expression.text === 'step'

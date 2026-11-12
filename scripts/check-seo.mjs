@@ -8,8 +8,8 @@ assert.doesNotMatch(appShell, /<h1(?:\s|>)/, 'App shell must not contain marketi
 assert.match(appShell, /name="robots" content="noindex, follow"/);
 const sitemap = await readFile(new URL('sitemap.xml', root), 'utf8');
 const urls = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => new URL(match[1]));
-assert.equal(urls.length, 18, 'Expected the homepage, four editor pages and thirteen service pages');
-for (const path of ['/solutions/','/website-builder/','/invitations-online/','/certificates-with-qr/','/qr-menu/']) {
+assert.equal(urls.length, 23, 'Expected the homepage, four editor pages and eighteen service pages');
+for (const path of ['/solutions/','/website-builder/','/invitations-online/','/certificates-with-qr/','/qr-menu/', '/qr-business-cards/', '/product-labels/', '/price-tags-with-reviews/', '/property-cards/', '/travel-itineraries/']) {
   assert.ok(urls.some(url=>url.pathname===path),`Missing discoverable service page: ${path}`);
 }
 const titles = new Set(),

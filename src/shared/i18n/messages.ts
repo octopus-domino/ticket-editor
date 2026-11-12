@@ -11,6 +11,7 @@ import { WORKFLOW_MESSAGES } from './workflow-messages';
 import { STEERING_MESSAGES } from './steering-messages';
 import { JOURNEY_MESSAGES } from './journey-messages';
 import { JOURNEY_EXTRA_MESSAGES } from './journey-extra-messages';
+import { JOURNEY_TOOLS_MESSAGES } from './journey-tools-messages';
 import { PUBLICATION_MESSAGES } from './publication-messages';
 // Columns: English | Russian | Simplified Chinese | Polish | Italian | Spanish | Dutch | French | German.
 const rows = String.raw`
@@ -203,7 +204,15 @@ for (const row of (
   HELP_MESSAGES +
   REMAINING_MESSAGES +
   EXTRA_MESSAGES +
-  TUTORIAL_MESSAGES + RECOGNITION_MESSAGES + API_MESSAGES + WORKFLOW_MESSAGES + STEERING_MESSAGES + JOURNEY_MESSAGES + JOURNEY_EXTRA_MESSAGES + PUBLICATION_MESSAGES
+  TUTORIAL_MESSAGES +
+  RECOGNITION_MESSAGES +
+  API_MESSAGES +
+  WORKFLOW_MESSAGES +
+  STEERING_MESSAGES +
+  JOURNEY_MESSAGES +
+  JOURNEY_EXTRA_MESSAGES +
+  JOURNEY_TOOLS_MESSAGES +
+  PUBLICATION_MESSAGES
 )
   .trim()
   .split('\n')

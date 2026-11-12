@@ -128,9 +128,7 @@ export default function WorkflowRunner({
               }}
             >
               <p>
-                {t('Шаг')}
-                {step + 1} {t('из')}
-                {definition.steps.length}
+                {t('Шаг')} {step + 1} {t('из')} {definition.steps.length}
               </p>
               <h2>{definition.steps[step].title}</h2>
               {definition.steps[step].fields.map((field) => (

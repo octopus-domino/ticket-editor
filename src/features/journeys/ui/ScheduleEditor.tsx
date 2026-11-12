@@ -58,8 +58,7 @@ export function ScheduleEditor({
             type="button"
             onClick={() => onChange(JSON.stringify(items.filter((_, i) => i !== index)))}
           >
-            {t('Удалить занятие')}
-            {index + 1}
+            {t('Удалить занятие')} {index + 1}
           </button>
         </div>
       ))}

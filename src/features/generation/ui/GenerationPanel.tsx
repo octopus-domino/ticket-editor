@@ -213,9 +213,7 @@ export const GenerationPanel: React.FC = () => {
           📄 {activeSchema?.name ?? __tr('Документ без подстановки данных')}
         </div>
         <div className="schema-hint">
-          {__tr('Слайдов:')}
-          {slides.length} {__tr('· Наборов данных:')}
-          {models.length}
+          {__tr('Слайдов:')} {slides.length} {__tr('· Наборов данных:')} {models.length}
         </div>
       </div>
       {!activeSchema && (
@@ -291,8 +289,7 @@ export const GenerationPanel: React.FC = () => {
           ))}
           {warnings.length > 5 && (
             <div>
-              {__tr('…и ещё')}
-              {warnings.length - 5}
+              {__tr('…и ещё')} {warnings.length - 5}
             </div>
           )}
         </div>
@@ -305,8 +302,7 @@ export const GenerationPanel: React.FC = () => {
             style={{ display: 'flex', justifyContent: 'space-between' }}
           >
             <span>
-              {__tr('Поля:')}
-              {activeModel.name}
+              {__tr('Поля:')} {activeModel.name}
             </span>
             {saveStatus === 'saving' && (
               <span style={{ fontSize: 10, color: '#94a3b8' }}>💾...</span>
@@ -379,15 +375,13 @@ export const GenerationPanel: React.FC = () => {
       {phase === 'async-running' && job && (
         <div className="gen-progress" style={{ marginTop: 12 }}>
           <div>
-            {__tr('Прогресс:')}
-            {job.progress.completed} / {job.progress.total}
+            {__tr('Прогресс:')} {job.progress.completed} / {job.progress.total}
           </div>
           <progress value={job.progress.completed} max={job.progress.total} />
           {job.errors.length > 0 && (
             <details style={{ marginTop: 8 }}>
               <summary>
-                {__tr('Ошибок:')}
-                {job.errors.length}
+                {__tr('Ошибок:')} {job.errors.length}
               </summary>
               {job.errors.slice(0, 5).map((e, k) => (
                 <div key={k} style={{ fontSize: 11 }}>
@@ -400,8 +394,7 @@ export const GenerationPanel: React.FC = () => {
       )}
       {(phase === 'async-done' || phase === 'sync-done') && result && (
         <div className="gen-status done" style={{ marginTop: 12 }}>
-          {__tr('Готово:')}
-          {result.count}.{' '}
+          {__tr('Готово:')} {result.count}.{' '}
           <button className="dp-btn" onClick={() => downloadBlob(result.blob, result.filename)}>
             {__tr('Скачать')}
           </button>

@@ -387,8 +387,7 @@ export const DataPanel: React.FC = () => {
             onClick={() => setValuesOpen((v) => !v)}
           >
             <span>
-              {__tr('Значения:')}
-              {activeModel.name}
+              {__tr('Значения:')} {activeModel.name}
             </span>
             <span style={{ fontSize: 11 }}>{valuesOpen ? '▾' : '▸'}</span>
           </div>

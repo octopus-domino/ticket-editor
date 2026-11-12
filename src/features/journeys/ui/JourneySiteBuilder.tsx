@@ -10,6 +10,7 @@ import { useAddressAvailability } from './useAddressAvailability';
 import { AddressFeedback } from './AddressFeedback';
 import { Link } from 'react-router-dom';
 import { localizePresetDraft } from '../domain/localizePresetDraft';
+import { JourneyBrandingEditor } from './JourneyBrandingEditor';
 
 export function JourneySiteBuilder() {
   const [definition, setDefinition] = useLanguageDraft<JourneyDefinition>(
@@ -20,6 +21,7 @@ export function JourneySiteBuilder() {
   );
   const [preview, setPreview] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [mediaBusy, setMediaBusy] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState('');
   const [ownerLink, setOwnerLink] = useState('');
@@ -107,7 +109,9 @@ export function JourneySiteBuilder() {
                 type="button"
                 disabled={Boolean(editing)}
                 aria-pressed={definition.kind === value.kind}
-                onClick={() => setDefinition({ ...value, slug: definition.slug })}
+                onClick={() =>
+                  setDefinition({ ...value, slug: definition.slug, branding: definition.branding })
+                }
               >
                 <strong>{JOURNEY_CAPABILITIES[value.kind].label}</strong>
                 <span>{value.description}</span>
@@ -236,11 +240,25 @@ export function JourneySiteBuilder() {
             <option value="ink">{t('Чернила')}</option>
           </select>
         </fieldset>
+        <JourneyBrandingEditor
+          value={definition.branding ?? {}}
+          onBusyChange={setMediaBusy}
+          onChange={(branding) => setDefinition((value) => ({ ...value, branding }))}
+        />
         <div className="journey-builder-actions">
-          <button type="button" className="journey-secondary" onClick={() => setPreview(true)}>
+          <button
+            type="button"
+            className="journey-secondary"
+            disabled={mediaBusy}
+            onClick={() => setPreview(true)}
+          >
             {t('Предпросмотр')}
           </button>
-          <button type="submit" disabled={busy || !address.valid} className="journey-primary">
+          <button
+            type="submit"
+            disabled={busy || mediaBusy || !address.valid}
+            className="journey-primary"
+          >
             {busy ? t('Публикуем…') : editing ? t('Сохранить сайт') : t('Опубликовать сайт')} ↗
           </button>
         </div>
@@ -249,7 +267,9 @@ export function JourneySiteBuilder() {
           <section role="status">
             <h2>{t('Сайт готов')}</h2>
             <a href={result}>{result}</a>
-            <p><Link to="/app/publications">{t('My sites and documents')} ↗</Link></p>
+            <p>
+              <Link to="/app/publications">{t('My sites and documents')} ↗</Link>
+            </p>
             <p>{t('Ссылка управления — сохраните её отдельно:')}</p>
             <input
               aria-label={t('Управление сайтом')}

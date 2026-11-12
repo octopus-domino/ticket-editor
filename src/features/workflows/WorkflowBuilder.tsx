@@ -265,8 +265,7 @@ export default function WorkflowBuilder() {
           {draft.steps.map((step, si) => (
             <fieldset key={si}>
               <legend>
-                {t('Шаг')}
-                {si + 1}
+                {t('Шаг')} {si + 1}
               </legend>
               <label>
                 {t('Заголовок шага')}

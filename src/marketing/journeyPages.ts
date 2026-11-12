@@ -137,6 +137,59 @@ export const JOURNEY_PAGES = [
     actionLabel: t('Fill in the form'),
     kind: 'greetings',
   },
+  {
+    path: '/qr-business-cards/',
+    label: t('QR business cards'),
+    heading: t('QR business cards'),
+    description: t('Create a business card, print it and let people save your contact by QR.'),
+    action: '/start/cards',
+    actionLabel: t('Fill in the form'),
+    kind: 'cards',
+  },
+  {
+    path: '/product-labels/',
+    label: t('Product labels'),
+    heading: t('Product labels'),
+    description: t(
+      'Import products, add batch details and print labels on A4 with a QR for each product.',
+    ),
+    action: '/start/labels',
+    actionLabel: t('Fill in the form'),
+    kind: 'labels',
+  },
+  {
+    path: '/price-tags-with-reviews/',
+    label: t('Price tags with reviews'),
+    heading: t('Price tags with reviews'),
+    description: t(
+      'Make printable price tags. Customers scan the QR, leave a rating and you see the feedback.',
+    ),
+    action: '/start/price-tags',
+    actionLabel: t('Fill in the form'),
+    kind: 'price-tags',
+  },
+  {
+    path: '/property-cards/',
+    label: t('Property cards'),
+    heading: t('Property cards'),
+    description: t(
+      'Add a property photo and details. Share one page, a PDF and a QR for viewings.',
+    ),
+    action: '/start/properties',
+    actionLabel: t('Fill in the form'),
+    kind: 'properties',
+  },
+  {
+    path: '/travel-itineraries/',
+    label: t('Travel itineraries'),
+    heading: t('Travel itineraries'),
+    description: t(
+      'Choose stops by address, add a travel program and share a personal PDF with a route map.',
+    ),
+    action: '/start/tours',
+    actionLabel: t('Fill in the form'),
+    kind: 'tours',
+  },
 ] as const;
 
 export const JOURNEY_STEPS = [

@@ -1,10 +1,11 @@
 import { t } from '@/shared/i18n';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { API_BASE } from '@/shared/api/client';
 import { sanitizeSvg } from '@/lib/svg/sanitize';
-import type { JourneyDocument } from '../domain/definitions';
+import type { JourneyDocument, JourneyDefinition } from '../domain/definitions';
 import { normalizedProposalData } from '../domain/proposal';
 import { JourneyButton } from './JourneyButton';
+import { lessons } from '../domain/schedule';
 
 interface Artwork {
   pages: { width: number; height: number; svg: string }[];
@@ -25,12 +26,19 @@ const fonts = faces
   .join('');
 
 /** Browser artwork is rendered from the server's PDF composition, never a separate HTML template. */
-export function JourneyArtwork({ document }: { document: Document }) {
+export function JourneyArtwork({
+  document,
+  definition,
+}: {
+  document: Document;
+  definition?: JourneyDefinition;
+}) {
   const [artwork, setArtwork] = useState<Artwork | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(true);
   const [retry, setRetry] = useState(0);
   const [selectedPage, setSelectedPage] = useState(0);
+  const requested = useRef(false);
   const isProposal = document.kind === 'PROPOSAL';
   let data = document.data,
     valid = true;
@@ -40,11 +48,13 @@ export function JourneyArtwork({ document }: { document: Document }) {
     } catch {
       valid = false;
     }
+  if (document.kind === 'SCHEDULE') valid = lessons(data.events ?? '[]').length > 0;
   const payload = JSON.stringify({
     id: document.id,
     kind: document.kind,
     title: document.title || (isProposal ? t('Коммерческое предложение') : t('Приглашение')),
     data,
+    ...(definition ? { definition } : {}),
   });
   useEffect(() => {
     if (!valid) {
@@ -58,6 +68,7 @@ export function JourneyArtwork({ document }: { document: Document }) {
     setError('');
     const timer = window.setTimeout(
       () => {
+        requested.current = true;
         void fetch(`${API_BASE}/api/journeys/artwork`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -77,13 +88,15 @@ export function JourneyArtwork({ document }: { document: Document }) {
             if (!Array.isArray(value.pages) || !value.pages.length)
               throw new Error(t('Не удалось прочитать макет.'));
             await Promise.all(
-              (isProposal ? faces.slice(0, 2) : faces).map(async ([family, style, weight]) => {
-                const loaded = await window.document.fonts.load(
-                  `${style} ${weight} 19px "${family}"`,
-                );
-                if (!loaded.length)
-                  throw new Error(t('Не удалось загрузить шрифты документа. Повторите попытку.'));
-              }),
+              (['INVITATION', 'TICKET'].includes(document.kind) ? faces : faces.slice(0, 2)).map(
+                async ([family, style, weight]) => {
+                  const loaded = await window.document.fonts.load(
+                    `${style} ${weight} 19px "${family}"`,
+                  );
+                  if (!loaded.length)
+                    throw new Error(t('Не удалось загрузить шрифты документа. Повторите попытку.'));
+                },
+              ),
             );
             if (controller.signal.aborted) return;
             setArtwork({
@@ -98,13 +111,13 @@ export function JourneyArtwork({ document }: { document: Document }) {
             }
           });
       },
-      document.id ? 0 : 300,
+      document.id && !requested.current ? 0 : 300,
     );
     return () => {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [payload, retry, document.id, isProposal, valid]);
+  }, [payload, retry, document.id, document.kind, isProposal, valid]);
   const currentPage = Math.min(selectedPage, (artwork?.pages.length ?? 1) - 1);
   const visiblePages = isProposal
     ? artwork?.pages.slice(currentPage, currentPage + 1)
@@ -137,13 +150,17 @@ export function JourneyArtwork({ document }: { document: Document }) {
         <>
           {!valid && (
             <div className="journey-artwork-loading">
-              <strong>{t('Ваше коммерческое предложение')}</strong>
-              <p>{t('Добавьте позиции и проверьте значения — здесь появится готовый макет.')}</p>
+              <strong>{isProposal ? t('Ваше коммерческое предложение') : t('ПРЕДПРОСМОТР')}</strong>
+              <p>
+                {isProposal
+                  ? t('Добавьте позиции и проверьте значения — здесь появится готовый макет.')
+                  : t('Fill in the form')}
+              </p>
             </div>
           )}
           {!artwork && valid && (
             <div className="journey-artwork-loading" role="status">
-              {isProposal ? t('Готовим коммерческое предложение…') : t('Готовим приглашение…')}
+              {t('Готовим…')}
             </div>
           )}
           {isProposal && artwork && artwork.pages.length > 1 && (
@@ -162,8 +179,7 @@ export function JourneyArtwork({ document }: { document: Document }) {
                 >
                   {artwork.pages.map((_, index) => (
                     <option key={index} value={index}>
-                      {index + 1} {t('из')}
-                      {artwork.pages.length}
+                      {index + 1} {t('из')} {artwork.pages.length}
                     </option>
                   ))}
                 </select>
@@ -180,8 +196,8 @@ export function JourneyArtwork({ document }: { document: Document }) {
             <div
               key={index}
               className="journey-artwork-page"
-              aria-hidden="true"
               aria-label={t('Страница {0}', index + 1)}
+              style={{ maxWidth: page.width }}
               dangerouslySetInnerHTML={{ __html: page.svg }}
             />
           ))}

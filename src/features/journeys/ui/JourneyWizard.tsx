@@ -1,6 +1,6 @@
 import { useLanguageDraft } from './useLanguageDraft';
-import { t } from '@/shared/i18n';
-import { useState } from 'react';
+import { t, getLocale } from '@/shared/i18n';
+import { lazy, Suspense, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { CreatedJourney, JourneyDefinition } from '../domain/definitions';
 import { journeyApi, managementUrl, pdfUrl, publicUrl, rememberKey } from '../api/journeys';
@@ -13,6 +13,12 @@ import { ScheduleEditor } from './ScheduleEditor';
 import { lessons } from '../domain/schedule';
 import { BatchRecipientsEditor } from './BatchRecipientsEditor';
 import { ProposalActionBar } from './ProposalActionBar';
+import { JourneyBrandingEditor } from './JourneyBrandingEditor';
+import { readBranding } from '../domain/branding';
+import { JourneyPrintSize } from './JourneyPrintSize';
+const RouteEditor = lazy(() =>
+  import('./RouteEditor').then((module) => ({ default: module.RouteEditor })),
+);
 
 export function JourneyWizard({
   definition,
@@ -40,8 +46,12 @@ export function JourneyWizard({
     `wizard:${definition.slug}:data`,
     {
       theme: definition.theme,
+      branding: JSON.stringify(definition.branding ?? {}),
       ...(definition.kind === 'SCHEDULE' ? { timezone: 'Europe/Moscow', events: '[]' } : {}),
-      ...(definition.kind === 'PROPOSAL' ? { currency: 'RUB', positions: '[]' } : {}),
+      ...(['PROPOSAL', 'PRICETAG', 'PROPERTY'].includes(definition.kind)
+        ? { currency: 'RUB' }
+        : {}),
+      ...(definition.kind === 'PROPOSAL' ? { positions: '[]' } : {}),
       ...(custom ? { site: definition.slug } : {}),
     },
   );
@@ -51,6 +61,29 @@ export function JourneyWizard({
     [],
   );
   const [busy, setBusy] = useState(false);
+  const preparedData = {
+    ...data,
+    branding: data.branding ?? JSON.stringify(definition.branding ?? {}),
+    ...(definition.kind === 'TOUR'
+      ? {
+          route_labels: JSON.stringify({
+            stop: t('Stop'),
+            car: t('Drive'),
+            foot: t('Walk'),
+            flight: t('Flight'),
+            waiting: t('Waiting'),
+            checkin: t('Check-in and security'),
+            baggage: t('Baggage and arrival formalities'),
+          }),
+        }
+      : {}),
+    field_labels: JSON.stringify(
+      Object.fromEntries(definition.fields.map((field) => [field.name, field.label])),
+    ),
+    locale: getLocale(),
+  };
+  const [mediaBusy, setMediaBusy] = useState(false);
+  const [routeBusy, setRouteBusy] = useState(false);
   const [error, setError] = useState('');
   const [created, setCreated] = useLanguageDraft<CreatedJourney[]>(
     `wizard:${definition.slug}:created`,
@@ -67,7 +100,7 @@ export function JourneyWizard({
       const result = await journeyApi.create(
         definition.kind,
         title,
-        data,
+        preparedData,
         JOURNEY_CAPABILITIES[definition.kind].batch
           ? names
               .split('\n')
@@ -132,6 +165,10 @@ export function JourneyWizard({
                   }
                 }
                 setError('');
+                if (definition.kind === 'TOUR' && !data.route) {
+                  setError(t('Save the route before continuing to the document.'));
+                  return;
+                }
                 setStep(1);
               }}
             >
@@ -153,6 +190,7 @@ export function JourneyWizard({
                         <textarea
                           required={
                             field.required &&
+                            !(field.name === 'recipient' && names.trim()) &&
                             !(rows.length > 0 && rows.every((row) => Boolean(row[field.name])))
                           }
                           maxLength={12000}
@@ -166,6 +204,7 @@ export function JourneyWizard({
                           type={field.type}
                           required={
                             field.required &&
+                            !(field.name === 'recipient' && names.trim()) &&
                             !(rows.length > 0 && rows.every((row) => Boolean(row[field.name])))
                           }
                           maxLength={300}
@@ -177,8 +216,19 @@ export function JourneyWizard({
                       )}
                     </label>
                   ))}
+                  {['VCARD', 'LABEL', 'PRICETAG'].includes(definition.kind) && (
+                    <JourneyPrintSize
+                      kind={definition.kind}
+                      data={data}
+                      onChange={(patch) => setData((value) => ({ ...value, ...patch }))}
+                    />
+                  )}
                   {JOURNEY_CAPABILITIES[definition.kind].batch && (
                     <BatchRecipientsEditor
+                      singleRecipient={
+                        data.recipient || (definition.kind === 'TOUR' ? title : undefined)
+                      }
+                      products={['LABEL', 'PRICETAG'].includes(definition.kind)}
                       names={names}
                       fields={definition.fields}
                       onChange={(names, rows) => {
@@ -200,6 +250,15 @@ export function JourneyWizard({
                       onChange={(positions) => setData((value) => ({ ...value, positions }))}
                     />
                   )}
+                  {definition.kind === 'TOUR' && (
+                    <Suspense fallback={<p>{t('Loading map…')}</p>}>
+                      <RouteEditor
+                        value={data.route ?? ''}
+                        onBusyChange={setRouteBusy}
+                        onChange={(route) => setData((value) => ({ ...value, route }))}
+                      />
+                    </Suspense>
+                  )}
                   <fieldset className="journey-theme">
                     <legend>{t('Оформление')}</legend>
                     {(['sage', 'rose', 'ink'] as const).map((theme) => (
@@ -219,10 +278,20 @@ export function JourneyWizard({
                       />
                     ))}
                   </fieldset>
+                  <JourneyBrandingEditor
+                    onBusyChange={setMediaBusy}
+                    value={readBranding(data.branding ?? JSON.stringify(definition.branding ?? {}))}
+                    onChange={(branding) =>
+                      setData((value) => ({ ...value, branding: JSON.stringify(branding) }))
+                    }
+                  />
                   <ProposalActionBar data={definition.kind === 'PROPOSAL' ? data : undefined}>
-                    <button className="journey-primary" type="submit">
-                      {t('Посмотреть результат')}
-                      <span>↗</span>
+                    <button
+                      className="journey-primary"
+                      type="submit"
+                      disabled={mediaBusy || routeBusy}
+                    >
+                      {t('Посмотреть результат')} <span>↗</span>
                     </button>
                   </ProposalActionBar>
                 </>
@@ -261,11 +330,12 @@ export function JourneyWizard({
             <span>{t('ПРЕДПРОСМОТР')}</span>
             <JourneyCard
               compact
+              definition={custom && previewOnly ? definition : undefined}
               document={{
                 kind: definition.kind,
                 title,
                 data: {
-                  ...data,
+                  ...preparedData,
                   ...(names ? { recipient: names.split('\n')[0] } : {}),
                   ...rows[0],
                 },

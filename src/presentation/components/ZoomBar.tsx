@@ -11,8 +11,12 @@ interface Props {
 }
 
 export const ZoomBar: React.FC<Props> = ({
-  zoom, onChange, selectedCount, fillMode,
-  dataHighlight, onToggleDataHighlight,
+  zoom,
+  onChange,
+  selectedCount,
+  fillMode,
+  dataHighlight,
+  onToggleDataHighlight,
 }) => (
   <div className="zoom-bar">
     <button onClick={() => onChange(Math.max(0.2, +(zoom - 0.1).toFixed(2)))}>−</button>
@@ -20,17 +24,24 @@ export const ZoomBar: React.FC<Props> = ({
     <button onClick={() => onChange(Math.min(10, +(zoom + 0.1).toFixed(2)))}>+</button>
     <button onClick={() => onChange(1)}>100%</button>
     {typeof selectedCount === 'number' && selectedCount > 1 && (
-      <span className="style-badge">{__tr("Выбрано:")}{selectedCount}</span>
+      <span className="style-badge">
+        {__tr('Выбрано:')} {selectedCount}
+      </span>
     )}
-    {fillMode && <span className="style-badge">{__tr("🎨 Заливка")}</span>}
+    {fillMode && <span className="style-badge">{__tr('🎨 Заливка')}</span>}
     {onToggleDataHighlight && (
       <button
         onClick={onToggleDataHighlight}
         className={dataHighlight ? 'active' : ''}
-        title={__tr("Показать, где на холсте используются данные")}
-        style={dataHighlight ? { background: '#eef2ff', borderColor: '#6366f1', color: '#4f46e5' } : undefined}
+        title={__tr('Показать, где на холсте используются данные')}
+        style={
+          dataHighlight
+            ? { background: '#eef2ff', borderColor: '#6366f1', color: '#4f46e5' }
+            : undefined
+        }
       >
-        {__tr("🏷 Данные")}</button>
+        {__tr('🏷 Данные')}
+      </button>
     )}
   </div>
 );

@@ -1,54 +1,21 @@
 import { t } from '@/shared/i18n';
-export type JourneyKind =
-  | 'INVITATION'
-  | 'CERTIFICATE'
-  | 'MENU'
-  | 'PROPOSAL'
-  | 'TICKET'
-  | 'GIFT'
-  | 'BADGE'
-  | 'PASS'
-  | 'RESUME'
-  | 'SCHEDULE'
-  | 'GREETING';
-export interface JourneyField {
-  name: string;
-  label: string;
-  type: 'text' | 'textarea' | 'date' | 'time';
-  required: boolean;
-}
-export interface JourneyDefinition {
-  slug: string;
-  kind: JourneyKind;
-  title: string;
-  description: string;
-  theme: 'sage' | 'rose' | 'ink';
-  fields: JourneyField[];
-}
-export interface JourneyDocument {
-  id: string;
-  kind: JourneyKind;
-  title: string;
-  data: Record<string, string>;
-  updatedAt: string;
-}
-export interface CreatedJourney {
-  document: JourneyDocument;
-  managementKey: string;
-  batchId?: string;
-}
-export interface JourneyStatus {
-  state: 'ACTIVE' | 'USED' | 'EXPIRED' | 'REVOKED';
-  usedAt: string | null;
-  validUntil: string;
-  consumable: boolean;
-}
-export interface JourneyBatch {
-  id: string;
-  title: string;
-  documents: { document: JourneyDocument; status: JourneyStatus }[];
-}
+import { extraJourneyPresets } from './extraPresets';
+import type { JourneyDefinition, JourneyField, JourneyKind } from './types';
+export type {
+  JourneyKind,
+  JourneyField,
+  JourneyDefinition,
+  JourneyDocument,
+  CreatedJourney,
+  JourneyStatus,
+  JourneyBatch,
+} from './types';
 export const JOURNEY_CAPABILITIES: Record<JourneyKind, { label: string; batch: boolean }> = {
+  VCARD: { label: t('QR business cards'), batch: true },
+  LABEL: { label: t('Product labels'), batch: true },
+  PRICETAG: { label: t('Price tags with reviews'), batch: true },
+  PROPERTY: { label: t('Property cards'), batch: false },
+  TOUR: { label: t('Travel itineraries'), batch: true },
   INVITATION: { label: t('Приглашение + RSVP'), batch: false },
   CERTIFICATE: { label: t('Сертификат + проверка'), batch: true },
   MENU: { label: t('QR-меню'), batch: false },
@@ -74,6 +41,7 @@ const field = (
 ): JourneyField => ({ name, label, type, required });
 export function journeyPresets(translate: typeof t = t): Record<string, JourneyDefinition> {
   return {
+    ...extraJourneyPresets(translate),
     tickets: {
       slug: 'tickets',
       kind: 'TICKET',

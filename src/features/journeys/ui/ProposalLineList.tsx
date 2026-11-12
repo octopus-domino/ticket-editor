@@ -48,8 +48,7 @@ export function ProposalLineList({
       <div className="proposal-lines-toolbar">
         <div>
           <strong>
-            {t('Позиций:')}
-            {items.length}
+            {t('Позиций:')} {items.length}
           </strong>
           <small>{t('До 200 товаров и услуг')}</small>
         </div>
@@ -165,8 +164,7 @@ export function ProposalLineList({
               <select value={current} onChange={(e) => changePage(Number(e.target.value))}>
                 {Array.from({ length: pages }, (_, i) => (
                   <option value={i} key={i}>
-                    {i + 1} {t('из')}
-                    {pages}
+                    {i + 1} {t('из')} {pages}
                   </option>
                 ))}
               </select>
@@ -175,10 +173,8 @@ export function ProposalLineList({
               {t('Далее →')}
             </JourneyButton>
             <small>
-              {t('Показано')}
-              {visible.length ? current * PAGE_SIZE + 1 : 0}–
-              {Math.min((current + 1) * PAGE_SIZE, filtered.length)} {t('из')}
-              {filtered.length}
+              {t('Показано')} {visible.length ? current * PAGE_SIZE + 1 : 0}–
+              {Math.min((current + 1) * PAGE_SIZE, filtered.length)} {t('из')} {filtered.length}
             </small>
           </nav>
         </>

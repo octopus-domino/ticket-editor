@@ -22,8 +22,7 @@ export function ProposalActionBar({
       <div className="proposal-action-bar-inner">
         <div className="proposal-action-summary">
           <span>
-            {t('Позиций:')}
-            {items.length}
+            {t('Позиций:')} {items.length}
           </span>
           <strong>{total}</strong>
         </div>

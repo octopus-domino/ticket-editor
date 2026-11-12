@@ -20,7 +20,7 @@ export const EmailSendModal: React.FC = () => {
   const [bcc, setBcc] = useState('');
   const [from, setFrom] = useState('');
   const [replyTo, setReplyTo] = useState('');
-  const [subject, setSubject] = useState(__tr("Документ от CoDoc"));
+  const [subject, setSubject] = useState(__tr('Документ от CoDoc'));
 
   useEffect(() => {
     if (modal !== 'send') return;
@@ -29,12 +29,12 @@ export const EmailSendModal: React.FC = () => {
     setBcc('');
     setFrom('');
     setReplyTo('');
-    setSubject(__tr("Документ от CoDoc"));
+    setSubject(__tr('Документ от CoDoc'));
   }, [modal]);
 
   if (modal !== 'send' || !slides) return null;
 
-  const slideName = slides.length > 0 ? slides[0].name : __tr("без названия");
+  const slideName = slides.length > 0 ? slides[0].name : __tr('без названия');
 
   const parseEmails = (v: string): string[] =>
     v
@@ -73,9 +73,9 @@ export const EmailSendModal: React.FC = () => {
       <div className="email-modal email-modal--narrow" onMouseDown={(e) => e.stopPropagation()}>
         <header className="email-modal-head">
           <div>
-            <h3 style={{ margin: 0 }}>{__tr("📤 Отправить по email")}</h3>
+            <h3 style={{ margin: 0 }}>{__tr('📤 Отправить по email')}</h3>
             <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>
-              {__tr("Слайд:")}<b style={{ color: '#475569' }}>{slideName}</b>
+              {__tr('Слайд:')} <b style={{ color: '#475569' }}>{slideName}</b>
             </div>
           </div>
           <button className="email-modal-close" onClick={() => emailStore.close()} disabled={busy}>
@@ -86,16 +86,20 @@ export const EmailSendModal: React.FC = () => {
         {done ? (
           <div className="email-send-done">
             <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
-            <h3 style={{ margin: '0 0 8px' }}>{__tr("Письмо передано почтовому серверу")}</h3>
+            <h3 style={{ margin: '0 0 8px' }}>{__tr('Письмо передано почтовому серверу')}</h3>
             <p style={{ color: '#64748b', fontSize: 13, margin: '0 0 20px' }}>
-              {__tr("Доставка может занять некоторое время. Если письма нет у получателя, проверьте папку «Спам».")}</p>
+              {__tr(
+                'Доставка может занять некоторое время. Если письма нет у получателя, проверьте папку «Спам».',
+              )}
+            </p>
             <button className="toolbar-btn primary" onClick={() => emailStore.close()}>
-              {__tr("Готово")}</button>
+              {__tr('Готово')}
+            </button>
           </div>
         ) : (
           <form className="email-form" onSubmit={submit}>
             <label>
-              <span>{__tr("Кому")}</span>
+              <span>{__tr('Кому')}</span>
               <input
                 type="text"
                 value={to}
@@ -107,7 +111,7 @@ export const EmailSendModal: React.FC = () => {
             </label>
 
             <label>
-              <span>{__tr("Тема")}</span>
+              <span>{__tr('Тема')}</span>
               <input
                 type="text"
                 value={subject}
@@ -118,37 +122,37 @@ export const EmailSendModal: React.FC = () => {
 
             <div className="email-form-row">
               <label>
-                <span>{__tr("Копия")}</span>
+                <span>{__tr('Копия')}</span>
                 <input
                   type="text"
                   value={cc}
                   onChange={(e) => setCc(e.target.value)}
-                  placeholder={__tr("необязательно")}
+                  placeholder={__tr('необязательно')}
                 />
               </label>
               <label>
-                <span>{__tr("Скрытая копия")}</span>
+                <span>{__tr('Скрытая копия')}</span>
                 <input
                   type="text"
                   value={bcc}
                   onChange={(e) => setBcc(e.target.value)}
-                  placeholder={__tr("необязательно")}
+                  placeholder={__tr('необязательно')}
                 />
               </label>
             </div>
 
             <div className="email-form-row">
               <label>
-                <span>{__tr("От кого (необязательно)")}</span>
+                <span>{__tr('От кого (необязательно)')}</span>
                 <input
                   type="email"
                   value={from}
                   onChange={(e) => setFrom(e.target.value)}
-                  placeholder={__tr("Адрес по умолчанию")}
+                  placeholder={__tr('Адрес по умолчанию')}
                 />
               </label>
               <label>
-                <span>{__tr("Адрес для ответа")}</span>
+                <span>{__tr('Адрес для ответа')}</span>
                 <input
                   type="email"
                   value={replyTo}
@@ -171,7 +175,12 @@ export const EmailSendModal: React.FC = () => {
                   borderRadius: 6,
                 }}
               >
-                {__tr("⚠️ Модель не выбрана — плейсхолдеры")}<code>{'{{...}}'}</code> {__tr("останутся в письме. Выберите модель в панели «Данные», если хотите заполнить.")}</div>
+                {__tr('⚠️ Модель не выбрана — плейсхолдеры')}
+                <code>{'{{...}}'}</code>{' '}
+                {__tr(
+                  'останутся в письме. Выберите модель в панели «Данные», если хотите заполнить.',
+                )}
+              </div>
             )}
 
             <div className="email-form-actions">
@@ -181,14 +190,18 @@ export const EmailSendModal: React.FC = () => {
                 onClick={() => emailStore.close()}
                 disabled={busy}
               >
-                {__tr("Отмена")}</button>
+                {__tr('Отмена')}
+              </button>
               <button type="submit" className="toolbar-btn primary" disabled={busy || !to.trim()}>
-                {busy ? __tr("Отправка…") : __tr("Отправить")}
+                {busy ? __tr('Отправка…') : __tr('Отправить')}
               </button>
             </div>
 
             <p className="email-hint">
-              {__tr("Если меняете отправителя, используйте адрес, разрешённый вашим почтовым сервисом. Для ответов на другой ящик укажите «Адрес для ответа».")}</p>
+              {__tr(
+                'Если меняете отправителя, используйте адрес, разрешённый вашим почтовым сервисом. Для ответов на другой ящик укажите «Адрес для ответа».',
+              )}
+            </p>
           </form>
         )}
       </div>

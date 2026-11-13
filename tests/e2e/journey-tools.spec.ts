@@ -306,6 +306,28 @@ test('nearby visits create a daytime plan and enter the route only when requeste
   await expect(stops).toHaveCount(2);
 });
 
+test('historic buildings can be searched and saved as a separate walk on a phone',async({page})=>{
+  test.setTimeout(90000);await page.setViewportSize({width:390,height:844});
+  await page.addInitScript(()=>localStorage.setItem('codoc:language','en'));
+  const state=await mockApi(page);let query='';
+  await page.route('**/api/journeys/buildings/nearby?*',route=>{
+    query=new URL(route.request().url()).searchParams.get('q')??'';
+    return route.fulfill({json:[{id:101,address:'Historic house',longitude:13.4002,latitude:52.5002,constructionYear:1860,architect:'Fixture architect',style:'Classicism',sourceUrl:'https://example.org/house'}]});
+  });
+  await page.route('**/api/journeys/routes/places/themed/enrich?*',route=>route.fulfill({json:[]}));
+  await page.goto('/start/tours');const stops=page.locator('.route-stops > li');
+  await stops.nth(1).getByRole('combobox',{name:'Address',exact:true}).fill('Museum Berlin');
+  await page.getByRole('option',{name:'Berlin Museum'}).getByRole('button').click();
+  const panel=stops.nth(1).locator('.route-place-panel');await panel.locator(':scope > summary').click();
+  await panel.getByLabel('Walk theme',{exact:true}).selectOption('buildings');
+  await panel.getByLabel('Address, architect or style').fill('Fixture architect');
+  await panel.getByRole('button',{name:'Generate a walking map',exact:true}).click();
+  await expect(panel.locator('.route-walk-print')).toBeVisible({timeout:30000});
+  expect(query).toBe('Fixture architect');expect(state.snapshot.stops[1].description).toContain('1860');
+  expect(state.snapshot.stops[1].meta.source).toBe('HOITH');expect(state.snapshot.stops[1].meta.architect).toBe('Fixture architect');
+  await expect(stops).toHaveCount(2);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+});
+
 test('themed walks preserve the trip and print seven numbered photographs on a phone',async({page})=>{
   test.setTimeout(90000);await page.setViewportSize({width:390,height:844});
   await page.addInitScript(()=>localStorage.setItem('codoc:language','en'));

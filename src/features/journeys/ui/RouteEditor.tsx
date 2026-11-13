@@ -18,6 +18,7 @@ import type { RouteMapHandle } from './RouteMap';
 import './route.css';
 import { RoutePlacePanel } from './RoutePlacePanel';
 import { routePointCaption } from './routePointCaption';
+import { YandexPlaceMap } from '../yandex/YandexPlaceMap';
 
 const RouteMap = lazy(() => import('./RouteMap').then((module) => ({ default: module.RouteMap })));
 const emptyStop = (): RouteStop => ({
@@ -54,6 +55,8 @@ export const RouteEditor = forwardRef<RouteEditorHandle, { value: string; onChan
   const [pointName, setPointName] = useState('');
   const pickPanel = useRef<HTMLDivElement>(null);
   const map = useRef<RouteMapHandle | null>(null);
+  const [yandexActive,setYandexActive]=useState(false);
+  const yandexCenter=useRef<{longitude:number;latitude:number}|null>(null);
   const loaded = useRef('');
   const running = useRef<Promise<string> | null>(null);
   const busyRef = useRef(false);
@@ -408,7 +411,7 @@ export const RouteEditor = forwardRef<RouteEditorHandle, { value: string; onChan
           <label>{t('Point name (optional)')}<input maxLength={180} value={pointName} onChange={event => setPointName(event.target.value)} /></label>
           <div className="route-actions">
             <button type="button" onClick={() => {
-              const point = map.current?.center();
+              const point = yandexActive ? yandexCenter.current : map.current?.center();
               if (point && Math.abs(point.latitude) <= 85) setPickedPoint(point);
             }}>{t('Use map center')}</button>
             <button type="button" disabled={!pickedPoint} onClick={() => {
@@ -422,6 +425,10 @@ export const RouteEditor = forwardRef<RouteEditorHandle, { value: string; onChan
           {pickedPoint && <output>{pickedPoint.latitude.toFixed(5)}, {pickedPoint.longitude.toFixed(5)}</output>}
         </fieldset>
       )}
+      <YandexPlaceMap center={[stops[0]?.longitude??37.62,stops[0]?.latitude??55.75]} points={[]} stops={stops.filter(stop=>Boolean(stop.label))} legs={legs}
+        onSelect={()=>{}} onModeChange={setYandexActive} onCenter={point=>{yandexCenter.current=point;}}
+        onPick={pickingStop&&!busy?setPickedPoint:undefined} pickedPoint={pickingStop?pickedPoint:null} />
+      <div style={yandexActive?{height:0,overflow:'hidden'}:undefined}>
       <Suspense fallback={<p role="status">{t('Loading map…')}</p>}>
         <RouteMap
           stops={stops.filter((stop) => stop.label)}
@@ -433,6 +440,7 @@ export const RouteEditor = forwardRef<RouteEditorHandle, { value: string; onChan
           }}
         />
       </Suspense>
+      </div>
       </div>
       {rows.length > 0 && (
         <ol className="route-timeline">

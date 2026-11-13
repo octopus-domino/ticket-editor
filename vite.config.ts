@@ -58,6 +58,7 @@ export default defineConfig({
     sourcemap: process.env.VITE_BUILD_SOURCEMAP !== 'false',
     chunkSizeWarningLimit: 600,
     rollupOptions: {
+      input: { app: path.resolve(ROOT,'index.html'), mapFrame: path.resolve(ROOT,'map-frame.html') },
       output: {
         manualChunks: {
           'react-vendor': ['react', 'react-dom'],

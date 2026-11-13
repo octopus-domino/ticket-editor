@@ -5,7 +5,8 @@ import { JOURNEY_PAGES } from './journeyPages';
 import './solutions-menu.css';
 
 export const SOLUTION_GROUPS = [
-  { label: () => t('Events and people'), kinds: ['courses', 'invite', 'tickets', 'certificates', 'badges', 'greetings', 'gifts', 'albums'] },
+  { label: () => t('Personal events'), kinds: ['invite', 'tickets', 'greetings', 'gifts', 'albums'] },
+  { label: () => t('Education'), kinds: ['courses', 'certificates', 'badges'] },
   { label: () => t('Work and business'), kinds: ['business', 'proposals', 'cards', 'labels', 'price-tags', 'menu', 'passes', 'properties'] },
   { label: () => t('Everyday plans'), kinds: ['tours', 'schedule', 'resume', 'poetry'] },
 ];

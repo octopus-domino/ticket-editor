@@ -8,6 +8,7 @@ import { RouteWalk, type RouteWalkHandle } from './RouteWalk';
 import { RouteAddressInput, type RouteAddress } from './RouteAddressInput';
 import { placePhotos } from '../api/placePhotos';
 import { timedCityWalk } from '../domain/timedCityWalk';
+import { YandexPlaceMap } from '../yandex/YandexPlaceMap';
 
 export function RoutePlacePanel({ stop, onNotes, onAdd, onWalkChange, onWalkBusy, visitDate }: {
   stop: RouteStop; onNotes: (notes: string) => void; onAdd: (address: RouteAddress) => void;
@@ -15,8 +16,10 @@ export function RoutePlacePanel({ stop, onNotes, onAdd, onWalkChange, onWalkBusy
 }) {
   const [kind, setKind] = useState<'hotels' | 'attractions'>('attractions');
   const [theme,setTheme]=useState(''),[visitTime,setVisitTime]=useState('09:00');
+  const [buildingQuery,setBuildingQuery]=useState('');
   const [places, setPlaces] = useState<RecommendedPlace[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
+  const [focusedId,setFocusedId]=useState<string>();
   const [available, setAvailable] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false), [error, setError] = useState('');
   const [date, setDate] = useState(visitDate);
@@ -25,19 +28,39 @@ export function RoutePlacePanel({ stop, onNotes, onAdd, onWalkChange, onWalkBusy
   const [visits, setVisits] = useState<CityVisit[]>([]);
   const [skipped, setSkipped] = useState<RecommendedPlace[]>([]);
   const [describing,setDescribing]=useState('');
-  const [, setLegs] = useState<PlannedLeg[]>([]);
+  const [legs, setLegs] = useState<PlannedLeg[]>([]);
+  const [mapStops,setMapStops]=useState<RouteStop[]>([]);
   const controller = useRef<AbortController | null>(null);
   const active = useRef(false);
   const walkBusyCallback = useRef(onWalkBusy); walkBusyCallback.current = onWalkBusy;
   const walk = useRef<RouteWalkHandle>(null);
+  const selectPlace=(id:string,checked?:boolean)=>{
+    if(busy||!places.some(place=>place.id===id))return;
+    setFocusedId(id);
+    setSelected(ids=>{
+      const include=checked??!ids.includes(id);
+      return include?ids.includes(id)||ids.length>=(theme?10:5)?ids:[...ids,id]:ids.filter(item=>item!==id);
+    });
+    setVisits([]);setLegs([]);setMapStops([]);setSkipped([]);
+  };
   useEffect(() => {
     setBusy(false);
-    setPlaces([]); setSelected([]); setAvailable(null); setVisits([]); setLegs([]); setSkipped([]); setError('');
+    setPlaces([]); setSelected([]); setAvailable(null); setVisits([]); setLegs([]);setMapStops([]); setSkipped([]); setError('');
     return () => { controller.current?.abort(); active.current = false; walkBusyCallback.current(false); };
   }, [stop.longitude, stop.latitude]);
   useEffect(() => { if (visitDate) setDate(visitDate); }, [visitDate]);
   const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:stop.zone}).format(new Date());
   const discover = (kind: string, signal: AbortSignal) => {
+    if(theme==='buildings'&&kind==='attractions'){
+      const params=new URLSearchParams({lon:String(stop.longitude),lat:String(stop.latitude),limit:'7',q:buildingQuery});
+      return journeyRequest<{id:number;address:string;longitude:number;latitude:number;constructionYear?:number;architect?:string;style?:string;sourceUrl?:string}[]>(
+        `/api/journeys/buildings/nearby?${params}`,{signal}).then(rows=>({available:true,source:'HOITH',places:rows.map((row):RecommendedPlace=>({
+          id:`building-${row.id}`,label:row.address?.slice(0,180)||t('Historic building'),longitude:row.longitude,latitude:row.latitude,
+          url:row.sourceUrl||'https://disk.yandex.ru/d/6rI165UaOpvG0A',source:'HOITH',
+          description:[row.constructionYear?`${t('Year built')}: ${row.constructionYear}`:'',row.architect?`${t('Architect')}: ${row.architect}`:'',row.style?`${t('Architectural style')}: ${row.style}`:''].filter(Boolean).join(' · '),
+          meta:{source:'HOITH',theme:'buildings',...(row.constructionYear?{construction_year:String(row.constructionYear)}:{}),...(row.architect?{architect:row.architect}:{}),...(row.style?{style:row.style}:{})},
+        }))}));
+    }
     const query=new URLSearchParams({longitude:String(stop.longitude),latitude:String(stop.latitude),kind,language:getLocale()});
     if(theme&&kind==='attractions'){
       query.set('theme',theme);query.set('maxStops','7');query.set('visitTime',`${date||visitDate||today()}T${visitTime}`);
@@ -90,6 +113,7 @@ export function RoutePlacePanel({ stop, onNotes, onAdd, onWalkChange, onWalkBusy
         roads.push({ ...road, mode: 'foot' }); current = next;
       }
       const origin = { ...stop, walkId: undefined, stayMinutes: 0 };
+      setLegs(roads);setMapStops([origin,...added]);
       const photos = await photosFor(candidates,added.slice(0,candidates.length),abort.signal);
       for(const photo of photos){const point=added.find(item=>item.id===photo.stopId);if(point?.meta)point.meta={...point.meta,photo_image_id:photo.imageId};}
       if (!abort.signal.aborted) await walk.current?.save([origin, ...added], roads, `${date || visitDate || today()}T${theme?visitTime:'09:00'}`, abort.signal, photos);
@@ -137,8 +161,10 @@ export function RoutePlacePanel({ stop, onNotes, onAdd, onWalkChange, onWalkBusy
       <label>{t('Walk theme')}<select aria-label={t('Walk theme')} value={theme} onChange={event=>{setTheme(event.target.value);setPlaces([]);setSelected([]);setVisits([]);setSkipped([]);setVisitTime(event.target.value==='bars'?'20:00':'09:00');}}>
         <option value="">{t('Any theme')}</option><option value="bars">{t('Bars and pubs')}</option><option value="mystic">{t('Mysteries and legends')}</option>
         <option value="religious">{t('Religious places')}</option><option value="cultural">{t('Culture and art')}</option>
+        <option value="buildings">{t('Historic buildings')}</option>
       </select></label>
-      {theme&&<><label>{t('Visit date')}<input type="date" value={date} onChange={event=>{setDate(event.target.value);setPlaces([]);setSelected([]);}} /></label>
+      {theme==='buildings'&&<label>{t('Address, architect or style')}<input type="search" maxLength={100} value={buildingQuery} onChange={event=>{setBuildingQuery(event.target.value);setPlaces([]);setSelected([]);}} /></label>}
+      {theme&&theme!=='buildings'&&<><label>{t('Visit date')}<input type="date" value={date} onChange={event=>{setDate(event.target.value);setPlaces([]);setSelected([]);}} /></label>
         <label>{t('Visit time')}<input type="time" value={visitTime} onChange={event=>{setVisitTime(event.target.value);setPlaces([]);setSelected([]);}} /></label>
         <small>{t('Opening hours are a guide. Closed places remain in the results.')}</small></>}
     </fieldset>
@@ -158,9 +184,12 @@ export function RoutePlacePanel({ stop, onNotes, onAdd, onWalkChange, onWalkBusy
     <fieldset disabled={busy} className="route-inputs">
       {available === false && <p role="status">{t('Nearby recommendations require the administrator to connect 2GIS. You can use the search links above now.')}</p>}
       {available === true && !places.length && <p>{t('No nearby places found.')}</p>}
+      <YandexPlaceMap center={[stop.longitude,stop.latitude]} focusedId={focusedId} stops={mapStops} legs={legs}
+        points={places.map(place=>({...place,selected:kind==='attractions'&&selected.includes(place.id)}))}
+        onSelect={id=>{if(kind==='attractions')selectPlace(id);else setFocusedId(id);}} />
       <ul className="route-place-results">{places.map(place => <li key={place.id}>
         {kind === 'attractions' && <input type="checkbox" aria-label={place.label} checked={selected.includes(place.id)} disabled={!selected.includes(place.id) && selected.length >= (theme?10:5)}
-          onChange={event => { setSelected(ids => event.target.checked ? [...ids, place.id] : ids.filter(id => id !== place.id)); setVisits([]); setLegs([]); setSkipped([]); }} />}
+          onChange={event => selectPlace(place.id,event.target.checked)} />}
         <a href={place.url} target="_blank" rel="noopener noreferrer">{place.label} ↗</a>
         {place.openingHours && <small>{place.openingHours}</small>}
         {place.source==='wikimapia'&&place.inOsm===false&&<small>{t('Community place')}</small>}
@@ -186,6 +215,6 @@ export function RoutePlacePanel({ stop, onNotes, onAdd, onWalkChange, onWalkBusy
     {busy && <p role="status">{t('Calculating the route…')}</p>}
     {error && <p role="alert">{error}</p>}
     {expanded && <RouteWalk ref={walk} value={stop.walkId} onChange={onWalkChange} />}
-    {places.length > 0 && <small><a href={source==='Wikimapia'?'https://wikimapia.org/':source==='2GIS'?'https://2gis.ru/':'https://www.openstreetmap.org/copyright'} target="_blank" rel="noopener noreferrer">{source}</a></small>}
+    {places.length > 0 && <small>{source==='mystic'?t('Curated places'):source==='HOITH'?'HOITH':<a href={source==='Wikimapia'?'https://wikimapia.org/':source==='2GIS'?'https://2gis.ru/':'https://www.openstreetmap.org/copyright'} target="_blank" rel="noopener noreferrer">{source}</a>}</small>}
   </details>;
 }

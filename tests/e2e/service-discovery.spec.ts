@@ -67,7 +67,7 @@ test('service landing pages have metadata and stay usable on a phone', async ({ 
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     await expect(page.locator('link[rel=canonical]')).toHaveAttribute(
       'href',
-      `https://codoc.site${path}`,
+      `https://www.codoc.site${path}`,
     );
     await expect(page.locator('meta[name=robots]')).toHaveAttribute('content', 'index, follow');
     expect(
@@ -75,7 +75,7 @@ test('service landing pages have metadata and stay usable on a phone', async ({ 
       path,
     ).toBe(true);
   }
-  await page.screenshot({ path: '../reports/service-discovery-mobile.png', fullPage: true });
+  await page.screenshot({ path: '../ticket-infra/reports/service-discovery-mobile.png', fullPage: true });
   await page.goto('/sites/new');
   await expect(page.locator('meta[name=robots]')).toHaveAttribute('content', 'noindex, nofollow');
 });

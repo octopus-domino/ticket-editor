@@ -8,8 +8,13 @@ import { useState } from 'react';
 import { SOLUTION_GROUPS } from './ReadySolutionsMenu';
 
 export function JourneyDiscovery() {
-  const [query,setQuery]=useState(''),[group,setGroup]=useState('all');
+  const [query,setQuery]=useState(''),[group,setGroup]=useState('featured');
   const kinds=SOLUTION_GROUPS.find(item=>item.kinds[0]===group)?.kinds;
+  const builder=JOURNEY_PAGES.find(page=>page.kind==='builder')!;
+  const visible=JOURNEY_PAGES.filter(page=>page.kind!=='hub'&&page.kind!=='builder'
+    && (group==='featured'?['invite','certificates','menu'].includes(page.kind):!kinds||kinds.includes(page.kind))
+    && `${page.label} ${page.description}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
+  const choose=(value:string)=>{setGroup(value);reachGoal('solutions_filter_selected',{group:value});};
   return (
     <section
       className="codoc-container journey-discovery"
@@ -24,17 +29,17 @@ export function JourneyDiscovery() {
         <p>{JOURNEY_PAGES[0].description}</p>
       </div>
       <div className="discovery-filters">
-        <label>{t('Search')}<input type="search" value={query} onChange={event=>setQuery(event.target.value)} /></label>
+        <label>{t('Search')}<input type="search" value={query} onChange={event=>{setQuery(event.target.value);if(event.target.value&&group==='featured')choose('all');}} /></label>
         <div role="group" aria-label={t('Ready-to-use services')}>
-          <button type="button" aria-pressed={group==='all'} onClick={()=>setGroup('all')}>{t('All solutions')}</button>
-          {SOLUTION_GROUPS.map(item=><button type="button" key={item.kinds[0]} aria-pressed={group===item.kinds[0]} onClick={()=>setGroup(item.kinds[0])}>{item.label()}</button>)}
+          <button type="button" aria-pressed={group==='featured'} onClick={()=>choose('featured')}>{t('Start here')}</button>
+          {SOLUTION_GROUPS.map(item=><button type="button" key={item.kinds[0]} aria-pressed={group===item.kinds[0]} onClick={()=>choose(item.kinds[0])}>{item.label()}</button>)}
+          <button type="button" aria-pressed={group==='all'} onClick={()=>choose('all')}>{t('All solutions')}</button>
         </div>
       </div>
       <div className="discovery-grid">
-        {JOURNEY_PAGES.filter((page) => page.kind !== 'hub' && page.kind !== 'builder'
-          && (!kinds || kinds.includes(page.kind)) && `${page.label} ${page.description}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())).map(
+        {visible.map(
           (page, index) => (
-            <article className={`discovery-card discovery-${page.kind}`} key={page.path}>
+            <article className={`discovery-card discovery-${page.kind} ${group==='featured'?'is-featured':'is-compact'}`} key={page.path}>
               <div className="discovery-preview" aria-hidden="true">
                 <span>CoDoc / 0{index + 1}</span>
                 <strong>{page.label}</strong>
@@ -44,28 +49,29 @@ export function JourneyDiscovery() {
               </div>
               <h3>{page.label}</h3>
               <p>{page.description}</p>
-              <p>{solutionBenefit(page.kind)}</p>
+              <details className="discovery-benefits"><summary>{t('Benefits for you and your recipients')}</summary><p>{solutionBenefit(page.kind)}</p></details>
               <Link
                 className="codoc-button codoc-primary"
                 to={page.action}
                 onClick={() =>
-                  reachGoal('start_journey', { kind: page.kind, placement: 'service_card' })
+                  reachGoal('start_journey', { kind: page.kind, group, placement: 'service_card' })
                 }
               >
                 {page.actionLabel} ↗
               </Link>
-              <Link className="discovery-more" to={page.path}>
+              <Link className="discovery-more" to={page.path} onClick={()=>reachGoal('solution_details_opened',{kind:page.kind,group})}>
                 {t('How it works')} →
               </Link>
             </article>
           ),
         )}
       </div>
+      {visible.length===0&&<p role="status">{t('No matching solutions. Try another search.')}</p>}
       <aside className="discovery-builder">
         <div>
           <span className="codoc-eyebrow">{t('Website builder')}</span>
-          <h3>{JOURNEY_PAGES[4].heading}</h3>
-          <p>{JOURNEY_PAGES[4].description}</p>
+          <h3>{builder.heading}</h3>
+          <p>{builder.description}</p>
         </div>
         <div>
           <Link

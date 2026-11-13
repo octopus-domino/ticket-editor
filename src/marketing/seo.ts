@@ -21,7 +21,7 @@ export function getPageMetadata(pathname: string): PageMetadata {
   if (path === '/') return HOME_METADATA;
   const journey = JOURNEY_PAGES.find(page => page.path.replace(/\/$/, '') === path);
   if (journey) return {path:journey.path,title:`${journey.heading} — CoDoc`,description:journey.description,index:true};
-  if (path === '/sites/new') return {path,title:`${t('Website builder')} — CoDoc`,description:JOURNEY_PAGES[4].description,index:false};
+  if (path === '/sites/new') return {path,title:`${t('Website builder')} — CoDoc`,description:JOURNEY_PAGES.find(page=>page.kind==='builder')!.description,index:false};
   if (path.startsWith('/start/')) return {path,title:`${t('Ready-to-use services')} — CoDoc`,description:JOURNEY_PAGES[0].description,index:false};
   if (/^\/(s|d|manage|issues|flows)\//.test(path)) return {path,title:`${t('Document')} — CoDoc`,description:t('Create documents from templates and data.'),index:false};
   if (path === '/learn' || path === '/stamp-editor') return { path, title: `CoDoc — ${t(path === '/learn' ? 'Learning center' : 'Stamp studio')}`, description: t('Create documents from templates and data.'), index: false };

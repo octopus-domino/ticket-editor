@@ -1,4 +1,15 @@
 export const ROUTE_IMPROVEMENT_MESSAGES = String.raw`
+Historic buildings|Исторические дома|历史建筑|Zabytkowe budynki|Edifici storici|Edificios históricos|Historische gebouwen|Bâtiments historiques|Historische Gebäude
+Historic building|Исторический дом|历史建筑|Zabytkowy budynek|Edificio storico|Edificio histórico|Historisch gebouw|Bâtiment historique|Historisches Gebäude
+Address, architect or style|Адрес, архитектор или стиль|地址、建筑师或风格|Adres, architekt lub styl|Indirizzo, architetto o stile|Dirección, arquitecto o estilo|Adres, architect of stijl|Adresse, architecte ou style|Adresse, Architekt oder Stil
+Year built|Год постройки|建造年份|Rok budowy|Anno di costruzione|Año de construcción|Bouwjaar|Année de construction|Baujahr
+Architect|Архитектор|建筑师|Architekt|Architetto|Arquitecto|Architect|Architecte|Architekt
+Architectural style|Архитектурный стиль|建筑风格|Styl architektoniczny|Stile architettonico|Estilo arquitectónico|Bouwstijl|Style architectural|Baustil
+Curated places|Места из подборки|精选地点|Wybrane miejsca|Luoghi selezionati|Lugares seleccionados|Geselecteerde plekken|Lieux sélectionnés|Ausgewählte Orte
+Start here|Начните с этого|从这里开始|Zacznij tutaj|Inizia da qui|Empieza aquí|Begin hier|Commencez ici|Hier beginnen
+Personal events|Личные события|个人活动|Wydarzenia osobiste|Eventi personali|Eventos personales|Persoonlijke gelegenheden|Événements personnels|Persönliche Anlässe
+Education|Образование|教育|Edukacja|Istruzione|Educación|Onderwijs|Éducation|Bildung
+No matching solutions. Try another search.|Ничего не нашлось. Попробуйте другой запрос.|没有匹配的方案，请尝试其他搜索。|Brak pasujących rozwiązań. Spróbuj inaczej.|Nessuna soluzione trovata. Prova un'altra ricerca.|No hay soluciones coincidentes. Prueba otra búsqueda.|Geen passende oplossingen. Probeer een andere zoekopdracht.|Aucune solution trouvée. Essayez une autre recherche.|Keine passenden Lösungen. Versuchen Sie einen anderen Suchbegriff.
 Route start|Начало маршрута|路线起点|Początek trasy|Inizio del percorso|Inicio de la ruta|Begin van de route|Début de l’itinéraire|Routenstart
 Route end|Конец маршрута|路线终点|Koniec trasy|Fine del percorso|Fin de la ruta|Einde van de route|Fin de l’itinéraire|Routenende
 Open in constructor|Открыть в конструкторе|在构建器中打开|Otwórz w kreatorze|Apri nel costruttore|Abrir en el constructor|Openen in de bouwer|Ouvrir dans le constructeur|Im Baukasten öffnen

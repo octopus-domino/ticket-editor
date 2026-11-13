@@ -97,6 +97,7 @@ export function LandingPage() {
               sizes="(max-width: 800px) 100vw, 50vw"
               width="1280"
               height="853"
+              decoding="async"
               alt={__tr('Two organizers preparing a workshop brochure together')}
             />
             <div className="codoc-art-label">

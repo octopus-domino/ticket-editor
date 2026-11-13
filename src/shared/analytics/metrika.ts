@@ -86,6 +86,7 @@ export function reachGoal(
   goal:
     | 'start_template'
     | 'start_site' | 'start_journey'
+    | 'solutions_filter_selected' | 'solution_details_opened'
     | 'template_created'
     | 'template_saved'
     | 'schema_created'

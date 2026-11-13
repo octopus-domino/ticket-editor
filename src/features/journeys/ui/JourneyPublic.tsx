@@ -231,8 +231,9 @@ export function JourneyPublic({ manage = false }: { manage?: boolean }) {
               {t('Contact us')}
             </a>
           )}
-          {document.kind === 'PRICETAG' && (
+          {(document.kind === 'PRICETAG' || document.kind === 'CERTIFICATE') && (
             <JourneyReviews
+              course={document.kind === 'CERTIFICATE'}
               key={id}
               id={id}
               manage={manage}

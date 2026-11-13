@@ -28,6 +28,7 @@ export function journeyError(status: number, raw?: string): string {
       case 'journey.route.unavailable':
         return t('The road route could not be calculated. Try closer stops or retry later.');
       case 'journey.route.search-unavailable':
+      case 'journey.route.places-unavailable':
         return t('Address search is unavailable. Please try again shortly.');
       case 'journey.route.invalid-route':
         return t('Check the stops, travel times and route settings.');

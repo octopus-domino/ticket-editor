@@ -37,11 +37,16 @@ export async function placePhotos(places: (RecommendedPlace & { stopId: string }
       const author = text(info.extmetadata?.Artist?.value ?? '');
       const license = text(info.extmetadata?.LicenseShortName?.value ?? '');
       let licenseUrl = text(info.extmetadata?.LicenseUrl?.value ?? '');
+      if (!licenseUrl && license.toLowerCase() === 'public domain'
+          && String(info.extmetadata?.Copyrighted?.value).toLowerCase() === 'false')
+        licenseUrl = 'https://creativecommons.org/publicdomain/mark/1.0/';
       if (licenseUrl.startsWith('//')) licenseUrl = `https:${licenseUrl}`;
       if (licenseUrl.startsWith('http://creativecommons.org/')) licenseUrl = licenseUrl.replace('http:', 'https:');
+      // Commons also returns canonical licence URLs without a trailing slash.
+      licenseUrl = licenseUrl.replace(/(\/\d\.\d)$/, '$1/');
       if (!author || author.length > 500 || !license || license.length > 80 || !licensed.test(licenseUrl)) continue;
       const url = new URL(info.thumburl ?? info.url);
-      if (url.protocol !== 'https:' || url.hostname !== 'upload.wikimedia.org') continue;
+      if (url.protocol !== 'https:' || !['upload.wikimedia.org', 'thumb.wikimedia.org'].includes(url.hostname)) continue;
       const response = await fetch(url, { signal: abort, credentials: 'omit', referrerPolicy: 'no-referrer' });
       if (!response.ok || Number(response.headers.get('content-length')) > 2_000_000) continue;
       const blob = await response.blob();

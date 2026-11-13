@@ -23,7 +23,8 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   );
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
-    throw Object.assign(new Error(journeyError(response.status, body.error)), {
+    const code = typeof body.details === 'string' && body.details.startsWith('journey.') ? body.details : body.error;
+    throw Object.assign(new Error(journeyError(response.status, code)), {
       status: response.status,
     });
   }

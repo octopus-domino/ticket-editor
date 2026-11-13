@@ -31,10 +31,12 @@ export function JourneyReviews({
   id,
   manage,
   managementKey,
+  course = false,
 }: {
   id: string;
   manage: boolean;
   managementKey: string;
+  course?: boolean;
 }) {
   const [key] = useState(() => responseKey(id));
   const [rating, setRating] = useState(5),
@@ -109,7 +111,7 @@ export function JourneyReviews({
   }
   return (
     <section className="journey-reviews">
-      <h2>{manage ? t('Customer reviews') : t('Rate this product')}</h2>
+      <h2>{course ? t(manage ? 'Course reviews' : 'Rate this course') : manage ? t('Customer reviews') : t('Rate this product')}</h2>
       {manage ? (
         <>
           {results && (

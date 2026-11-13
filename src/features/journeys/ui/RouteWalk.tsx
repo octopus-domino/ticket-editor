@@ -3,6 +3,8 @@ import { getLocale, t } from '@/shared/i18n';
 import { API_BASE } from '@/shared/api/client';
 import type { RouteSnapshot, PlannedLeg, RoutePhoto } from '../domain/route';
 import { buildRouteTimeline, type RouteStop, type TimelineRow } from '../domain/routeTimeline';
+import { routePointMarker } from '../domain/route';
+import { routePointCaption } from './routePointCaption';
 import { journeyRequest } from '../api/journeys';
 import type { RouteMapHandle } from './RouteMap';
 const RouteMap = lazy(() => import('./RouteMap').then(module => ({ default: module.RouteMap })));
@@ -30,7 +32,7 @@ export const RouteWalk = forwardRef<RouteWalkHandle, { value?: string; onChange:
     const timeline = plannedTimeline ?? buildRouteTimeline(stops, legs, startLocal);
     if (new Date(timeline.at(-1)!.end).getTime() - new Date(timeline[0].start).getTime() > 12 * 3600000)
       throw new Error(t('This walk is too long for one day. Choose fewer or closer places.'));
-    const draft: RouteSnapshot = { stops, legs, startLocal, timeline, mapId: '', ...(photos?.length ? { photos } : {}) };
+    const draft: RouteSnapshot = { stops, legs, startLocal, timeline, mapId: '', pointNumbering: 'interior', ...(photos?.length ? { photos } : {}) };
     setSnapshot(draft); setError('');
     try {
     await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
@@ -67,10 +69,10 @@ export const RouteWalk = forwardRef<RouteWalkHandle, { value?: string; onChange:
       {snapshot.mapId ? <img className="route-walk-print" src={`${API_BASE}/api/journeys/media/${encodeURIComponent(snapshot.mapId)}`} alt={t('City walk')} /> :
         <Suspense fallback={<p>{t('Loading map…')}</p>}><RouteMap stops={snapshot.stops} legs={snapshot.legs} photos={snapshot.photos} onReady={handle => { map.current = handle; }} /></Suspense>}
       {!!snapshot.photos?.length && <details><summary>{t('Photo credits')}</summary><ol className="route-photo-credits">{snapshot.photos.map(photo => <li key={photo.stopId}>
-        {snapshot.stops.findIndex(stop => stop.id === photo.stopId) + 1}. <a href={photo.sourceUrl} target="_blank" rel="noopener noreferrer">{photo.author}</a> · <a href={photo.licenseUrl} target="_blank" rel="noopener noreferrer">{photo.license}</a>
+        {snapshot.pointNumbering === 'interior' ? routePointMarker(snapshot.stops.findIndex(stop => stop.id === photo.stopId), snapshot.stops.length) : snapshot.stops.findIndex(stop => stop.id === photo.stopId) + 1}. <a href={photo.sourceUrl} target="_blank" rel="noopener noreferrer">{photo.author}</a> · <a href={photo.licenseUrl} target="_blank" rel="noopener noreferrer">{photo.license}</a>
       </li>)}</ol></details>}
       <ol className="route-timeline">{snapshot.timeline.filter(row => row.kind === 'stop').map((row, index) => <li key={index}>
-        <strong>{row.label}</strong><time>{time(row.start, row.zone)}–{time(row.end, row.zone)}</time>{row.description && <small>{row.description}</small>}
+        <strong>{routePointCaption(index, snapshot.stops.length)} · {row.label}</strong><time>{time(row.start, row.zone)}–{time(row.end, row.zone)}</time>{row.description && <small>{row.description}</small>}
       </li>)}</ol>
       <div className="route-actions">
         <button type="button" className="journey-secondary" disabled={downloading || !snapshot.mapId} onClick={() => void download()}>{t('Download walking map (JPG)')}</button>

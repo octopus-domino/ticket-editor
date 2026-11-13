@@ -136,9 +136,10 @@ test('a separate walking map keeps numbered photos and the city plan out of the 
   await panel.getByRole('button', { name: 'Generate a walking map' }).click();
   await expect(panel.locator('.route-walk-print')).toBeVisible({ timeout: 30000 });
   expect(state.snapshot.photos).toHaveLength(2);
+  expect(state.snapshot.pointNumbering).toBe('interior');
   expect(state.snapshot.stops).toHaveLength(4);
   expect(state.snapshot.legs.every((leg: any) => leg.mode === 'foot')).toBe(true);
-  expect(state.snapshot.photos.map((photo: any) => state.snapshot.stops.findIndex((stop: any) => stop.id === photo.stopId) + 1)).toEqual([2, 3]);
+  expect(state.snapshot.photos.map((photo: any) => state.snapshot.stops.findIndex((stop: any) => stop.id === photo.stopId))).toEqual([1, 2]);
   await expect(stops).toHaveCount(2);
   const mapImage = media.get(state.snapshot.mapId)!;
   const size = await page.evaluate(async image => {
@@ -245,7 +246,7 @@ test('route edits keep notes with their point and require selecting an edited ad
   await stops.nth(1).getByRole('combobox', { name: 'Address', exact: true }).fill('Airport Berlin');
   await page.getByRole('option', { name: 'Berlin Airport' }).getByRole('button').click();
   await stops.nth(0).getByRole('button', { name: /Move stop/ }).press('ArrowDown');
-  await expect(stops.nth(0)).toContainText('Departure point');
+  await expect(stops.nth(0)).toContainText('Route start');
   await expect(stops.nth(0).getByRole('combobox', { name: 'Address', exact: true })).toHaveValue('Berlin Airport');
   await expect(stops.nth(1).getByLabel('Notes for this stop (optional)')).toHaveValue('Meet by the main entrance');
   const address = stops.nth(0).getByRole('combobox', { name: 'Address', exact: true });
@@ -345,4 +346,31 @@ test('themed walks preserve the trip and print seven numbered photographs on a p
   expect(state.snapshot.stops[1].meta.theme).toBe('mystic');expect(state.snapshot.stops[1].meta.photo_image_id).toBe('c'.repeat(64));
   await expect(stops).toHaveCount(2);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
   await page.screenshot({path:'../ticket-infra/reports/themed-walk-mobile.png',fullPage:true});
+});
+
+
+test('confirmed addresses clear map picking and only intermediate stops have numbers', async ({page})=>{
+  await page.addInitScript(()=>localStorage.setItem('codoc:language','en'));
+  await page.setViewportSize({width:390,height:844});await mockApi(page);await page.goto('/start/tours');
+  const stops=page.locator('.route-stops > li');
+  await expect(stops.first().locator('.route-stop-heading > strong')).toContainText('Route start');
+  await expect(stops.last().locator('.route-stop-heading > strong')).toContainText('Route end');
+  await stops.first().getByRole('button',{name:'Choose on map',exact:true}).click();
+  await expect(page.locator('.route-pick-controls')).toBeVisible();
+  await stops.first().getByRole('combobox',{name:'Address',exact:true}).fill('Museum Berlin');
+  await page.getByRole('option',{name:'Berlin Museum'}).getByRole('button').click();
+  await expect(page.locator('.route-pick-controls')).toHaveCount(0);
+  await stops.last().getByRole('combobox',{name:'Address',exact:true}).fill('Airport Berlin');
+  await page.getByRole('option',{name:'Berlin Airport'}).getByRole('button').click();
+  await page.getByLabel('Start, local time',{exact:true}).fill('2026-11-13T09:00');
+  await stops.first().getByRole('button',{name:'Choose on map',exact:true}).click();
+  await page.getByRole('button',{name:'Calculate schedule',exact:true}).click();
+  await expect(page.locator('.route-pick-controls')).toHaveCount(0);
+  await expect(page.locator('.route-timeline > li > strong').first()).toHaveText('Route start');
+  await expect(page.locator('.route-timeline > li > strong').last()).toHaveText('Route end');
+  await page.getByRole('button',{name:'Add stop',exact:true}).click();
+  await expect(stops.nth(1).locator('.route-stop-heading > strong')).toContainText('Stop 1');
+  await expect(stops.last().locator('.route-stop-heading > strong')).toContainText('Route end');
+  await expect(stops.last().getByRole('combobox',{name:'Address',exact:true})).toHaveValue('Berlin Airport');
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });

@@ -13,7 +13,8 @@ import { t } from '@/shared/i18n';
 import type { RouteStop } from '../domain/routeTimeline';
 import type { PlannedLeg, RoutePhoto } from '../domain/route';
 import { drawMapCollage } from './drawMapCollage';
-import { mapRouteLines, routeMapBounds } from '../domain/route';
+import { mapRouteLines, routeMapBounds, routePointMarker } from '../domain/route';
+import { routePointCaption } from './routePointCaption';
 
 setWorkerUrl(workerUrl);
 setWorkerCount(2);
@@ -164,12 +165,14 @@ export function RouteMap({
               context.textAlign = 'center';
               context.textBaseline = 'middle';
               context.fillStyle = '#fff';
-              context.fillText(String(index + 1), x, y);
+              context.fillText(routePointMarker(index, stopsRef.current.length), x, y);
             });
             context.fillStyle = '#ffffffee';
-            context.fillRect(0, height - 56, width, 56);
+            context.fillRect(0, height - 84, width, 84);
             context.fillStyle = '#273c35';
             context.font = '22px sans-serif';
+            context.textAlign = 'left';
+            context.fillText(`A · ${t('Route start')}     B · ${t('Route end')}`,30,height-60);
             context.textAlign = 'right';
             context.textBaseline = 'middle';
             context.fillText(
@@ -242,8 +245,8 @@ export function RouteMap({
     const markers = stops.map((stop, index) => {
       const element = document.createElement('span');
       element.className = 'route-map-marker';
-      element.textContent = String(index + 1);
-      element.title = stop.label;
+      element.textContent = routePointMarker(index, stops.length);
+      element.title = `${routePointCaption(index, stops.length)} · ${stop.label}`;
       return new Marker({ element, anchor: 'center' })
         .setLngLat([stop.longitude, stop.latitude])
         .addTo(map);
@@ -263,6 +266,7 @@ export function RouteMap({
   return (
     <div>
       <div ref={container} className="route-map" data-picking={Boolean(onPick)} aria-label={t('Route map')} />
+      <small>A · {t('Route start')} — B · {t('Route end')}</small>
       {error && <p role="alert">{error}</p>}
     </div>
   );

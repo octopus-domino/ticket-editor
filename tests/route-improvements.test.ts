@@ -3,10 +3,15 @@ import { reorderRoute } from '@/features/journeys/domain/reorderRoute';
 import { cityVisitPlan, nearestPlaces, type RecommendedPlace } from '@/features/journeys/domain/cityVisitPlan';
 import type { RouteStop } from '@/features/journeys/domain/routeTimeline';
 import type { PlannedLeg } from '@/features/journeys/domain/route';
+import { routePointMarker } from '@/features/journeys/domain/route';
 const stop = (id: string): RouteStop => ({ id, label: id, longitude: 37, latitude: 55, zone: 'Europe/Moscow', stayMinutes: 0, description: `Notes ${id}` });
 const leg = (mode: PlannedLeg['mode']): PlannedLeg => ({ mode, durationSeconds: 600, coordinates: [[37, 55], [38, 56]], departure: '2026-11-12T10:00', arrival: '2026-11-12T11:00' });
 const place = (id: string, from = '10:00', to = '18:00'): RecommendedPlace => ({ id, label: id, latitude: 55, longitude: 37, url: 'https://2gis.ru/', schedule: { Thu: { working_hours: [{ from, to }] } } });
 describe('route reorder and city visits', () => {
+  it('numbers only intermediate stops and names map endpoints separately', () => {
+    expect([0,1].map(index=>routePointMarker(index,2))).toEqual(['A','B']);
+    expect([0,1,2,3].map(index=>routePointMarker(index,4))).toEqual(['A','1','2','B']);
+  });
   it('retains directed flights only for the original pair and carries notes with the stop', () => {
     const stops = ['a', 'b', 'c', 'd'].map(stop), legs = [leg('flight'), leg('car'), leg('foot')];
     const result = reorderRoute(stops, legs, 3, 2);

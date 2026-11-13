@@ -17,6 +17,7 @@ import { RouteAddressInput, type RouteAddress } from './RouteAddressInput';
 import type { RouteMapHandle } from './RouteMap';
 import './route.css';
 import { RoutePlacePanel } from './RoutePlacePanel';
+import { routePointCaption } from './routePointCaption';
 
 const RouteMap = lazy(() => import('./RouteMap').then((module) => ({ default: module.RouteMap })));
 const emptyStop = (): RouteStop => ({
@@ -84,6 +85,7 @@ export const RouteEditor = forwardRef<RouteEditorHandle, { value: string; onChan
     setError('');
   };
   const address = (index: number, selected: RouteAddress) => {
+    setPickingStop(null); setPickedPoint(null);
     invalidate();
     setStops((items) =>
       items.map((stop, i) =>
@@ -117,6 +119,7 @@ export const RouteEditor = forwardRef<RouteEditorHandle, { value: string; onChan
   const finish = () => { busyRef.current = false; setBusy(false); callbacks.current.onBusyChange(false); setProgress(''); };
   async function calculate(anchor: boolean) {
     if (busyRef.current) return;
+    setPickingStop(null); setPickedPoint(null);
     begin();
     try {
       const plan = await planRoute(stops, legs, start, anchor, setProgress);
@@ -143,7 +146,7 @@ export const RouteEditor = forwardRef<RouteEditorHandle, { value: string; onChan
         const image = await map.current.capture();
         const asset = await journeyRequest<{ id: string }>('/api/journeys/media', { method: 'POST', body: JSON.stringify({ image }) });
         const saved = await journeyRequest<{ id: string }>('/api/journeys/routes', { method: 'POST', body: JSON.stringify({
-          stops: stops.map(stop => ({ ...stop, confirmed: undefined })), legs: plan.legs, startLocal: plan.start, timeline: plan.rows, mapId: asset.id,
+          stops: stops.map(stop => ({ ...stop, confirmed: undefined })), legs: plan.legs, startLocal: plan.start, timeline: plan.rows, mapId: asset.id, pointNumbering: 'interior',
         }) });
         loaded.current = saved.id; callbacks.current.onChange(saved.id); setDirty(false);
         return saved.id;
@@ -190,7 +193,7 @@ export const RouteEditor = forwardRef<RouteEditorHandle, { value: string; onChan
               <div className="route-stop-heading">
                 <RouteReorderHandle index={index} onMove={move} disabled={busy} />
                 <strong>
-                  {index === 0 ? t('Departure point') : `${t('Stop')} ${index + 1}`}
+                  {routePointCaption(index, stops.length)}
                   {stop.label && <small>{stop.label}</small>}
                 </strong>
                 {stops.length > 2 && (
@@ -359,8 +362,9 @@ export const RouteEditor = forwardRef<RouteEditorHandle, { value: string; onChan
           disabled={stops.length >= 12}
           onClick={() => {
             invalidate();
-            setStops((items) => [...items, emptyStop()]);
-            setLegs((items) => [...items, emptyLeg()]);
+            setStops((items) => [...items.slice(0,-1), emptyStop(), items[items.length-1]]);
+            // Inserting a visit splits the final transfer; its old geometry cannot describe either new leg.
+            setLegs((items) => [...items.slice(0,-1), emptyLeg(), emptyLeg()]);
           }}
         >
           {t('Add stop')}
@@ -399,7 +403,7 @@ export const RouteEditor = forwardRef<RouteEditorHandle, { value: string; onChan
       <div ref={pickPanel} tabIndex={-1} className="route-map-picker">
       {pickingStop && stops.some(stop => stop.id === pickingStop) && (
         <fieldset disabled={busy} className="route-pick-controls">
-          <legend>{t('Choose a point for stop')} {stops.findIndex(stop => stop.id === pickingStop) + 1}</legend>
+          <legend>{routePointCaption(stops.findIndex(stop => stop.id === pickingStop), stops.length)}</legend>
           <p>{t('Tap the map, or move it and use its center. No address search is needed.')}</p>
           <label>{t('Point name (optional)')}<input maxLength={180} value={pointName} onChange={event => setPointName(event.target.value)} /></label>
           <div className="route-actions">
@@ -434,7 +438,7 @@ export const RouteEditor = forwardRef<RouteEditorHandle, { value: string; onChan
         <ol className="route-timeline">
           {rows.map((row, index) => (
             <li key={index}>
-              <strong>{labels[row.kind]}</strong>
+              <strong>{row.kind === 'stop' ? routePointCaption(rows.slice(0,index).filter(item=>item.kind==='stop').length, stops.length) : labels[row.kind]}</strong>
               <span>{row.label}</span>
               {row.description && <p>{row.description}</p>}
               <time>

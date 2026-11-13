@@ -1,5 +1,6 @@
 import { API_BASE } from '@/shared/api/client';
 import type { RoutePhoto } from '../domain/route';
+import { routePointMarker } from '../domain/route';
 import type { RouteStop } from '../domain/routeTimeline';
 
 /** Photo cards occupy their own strip; leader lines share the map's projected coordinates. */
@@ -16,7 +17,7 @@ export async function drawMapCollage(context: CanvasRenderingContext2D, photos: 
     return image;
   }).map(pending=>pending.catch(()=>null)));
   const columns=Math.min(4,photos.length),rows=Math.ceil(photos.length/columns);
-  const stripHeight=context.canvas.height-mapHeight,rowHeight=stripHeight/rows,imageHeight=Math.min(235,rowHeight-90);
+  const stripHeight=context.canvas.height-mapHeight-92,rowHeight=stripHeight/rows,imageHeight=Math.min(235,rowHeight-90);
   const gap = 24, cardWidth = (width - gap * (columns + 1)) / columns;
   context.fillStyle = '#f8f7ec'; context.fillRect(0, mapHeight, width, stripHeight);
   // Draw every leader first so none can cross over a previously painted photograph.
@@ -39,7 +40,7 @@ export async function drawMapCollage(context: CanvasRenderingContext2D, photos: 
     context.beginPath(); context.arc(x + 32, y + 32, 28, 0, Math.PI * 2);
     context.fillStyle = '#244e42'; context.fill(); context.strokeStyle = '#fff'; context.lineWidth = 4; context.stroke();
     context.fillStyle = '#fff'; context.textAlign = 'center'; context.textBaseline = 'middle'; context.font = 'bold 32px sans-serif';
-    context.fillText(String(stopIndex + 1), x + 32, y + 32);
+    context.fillText(routePointMarker(stopIndex,stops.length), x + 32, y + 32);
     context.fillStyle = '#244e42'; context.textAlign = 'left'; context.font = '26px sans-serif';
     let label = stop.label;
     while (label.length > 1 && context.measureText(label).width > cardWidth - 14) label = label.slice(0, -1);

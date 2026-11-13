@@ -1,4 +1,6 @@
 export const ROUTE_IMPROVEMENT_MESSAGES = String.raw`
+Route start|Начало маршрута|路线起点|Początek trasy|Inizio del percorso|Inicio de la ruta|Begin van de route|Début de l’itinéraire|Routenstart
+Route end|Конец маршрута|路线终点|Koniec trasy|Fine del percorso|Fin de la ruta|Einde van de route|Fin de l’itinéraire|Routenende
 Open in constructor|Открыть в конструкторе|在构建器中打开|Otwórz w kreatorze|Apri nel costruttore|Abrir en el constructor|Openen in de bouwer|Ouvrir dans le constructeur|Im Baukasten öffnen
 Preparing the template…|Готовим шаблон…|正在准备模板…|Przygotowywanie szablonu…|Preparazione modello…|Preparando plantilla…|Sjabloon voorbereiden…|Préparation du modèle…|Vorlage wird vorbereitet…
 Import image or PDF|Изображение или PDF|图片或PDF导入|Import obrazu lub PDF|Importa immagine o PDF|Importar imagen o PDF|Afbeelding of PDF importeren|Importer une image ou un PDF|Bild oder PDF importieren

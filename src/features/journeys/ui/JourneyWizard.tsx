@@ -80,7 +80,9 @@ function BasicJourneyWizard({
           route_labels: JSON.stringify({
             stop: t('Stop'),
             walk: t('City walk'),
-            departure: t('Departure point'),
+            departure: t('Route start'),
+            route_start: t('Route start'),
+            route_end: t('Route end'),
             car: t('Drive'),
             foot: t('Walk'),
             flight: t('Flight'),

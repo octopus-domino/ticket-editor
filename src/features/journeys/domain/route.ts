@@ -10,6 +10,10 @@ export interface RouteSnapshot {
   startLocal: string;
   mapId: string;
   photos?: RoutePhoto[];
+  pointNumbering?: 'interior';
+}
+export function routePointMarker(index: number, count: number): string {
+  return index === 0 ? 'A' : index === count - 1 ? 'B' : String(index);
 }
 export interface RoutePhoto { stopId: string; imageId: string; sourceUrl: string; author: string; license: string; licenseUrl: string }
 

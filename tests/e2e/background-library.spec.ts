@@ -51,11 +51,21 @@ test('selected lossless artwork survives the native document export at the origi
     return route.fulfill({json:[]});
   });
   await page.goto('/app/editor/local');
+  const canvas=page.locator('.konvajs-content canvas').first();
+  await expect(canvas).toBeVisible();
+  const fingerprint=()=>canvas.evaluate(element=>{
+    const node=element as HTMLCanvasElement;
+    const pixels=node.getContext('2d')!.getImageData(0,0,node.width,node.height).data;
+    let hash=0;for(let i=0;i<pixels.length;i+=101)hash=(hash*31+pixels[i])|0;
+    return hash;
+  });
+  const before=await fingerprint();
   await page.getByRole('button',{name:'Tool library',exact:true}).click();
   await page.locator('.section-head').filter({ hasText: 'Images' }).click();
   const library = page.locator('.background-library'); await library.locator('summary').click();
   await library.getByRole('button',{name:'Sage paper',exact:true}).click();
   await expect(library.getByRole('button',{name:'Sage paper',exact:true})).toHaveAttribute('aria-pressed','true');
+  await expect.poll(fingerprint).not.toBe(before);
   const downloading = page.waitForEvent('download');
   await page.locator('.toolbar').getByRole('button',{name:/JSON/}).click();
   const path = await (await downloading).path();

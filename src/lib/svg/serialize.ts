@@ -58,10 +58,14 @@ export function serializeSlideToSvg(slide: Slide): string {
 
   const defs = [gradientDefs, clipDefs].filter(Boolean).join('');
   const defsBlock = defs ? `\n  <defs>${defs}</defs>` : '';
+  const backgroundImage = slide.backgroundImage
+    ? `<image x="0" y="0" width="${width}" height="${height}" preserveAspectRatio="xMidYMid slice" xlink:href="${escapeXml(slide.backgroundImage)}" />`
+    : '';
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${defsBlock}
   <rect width="${width}" height="${height}" fill="${escapeXml(background)}" />
+  ${backgroundImage}
   ${elementsSvg}
 </svg>`;
 }

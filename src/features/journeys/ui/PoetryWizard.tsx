@@ -41,12 +41,12 @@ export default function PoetryWizard({ definition, custom = false, previewOnly =
     }, () => { setError(t('Choose your region manually. Location is unavailable.')); setLocating(false); }, { enableHighAccuracy: false, timeout: 12000, maximumAge: 600000 });
   };
   const prepare = async () => {
-    if (running.current || !region || regionEdited) return;
+    if (running.current || regionEdited) return;
     running.current = true; setBusy(true); setError(''); setPrepared(null); setCreated(null);
     const controller = new AbortController(); abort.current = controller;
     try {
       const result = await journeyRequest<Prepared>('/api/journeys/poetry', { method: 'POST', signal: controller.signal,
-        body: JSON.stringify({ latitude: region.latitude, longitude: region.longitude, zone: region.zone, language, mood, audience, moodText: moodText.trim() || undefined, seed: crypto.randomUUID() }) });
+        body: JSON.stringify({ ...(region ? { latitude: region.latitude, longitude: region.longitude, zone: region.zone } : { zone: Intl.DateTimeFormat().resolvedOptions().timeZone }), language, mood, audience, moodText: moodText.trim() || undefined, seed: crypto.randomUUID() }) });
       if (!controller.signal.aborted) setPrepared(result);
     } catch (reason) { if (!controller.signal.aborted) setError((reason as Error).message); }
     finally { running.current = false; setBusy(false); }
@@ -79,8 +79,9 @@ export default function PoetryWizard({ definition, custom = false, previewOnly =
           {AGES.map(([code, label]) => <option key={code} value={code}>{t(label)}</option>)}
         </select></label>
         <section className="poetry-region">
-          <h2>{t('Your region')}</h2>
-          <p>{t('We use the local forecast to choose the mood of the poems. The cards are about life, not weather reports.')}</p>
+          <h2>{t('Your region (optional)')}</h2>
+          <p>{t('Without a region, poems are chosen without weather.')}</p>
+          {region && <button type="button" onClick={() => { setRegion(null); setRegionEdited(false); setPrepared(null); setError(''); }}>{t('Do not use weather')}</button>}
           <button type="button" disabled={locating} onClick={locate}>{t(locating ? 'Finding your location…' : 'Use my location')}</button>
           <RouteAddressInput value={region?.label ?? ''} onSelect={selected => chooseRegion(selected, selected.label)} onEditing={edited => { setRegionEdited(edited); if (edited) setPrepared(null); }} />
           {region && !regionEdited && <p role="status">{region.label}</p>}
@@ -96,7 +97,7 @@ export default function PoetryWizard({ definition, custom = false, previewOnly =
           {field.type === 'textarea' ? <textarea maxLength={4000} required={field.required} value={fields[field.name] ?? ''} onChange={event => setFields({ ...fields, [field.name]: event.target.value })} /> :
             <input type={field.type === 'date' || field.type === 'time' ? field.type : 'text'} required={field.required} maxLength={500} value={fields[field.name] ?? ''} onChange={event => setFields({ ...fields, [field.name]: event.target.value })} />}
         </label>)}
-        <button type="submit" disabled={!region || regionEdited || locating}>{t(prepared ? 'Choose another seven poems' : 'Choose poems for seven days')}</button>
+        <button type="submit" disabled={regionEdited || locating}>{t(prepared ? 'Choose another seven poems' : 'Choose poems for seven days')}</button>
       </fieldset>
     </form>
     <details><summary>{t('How the poems are chosen')}</summary><p>{t('PoemShip helps find poems by mood and age. Other poetry libraries provide a fallback. Each card keeps its author and source. Preview before sharing.')}</p></details>
@@ -107,7 +108,7 @@ export default function PoetryWizard({ definition, custom = false, previewOnly =
       <JourneyCard document={{ kind: 'POETRY', title, data }} />
       <label>{t('Collection title')}<input maxLength={120} value={title} onChange={event => setTitle(event.target.value)} /></label>
       <button type="button" disabled={busy || previewOnly || !title.trim()} onClick={() => void publish()}>{t('Save cards and get PDF')}</button>
-      <small><a href={prepared.weatherSource} target="_blank" rel="noopener noreferrer">MET Norway</a> · <a href={prepared.weatherLicense} target="_blank" rel="noopener noreferrer">CC BY 4.0</a></small>
+      {prepared.weatherSource && <small><a href={prepared.weatherSource} target="_blank" rel="noopener noreferrer">MET Norway</a> · <a href={prepared.weatherLicense} target="_blank" rel="noopener noreferrer">CC BY 4.0</a></small>}
     </section>}
     {created && <section className="journey-results"><h2>{t('Your seven cards')}</h2>
       <a className="journey-primary" href={pdfUrl(created.document.id)}>{t('Download all seven cards (PDF)')}</a>

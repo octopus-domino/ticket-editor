@@ -9,6 +9,7 @@ import { useDocumentStore, useSelectionStore, useModalsStore } from '@/ui/provid
 import { ElementRenderer } from './ElementRenderer';
 import { GridLayer } from './GridLayer';
 import { CanvasPreviewLayer } from './canvas/CanvasPreviewLayer';
+import { CanvasBackground } from './canvas/CanvasBackground';
 import { DataHighlightLayer } from './canvas/DataHighlightLayer';
 import { RichTextInlineEditor } from './richText/RichTextInlineEditor';
 import { useEditingCommit } from '../hooks/editor/useEditingCommit';
@@ -286,6 +287,7 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
       >
         <Layer listening={false}>
           <Rect x={0} y={0} width={slide.width} height={slide.height} fill={slide.background} />
+          <CanvasBackground src={slide.backgroundImage} width={slide.width} height={slide.height} />
           {showGrid && <GridLayer width={slide.width} height={slide.height} />}
           {showMargins && (
             <Rect

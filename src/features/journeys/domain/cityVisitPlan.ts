@@ -6,6 +6,13 @@ export interface RecommendedPlace {
   openingHours?: string;
   photoReference?: string;
   description?: string;
+  visitStatus?: 'OPEN'|'CLOSED'|'UNKNOWN';
+  source?: string;
+  inOsm?: boolean;
+  wikimapiaId?: string;
+  wikidataSitelinks?: number;
+  score?: number;
+  meta?: Record<string,string>;
   schedule?: Record<string, { working_hours?: { from: string; to: string }[] }>;
 }
 export interface CityVisit { place: RecommendedPlace; start: string; end: string }

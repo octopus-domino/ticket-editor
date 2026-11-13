@@ -3,8 +3,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useStore } from '@/shared/store/store';
 import { useDocumentStore } from '../providers/EditorProvider';
-import { download } from '@/lib/download';
-import { serializeSlideToSvg } from '@/lib/svg/serialize';
 import { templateStore } from '@/features/templates/state/TemplateStore';
 import { schemaStore } from '@/features/schemas/state/SchemaStore';
 import { emailStore } from '@/features/email';
@@ -12,15 +10,15 @@ import { isFeatureEnabled } from '@/shared/flags';
 import { resolveBindings } from '@/features/bindings/domain/BindingResolver';
 import { materializeSlide } from '@/features/generation/ui/materializeSlide';
 import { modelStore } from '@/features/data-models/state/ModelStore';
-import { GenerationMetrics } from '@/shared/analytics/GenerationMetrics';
 import { PowerPointActions } from './PowerPointActions';
 import { ImageImportActions } from './ImageImportActions';
+import { useFileIO } from '../hooks/editor/useFileIO';
 
 export const Toolbar: React.FC = () => {
   const docStore = useDocumentStore();
   const slides = useStore(docStore, (s) => s.slides);
   const activeId = useStore(docStore, (s) => s.activeId);
-  const data = useStore(docStore, (s) => s.data);
+  const fileIO = useFileIO();
   useStore(docStore, (s) => s.historyVersion);
 
   const canUndo = docStore.canUndo;
@@ -44,37 +42,8 @@ export const Toolbar: React.FC = () => {
     };
   }, []);
 
-  const handleExportJson = () => {
-    const payload = {
-      version: '2.0',
-      exportedAt: new Date().toISOString(),
-      slides,
-      data,
-    };
-    download(
-      JSON.stringify(payload, null, 2),
-      `ticket-editor-${Date.now()}.json`,
-      'application/json',
-    );
-  };
-
-  const handleExportSvg = () => {
-    if (!activeSlide) return;
-    const metrics = new GenerationMetrics({
-      source: 'editor_export',
-      mode: 'local',
-      format: 'svg',
-      requestedCount: 1,
-    });
-    try {
-      const svgString = serializeSlideToSvg(activeSlide);
-      download(svgString, `slide-${activeSlide.id}.svg`, 'image/svg+xml');
-      metrics.complete({ count: 1, failed: 0 });
-    } catch (error) {
-      metrics.fail('execution');
-      throw error;
-    }
-  };
+  const handleExportJson = fileIO.exportJson;
+  const handleExportSvg = fileIO.exportSvgLocal;
 
   const openSaveAs = () => {
     setSaveAsName(__tr("Шаблон {0}", new Date().toLocaleDateString('ru-RU')));

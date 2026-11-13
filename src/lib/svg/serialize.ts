@@ -4,6 +4,7 @@
 
 import type { Slide } from '@/shared/types';
 import { escapeXml } from './escape';
+import { backgroundUrl } from '@/shared/backgrounds/catalog';
 import {
   toSvgText, toSvgShape, toSvgLine, toSvgTable, toSvgImage,
   toSvgFooter, toSvgPlaceholder, toSvgFill, toSvgConnector,
@@ -58,8 +59,9 @@ export function serializeSlideToSvg(slide: Slide): string {
 
   const defs = [gradientDefs, clipDefs].filter(Boolean).join('');
   const defsBlock = defs ? `\n  <defs>${defs}</defs>` : '';
-  const backgroundImage = slide.backgroundImage
-    ? `<image x="0" y="0" width="${width}" height="${height}" preserveAspectRatio="xMidYMid slice" xlink:href="${escapeXml(slide.backgroundImage)}" />`
+  const backgroundSrc = backgroundUrl(slide.backgroundPreset) ?? slide.backgroundImage;
+  const backgroundImage = backgroundSrc
+    ? `<image x="0" y="0" width="${width}" height="${height}" preserveAspectRatio="xMidYMid slice" xlink:href="${escapeXml(backgroundSrc)}" />`
     : '';
 
   return `<?xml version="1.0" encoding="UTF-8"?>

@@ -26,6 +26,7 @@ export function journeyError(status: number, raw?: string): string {
       case 'journey.route.walk-too-long':
         return t('Split this walk into sections of up to 400 km.');
       case 'journey.route.unavailable':
+      case 'journey.route.no-path':
         return t('The road route could not be calculated. Try closer stops or retry later.');
       case 'journey.route.search-unavailable':
       case 'journey.route.places-unavailable':

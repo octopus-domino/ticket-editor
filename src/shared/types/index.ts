@@ -379,6 +379,7 @@ export interface Slide {
   height: number;
   background: string;
   backgroundImage?: string;
+  backgroundPreset?: string;
   repeat?: { path: string; pageSize: number };
   padding: Padding;
   elements: CanvasElement[];

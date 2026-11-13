@@ -362,6 +362,7 @@ export const SlideSchema = z
     height: z.number().positive(),
     background: z.string().default('#ffffff'),
     backgroundImage: z.string().optional(),
+    backgroundPreset: z.string().regex(/^[a-z][a-z0-9-]{0,79}$/).optional(),
     repeat: z.object({ path: z.string().min(1), pageSize: z.number().int().min(1).max(100) }).optional(),
     padding: PaddingSchema.default({
       top: 20,

@@ -28,7 +28,6 @@ import { SymbolsPanel } from './panels/SymbolsPanel';
 import { QrModal } from './QrModal';
 import { toast } from '@/presentation/components/toast';
 import { BackgroundLibrary } from '@/shared/backgrounds/BackgroundLibrary';
-import { loadBackground } from '@/shared/backgrounds/loadBackground';
 import { PageRepeatSettings } from './PageRepeatSettings';
 
 const Section: React.FC<{
@@ -631,12 +630,11 @@ export const LeftPanel: React.FC = () => {
       </Section>
 
       <Section title={__tr("Изображения")} icon="🖼">
-        <BackgroundLibrary onSelect={async preset => {
+        <BackgroundLibrary selectedId={activeSlide.backgroundPreset} onSelect={preset => {
           const targetId = activeSlide.id;
-          const image = await loadBackground(preset.id);
           docStore.commit(draft => {
             const target = draft.slides.find(slide => slide.id === targetId);
-            if (target) target.backgroundImage = image;
+            if (target) { target.backgroundPreset = preset.id; target.backgroundImage = undefined; }
           }, 'background-library');
         }} />
         <button
@@ -651,7 +649,7 @@ export const LeftPanel: React.FC = () => {
           type="button"
           className="tool-btn danger"
           onClick={fileIO.removeBackgroundImage}
-          disabled={!activeSlide.backgroundImage}
+          disabled={!activeSlide.backgroundImage && !activeSlide.backgroundPreset}
         >
           {__tr("✕ Убрать фон")}</button>
       </Section>

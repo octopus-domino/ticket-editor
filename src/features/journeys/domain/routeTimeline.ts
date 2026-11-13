@@ -10,6 +10,7 @@ export interface RouteStop {
   description?: string;
   confirmed?: boolean;
   walkId?: string;
+  meta?: Record<string,string>;
 }
 export interface RouteLeg {
   mode: 'car' | 'foot' | 'flight';

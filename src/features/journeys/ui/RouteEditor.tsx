@@ -236,7 +236,7 @@ export const RouteEditor = forwardRef<RouteEditorHandle, { value: string; onChan
                 <textarea maxLength={500} rows={2} value={stop.description ?? ''}
                   onChange={event => { invalidate(); setStops(items => items.map((item, i) => i === index ? { ...item, description: event.target.value } : item)); }} />
               </label>
-              {stop.label && stop.confirmed !== false && <RoutePlacePanel stop={stop}
+              {index > 0 && stop.label && stop.confirmed !== false && <RoutePlacePanel stop={stop}
                 visitDate={start.slice(0, 10)}
                 onWalkChange={walkId => {
                   setDirty(true); setStops(items => items.map(item => item.id === stop.id ? { ...item, walkId } : item));

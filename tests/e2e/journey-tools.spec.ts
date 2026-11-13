@@ -129,10 +129,10 @@ test('a separate walking map keeps numbered photos and the city plan out of the 
   await page.route('https://upload.wikimedia.org/museum.jpg', route => route.fulfill({ path: 'public/backgrounds/thumbs/sage-paper.jpg', contentType: 'image/jpeg' }));
   await page.goto('/start/tours');
   const stops = page.locator('.route-stops > li');
-  await stops.first().getByRole('combobox', { name: 'Address', exact: true }).fill('Museum Berlin');
+  await stops.nth(1).getByRole('combobox', { name: 'Address', exact: true }).fill('Museum Berlin');
   await page.getByRole('option', { name: 'Berlin Museum' }).getByRole('button').click();
-  const panel = stops.first().locator('.route-place-panel');
-  await panel.locator('summary').click();
+  const panel = stops.nth(1).locator('.route-place-panel');
+  await panel.locator(':scope > summary').click();
   await panel.getByRole('button', { name: 'Generate a walking map' }).click();
   await expect(panel.locator('.route-walk-print')).toBeVisible({ timeout: 30000 });
   expect(state.snapshot.photos).toHaveLength(2);
@@ -206,7 +206,7 @@ test('airport itinerary saves a print-resolution map and a coherent timeline on 
   await page.getByRole('option', { name: 'Berlin Museum' }).click();
   await addresses.nth(1).fill('Airport Berlin');
   await page.getByRole('option', { name: 'Berlin Airport' }).click();
-  await page.getByLabel('Часовой пояс', { exact: true }).nth(1).fill('Asia/Dubai');
+  await page.getByLabel('Часовой пояс', { exact: true }).nth(1).selectOption('Asia/Dubai');
   await page.getByLabel('Как добраться до следующей остановки').selectOption('flight');
   await page.getByLabel('Вылет, местное время').fill('2026-12-12T10:00');
   await page.getByLabel('Прилёт, местное время').fill('2026-12-12T16:00');
@@ -254,9 +254,11 @@ test('route edits keep notes with their point and require selecting an edited ad
   await address.press('Escape');
   await expect(address).toHaveValue('Berlin Airport');
   await expect(address).toHaveAttribute('aria-invalid', 'false');
-  await stops.nth(0).locator('.route-place-panel summary').click();
-  await stops.nth(0).getByRole('button', { name: 'Find nearby places' }).click();
-  await expect(stops.nth(0)).toContainText('require the administrator to connect 2GIS');
+  await expect(stops.nth(0).locator('.route-place-panel')).toHaveCount(0);
+  await stops.nth(1).locator('.route-place-panel > summary').click();
+  await stops.nth(1).getByText('Hotels', {exact:true}).click();
+  await stops.nth(1).getByRole('button', { name: 'Find nearby places' }).click();
+  await expect(stops.nth(1)).toContainText('require the administrator to connect 2GIS');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
@@ -285,19 +287,62 @@ test('nearby visits create a daytime plan and enter the route only when requeste
   }] } }));
   await page.goto('/start/tours');
   const stops = page.locator('.route-stops > li');
-  await stops.nth(0).getByRole('combobox', { name: 'Address', exact: true }).fill('Museum Berlin');
+  await stops.nth(1).getByRole('combobox', { name: 'Address', exact: true }).fill('Museum Berlin');
   await page.getByRole('option', { name: 'Berlin Museum' }).getByRole('button').click();
-  const panel = stops.nth(0).locator('.route-place-panel');
-  await panel.locator('summary').click();
-  await panel.getByRole('button', { name: 'Find nearby places' }).click();
+  const panel = stops.nth(1).locator('.route-place-panel');
+  await panel.locator(':scope > summary').click();
+  await panel.getByRole('button', { name: 'Generate a walking map' }).click();
+  await expect(panel.locator('.route-walk-print')).toBeVisible();
+  await panel.getByText('Plan this day', {exact:true}).first().click();
   await panel.getByRole('checkbox', { name: 'City Gallery' }).check();
   await panel.getByLabel('Visit date').fill('2026-11-12');
   await panel.getByRole('button', { name: 'Plan this day' }).click();
   await expect(panel).toContainText('10:00–11:00 · City Gallery');
   await expect(stops).toHaveCount(2);
   await panel.getByRole('button', { name: 'Add day plan to notes' }).click();
-  await expect(stops.nth(0).getByLabel('Notes for this stop (optional)')).toHaveValue('2026-11-12\n10:00–11:00 City Gallery');
-  await panel.getByRole('button', { name: 'Add stop', exact: true }).click();
-  await expect(stops).toHaveCount(3);
-  await expect(stops.nth(1).getByRole('combobox', { name: 'Address', exact: true })).toHaveValue('City Gallery');
+  await expect(stops.nth(1).getByLabel('Notes for this stop (optional)')).toHaveValue('2026-11-12\n10:00–11:00 City Gallery');
+  await expect(panel.getByRole('button', { name: 'Add stop', exact: true })).toHaveCount(0);
+  await expect(stops).toHaveCount(2);
+});
+
+test('themed walks preserve the trip and print seven numbered photographs on a phone',async({page})=>{
+  test.setTimeout(90000);await page.setViewportSize({width:390,height:844});
+  await page.addInitScript(()=>localStorage.setItem('codoc:language','en'));
+  const state=await mockApi(page);let searchTheme='',photoRequests=0;
+  await page.route('**/api/journeys/routes/places/themed?*',route=>{
+    searchTheme=new URL(route.request().url()).searchParams.get('theme')??'';
+    const places=Array.from({length:7},(_,i)=>({id:i===0?'wikimapia-123':`node-${i}`,label:i===0?'Legend courtyard':`Quiet place ${i}`,
+      longitude:13.4002+i*.0003,latitude:52.5002+i*.0003,url:i===0?'https://wikimapia.org/123':`https://www.openstreetmap.org/node/${i}`,
+      source:i===0?'wikimapia':'osm',inOsm:i!==0,description:'A local story about this place.',visitStatus:i===1?'CLOSED':'UNKNOWN',
+      meta:{source:i===0?'wikimapia':'osm',theme:'mystic',in_osm:String(i!==0),visit_status:i===1?'CLOSED':'UNKNOWN'}}));
+    return route.fulfill({json:{available:true,source:'OpenStreetMap / Wikimapia',places}});
+  });
+  await page.route('**/api/journeys/routes/places/themed/enrich?*',route=>{
+    photoRequests++;const points=route.request().postDataJSON() as {id:string}[];
+    return route.fulfill({json:points.map(point=>({stopId:point.id,imageId:'c'.repeat(64),sourceUrl:'https://commons.wikimedia.org/wiki/File:Fixture.jpg',
+      author:'Fixture photographer',license:'CC BY 4.0',licenseUrl:'https://creativecommons.org/licenses/by/4.0/'}))});
+  });
+  await page.route('**/api/journeys/media/*',route=>{
+    if(new URL(route.request().url()).pathname.endsWith('c'.repeat(64)))return route.fulfill({path:'public/backgrounds/thumbs/sage-paper.jpg',contentType:'image/jpeg'});
+    if(!state.image)return route.fulfill({status:404});
+    return route.fulfill({contentType:'image/jpeg',body:Buffer.from(state.image.split(',')[1],'base64')});
+  });
+  await page.route('**/api/journeys/routes/road',route=>{
+    const input=route.request().postDataJSON();return route.fulfill({json:{coordinates:[[input.start.longitude,input.start.latitude],[input.end.longitude,input.end.latitude]],durationSeconds:60,distanceMeters:100}});
+  });
+  await page.goto('/start/tours');const stops=page.locator('.route-stops > li');
+  await stops.nth(1).getByRole('combobox',{name:'Address',exact:true}).fill('Museum Berlin');
+  await page.getByRole('option',{name:'Berlin Museum'}).getByRole('button').click();
+  const panel=stops.nth(1).locator('.route-place-panel');await panel.locator(':scope > summary').click();
+  await panel.getByLabel('Walk theme',{exact:true}).selectOption('mystic');
+  await expect(stops.first().locator('.route-place-panel')).toHaveCount(0);
+  await expect(panel.getByRole('button',{name:'Create walk from selected places',exact:true})).toHaveCount(0);
+  await panel.getByRole('button',{name:'Generate a walking map',exact:true}).click();
+  await expect(panel).toContainText('Community place');await expect(panel).toContainText('Closed according to OSM');
+  await expect(panel.getByRole('checkbox',{name:'Quiet place 1',exact:true})).toBeChecked();
+  await expect(panel.locator('.route-walk-print')).toBeVisible({timeout:30000});
+  expect(searchTheme).toBe('mystic');expect(photoRequests).toBe(1);expect(state.snapshot.photos).toHaveLength(7);expect(state.snapshot.stops).toHaveLength(9);
+  expect(state.snapshot.stops[1].meta.theme).toBe('mystic');expect(state.snapshot.stops[1].meta.photo_image_id).toBe('c'.repeat(64));
+  await expect(stops).toHaveCount(2);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await page.screenshot({path:'../ticket-infra/reports/themed-walk-mobile.png',fullPage:true});
 });

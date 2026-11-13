@@ -19,6 +19,7 @@ import { importElements } from '@/application/use-cases/importElements';
 import { measureEditorExport } from '@/shared/analytics/GenerationMetrics';
 import { modelStore } from '@/features/data-models/state/ModelStore';
 import { materializeSlide } from '@/lib/materialize';
+import { loadBackground } from '@/shared/backgrounds/loadBackground';
 
 /* ---------- helpers ---------- */
 
@@ -70,12 +71,20 @@ export function useFileIO() {
     modalsStore.setFillPoints([]);
   }, [selStore, modalsStore]);
 
-  const exportJson = useCallback(() => {
+  const exportJson = useCallback(async () => {
     const state = docStore.getState();
+    const embedded = new Map<string, string>();
+    const slides = [];
+    for (const slide of state.slides) {
+      if (!slide.backgroundPreset) { slides.push(slide); continue; }
+      const id = slide.backgroundPreset;
+      if (!embedded.has(id)) embedded.set(id, await loadBackground(id));
+      slides.push({ ...slide, backgroundPreset: undefined, backgroundImage: embedded.get(id) });
+    }
     const payload = {
       version: '2.0',
       exportedAt: new Date().toISOString(),
-      slides: state.slides,
+      slides,
       data: state.data,
       bindings: state.bindings,
       activeSlideId: state.activeId,
@@ -149,6 +158,10 @@ export function useFileIO() {
 
     await measureEditorExport('svg', 'local', async () => {
       const [prepared] = await prepareQrForExport([active], '');
+      if (prepared.backgroundPreset) {
+        prepared.backgroundImage = await loadBackground(prepared.backgroundPreset);
+        prepared.backgroundPreset = undefined;
+      }
 
       const { serializeSlideToSvg } = await import('@/lib/svg/serialize');
       const svg = serializeSlideToSvg(prepared);
@@ -252,7 +265,7 @@ export function useFileIO() {
         const src = await readFileAsDataUrl(file);
         docStore.commit((draft) => {
           const s = draft.slides.find((sl) => sl.id === draft.activeId);
-          if (s) s.backgroundImage = src;
+          if (s) { s.backgroundImage = src; s.backgroundPreset = undefined; }
         }, 'set-bg');
       } catch (err) {
         toast.error(__tr('Не удалось установить фон'), (err as Error).message);
@@ -264,7 +277,7 @@ export function useFileIO() {
   const removeBackgroundImage = useCallback(() => {
     docStore.commit((draft) => {
       const s = draft.slides.find((sl) => sl.id === draft.activeId);
-      if (s) s.backgroundImage = undefined;
+      if (s) { s.backgroundImage = undefined; s.backgroundPreset = undefined; }
     }, 'remove-bg');
   }, [docStore]);
 

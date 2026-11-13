@@ -39,7 +39,9 @@ export function RouteMap({
 }) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<Map | null>(null);
+  const fitted = useRef<{ stops: RouteStop[]; legs: PlannedLeg[] } | null>(null);
   const [ready, setReady] = useState(false);
+  const [styleGeneration, setStyleGeneration] = useState(0);
   const [error, setError] = useState('');
   const onReadyRef = useRef(onReady);
   onReadyRef.current = onReady;
@@ -66,6 +68,22 @@ export function RouteMap({
       return;
     }
     mapRef.current = map;
+    let raster = false, tileErrors = 0;
+    const fallback = () => {
+      if (raster) return;
+      raster = true;
+      setReady(false);
+      // A public raster fallback, without prefetching or offline bulk downloads.
+      map.setStyle({ version: 8, sources: { osm: { type: 'raster', tileSize: 256,
+        tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], maxzoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>',
+      } }, layers: [{ id: 'osm-basemap', type: 'raster', source: 'osm' }] });
+    };
+    map.on('style.load', () => { setReady(true); setStyleGeneration(value => value + 1); });
+    map.on('error', () => {
+      if (++tileErrors >= 3 && !raster) fallback();
+      else if (raster) setError(t('The map is taking too long to load. Check your connection.'));
+    });
     map.on('click', event => {
       const longitude = ((event.lngLat.lng + 180) % 360 + 360) % 360 - 180;
       if (Math.abs(event.lngLat.lat) <= 85)
@@ -75,8 +93,10 @@ export function RouteMap({
     const observer = new ResizeObserver(() => map.resize());
     observer.observe(container.current);
     const fail = window.setTimeout(() => {
-      if (!map.isStyleLoaded())
+      if (!map.loaded()) {
+        fallback();
         setError(t('The map is taking too long to load. Check your connection.'));
+      }
     }, 20000);
     map.once('load', () => {
       clearTimeout(fail);
@@ -103,10 +123,11 @@ export function RouteMap({
           // Re-render at print resolution using the same viewport, then restore the interactive map.
           const previous = map.getPixelRatio();
           try {
-            const photos = photosRef.current.slice(0, 4);
+            const photos = photosRef.current.slice(0, 12);
             // Collage stays below 4 million pixels: the server's bounded image budget.
             const width = photos.length ? 2200 : 2400, height = photos.length ? 1800 : 1500;
-            const mapHeight = photos.length ? 1375 : 1500;
+            const photoRows=Math.ceil(photos.length/4);
+            const mapHeight = photos.length ? height-(photoRows===1?425:photoRows*320) : 1500;
             map.setPixelRatio(width / Math.max(1, map.getContainer().clientWidth));
             map.triggerRepaint();
             await new Promise<void>((resolve, reject) => {
@@ -152,7 +173,7 @@ export function RouteMap({
             context.textAlign = 'right';
             context.textBaseline = 'middle';
             context.fillText(
-              '© OpenStreetMap contributors · openstreetmap.org/copyright · OpenFreeMap / OpenMapTiles',
+              raster ? '© OpenStreetMap contributors · openstreetmap.org/copyright' : '© OpenStreetMap contributors · openstreetmap.org/copyright · OpenFreeMap / OpenMapTiles',
               width - 30,
               height - 28,
             );
@@ -227,7 +248,8 @@ export function RouteMap({
         .setLngLat([stop.longitude, stop.latitude])
         .addTo(map);
     });
-    if (stops.length) {
+    if (stops.length && (fitted.current?.stops !== stops || fitted.current?.legs !== legs)) {
+      fitted.current = { stops, legs };
       const coordinates: [number, number][] = [
         ...stops.map((stop): [number, number] => [stop.longitude, stop.latitude]),
         ...legs.flatMap((leg) => leg.coordinates),
@@ -237,7 +259,7 @@ export function RouteMap({
     return () => {
       markers.forEach((marker) => marker.remove());
     };
-  }, [stops, legs, ready]);
+  }, [stops, legs, ready, styleGeneration]);
   return (
     <div>
       <div ref={container} className="route-map" data-picking={Boolean(onPick)} aria-label={t('Route map')} />

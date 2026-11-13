@@ -1,0 +1,1 @@
+export const MAX_JOURNEY_RECIPIENTS = 200;

@@ -28,6 +28,7 @@ export default function WorkflowRunner({
   );
   const [busy, setBusy] = useState(false);
   const [download, setDownload] = useState('');
+  const [visitUrl, setVisitUrl] = useState('');
   useEffect(() => {
     let active = true;
     setWorkflow(null);
@@ -36,6 +37,7 @@ export default function WorkflowRunner({
     if (previousSlug.current !== slug) {
       setValues({});
       setDownload('');
+      setVisitUrl('');
       previousSlug.current = slug;
     }
 
@@ -89,6 +91,7 @@ export default function WorkflowRunner({
             <section className="workflow-panel">
               <h2>{t('Документ готов')}</h2>
               <p>{definition.completionMessage}</p>
+              {visitUrl && <p><a href={visitUrl}>{t('Attendance verification link')}</a></p>}
               <a
                 className="journey-button journey-button--primary"
                 href={download}
@@ -99,6 +102,7 @@ export default function WorkflowRunner({
               <JourneyButton
                 onClick={() => {
                   setDownload('');
+                  setVisitUrl('');
                   setStep(0);
                 }}
               >
@@ -117,9 +121,8 @@ export default function WorkflowRunner({
                 setBusy(true);
                 setError('');
                 try {
-                  setDownload(
-                    URL.createObjectURL(await workflowApi.pdf(slug, workflow!.revision, values)),
-                  );
+                  const result = await workflowApi.pdf(slug, workflow!.revision, values);
+                  setDownload(URL.createObjectURL(result.pdf)); setVisitUrl(result.visitUrl ?? '');
                 } catch (reason) {
                   setError((reason as Error).message);
                 } finally {

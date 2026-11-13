@@ -134,6 +134,11 @@ test('mobile editor keeps slides horizontal and opens shapes from Tools', async 
   const strip = await page.locator('.slides-panel').boundingBox();
   expect(strip!.height).toBeLessThan(100);
   expect(strip!.width).toBeGreaterThan(300);
+  const canvas = await page.locator('.canvas-area').boundingBox();
+  expect(canvas!.width).toBeGreaterThan(370);
+  expect(canvas!.height).toBeGreaterThan(844 * 0.55);
+  const dock = await page.locator('.canvas-dock').boundingBox();
+  expect(dock!.height).toBeLessThanOrEqual(46);
   await page.getByRole('button', { name: /Tools/ }).click();
   await expect(page.locator('.left-panel')).toBeVisible();
   await expect(page.locator('.left-panel').getByRole('button', { name: /Triangle/ })).toBeVisible();

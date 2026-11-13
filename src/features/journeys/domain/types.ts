@@ -11,6 +11,8 @@ export type JourneyKind =
   | 'RESUME'
   | 'SCHEDULE'
   | 'GREETING'
+  | 'ALBUM'
+  | 'POETRY'
   | 'VCARD'
   | 'LABEL'
   | 'PRICETAG'
@@ -30,6 +32,7 @@ export interface JourneyDefinition {
   theme: 'sage' | 'rose' | 'ink';
   fields: JourneyField[];
   branding?: JourneyBranding | null;
+  backgroundPreset?: string | null;
 }
 export interface JourneyDocument {
   id: string;

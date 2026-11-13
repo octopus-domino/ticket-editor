@@ -3,6 +3,7 @@ import { t } from '@/shared/i18n';
 import { JOURNEY_PAGES } from './journeyPages';
 import './journey-discovery.css';
 import { reachGoal } from '@/shared/analytics/metrika';
+import { solutionBenefit } from './solutionBenefits';
 
 export function JourneyDiscovery() {
   return (
@@ -31,6 +32,7 @@ export function JourneyDiscovery() {
               </div>
               <h3>{page.label}</h3>
               <p>{page.description}</p>
+              <p>{solutionBenefit(page.kind)}</p>
               <Link
                 className="codoc-button codoc-primary"
                 to={page.action}

@@ -84,3 +84,18 @@ export async function prepareImage(file: File): Promise<string> {
     bitmap.close();
   }
 }
+
+export async function preparePdfPage(file: File, page: number, signal: AbortSignal): Promise<{ image: string; pages: number }> {
+  if (file.size > 8 * 1024 * 1024) throw new Error('recognition.invalid_pdf');
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  let binary = '';
+  for (let offset = 0; offset < bytes.length; offset += 32768)
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + 32768));
+  const response = await authFetch('/api/recognition/pdf-page', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pdf: btoa(binary), page }), signal,
+  });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error ?? 'recognition.invalid_pdf');
+  return result;
+}

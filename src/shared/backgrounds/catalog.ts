@@ -1,0 +1,1028 @@
+// Generated from the reviewed 50-asset background collection.
+export interface BackgroundPreset { id: string; ru: string; en: string; category: string; names: Record<string, string> }
+export const BACKGROUND_CATALOG: readonly BackgroundPreset[] = [
+  {
+    "id": "sage-paper",
+    "ru": "Шалфей и бумага",
+    "en": "Sage paper",
+    "category": "botanical",
+    "names": {
+      "en": "Sage paper",
+      "ru": "Шалфей и бумага",
+      "zh": "鼠尾草纸纹",
+      "pl": "Szałwia i papier",
+      "it": "Carta e salvia",
+      "es": "Papel y salvia",
+      "nl": "Saliepapier",
+      "fr": "Papier sauge",
+      "de": "Salbeipapier"
+    }
+  },
+  {
+    "id": "rose-petals",
+    "ru": "Лепестки роз",
+    "en": "Rose petals",
+    "category": "botanical",
+    "names": {
+      "en": "Rose petals",
+      "ru": "Лепестки роз",
+      "zh": "玫瑰花瓣",
+      "pl": "Płatki róż",
+      "it": "Petali di rosa",
+      "es": "Pétalos de rosa",
+      "nl": "Rozenblaadjes",
+      "fr": "Pétales de rose",
+      "de": "Rosenblätter"
+    }
+  },
+  {
+    "id": "lavender-mist",
+    "ru": "Лавандовый туман",
+    "en": "Lavender mist",
+    "category": "botanical",
+    "names": {
+      "en": "Lavender mist",
+      "ru": "Лавандовый туман",
+      "zh": "薰衣草薄雾",
+      "pl": "Lawendowa mgła",
+      "it": "Nebbia lavanda",
+      "es": "Bruma lavanda",
+      "nl": "Lavendelmist",
+      "fr": "Brume lavande",
+      "de": "Lavendelnebel"
+    }
+  },
+  {
+    "id": "citrus-garden",
+    "ru": "Цитрусовый сад",
+    "en": "Citrus garden",
+    "category": "botanical",
+    "names": {
+      "en": "Citrus garden",
+      "ru": "Цитрусовый сад",
+      "zh": "柑橘花园",
+      "pl": "Cytrusowy ogród",
+      "it": "Giardino di agrumi",
+      "es": "Jardín cítrico",
+      "nl": "Citrustuin",
+      "fr": "Jardin d’agrumes",
+      "de": "Zitrusgarten"
+    }
+  },
+  {
+    "id": "wildflower-meadow",
+    "ru": "Луговые цветы",
+    "en": "Wildflower meadow",
+    "category": "botanical",
+    "names": {
+      "en": "Wildflower meadow",
+      "ru": "Луговые цветы",
+      "zh": "野花草地",
+      "pl": "Łąka kwiatowa",
+      "it": "Prato fiorito",
+      "es": "Prado de flores",
+      "nl": "Bloemenweide",
+      "fr": "Prairie fleurie",
+      "de": "Blumenwiese"
+    }
+  },
+  {
+    "id": "fern-study",
+    "ru": "Папоротник",
+    "en": "Fern study",
+    "category": "botanical",
+    "names": {
+      "en": "Fern study",
+      "ru": "Папоротник",
+      "zh": "蕨叶",
+      "pl": "Paproć",
+      "it": "Felce",
+      "es": "Helecho",
+      "nl": "Varen",
+      "fr": "Fougère",
+      "de": "Farn"
+    }
+  },
+  {
+    "id": "cherry-blossom",
+    "ru": "Цветение сакуры",
+    "en": "Cherry blossom",
+    "category": "botanical",
+    "names": {
+      "en": "Cherry blossom",
+      "ru": "Цветение сакуры",
+      "zh": "樱花",
+      "pl": "Kwiat wiśni",
+      "it": "Fiori di ciliegio",
+      "es": "Flor de cerezo",
+      "nl": "Kersenbloesem",
+      "fr": "Fleurs de cerisier",
+      "de": "Kirschblüte"
+    }
+  },
+  {
+    "id": "olive-grove",
+    "ru": "Оливковая роща",
+    "en": "Olive grove",
+    "category": "botanical",
+    "names": {
+      "en": "Olive grove",
+      "ru": "Оливковая роща",
+      "zh": "橄榄林",
+      "pl": "Gaj oliwny",
+      "it": "Uliveto",
+      "es": "Olivar",
+      "nl": "Olijfgaard",
+      "fr": "Oliveraie",
+      "de": "Olivenhain"
+    }
+  },
+  {
+    "id": "tropical-sand",
+    "ru": "Тропический песок",
+    "en": "Tropical sand",
+    "category": "botanical",
+    "names": {
+      "en": "Tropical sand",
+      "ru": "Тропический песок",
+      "zh": "热带沙滩",
+      "pl": "Tropikalny piasek",
+      "it": "Sabbia tropicale",
+      "es": "Arena tropical",
+      "nl": "Tropisch zand",
+      "fr": "Sable tropical",
+      "de": "Tropensand"
+    }
+  },
+  {
+    "id": "autumn-herbarium",
+    "ru": "Осенний гербарий",
+    "en": "Autumn herbarium",
+    "category": "botanical",
+    "names": {
+      "en": "Autumn herbarium",
+      "ru": "Осенний гербарий",
+      "zh": "秋日草木",
+      "pl": "Jesienny zielnik",
+      "it": "Erbario autunnale",
+      "es": "Herbario otoñal",
+      "nl": "Herfstherbarium",
+      "fr": "Herbier d’automne",
+      "de": "Herbstherbarium"
+    }
+  },
+  {
+    "id": "pearl-flow",
+    "ru": "Жемчужный поток",
+    "en": "Pearl flow",
+    "category": "abstract",
+    "names": {
+      "en": "Pearl flow",
+      "ru": "Жемчужный поток",
+      "zh": "珍珠流光",
+      "pl": "Perłowy nurt",
+      "it": "Flusso perlato",
+      "es": "Flujo de perla",
+      "nl": "Parelstroom",
+      "fr": "Reflets nacrés",
+      "de": "Perlenfluss"
+    }
+  },
+  {
+    "id": "apricot-haze",
+    "ru": "Абрикосовая дымка",
+    "en": "Apricot haze",
+    "category": "abstract",
+    "names": {
+      "en": "Apricot haze",
+      "ru": "Абрикосовая дымка",
+      "zh": "杏色薄雾",
+      "pl": "Morelowa mgiełka",
+      "it": "Foschia albicocca",
+      "es": "Bruma albaricoque",
+      "nl": "Abrikozennevel",
+      "fr": "Brume abricot",
+      "de": "Aprikosennebel"
+    }
+  },
+  {
+    "id": "blue-current",
+    "ru": "Голубое течение",
+    "en": "Blue current",
+    "category": "abstract",
+    "names": {
+      "en": "Blue current",
+      "ru": "Голубое течение",
+      "zh": "蓝色流纹",
+      "pl": "Błękitny nurt",
+      "it": "Corrente azzurra",
+      "es": "Corriente azul",
+      "nl": "Blauwe stroom",
+      "fr": "Courant bleu",
+      "de": "Blaue Strömung"
+    }
+  },
+  {
+    "id": "lilac-glass",
+    "ru": "Сиреневое стекло",
+    "en": "Lilac glass",
+    "category": "abstract",
+    "names": {
+      "en": "Lilac glass",
+      "ru": "Сиреневое стекло",
+      "zh": "丁香玻璃",
+      "pl": "Liliowe szkło",
+      "it": "Vetro lilla",
+      "es": "Cristal lila",
+      "nl": "Lila glas",
+      "fr": "Verre lilas",
+      "de": "Fliederglas"
+    }
+  },
+  {
+    "id": "seafoam-orbit",
+    "ru": "Мятная орбита",
+    "en": "Seafoam orbit",
+    "category": "abstract",
+    "names": {
+      "en": "Seafoam orbit",
+      "ru": "Мятная орбита",
+      "zh": "薄荷轨迹",
+      "pl": "Miętowa orbita",
+      "it": "Orbita menta",
+      "es": "Órbita menta",
+      "nl": "Muntbaan",
+      "fr": "Orbite menthe",
+      "de": "Minzumlauf"
+    }
+  },
+  {
+    "id": "terracotta-wave",
+    "ru": "Терракотовая волна",
+    "en": "Terracotta wave",
+    "category": "abstract",
+    "names": {
+      "en": "Terracotta wave",
+      "ru": "Терракотовая волна",
+      "zh": "陶土波纹",
+      "pl": "Terakotowa fala",
+      "it": "Onda terracotta",
+      "es": "Onda terracota",
+      "nl": "Terracottagolf",
+      "fr": "Vague terre cuite",
+      "de": "Terrakottawelle"
+    }
+  },
+  {
+    "id": "champagne-light",
+    "ru": "Свет шампанского",
+    "en": "Champagne light",
+    "category": "abstract",
+    "names": {
+      "en": "Champagne light",
+      "ru": "Свет шампанского",
+      "zh": "香槟微光",
+      "pl": "Szampański blask",
+      "it": "Luce champagne",
+      "es": "Luz champán",
+      "nl": "Champagnelicht",
+      "fr": "Lumière champagne",
+      "de": "Champagnerlicht"
+    }
+  },
+  {
+    "id": "silver-linework",
+    "ru": "Серебряные линии",
+    "en": "Silver linework",
+    "category": "abstract",
+    "names": {
+      "en": "Silver linework",
+      "ru": "Серебряные линии",
+      "zh": "银色线纹",
+      "pl": "Srebrne linie",
+      "it": "Linee argento",
+      "es": "Líneas plateadas",
+      "nl": "Zilveren lijnen",
+      "fr": "Lignes argentées",
+      "de": "Silberlinien"
+    }
+  },
+  {
+    "id": "mint-lilac",
+    "ru": "Мята и сирень",
+    "en": "Mint and lilac",
+    "category": "abstract",
+    "names": {
+      "en": "Mint and lilac",
+      "ru": "Мята и сирень",
+      "zh": "薄荷与丁香",
+      "pl": "Mięta i bez",
+      "it": "Menta e lilla",
+      "es": "Menta y lila",
+      "nl": "Munt en lila",
+      "fr": "Menthe et lilas",
+      "de": "Minze und Flieder"
+    }
+  },
+  {
+    "id": "dawn-gradient",
+    "ru": "Рассветный градиент",
+    "en": "Dawn gradient",
+    "category": "abstract",
+    "names": {
+      "en": "Dawn gradient",
+      "ru": "Рассветный градиент",
+      "zh": "晨曦渐变",
+      "pl": "Świt",
+      "it": "Sfumature d’alba",
+      "es": "Degradado del alba",
+      "nl": "Dageraadverloop",
+      "fr": "Dégradé d’aube",
+      "de": "Morgenverlauf"
+    }
+  },
+  {
+    "id": "cotton-ivory",
+    "ru": "Хлопковая бумага",
+    "en": "Ivory cotton",
+    "category": "texture",
+    "names": {
+      "en": "Ivory cotton",
+      "ru": "Хлопковая бумага",
+      "zh": "象牙棉纸",
+      "pl": "Papier bawełniany",
+      "it": "Carta di cotone",
+      "es": "Papel de algodón",
+      "nl": "Katoenpapier",
+      "fr": "Papier coton",
+      "de": "Baumwollpapier"
+    }
+  },
+  {
+    "id": "linen-cream",
+    "ru": "Кремовый лён",
+    "en": "Cream linen",
+    "category": "texture",
+    "names": {
+      "en": "Cream linen",
+      "ru": "Кремовый лён",
+      "zh": "奶油亚麻",
+      "pl": "Kremowy len",
+      "it": "Lino crema",
+      "es": "Lino crema",
+      "nl": "Crèmelinnen",
+      "fr": "Lin crème",
+      "de": "Cremefarbenes Leinen"
+    }
+  },
+  {
+    "id": "white-marble",
+    "ru": "Белый мрамор",
+    "en": "White marble",
+    "category": "texture",
+    "names": {
+      "en": "White marble",
+      "ru": "Белый мрамор",
+      "zh": "白色大理石",
+      "pl": "Biały marmur",
+      "it": "Marmo bianco",
+      "es": "Mármol blanco",
+      "nl": "Wit marmer",
+      "fr": "Marbre blanc",
+      "de": "Weißer Marmor"
+    }
+  },
+  {
+    "id": "travertine-sand",
+    "ru": "Песочный травертин",
+    "en": "Sand travertine",
+    "category": "texture",
+    "names": {
+      "en": "Sand travertine",
+      "ru": "Песочный травертин",
+      "zh": "砂色洞石",
+      "pl": "Piaskowy trawertyn",
+      "it": "Travertino sabbia",
+      "es": "Travertino arena",
+      "nl": "Zandtravertijn",
+      "fr": "Travertin sable",
+      "de": "Sandtravertin"
+    }
+  },
+  {
+    "id": "handmade-washi",
+    "ru": "Бумага васи",
+    "en": "Handmade washi",
+    "category": "texture",
+    "names": {
+      "en": "Handmade washi",
+      "ru": "Бумага васи",
+      "zh": "和纸",
+      "pl": "Papier washi",
+      "it": "Carta washi",
+      "es": "Papel washi",
+      "nl": "Washipapier",
+      "fr": "Papier washi",
+      "de": "Washipapier"
+    }
+  },
+  {
+    "id": "watercolor-ivory",
+    "ru": "Акварельная бумага",
+    "en": "Watercolor ivory",
+    "category": "texture",
+    "names": {
+      "en": "Watercolor ivory",
+      "ru": "Акварельная бумага",
+      "zh": "象牙水彩纸",
+      "pl": "Papier akwarelowy",
+      "it": "Carta acquerello",
+      "es": "Papel de acuarela",
+      "nl": "Aquarelpapier",
+      "fr": "Papier aquarelle",
+      "de": "Aquarellpapier"
+    }
+  },
+  {
+    "id": "chalk-plaster",
+    "ru": "Меловая штукатурка",
+    "en": "Chalk plaster",
+    "category": "texture",
+    "names": {
+      "en": "Chalk plaster",
+      "ru": "Меловая штукатурка",
+      "zh": "白垩灰泥",
+      "pl": "Kredowy tynk",
+      "it": "Intonaco chiaro",
+      "es": "Yeso claro",
+      "nl": "Krijtpleister",
+      "fr": "Enduit craie",
+      "de": "Kreideputz"
+    }
+  },
+  {
+    "id": "silk-pearl",
+    "ru": "Жемчужный шёлк",
+    "en": "Pearl silk",
+    "category": "texture",
+    "names": {
+      "en": "Pearl silk",
+      "ru": "Жемчужный шёлк",
+      "zh": "珍珠丝绸",
+      "pl": "Perłowy jedwab",
+      "it": "Seta perlata",
+      "es": "Seda perlada",
+      "nl": "Parelzijde",
+      "fr": "Soie nacrée",
+      "de": "Perlenseide"
+    }
+  },
+  {
+    "id": "pale-wood",
+    "ru": "Светлое дерево",
+    "en": "Pale wood",
+    "category": "texture",
+    "names": {
+      "en": "Pale wood",
+      "ru": "Светлое дерево",
+      "zh": "浅色木纹",
+      "pl": "Jasne drewno",
+      "it": "Legno chiaro",
+      "es": "Madera clara",
+      "nl": "Licht hout",
+      "fr": "Bois clair",
+      "de": "Helles Holz"
+    }
+  },
+  {
+    "id": "recycled-paper",
+    "ru": "Крафтовая бумага",
+    "en": "Recycled paper",
+    "category": "texture",
+    "names": {
+      "en": "Recycled paper",
+      "ru": "Крафтовая бумага",
+      "zh": "再生纸",
+      "pl": "Papier z odzysku",
+      "it": "Carta riciclata",
+      "es": "Papel reciclado",
+      "nl": "Gerecycled papier",
+      "fr": "Papier recyclé",
+      "de": "Recyclingpapier"
+    }
+  },
+  {
+    "id": "gold-celebration",
+    "ru": "Золотой праздник",
+    "en": "Golden celebration",
+    "category": "celebration",
+    "names": {
+      "en": "Golden celebration",
+      "ru": "Золотой праздник",
+      "zh": "金色庆典",
+      "pl": "Złote święto",
+      "it": "Festa dorata",
+      "es": "Fiesta dorada",
+      "nl": "Gouden feest",
+      "fr": "Fête dorée",
+      "de": "Goldenes Fest"
+    }
+  },
+  {
+    "id": "peach-ribbon",
+    "ru": "Персиковая лента",
+    "en": "Peach ribbon",
+    "category": "celebration",
+    "names": {
+      "en": "Peach ribbon",
+      "ru": "Персиковая лента",
+      "zh": "桃色缎带",
+      "pl": "Brzoskwiniowa wstążka",
+      "it": "Nastro pesca",
+      "es": "Cinta melocotón",
+      "nl": "Perziklint",
+      "fr": "Ruban pêche",
+      "de": "Pfirsichband"
+    }
+  },
+  {
+    "id": "blue-confetti",
+    "ru": "Голубое конфетти",
+    "en": "Blue confetti",
+    "category": "celebration",
+    "names": {
+      "en": "Blue confetti",
+      "ru": "Голубое конфетти",
+      "zh": "蓝色纸屑",
+      "pl": "Błękitne konfetti",
+      "it": "Coriandoli azzurri",
+      "es": "Confeti azul",
+      "nl": "Blauwe confetti",
+      "fr": "Confettis bleus",
+      "de": "Blaue Konfetti"
+    }
+  },
+  {
+    "id": "winter-snow",
+    "ru": "Зимний снег",
+    "en": "Winter snow",
+    "category": "celebration",
+    "names": {
+      "en": "Winter snow",
+      "ru": "Зимний снег",
+      "zh": "冬日雪花",
+      "pl": "Zimowy śnieg",
+      "it": "Neve invernale",
+      "es": "Nieve de invierno",
+      "nl": "Wintersneeuw",
+      "fr": "Neige d’hiver",
+      "de": "Winterschnee"
+    }
+  },
+  {
+    "id": "spring-watercolor",
+    "ru": "Весенняя акварель",
+    "en": "Spring watercolor",
+    "category": "celebration",
+    "names": {
+      "en": "Spring watercolor",
+      "ru": "Весенняя акварель",
+      "zh": "春日水彩",
+      "pl": "Wiosenna akwarela",
+      "it": "Acquerello primaverile",
+      "es": "Acuarela primaveral",
+      "nl": "Lenteaquarel",
+      "fr": "Aquarelle printanière",
+      "de": "Frühlingsaquarell"
+    }
+  },
+  {
+    "id": "art-deco-ivory",
+    "ru": "Ар-деко айвори",
+    "en": "Ivory art deco",
+    "category": "celebration",
+    "names": {
+      "en": "Ivory art deco",
+      "ru": "Ар-деко айвори",
+      "zh": "象牙装饰艺术",
+      "pl": "Art déco ecru",
+      "it": "Art déco avorio",
+      "es": "Art déco marfil",
+      "nl": "Ivoor art deco",
+      "fr": "Art déco ivoire",
+      "de": "Elfenbein-Art-déco"
+    }
+  },
+  {
+    "id": "champagne-bokeh",
+    "ru": "Огни шампанского",
+    "en": "Champagne bokeh",
+    "category": "celebration",
+    "names": {
+      "en": "Champagne bokeh",
+      "ru": "Огни шампанского",
+      "zh": "香槟光影",
+      "pl": "Szampańskie światła",
+      "it": "Luci champagne",
+      "es": "Luces champán",
+      "nl": "Champagnelichtjes",
+      "fr": "Lueurs champagne",
+      "de": "Champagnerlichter"
+    }
+  },
+  {
+    "id": "dusty-blue-floral",
+    "ru": "Пыльно-голубые цветы",
+    "en": "Dusty blue floral",
+    "category": "celebration",
+    "names": {
+      "en": "Dusty blue floral",
+      "ru": "Пыльно-голубые цветы",
+      "zh": "雾蓝花卉",
+      "pl": "Przygaszony błękit",
+      "it": "Fiori azzurro polvere",
+      "es": "Flores azul suave",
+      "nl": "Zachtblauwe bloemen",
+      "fr": "Fleurs bleu poudré",
+      "de": "Staubblaue Blumen"
+    }
+  },
+  {
+    "id": "terracotta-arch",
+    "ru": "Терракотовая арка",
+    "en": "Terracotta arch",
+    "category": "celebration",
+    "names": {
+      "en": "Terracotta arch",
+      "ru": "Терракотовая арка",
+      "zh": "陶土拱形",
+      "pl": "Terakotowy łuk",
+      "it": "Arco terracotta",
+      "es": "Arco terracota",
+      "nl": "Terracottaboog",
+      "fr": "Arche terre cuite",
+      "de": "Terrakottabogen"
+    }
+  },
+  {
+    "id": "coral-festival",
+    "ru": "Коралловый праздник",
+    "en": "Coral festival",
+    "category": "celebration",
+    "names": {
+      "en": "Coral festival",
+      "ru": "Коралловый праздник",
+      "zh": "珊瑚庆典",
+      "pl": "Koralowe święto",
+      "it": "Festa corallo",
+      "es": "Fiesta coral",
+      "nl": "Koraalfeest",
+      "fr": "Fête corail",
+      "de": "Korallenfest"
+    }
+  },
+  {
+    "id": "misty-mountains",
+    "ru": "Горы в тумане",
+    "en": "Misty mountains",
+    "category": "travel",
+    "names": {
+      "en": "Misty mountains",
+      "ru": "Горы в тумане",
+      "zh": "云雾山峦",
+      "pl": "Góry we mgle",
+      "it": "Montagne nella nebbia",
+      "es": "Montañas con niebla",
+      "nl": "Mistige bergen",
+      "fr": "Montagnes brumeuses",
+      "de": "Nebelberge"
+    }
+  },
+  {
+    "id": "coastal-morning",
+    "ru": "Утро у моря",
+    "en": "Coastal morning",
+    "category": "travel",
+    "names": {
+      "en": "Coastal morning",
+      "ru": "Утро у моря",
+      "zh": "海岸清晨",
+      "pl": "Poranek nad morzem",
+      "it": "Mattino al mare",
+      "es": "Mañana costera",
+      "nl": "Kustochtend",
+      "fr": "Matin côtier",
+      "de": "Küstenmorgen"
+    }
+  },
+  {
+    "id": "forest-haze",
+    "ru": "Лесная дымка",
+    "en": "Forest haze",
+    "category": "travel",
+    "names": {
+      "en": "Forest haze",
+      "ru": "Лесная дымка",
+      "zh": "林间薄雾",
+      "pl": "Leśna mgła",
+      "it": "Foschia nel bosco",
+      "es": "Bruma del bosque",
+      "nl": "Bosnevel",
+      "fr": "Brume forestière",
+      "de": "Waldnebel"
+    }
+  },
+  {
+    "id": "desert-dunes",
+    "ru": "Пустынные дюны",
+    "en": "Desert dunes",
+    "category": "travel",
+    "names": {
+      "en": "Desert dunes",
+      "ru": "Пустынные дюны",
+      "zh": "沙漠沙丘",
+      "pl": "Pustynne wydmy",
+      "it": "Dune del deserto",
+      "es": "Dunas del desierto",
+      "nl": "Woestijnduinen",
+      "fr": "Dunes du désert",
+      "de": "Wüstendünen"
+    }
+  },
+  {
+    "id": "alpine-lake",
+    "ru": "Альпийское озеро",
+    "en": "Alpine lake",
+    "category": "travel",
+    "names": {
+      "en": "Alpine lake",
+      "ru": "Альпийское озеро",
+      "zh": "高山湖泊",
+      "pl": "Alpejskie jezioro",
+      "it": "Lago alpino",
+      "es": "Lago alpino",
+      "nl": "Alpenmeer",
+      "fr": "Lac alpin",
+      "de": "Alpensee"
+    }
+  },
+  {
+    "id": "city-sketch",
+    "ru": "Городской скетч",
+    "en": "City sketch",
+    "category": "travel",
+    "names": {
+      "en": "City sketch",
+      "ru": "Городской скетч",
+      "zh": "城市素描",
+      "pl": "Miejski szkic",
+      "it": "Schizzo urbano",
+      "es": "Boceto urbano",
+      "nl": "Stadsschets",
+      "fr": "Croquis urbain",
+      "de": "Stadtskizze"
+    }
+  },
+  {
+    "id": "island-breeze",
+    "ru": "Островной бриз",
+    "en": "Island breeze",
+    "category": "travel",
+    "names": {
+      "en": "Island breeze",
+      "ru": "Островной бриз",
+      "zh": "海岛微风",
+      "pl": "Wyspiarska bryza",
+      "it": "Brezza isolana",
+      "es": "Brisa isleña",
+      "nl": "Eilandbries",
+      "fr": "Brise insulaire",
+      "de": "Inselbrise"
+    }
+  },
+  {
+    "id": "northern-light",
+    "ru": "Северное сияние",
+    "en": "Northern light",
+    "category": "travel",
+    "names": {
+      "en": "Northern light",
+      "ru": "Северное сияние",
+      "zh": "极光",
+      "pl": "Zorza polarna",
+      "it": "Aurora boreale",
+      "es": "Aurora boreal",
+      "nl": "Noorderlicht",
+      "fr": "Aurore boréale",
+      "de": "Nordlicht"
+    }
+  },
+  {
+    "id": "tuscan-hills",
+    "ru": "Тосканские холмы",
+    "en": "Tuscan hills",
+    "category": "travel",
+    "names": {
+      "en": "Tuscan hills",
+      "ru": "Тосканские холмы",
+      "zh": "托斯卡纳山丘",
+      "pl": "Toskańskie wzgórza",
+      "it": "Colline toscane",
+      "es": "Colinas toscanas",
+      "nl": "Toscaanse heuvels",
+      "fr": "Collines toscanes",
+      "de": "Toskanische Hügel"
+    }
+  },
+  {
+    "id": "sakura-journey",
+    "ru": "Весеннее путешествие",
+    "en": "Spring journey",
+    "category": "travel",
+    "names": {
+      "en": "Spring journey",
+      "ru": "Весеннее путешествие",
+      "zh": "春日旅途",
+      "pl": "Wiosenna podróż",
+      "it": "Viaggio di primavera",
+      "es": "Viaje de primavera",
+      "nl": "Lentereis",
+      "fr": "Voyage printanier",
+      "de": "Frühlingsreise"
+    }
+  },
+  {
+    "id": "corporate-blue",
+    "ru": "Деловой синий",
+    "en": "Corporate blue",
+    "category": "business",
+    "names": {
+      "en": "Corporate blue",
+      "ru": "Деловой синий",
+      "zh": "商务蓝",
+      "pl": "Biznesowy błękit",
+      "it": "Blu aziendale",
+      "es": "Azul corporativo",
+      "nl": "Zakelijk blauw",
+      "fr": "Bleu professionnel",
+      "de": "Geschäftsblau"
+    }
+  },
+  {
+    "id": "graphite-grid",
+    "ru": "Графитовая сетка",
+    "en": "Graphite grid",
+    "category": "business",
+    "names": {
+      "en": "Graphite grid",
+      "ru": "Графитовая сетка",
+      "zh": "石墨网格",
+      "pl": "Grafitowa siatka",
+      "it": "Griglia grafite",
+      "es": "Cuadrícula grafito",
+      "nl": "Grafietraster",
+      "fr": "Grille graphite",
+      "de": "Graphitraster"
+    }
+  },
+  {
+    "id": "teal-geometry",
+    "ru": "Бирюзовая геометрия",
+    "en": "Teal geometry",
+    "category": "business",
+    "names": {
+      "en": "Teal geometry",
+      "ru": "Бирюзовая геометрия",
+      "zh": "青绿几何",
+      "pl": "Turkusowa geometria",
+      "it": "Geometria turchese",
+      "es": "Geometría turquesa",
+      "nl": "Turkooizen geometrie",
+      "fr": "Géométrie turquoise",
+      "de": "Türkise Geometrie"
+    }
+  },
+  {
+    "id": "executive-ivory",
+    "ru": "Деловой айвори",
+    "en": "Executive ivory",
+    "category": "business",
+    "names": {
+      "en": "Executive ivory",
+      "ru": "Деловой айвори",
+      "zh": "商务象牙白",
+      "pl": "Biznesowa elegancja",
+      "it": "Avorio elegante",
+      "es": "Marfil ejecutivo",
+      "nl": "Zakelijk ivoor",
+      "fr": "Ivoire professionnel",
+      "de": "Geschäftliches Elfenbein"
+    }
+  },
+  {
+    "id": "navy-gold",
+    "ru": "Синий и золото",
+    "en": "Navy and gold",
+    "category": "business",
+    "names": {
+      "en": "Navy and gold",
+      "ru": "Синий и золото",
+      "zh": "藏蓝与金色",
+      "pl": "Granat i złoto",
+      "it": "Blu e oro",
+      "es": "Azul marino y oro",
+      "nl": "Marineblauw en goud",
+      "fr": "Bleu marine et or",
+      "de": "Marineblau und Gold"
+    }
+  },
+  {
+    "id": "steel-wave",
+    "ru": "Стальная волна",
+    "en": "Steel wave",
+    "category": "business",
+    "names": {
+      "en": "Steel wave",
+      "ru": "Стальная волна",
+      "zh": "钢灰波纹",
+      "pl": "Stalowa fala",
+      "it": "Onda acciaio",
+      "es": "Onda de acero",
+      "nl": "Staalgolf",
+      "fr": "Vague acier",
+      "de": "Stahlwelle"
+    }
+  },
+  {
+    "id": "light-blueprint",
+    "ru": "Светлый чертёж",
+    "en": "Light blueprint",
+    "category": "business",
+    "names": {
+      "en": "Light blueprint",
+      "ru": "Светлый чертёж",
+      "zh": "浅色蓝图",
+      "pl": "Jasny plan",
+      "it": "Progetto chiaro",
+      "es": "Plano claro",
+      "nl": "Lichte blauwdruk",
+      "fr": "Plan clair",
+      "de": "Heller Bauplan"
+    }
+  },
+  {
+    "id": "sand-architecture",
+    "ru": "Песочная архитектура",
+    "en": "Sand architecture",
+    "category": "business",
+    "names": {
+      "en": "Sand architecture",
+      "ru": "Песочная архитектура",
+      "zh": "砂色建筑",
+      "pl": "Piaskowa architektura",
+      "it": "Architettura sabbia",
+      "es": "Arquitectura arena",
+      "nl": "Zandarchitectuur",
+      "fr": "Architecture sable",
+      "de": "Sandarchitektur"
+    }
+  },
+  {
+    "id": "emerald-lines",
+    "ru": "Изумрудные линии",
+    "en": "Emerald lines",
+    "category": "business",
+    "names": {
+      "en": "Emerald lines",
+      "ru": "Изумрудные линии",
+      "zh": "翡翠线纹",
+      "pl": "Szmaragdowe linie",
+      "it": "Linee smeraldo",
+      "es": "Líneas esmeralda",
+      "nl": "Smaragdlijnen",
+      "fr": "Lignes émeraude",
+      "de": "Smaragdlinien"
+    }
+  },
+  {
+    "id": "platinum-paper",
+    "ru": "Платиновая бумага",
+    "en": "Platinum paper",
+    "category": "business",
+    "names": {
+      "en": "Platinum paper",
+      "ru": "Платиновая бумага",
+      "zh": "铂白纸纹",
+      "pl": "Platynowy papier",
+      "it": "Carta platino",
+      "es": "Papel platino",
+      "nl": "Platinapapier",
+      "fr": "Papier platine",
+      "de": "Platinpapier"
+    }
+  }
+];
+export function backgroundUrl(id: string | null | undefined, thumbnail = false): string | undefined {
+  if (!id || !BACKGROUND_CATALOG.some(preset => preset.id === id)) return undefined;
+  return `${import.meta.env.BASE_URL}backgrounds/${thumbnail ? `thumbs/${id}.jpg` : `lossless/${id}.webp`}`;
+}

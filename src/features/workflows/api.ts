@@ -20,6 +20,7 @@ export interface WorkflowDefinition {
   templateId: string;
   steps: WorkflowStep[];
   completionMessage: string;
+  attendance?: { title: string; instructions: string } | null;
 }
 export interface ManagedWorkflow {
   definition: WorkflowDefinition;
@@ -80,6 +81,6 @@ export const workflowApi = {
     if (!r.ok) {
       await json(r);
     }
-    return r.blob();
+    return { pdf: await r.blob(), visitUrl: r.headers.get('X-Workflow-Visit-URL') };
   },
 };

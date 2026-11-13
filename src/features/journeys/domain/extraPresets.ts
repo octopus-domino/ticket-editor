@@ -9,6 +9,14 @@ export function extraJourneyPresets(translate: typeof t): Record<string, Journey
     required = true,
   ): JourneyField => ({ name, label: translate(label), type, required });
   return {
+    poetry: { slug: 'poetry', kind: 'POETRY', theme: 'sage', title: translate('Seven days of poetry'),
+      description: translate('A little warmth for each day. Choose a language, age and mood; we will find real poems for seven personal cards.'),
+      fields: [field('description', 'A personal message', 'textarea', false)] },
+    albums: {
+      slug: 'albums', kind: 'ALBUM', theme: 'sage', title: translate('An album made together'),
+      description: translate('Invite family and friends to add photos and handwritten captions. Keep one shared album and print it as a PDF.'),
+      fields: [field('description', 'A few words about the album', 'textarea', false)],
+    },
     cards: {
       slug: 'cards',
       kind: 'VCARD',

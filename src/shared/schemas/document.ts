@@ -115,6 +115,8 @@ export const TextElementSchema = z
     richText: z.boolean().optional(),
     fontSize: z.number().positive(),
     fontFamily: z.string(),
+      autoFit: z.boolean().optional(),
+      minFontSize: z.number().min(6).optional(),
     fill: z.string(),
     fontStyle: z.string().default('normal'),
     textDecoration: z.string().default(''),
@@ -360,6 +362,7 @@ export const SlideSchema = z
     height: z.number().positive(),
     background: z.string().default('#ffffff'),
     backgroundImage: z.string().optional(),
+    repeat: z.object({ path: z.string().min(1), pageSize: z.number().int().min(1).max(100) }).optional(),
     padding: PaddingSchema.default({
       top: 20,
       right: 20,

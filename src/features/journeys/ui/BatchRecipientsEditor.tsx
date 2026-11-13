@@ -100,8 +100,8 @@ export function BatchRecipientsEditor({
                       throw new Error(t('Проверьте имя в строке {0}.', index + 2));
                     return values;
                   });
-                if (!rows.length || rows.length > 100)
-                  throw new Error(t('Нужно от 1 до 100 получателей.'));
+                if (!rows.length || rows.length > MAX_JOURNEY_RECIPIENTS)
+                  throw new Error(t('Use a list of 1 to {0} recipients.', MAX_JOURNEY_RECIPIENTS));
                 onChange(rows.map((row) => row.recipient).join('\n'), rows);
                 setSheet([]);
                 setError('');
@@ -127,10 +127,11 @@ export function BatchRecipientsEditor({
       </label>
       <small>
         {t(
-          'До 100 получателей. При ручном изменении списка используются общие значения из формы. Файл Excel остаётся в браузере.',
+          'Up to 200 recipients. Editing the list manually uses the shared form values. Your Excel file stays in the browser.',
         )}
       </small>
       {error && <p role="alert">{error}</p>}
     </fieldset>
   );
 }
+import { MAX_JOURNEY_RECIPIENTS } from '../domain/batchLimits';

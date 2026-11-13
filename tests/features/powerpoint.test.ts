@@ -65,11 +65,12 @@ describe('PowerPoint interchange', () => {
     const result = (await importPptx(pack(files))).slides[0].elements[0];
     expect(result).toMatchObject({ type: 'text', richText: true });
     if (result.type !== 'text') throw new Error('Expected editable text');
-    expect(result.text).toContain('font-size:32px');
-    expect(result.text).toContain('font-size:16px');
-    expect(result.text).toContain('font-weight:700');
-    expect(result.text).toContain('&lt;script&gt;body');
-    expect(result.text).not.toContain('<script>');
+    expect(result.text).toBe('Headline<script>body');
+    expect(result.html).toContain('font-size:32px');
+    expect(result.html).toContain('font-size:16px');
+    expect(result.html).toContain('font-weight:700');
+    expect(result.html).toContain('&lt;script&gt;body');
+    expect(result.html).not.toContain('<script>');
   });
   it.each([
     [240, 130],

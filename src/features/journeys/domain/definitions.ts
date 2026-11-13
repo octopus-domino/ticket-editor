@@ -11,6 +11,8 @@ export type {
   JourneyBatch,
 } from './types';
 export const JOURNEY_CAPABILITIES: Record<JourneyKind, { label: string; batch: boolean }> = {
+  ALBUM: { label: t('Shared photo albums'), batch: false },
+  POETRY: { label: t('Daily poetry cards'), batch: false },
   VCARD: { label: t('QR business cards'), batch: true },
   LABEL: { label: t('Product labels'), batch: true },
   PRICETAG: { label: t('Price tags with reviews'), batch: true },

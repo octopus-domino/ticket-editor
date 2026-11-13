@@ -12,6 +12,7 @@ import './journeys.css';
 import { LanguageSwitcher } from '@/shared/i18n/LanguageSwitcher';
 import WorkflowRunner from '../workflows/WorkflowRunner';
 import { localizeInvalidField, clearFieldValidation } from './ui/formValidation';
+import { BackgroundSurface } from '@/shared/backgrounds/BackgroundSurface';
 
 function ConfiguredJourney() {
   const params = useParams();
@@ -42,7 +43,7 @@ function ConfiguredJourney() {
   return professional ? (
     <WorkflowRunner slugOverride={slug} embedded />
   ) : definition ? (
-    <JourneyWizard key={slug} definition={definition} custom />
+    <BackgroundSurface id={definition.backgroundPreset}><JourneyWizard key={slug} definition={definition} custom /></BackgroundSurface>
   ) : (
     <main className="journey-public">
       {error ? <p role="alert">{error}</p> : <p role="status">{t('Загружаем сайт…')}</p>}

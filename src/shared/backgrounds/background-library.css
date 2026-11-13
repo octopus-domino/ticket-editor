@@ -1,0 +1,17 @@
+.background-library{min-width:0;margin:12px 0;border:1px solid var(--border,#d8ddd7);border-radius:12px;padding:10px;background:var(--panel,#fff)}
+.background-library>summary{cursor:pointer;font-weight:600;min-height:36px;line-height:1.5;overflow-wrap:anywhere}
+.background-library>summary>span{display:inline-block;border-radius:12px;padding:1px 7px;background:#eaf0e5;color:#31533c;font-size:12px}
+.background-library>p{font-size:12px;line-height:1.5;color:var(--muted,#53675b)}
+.background-library>label{display:grid;gap:6px;font-size:12px;margin-bottom:12px}
+.background-library select{width:100%;min-width:0;box-sizing:border-box;padding:8px;border:1px solid #ccd6cc;border-radius:8px;background:var(--panel,#fff);color:var(--text,#203e34)}
+.background-library-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:8px;max-height:370px;overflow:auto;overscroll-behavior:contain;padding:3px}
+.background-library .background-library-item{display:grid;gap:0;padding:0;min-width:0;border:2px solid transparent;border-radius:9px;overflow:hidden;background:#fff;color:#213b31;cursor:pointer;text-align:left;line-height:1.3;font-size:11px}
+.background-library .background-library-item[aria-pressed=true]{border-color:#4b7755;box-shadow:0 0 0 1px #4b7755}
+.background-library .background-library-item:focus-visible{outline:2px solid #c2410c;outline-offset:1px}
+.background-library-item img{display:block;width:100%;height:auto;aspect-ratio:1;object-fit:cover}
+.background-library-item span{padding:6px;overflow-wrap:anywhere;font-size:11px;line-height:1.3}
+.background-library button:disabled{opacity:.65;cursor:wait}
+.journey-site-background{min-height:100dvh;background-size:cover;background-position:center;background-attachment:fixed;padding:20px;box-sizing:border-box}
+.journey-site-background .journey-wizard{background:transparent}
+.journey-site-background .journey-intro{background:#ffffffeb;border-radius:16px;padding:24px}
+@media(max-width:600px){.journey-site-background{padding:10px;background-attachment:scroll}.background-library-grid{grid-template-columns:repeat(auto-fill,minmax(90px,1fr))}}

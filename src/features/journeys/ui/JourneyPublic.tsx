@@ -1,5 +1,5 @@
 import { t, getLocale } from '@/shared/i18n';
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import type { GuestReply, JourneyDocument } from '../domain/definitions';
 import { journeyApi, managementKey, pdfUrl, publicUrl } from '../api/journeys';
@@ -16,9 +16,13 @@ import { readBranding } from '../domain/branding';
 import { JourneyReviews } from './JourneyReviews';
 import { JourneyPrintSize } from './JourneyPrintSize';
 import { contactHref } from '../domain/contact';
+import type { RouteEditorHandle } from './RouteEditor';
+import { JourneyConstructorButton } from './JourneyConstructorButton';
+import { JourneyStatusActions } from './JourneyStatusActions';
 const RouteEditor = lazy(() =>
   import('./RouteEditor').then((module) => ({ default: module.RouteEditor })),
 );
+const AlbumPanel = lazy(() => import('./AlbumPanel').then(module => ({ default: module.AlbumPanel })));
 
 export function JourneyPublic({ manage = false }: { manage?: boolean }) {
   const { id = '' } = useParams();
@@ -27,6 +31,7 @@ export function JourneyPublic({ manage = false }: { manage?: boolean }) {
   const [busy, setBusy] = useState(false);
   const [mediaBusy, setMediaBusy] = useState(false);
   const [routeBusy, setRouteBusy] = useState(false);
+  const routeEditor = useRef<RouteEditorHandle>(null);
   const [message, setMessage] = useState('');
   const [name, setName] = useState('');
   const [attending, setAttending] = useState(true);
@@ -37,7 +42,7 @@ export function JourneyPublic({ manage = false }: { manage?: boolean }) {
   const documentUpdatedAt = document?.updatedAt;
   useEffect(() => {
     setStatus(null);
-    if (!documentKind || !['TICKET', 'GIFT', 'PASS'].includes(documentKind)) return;
+    if (!documentKind || !manage && !['TICKET', 'GIFT', 'PASS'].includes(documentKind)) return;
     let active = true;
     void journeyApi
       .status(id)
@@ -50,7 +55,7 @@ export function JourneyPublic({ manage = false }: { manage?: boolean }) {
     return () => {
       active = false;
     };
-  }, [id, documentKind, documentUpdatedAt]);
+  }, [id, documentKind, documentUpdatedAt, manage]);
   useEffect(() => {
     let active = true;
     setDocument(null);
@@ -101,7 +106,9 @@ export function JourneyPublic({ manage = false }: { manage?: boolean }) {
     setBusy(true);
     setError('');
     try {
-      setDocument(await journeyApi.update(document, managementKey(id)));
+      const routeId = document.kind === 'TOUR' ? await routeEditor.current?.prepare() : undefined;
+      const prepared = routeId ? { ...document, data: { ...document.data, route: routeId } } : document;
+      setDocument(await journeyApi.update(prepared, managementKey(id)));
       setMessage(t('Обновлено. Публичная ссылка и QR остались прежними.'));
     } catch (reason) {
       setError((reason as Error).message);
@@ -118,8 +125,10 @@ export function JourneyPublic({ manage = false }: { manage?: boolean }) {
   return (
     <main className={`journey-public journey-public-${document.kind.toLowerCase()}`}>
       <div className="journey-public-layout">
-        <JourneyCard document={document} />
+        {document.kind === 'ALBUM' && <Suspense fallback={<p>{t('Loading…')}</p>}><AlbumPanel id={id} manage={manage} /></Suspense>}
+        {document.kind !== 'ALBUM' && <JourneyCard document={document} />}
         <aside className="journey-public-actions">
+          {manage && <JourneyConstructorButton id={id} />}
           {!manage && ['INVITATION', 'TICKET'].includes(document.kind) && (
             <header className="journey-event-intro">
               <span>{t('ДО ВСТРЕЧИ НА СОБЫТИИ')}</span>
@@ -265,6 +274,7 @@ export function JourneyPublic({ manage = false }: { manage?: boolean }) {
           {manage && (
             <section className="journey-manage">
               <h1>{t('Управление публикацией')}</h1>
+              {status && <JourneyStatusActions id={id} managementKey={managementKey(id)} status={status} onChange={setStatus} />}
               <p>{t('Сохраните эту ссылку. Не отправляйте её гостям.')}</p>
               <label>
                 {t('Название')}
@@ -361,6 +371,7 @@ export function JourneyPublic({ manage = false }: { manage?: boolean }) {
               {document.kind === 'TOUR' && (
                 <Suspense fallback={<p>{t('Loading map…')}</p>}>
                   <RouteEditor
+                    ref={routeEditor}
                     value={document.data.route ?? ''}
                     onBusyChange={setRouteBusy}
                     onChange={(route) =>

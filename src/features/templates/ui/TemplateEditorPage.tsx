@@ -15,6 +15,7 @@ import { workspaceStore } from '@/workspace/store';
 import './template-journey.css';
 import { TutorialCoach } from '@/features/learning/TutorialCoach';
 import { ResourceHistoryPanel } from '@/features/history/ResourceHistoryPanel';
+import { ConstructorPublicationActions } from '@/features/journeys/ui/ConstructorPublicationActions';
 
 function TemplateEditorSession({ templateId }: { templateId: string }) {
   const activeSchemaId = useStore(schemaStore, (state) => state.activeId);
@@ -108,6 +109,7 @@ function TemplateEditorSession({ templateId }: { templateId: string }) {
           saveContext={activeSchemaId}
         />
       </div>
+      <ConstructorPublicationActions templateId={template.id} ready={saved} />
     </div>
   );
 }

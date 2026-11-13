@@ -9,7 +9,9 @@ export interface RouteSnapshot {
   timeline: TimelineRow[];
   startLocal: string;
   mapId: string;
+  photos?: RoutePhoto[];
 }
+export interface RoutePhoto { stopId: string; imageId: string; sourceUrl: string; author: string; license: string; licenseUrl: string }
 
 /** Split at the date line so the renderer does not draw a flight across the whole world. */
 export function mapRouteLines(coordinates: [number, number][]): [number, number][][] {

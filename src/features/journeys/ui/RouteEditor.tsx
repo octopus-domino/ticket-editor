@@ -1,19 +1,21 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useImperativeHandle, forwardRef, useRef, useState } from 'react';
 import timezone from 'tz-lookup';
 import { getLocale, t } from '@/shared/i18n';
 import { journeyRequest } from '../api/journeys';
 import { journeyError } from '../api/errorMessage';
 import {
-  buildRouteTimeline,
-  departureForFlight,
   type RouteStop,
   type RouteLeg,
   type TimelineRow,
 } from '../domain/routeTimeline';
-import { flightCoordinates, type PlannedLeg, type RouteSnapshot } from '../domain/route';
+import type { PlannedLeg, RouteSnapshot } from '../domain/route';
+import { planRoute } from '../api/routePlanner';
+import { reorderRoute } from '../domain/reorderRoute';
+import { RouteReorderHandle } from './RouteReorderHandle';
 import { RouteAddressInput, type RouteAddress } from './RouteAddressInput';
 import type { RouteMapHandle } from './RouteMap';
 import './route.css';
+import { RoutePlacePanel } from './RoutePlacePanel';
 
 const RouteMap = lazy(() => import('./RouteMap').then((module) => ({ default: module.RouteMap })));
 const emptyStop = (): RouteStop => ({
@@ -31,16 +33,13 @@ const emptyLeg = (): PlannedLeg => ({
   beforeMinutes: 120,
   afterMinutes: 45,
 });
-export function RouteEditor({
+export interface RouteEditorHandle { prepare(): Promise<string> }
+export const RouteEditor = forwardRef<RouteEditorHandle, { value: string; onChange: (id: string) => void; onBusyChange: (busy: boolean) => void }>(function RouteEditor({
   value,
   onChange,
   onBusyChange,
-}: {
-  value: string;
-  onChange: (id: string) => void;
-  onBusyChange: (busy: boolean) => void;
-}) {
-  const [stops, setStops] = useState<RouteStop[]>([emptyStop(), emptyStop()]);
+}, ref) {
+  const [stops, setStops] = useState<RouteStop[]>(() => [emptyStop(), emptyStop()]);
   const [legs, setLegs] = useState<PlannedLeg[]>([emptyLeg()]);
   const [start, setStart] = useState('');
   const [rows, setRows] = useState<TimelineRow[]>([]);
@@ -48,8 +47,14 @@ export function RouteEditor({
   const [error, setError] = useState('');
   const [progress, setProgress] = useState('');
   const [dirty, setDirty] = useState(false);
+  const [pickingStop, setPickingStop] = useState<string | null>(null);
+  const [pickedPoint, setPickedPoint] = useState<{ longitude: number; latitude: number } | null>(null);
+  const [pointName, setPointName] = useState('');
+  const pickPanel = useRef<HTMLDivElement>(null);
   const map = useRef<RouteMapHandle | null>(null);
   const loaded = useRef('');
+  const running = useRef<Promise<string> | null>(null);
+  const busyRef = useRef(false);
   const callbacks = useRef({ onChange, onBusyChange });
   callbacks.current = { onChange, onBusyChange };
   useEffect(() => {
@@ -76,14 +81,13 @@ export function RouteEditor({
     setDirty(true);
     setRows([]);
     setError('');
-    callbacks.current.onChange('');
   };
   const address = (index: number, selected: RouteAddress) => {
     invalidate();
     setStops((items) =>
       items.map((stop, i) =>
         i === index
-          ? { ...stop, ...selected, zone: timezone(selected.latitude, selected.longitude) }
+          ? { ...stop, ...selected, walkId: undefined, confirmed: true, zone: timezone(selected.latitude, selected.longitude) }
           : stop,
       ),
     );
@@ -103,78 +107,58 @@ export function RouteEditor({
       ),
     );
   };
+  const showError = (reason: unknown) => {
+    const message = (reason as Error).message;
+    const translated = message.startsWith('journey.') ? journeyError(400, message) : message;
+    setError(translated); return translated;
+  };
+  const begin = () => { busyRef.current = true; setBusy(true); callbacks.current.onBusyChange(true); setError(''); };
+  const finish = () => { busyRef.current = false; setBusy(false); callbacks.current.onBusyChange(false); setProgress(''); };
   async function calculate(anchor: boolean) {
-    setBusy(true);
-    callbacks.current.onBusyChange(true);
-    setError('');
+    if (busyRef.current) return;
+    begin();
     try {
-      if (stops.some((stop) => !stop.label))
-        throw new Error(t('Select an address for every stop.'));
-      const planned: PlannedLeg[] = [];
-      for (let i = 0; i < legs.length; i++) {
-        const leg = legs[i];
-        setProgress(`${t('Calculating the route…')} ${i + 1}/${legs.length}`);
-        if (leg.mode === 'flight')
-          planned.push({ ...leg, coordinates: flightCoordinates(stops[i], stops[i + 1]) });
-        else if (leg.coordinates.length) planned.push(leg);
-        else {
-          const road = await journeyRequest<{
-            coordinates: [number, number][];
-            distanceMeters: number;
-            durationSeconds: number;
-          }>('/api/journeys/routes/road', {
-            method: 'POST',
-            body: JSON.stringify({
-              start: { longitude: stops[i].longitude, latitude: stops[i].latitude },
-              end: { longitude: stops[i + 1].longitude, latitude: stops[i + 1].latitude },
-              mode: leg.mode,
-            }),
-          });
-          planned.push({ ...leg, ...road });
-        }
-      }
-      const departure = anchor ? departureForFlight(stops, planned) : start;
-      const timeline = buildRouteTimeline(stops, planned, departure);
-      setLegs(planned);
-      setRows(timeline);
-      setStart(departure);
-      setProgress('');
-      setDirty(true);
-    } catch (reason) {
-      const message = (reason as Error).message;
-      setError(message.startsWith('journey.') ? journeyError(400, message) : message);
-    } finally {
-      setBusy(false);
-      callbacks.current.onBusyChange(false);
-    }
+      const plan = await planRoute(stops, legs, start, anchor, setProgress);
+      setLegs(plan.legs); setRows(plan.rows); setStart(plan.start); setDirty(true);
+    } catch (reason) { showError(reason); }
+    finally { finish(); }
   }
-  async function save() {
-    if (!map.current || !rows.length) return;
-    setBusy(true);
-    callbacks.current.onBusyChange(true);
-    setError('');
-    try {
-      setProgress(t('Preparing the map for print…'));
-      const image = await map.current.capture();
-      const asset = await journeyRequest<{ id: string }>('/api/journeys/media', {
-        method: 'POST',
-        body: JSON.stringify({ image }),
-      });
-      const saved = await journeyRequest<{ id: string }>('/api/journeys/routes', {
-        method: 'POST',
-        body: JSON.stringify({ stops, legs, startLocal: start, timeline: rows, mapId: asset.id }),
-      });
-      loaded.current = saved.id;
-      callbacks.current.onChange(saved.id);
-      setDirty(false);
-      setProgress('');
-    } catch (reason) {
-      setError((reason as Error).message);
-    } finally {
-      setBusy(false);
-      callbacks.current.onBusyChange(false);
-    }
+  function prepare(): Promise<string> {
+    if (running.current) return running.current;
+    if (!dirty && value) return Promise.resolve(value);
+    if (busyRef.current) return Promise.reject(new Error(t('Calculating the route…')));
+    const operation = (async () => {
+      begin();
+      try {
+        const anchor = !start && legs.some(leg => leg.mode === 'flight');
+        const plan = rows.length ? { legs, rows, start } : await planRoute(stops, legs, start, anchor, setProgress);
+        setLegs(plan.legs); setRows(plan.rows); setStart(plan.start);
+        await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+        setProgress(t('Loading map…'));
+        const deadline = Date.now() + 15000;
+        while (!map.current && Date.now() < deadline) await new Promise<void>(resolve => setTimeout(resolve, 100));
+        if (!map.current) throw new Error(t('Wait until the map has finished loading.'));
+        setProgress(t('Preparing the map for print…'));
+        const image = await map.current.capture();
+        const asset = await journeyRequest<{ id: string }>('/api/journeys/media', { method: 'POST', body: JSON.stringify({ image }) });
+        const saved = await journeyRequest<{ id: string }>('/api/journeys/routes', { method: 'POST', body: JSON.stringify({
+          stops: stops.map(stop => ({ ...stop, confirmed: undefined })), legs: plan.legs, startLocal: plan.start, timeline: plan.rows, mapId: asset.id,
+        }) });
+        loaded.current = saved.id; callbacks.current.onChange(saved.id); setDirty(false);
+        return saved.id;
+      } catch (reason) { throw new Error(showError(reason)); }
+      finally { finish(); }
+    })();
+    running.current = operation;
+    void operation.finally(() => { running.current = null; }).catch(() => {});
+    return operation;
   }
+  useImperativeHandle(ref, () => ({ prepare }));
+  const move = (from: number, to: number) => {
+    if (to < 0 || to >= stops.length || from === to || busyRef.current) return;
+    const result = reorderRoute(stops, legs, from, to);
+    invalidate(); setStops(result.stops); setLegs(result.legs);
+  };
   const time = (instant: string, zone: string) =>
     new Intl.DateTimeFormat(getLocale(), {
       timeZone: zone,
@@ -201,10 +185,12 @@ export function RouteEditor({
       <fieldset disabled={busy} className="route-inputs">
         <ol className="route-stops">
           {stops.map((stop, index) => (
-            <li key={stop.id}>
+            <li key={stop.id} data-route-stop={index}>
               <div className="route-stop-heading">
+                <RouteReorderHandle index={index} onMove={move} disabled={busy} />
                 <strong>
-                  {index + 1}. {stop.label || t('New stop')}
+                  {index === 0 ? t('Departure point') : `${t('Stop')} ${index + 1}`}
+                  {stop.label && <small>{stop.label}</small>}
                 </strong>
                 {stops.length > 2 && (
                   <button
@@ -233,7 +219,40 @@ export function RouteEditor({
               <RouteAddressInput
                 value={stop.label}
                 onSelect={(selected) => address(index, selected)}
+                onEditing={(edited) => {
+                  if (stop.confirmed === !edited) return;
+                  invalidate(); setStops(items => items.map((item, i) => i === index ? { ...item, confirmed: !edited } : item));
+                }}
               />
+              <button type="button" className="journey-secondary" onClick={() => {
+                setPickingStop(stop.id); setPickedPoint(null); setPointName('');
+                requestAnimationFrame(() => {
+                  pickPanel.current?.scrollIntoView({ behavior: 'auto', block: 'center' });
+                  pickPanel.current?.focus({ preventScroll: true });
+                });
+              }}>{t('Choose on map')}</button>
+              <label>{t('Notes for this stop (optional)')}
+                <textarea maxLength={500} rows={2} value={stop.description ?? ''}
+                  onChange={event => { invalidate(); setStops(items => items.map((item, i) => i === index ? { ...item, description: event.target.value } : item)); }} />
+              </label>
+              {stop.label && stop.confirmed !== false && <RoutePlacePanel stop={stop}
+                visitDate={start.slice(0, 10)}
+                onWalkChange={walkId => {
+                  invalidate(); setStops(items => items.map(item => item.id === stop.id ? { ...item, walkId } : item));
+                }}
+                onWalkBusy={value => { busyRef.current = value; setBusy(value); callbacks.current.onBusyChange(value); }}
+                onNotes={notes => {
+                  const combined = [stop.description, notes].filter(Boolean).join('\n');
+                  if (combined.length > 500) { setError(t('Stop notes can contain up to 500 characters. Shorten the notes before adding the plan.')); return; }
+                  invalidate(); setStops(items => items.map(item => item.id === stop.id ? { ...item, description: combined } : item));
+                }}
+                onAdd={selected => {
+                  if (stops.length >= 12) { setError(t('A route can contain up to 12 stops.')); return; }
+                  const added = { ...emptyStop(), label: selected.label, longitude: selected.longitude, latitude: selected.latitude, zone: timezone(selected.latitude, selected.longitude), confirmed: true };
+                  const ordered = [...stops]; ordered.splice(index + 1, 0, added);
+                  const oldEdges = new Map(legs.map((leg, i) => [`${stops[i].id}:${stops[i + 1].id}`, leg]));
+                  invalidate(); setStops(ordered); setLegs(ordered.slice(1).map((item, i) => oldEdges.get(`${ordered[i].id}:${item.id}`) ?? emptyLeg()));
+                }} />}
               <div className="route-inline">
                 <label>
                   {t('Time zone')}
@@ -376,21 +395,47 @@ export function RouteEditor({
           )}
         </div>
       </fieldset>
+      <div ref={pickPanel} tabIndex={-1} className="route-map-picker">
+      {pickingStop && stops.some(stop => stop.id === pickingStop) && (
+        <fieldset disabled={busy} className="route-pick-controls">
+          <legend>{t('Choose a point for stop')} {stops.findIndex(stop => stop.id === pickingStop) + 1}</legend>
+          <p>{t('Tap the map, or move it and use its center. No address search is needed.')}</p>
+          <label>{t('Point name (optional)')}<input maxLength={180} value={pointName} onChange={event => setPointName(event.target.value)} /></label>
+          <div className="route-actions">
+            <button type="button" onClick={() => {
+              const point = map.current?.center();
+              if (point && Math.abs(point.latitude) <= 85) setPickedPoint(point);
+            }}>{t('Use map center')}</button>
+            <button type="button" disabled={!pickedPoint} onClick={() => {
+              const index = stops.findIndex(stop => stop.id === pickingStop);
+              if (index < 0 || !pickedPoint) return;
+              address(index, { ...pickedPoint, label: pointName.trim() || `${t('Point on map')} · ${pickedPoint.latitude.toFixed(5)}, ${pickedPoint.longitude.toFixed(5)}` });
+              setPickingStop(null); setPickedPoint(null);
+            }}>{t('Confirm point')}</button>
+            <button type="button" onClick={() => { setPickingStop(null); setPickedPoint(null); }}>{t('Cancel')}</button>
+          </div>
+          {pickedPoint && <output>{pickedPoint.latitude.toFixed(5)}, {pickedPoint.longitude.toFixed(5)}</output>}
+        </fieldset>
+      )}
       <Suspense fallback={<p role="status">{t('Loading map…')}</p>}>
         <RouteMap
           stops={stops.filter((stop) => stop.label)}
           legs={legs}
+          onPick={pickingStop && !busy && stops.some(stop => stop.id === pickingStop) ? setPickedPoint : undefined}
+          pickedPoint={pickingStop && stops.some(stop => stop.id === pickingStop) ? pickedPoint : null}
           onReady={(handle) => {
             map.current = handle;
           }}
         />
       </Suspense>
+      </div>
       {rows.length > 0 && (
         <ol className="route-timeline">
           {rows.map((row, index) => (
             <li key={index}>
               <strong>{labels[row.kind]}</strong>
               <span>{row.label}</span>
+              {row.description && <p>{row.description}</p>}
               <time>
                 {time(row.start, row.startZone ?? row.zone)}
                 {row.end !== row.start ? ` — ${time(row.end, row.zone)}` : ''}
@@ -411,16 +456,7 @@ export function RouteEditor({
       </p>
       {busy && <p role="status">{progress}</p>}
       {error && <p role="alert">{error}</p>}
-      <button
-        type="button"
-        className="journey-primary"
-        disabled={busy || !rows.length}
-        onClick={() => void save()}
-      >
-        {t('Save route and print map')}
-      </button>
-      {!dirty && value && <small role="status">{t('Route saved')}</small>}
-      {dirty && <small>{t('Save the route before continuing to the document.')}</small>}
+      <small role="status">{dirty || !value ? t('The route and map will be prepared when you view the document.') : t('Route saved')}</small>
     </fieldset>
   );
-}
+});

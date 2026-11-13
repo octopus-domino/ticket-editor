@@ -27,6 +27,9 @@ import { StylesPanel } from './panels/StylesPanel';
 import { SymbolsPanel } from './panels/SymbolsPanel';
 import { QrModal } from './QrModal';
 import { toast } from '@/presentation/components/toast';
+import { BackgroundLibrary } from '@/shared/backgrounds/BackgroundLibrary';
+import { loadBackground } from '@/shared/backgrounds/loadBackground';
+import { PageRepeatSettings } from './PageRepeatSettings';
 
 const Section: React.FC<{
   title: string;
@@ -624,9 +627,18 @@ export const LeftPanel: React.FC = () => {
         >
           {__tr("Отступы страницы")}</h4>
         <PaddingEditor value={activeSlide.padding} onChange={updatePadding} />
+        <PageRepeatSettings />
       </Section>
 
       <Section title={__tr("Изображения")} icon="🖼">
+        <BackgroundLibrary onSelect={async preset => {
+          const targetId = activeSlide.id;
+          const image = await loadBackground(preset.id);
+          docStore.commit(draft => {
+            const target = draft.slides.find(slide => slide.id === targetId);
+            if (target) target.backgroundImage = image;
+          }, 'background-library');
+        }} />
         <button
           type="button"
           className="tool-btn"

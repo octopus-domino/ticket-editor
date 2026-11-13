@@ -71,6 +71,7 @@ function parseNodesToBlocks(
 
     const el = node as HTMLElement;
     const tag = el.tagName.toLowerCase();
+    if (['style', 'script', 'template', 'noscript', 'head'].includes(tag)) return;
 
     // F-RT-03: Спец-обработка оберток TipTap
     if (tag === 'div' && el.classList.contains('tableWrapper')) {

@@ -2,6 +2,19 @@ import { t, getLocale } from '@/shared/i18n';
 export function journeyError(status: number, raw?: string): string {
   if (raw?.startsWith('journey.')) {
     switch (raw) {
+      case 'journey.poetry.location':
+        return t('Choose a region or use your location.');
+      case 'journey.poetry.preferences':
+      case 'journey.poetry.language':
+        return t('Check the language, age and mood for your cards.');
+      case 'journey.poetry.weather-unavailable':
+        return t('The local forecast is unavailable. Try again a little later.');
+      case 'journey.poetry.sources-unavailable':
+        return t('The poetry sources are unavailable. Try again a little later.');
+      case 'journey.poetry.not-enough':
+        return t('We could not find seven verified poems for these preferences. Try another mood or audience.');
+      case 'journey.poetry.busy':
+        return t('Another poetry selection is being prepared. Please try again shortly.');
       case 'journey.route.invalid-time':
         return t(
           'Check local dates and time zones. This time may not exist or may occur twice when clocks change.',
@@ -9,7 +22,9 @@ export function journeyError(status: number, raw?: string): string {
       case 'journey.route.missed-flight':
         return t('You will not reach the airport in time. Leave earlier or change the connection.');
       case 'journey.route.too-long':
-        return t('Split this ground transfer into sections of up to 400 km.');
+        return t('Split this ground transfer into sections of up to 1500 km.');
+      case 'journey.route.walk-too-long':
+        return t('Split this walk into sections of up to 400 km.');
       case 'journey.route.unavailable':
         return t('The road route could not be calculated. Try closer stops or retry later.');
       case 'journey.route.search-unavailable':

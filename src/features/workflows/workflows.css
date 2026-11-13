@@ -113,3 +113,8 @@
     max-height: 240px;
   }
 }
+.workflow-attendance { margin: 16px 0; }
+.workflow-attendance summary { cursor: pointer; padding: 12px 0; }
+.visit-check-page dd { margin: 4px 0 12px; overflow-wrap: anywhere; }
+.visit-check-page fieldset { border: 0; margin: 16px 0; padding: 0; }
+.visit-check-page button { min-height: 44px; }

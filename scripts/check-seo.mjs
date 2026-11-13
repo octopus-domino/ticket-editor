@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { createServer } from 'vite';
 
 const root = new URL('../dist/', import.meta.url);
 const appShell = await readFile(new URL('app.html', root), 'utf8');
@@ -8,7 +9,14 @@ assert.doesNotMatch(appShell, /<h1(?:\s|>)/, 'App shell must not contain marketi
 assert.match(appShell, /name="robots" content="noindex, follow"/);
 const sitemap = await readFile(new URL('sitemap.xml', root), 'utf8');
 const urls = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => new URL(match[1]));
-assert.equal(urls.length, 23, 'Expected the homepage, four editor pages and eighteen service pages');
+const registry = await createServer({ server: { middlewareMode: true }, appType: 'custom', mode: 'production' });
+let expectedPaths;
+try {
+  const { SEARCH_PAGES } = await registry.ssrLoadModule('/src/marketing/searchPages.ts');
+  const { JOURNEY_PAGES } = await registry.ssrLoadModule('/src/marketing/journeyPages.ts');
+  expectedPaths = ['/', ...SEARCH_PAGES.map(page => page.path), ...JOURNEY_PAGES.map(page => page.path)];
+} finally { await registry.close(); }
+assert.deepEqual(urls.map(url => url.pathname).sort(), expectedPaths.sort(), 'Sitemap must cover every registered public page exactly once');
 for (const path of ['/solutions/','/website-builder/','/invitations-online/','/certificates-with-qr/','/qr-menu/', '/qr-business-cards/', '/product-labels/', '/price-tags-with-reviews/', '/property-cards/', '/travel-itineraries/']) {
   assert.ok(urls.some(url=>url.pathname===path),`Missing discoverable service page: ${path}`);
 }

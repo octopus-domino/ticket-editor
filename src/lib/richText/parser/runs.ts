@@ -43,6 +43,7 @@ export function parseHtmlToRuns(html: string, base: BaseStyle): TextRun[] {
 
     const el = node as HTMLElement;
     const tag = el.tagName.toLowerCase();
+    if (['style', 'script', 'template', 'noscript', 'head'].includes(tag)) return;
 
     if (tag === 'br') { pushLine(style); return; }
     if (tag === 'table') return;

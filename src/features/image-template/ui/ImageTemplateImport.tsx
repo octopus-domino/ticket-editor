@@ -3,10 +3,11 @@ import type { Slide, ImageElement } from '@/shared/types';
 import { t } from '@/shared/i18n';
 import { authFetch } from '@/shared/api/client';
 import { serializeSlideToSvg } from '@/lib/svg/serialize';
-import { originalImageSlide, prepareImage, recognizeImage } from '../api/recognitionClient';
+import { originalImageSlide, prepareImage, preparePdfPage, recognizeImage } from '../api/recognitionClient';
 import './image-template.css';
 
 const messages: Record<string, string> = {
+  'recognition.invalid_pdf': 'Use an unencrypted PDF up to 8 MB and select an existing page.',
   'recognition.invalid_image': 'Use a PNG, JPEG or WebP image up to 8 MB.',
   'recognition.ocr_unavailable':
     'Local OCR is unavailable. Ask the administrator to install Tesseract and language data.',
@@ -49,6 +50,10 @@ export function ImageTemplateImport({
   context?: 'template' | 'document';
 }) {
   const [source, setSource] = useState('');
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [pdfPage, setPdfPage] = useState(1);
+  const [pdfPages, setPdfPages] = useState(0);
+  const [loadedPdfPage, setLoadedPdfPage] = useState(0);
   const [filename, setFilename] = useState('');
   const [rawSlide, setRawSlide] = useState<Slide | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
@@ -105,19 +110,28 @@ export function ImageTemplateImport({
     onDraft(null);
   }
 
-  async function select(file?: File) {
+  async function select(file?: File, page = 1) {
     reset();
     setSource('');
     setFilename('');
+    const pdf = Boolean(file && (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)));
+    setPdfFile(pdf ? file! : null);
+    setPdfPage(page);
+    setPdfPages(0);
     if (!file) return;
     const current = revision.current;
     setBusy(true);
     onBusy(true);
     try {
-      const image = await prepareImage(file);
+      const abort = new AbortController();
+      controller.current = abort;
+      const result = pdf ? await preparePdfPage(file, page, abort.signal) : null;
+      const image = result ? result.image : await prepareImage(file);
       if (current === revision.current) {
         setSource(image);
         setFilename(file.name);
+        setPdfPages(result?.pages ?? 0);
+        setLoadedPdfPage(result ? page : 0);
       }
     } catch (reason) {
       if (current === revision.current)
@@ -192,12 +206,18 @@ export function ImageTemplateImport({
         {t('Document image')}
         <input
           type="file"
-          accept="image/png,image/jpeg,image/webp"
+          accept="image/png,image/jpeg,image/webp,application/pdf,.pdf"
           disabled={busy}
           onChange={(event) => void select(event.target.files?.[0])}
         />
       </label>
-      <p>{t('Use a PNG, JPEG or WebP image up to 8 MB.')}</p>
+      <p>{t('Use a PNG, JPEG, WebP or PDF up to 8 MB.')}</p>
+      {pdfFile && pdfPages > 0 && <label>{t('PDF page')} (1–{pdfPages})
+        <input type="number" min={1} max={pdfPages} value={pdfPage} disabled={busy}
+          onChange={event => { setPdfPage(Number(event.target.value)); setRawSlide(null); }} />
+        <button type="button" disabled={busy || !Number.isInteger(pdfPage) || pdfPage < 1 || pdfPage > pdfPages || pdfPage === loadedPdfPage}
+          onClick={() => void select(pdfFile, pdfPage)}>{t('Load page')}</button>
+      </label>}
       <label>
         {t('Recognition language')}
         <select
@@ -240,10 +260,10 @@ export function ImageTemplateImport({
         </label>
       )}
       <div className="image-template-actions">
-        <button type="button" disabled={!source || busy} onClick={() => void keepOriginal()}>
+        <button type="button" disabled={!source || busy || (pdfFile !== null && pdfPage !== loadedPdfPage)} onClick={() => void keepOriginal()}>
           {t('Keep original appearance')}
         </button>
-        <button type="button" disabled={!source || busy} onClick={() => void recognize()}>
+        <button type="button" disabled={!source || busy || (pdfFile !== null && pdfPage !== loadedPdfPage)} onClick={() => void recognize()}>
           {t(busy ? 'Recognizing…' : 'Recognize locally')}
         </button>
         {busy && (

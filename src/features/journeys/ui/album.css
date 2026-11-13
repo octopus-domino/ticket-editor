@@ -1,0 +1,23 @@
+.journey-public-album .journey-public-layout { display: block; }
+.album-panel { min-width: 0; margin: 20px 0; }
+.album-panel fieldset { border: 1px solid #dedfce; border-radius: 12px; padding: 12px; display: grid; gap: 10px; min-width: 0; }
+.album-panel label { display: grid; gap: 6px; }
+.album-panel input, .album-panel textarea { width: 100%; box-sizing: border-box; min-width: 0; }
+.album-panel textarea { font-size: 24px !important; }
+.album-panel summary { padding: 10px 0; cursor: pointer; }
+.album-panel button { min-height: 44px; }
+.album-photos { padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 18px; }
+.album-photos > li { min-width: 0; background: #fffdf8; padding: 10px; border: 1px solid #e5ded0; border-radius: 10px; }
+.album-photos img { width: 100%; height: auto; max-height: 380px; object-fit: contain; display: block; }
+.album-caption { font-size: 25px; line-height: 1.3; margin: 10px 2px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.album-photo-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.album-reorder-handle { touch-action: none; cursor: grab; }
+.album-photos [data-drop-target] { outline: 2px solid #50765d; }
+.poetry-preferences { display: grid; gap: 16px; min-width: 0; border: 0; padding: 0; }
+.poetry-preferences label { display: grid; gap: 6px; }
+.poetry-preferences input, .poetry-preferences select, .poetry-preferences textarea { min-width: 0; width: 100%; box-sizing: border-box; }
+.poetry-region { border: 1px solid #d8ddd7; border-radius: 12px; padding: 12px; min-width: 0; }
+.poetry-region h2 { font-size: 18px; margin-top: 0; }
+.poetry-wizard { max-width: 760px; }
+.poetry-wizard button { min-height: 44px; }
+.poetry-wizard small { display: block; margin: 12px 0; }

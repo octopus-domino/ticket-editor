@@ -12,6 +12,10 @@ const baseStyle: BaseStyle = {
 };
 
 describe('parseHtmlToBlocks', () => {
+  it('never prints CSS or script contents from imported HTML', () => {
+    const blocks = parseHtmlToBlocks('<p>Hello<style>.x { color: red; }</style><script>alert(1)</script> world</p>', baseStyle);
+    expect(blocks.flatMap(block => block.kind === 'text' ? block.runs.map(run => run.text) : []).join('')).toBe('Hello world');
+  });
   it('parses paragraphs into a single text block', () => {
     const html = '<p>Hello</p><p>World</p>';
     const blocks = parseHtmlToBlocks(html, baseStyle);

@@ -5,12 +5,15 @@ import { journeyApi, managementKey, managementUrl, pdfUrl, publicUrl } from '../
 import type { JourneyBatch as Batch, JourneyStatus } from '../domain/definitions';
 import { downloadFile } from '@/shared/files/download';
 import { JourneyScanner } from './JourneyScanner';
+import { JourneyStatusActions } from './JourneyStatusActions';
+import { JourneyConstructorButton } from './JourneyConstructorButton';
+import { JourneyCard } from './JourneyCard';
 
 export const STATUS_LABELS: Record<JourneyStatus['state'], string> = {
-  ACTIVE: t('Действителен'),
-  USED: t('Использован'),
-  EXPIRED: t('Срок истёк'),
-  REVOKED: t('Отозван'),
+  get ACTIVE() { return t('Действителен'); },
+  get USED() { return t('Использован'); },
+  get EXPIRED() { return t('Срок истёк'); },
+  get REVOKED() { return t('Отозван'); },
 };
 export function JourneyBatch() {
   const { id = '' } = useParams();
@@ -18,6 +21,7 @@ export function JourneyBatch() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [code, setCode] = useState('');
+  const [previewId, setPreviewId] = useState('');
   const key = managementKey(`batch:${id}`);
   async function reload() {
     setBatch(await journeyApi.batch(id, key));
@@ -74,6 +78,7 @@ export function JourneyBatch() {
       {batch && (
         <>
           <JourneyScanner onCode={setCode} />
+          {batch.documents[0] && <JourneyConstructorButton id={batch.documents[0].document.id} batchId={id} />}
           <button
             disabled={busy}
             onClick={() => {
@@ -88,6 +93,11 @@ export function JourneyBatch() {
             {t('Скачать весь выпуск PDF')}{' '}
             {batch.documents[0]?.document.kind === 'BADGE' ? t('— 6 бейджей на A4') : ''}
           </button>
+          <button type="button" disabled={busy} onClick={() => {
+            setBusy(true); setError('');
+            void journeyApi.batchZip(id, key).then(blob => downloadFile(blob, 'codoc-release.zip'))
+              .catch(reason => setError((reason as Error).message)).finally(() => setBusy(false));
+          }}>{t('Download separate PDFs (ZIP)')}</button>
           <button
             disabled={busy}
             onClick={() => {
@@ -136,6 +146,15 @@ export function JourneyBatch() {
                       : t('Подтвердить проход')}
                   </button>
                 )}
+                <JourneyStatusActions id={document.id} managementKey={key} status={status} onChange={next => {
+                  setBatch(current => current ? { ...current, documents: current.documents.map(item => item.document.id === document.id ? { ...item, status: next } : item) } : current);
+                }} />
+                {status.state !== 'REVOKED' && <details open={previewId === document.id} onToggle={event => {
+                  if (event.currentTarget.open) setPreviewId(document.id);
+                  else if (previewId === document.id) setPreviewId('');
+                }}><summary>{t('Preview document')}</summary>
+                  {previewId === document.id && <JourneyCard document={document} />}
+                </details>}
               </article>
             ))}
           </div>

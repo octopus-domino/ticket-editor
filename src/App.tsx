@@ -17,6 +17,7 @@ const JourneyApp = lazy(() => import('./features/journeys/JourneyApp'));
 const PublicationsPage = lazy(() => import('./features/journeys/ui/PublicationsPage'));
 const WorkflowBuilder = lazy(() => import('./features/workflows/WorkflowBuilder'));
 const WorkflowRunner = lazy(() => import('./features/workflows/WorkflowRunner'));
+const VisitCheckPage = lazy(() => import('./features/workflows/VisitCheckPage'));
 import { SearchLandingPage, NotFoundPage } from './marketing/SearchLandingPage';
 import { SEARCH_PAGES } from './marketing/searchPages';
 
@@ -85,6 +86,7 @@ const App: React.FC = () => {
             <Route path="/s/:slug" element={<JourneyApp mode="custom" />} />
             <Route path="/sites/new" element={<JourneyApp mode="builder" />} />
             <Route path="/flows/:slug" element={<WorkflowRunner />} />
+            <Route path="/visits/:id" element={<VisitCheckPage />} />
             <Route path="/d/:id" element={<JourneyApp mode="public" />} />
             <Route path="/manage/:id" element={<JourneyApp mode="manage" />} />
             <Route path="/issues/:id" element={<JourneyApp mode="batch" />} />

@@ -253,7 +253,8 @@ function readTextOrShape(
     return {
       ...newSimpleText(),
       ...bounds,
-      text: richText ?? text,
+      text,
+      html: richText ?? undefined,
       richText: Boolean(richText),
       autoHeight: false,
       fontSize,

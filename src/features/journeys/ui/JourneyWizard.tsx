@@ -1,6 +1,6 @@
 import { useLanguageDraft } from './useLanguageDraft';
 import { t, getLocale } from '@/shared/i18n';
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { CreatedJourney, JourneyDefinition } from '../domain/definitions';
 import { journeyApi, managementUrl, pdfUrl, publicUrl, rememberKey } from '../api/journeys';
@@ -15,12 +15,19 @@ import { BatchRecipientsEditor } from './BatchRecipientsEditor';
 import { ProposalActionBar } from './ProposalActionBar';
 import { JourneyBrandingEditor } from './JourneyBrandingEditor';
 import { readBranding } from '../domain/branding';
+import type { RouteEditorHandle } from './RouteEditor';
+import { JourneyConstructorButton } from './JourneyConstructorButton';
 import { JourneyPrintSize } from './JourneyPrintSize';
 const RouteEditor = lazy(() =>
   import('./RouteEditor').then((module) => ({ default: module.RouteEditor })),
 );
+const PoetryWizard = lazy(() => import('./PoetryWizard'));
+interface WizardProps { definition: JourneyDefinition; custom?: boolean; previewOnly?: boolean }
+export function JourneyWizard(props: WizardProps) {
+  return props.definition.kind === 'POETRY' ? <Suspense fallback={<p>{t('Loading…')}</p>}><PoetryWizard {...props} /></Suspense> : <BasicJourneyWizard {...props} />;
+}
 
-export function JourneyWizard({
+function BasicJourneyWizard({
   definition,
   custom = false,
   previewOnly = false,
@@ -68,6 +75,8 @@ export function JourneyWizard({
       ? {
           route_labels: JSON.stringify({
             stop: t('Stop'),
+            walk: t('City walk'),
+            departure: t('Departure point'),
             car: t('Drive'),
             foot: t('Walk'),
             flight: t('Flight'),
@@ -84,6 +93,7 @@ export function JourneyWizard({
   };
   const [mediaBusy, setMediaBusy] = useState(false);
   const [routeBusy, setRouteBusy] = useState(false);
+  const routeEditor = useRef<RouteEditorHandle>(null);
   const [error, setError] = useState('');
   const [created, setCreated] = useLanguageDraft<CreatedJourney[]>(
     `wizard:${definition.slug}:created`,
@@ -110,6 +120,7 @@ export function JourneyWizard({
         rows,
       );
       result.forEach((value) => rememberKey(value.document.id, value.managementKey));
+      if (result[0]?.batchId) rememberKey(`batch:${result[0].batchId}`, result[0].managementKey);
       setCreated(result);
       setStep(2);
     } catch (reason) {
@@ -143,7 +154,7 @@ export function JourneyWizard({
         <div className="journey-workspace">
           <section className="journey-form-panel">
             <form
-              onSubmit={(event) => {
+              onSubmit={async (event) => {
                 event.preventDefault();
                 if (definition.kind === 'SCHEDULE' && !lessons(data.events).length) {
                   setError(t('Добавьте хотя бы одно занятие.'));
@@ -165,9 +176,9 @@ export function JourneyWizard({
                   }
                 }
                 setError('');
-                if (definition.kind === 'TOUR' && !data.route) {
-                  setError(t('Save the route before continuing to the document.'));
-                  return;
+                if (definition.kind === 'TOUR') {
+                  try { await routeEditor.current?.prepare(); }
+                  catch (reason) { setError((reason as Error).message); return; }
                 }
                 setStep(1);
               }}
@@ -253,6 +264,7 @@ export function JourneyWizard({
                   {definition.kind === 'TOUR' && (
                     <Suspense fallback={<p>{t('Loading map…')}</p>}>
                       <RouteEditor
+                        ref={routeEditor}
                         value={data.route ?? ''}
                         onBusyChange={setRouteBusy}
                         onChange={(route) => setData((value) => ({ ...value, route }))}
@@ -358,6 +370,7 @@ export function JourneyWizard({
           {created.map((value) => (
             <article key={value.document.id}>
               <h2>{value.document.data.recipient ?? value.document.title}</h2>
+              <JourneyConstructorButton id={value.document.id} />
               <JourneyShare url={publicUrl(value.document.id)} title={value.document.title} />
               <div className="journey-result-links">
                 <a className="journey-primary" href={pdfUrl(value.document.id)}>

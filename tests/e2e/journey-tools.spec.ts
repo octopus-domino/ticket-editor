@@ -49,6 +49,10 @@ async function mockApi(page: Page) {
           },
         ],
       });
+    if (url.pathname === '/api/journeys/routes/places') return route.fulfill({ json: { available: false, places: [] } });
+    if (url.pathname === '/api/journeys/routes/road') return route.fulfill({ json: {
+      coordinates: [[13.4, 52.5], [13.41, 52.48], [13.4, 52.4]], durationSeconds: 600, distanceMeters: 12000,
+    } });
     if (url.pathname === '/api/journeys/media' && method === 'POST') {
       state.image = route.request().postDataJSON().image;
       return route.fulfill({ json: { id: 'a'.repeat(64) } });
@@ -75,6 +79,77 @@ async function mockApi(page: Page) {
   });
   return state;
 }
+
+test('a phone chooses a route point on the map when address search is unavailable', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('codoc:language', 'en'));
+  await page.setViewportSize({ width: 390, height: 844 });
+  await mockApi(page);
+  let searches = 0;
+  await page.route('**/api/journeys/routes/addresses?*', route => { searches++; return route.fulfill({ status: 503, json: {} }); });
+  await page.goto('/start/tours');
+  const stops = page.locator('.route-stops > li');
+  await stops.first().getByRole('button', { name: 'Choose on map', exact: true }).click();
+  await page.getByLabel('Point name (optional)').fill('Meeting by the river');
+  const map = page.getByLabel('Route map', { exact: true });
+  await expect(map.locator('canvas')).toBeVisible();
+  await map.locator('canvas').click({ position: { x: 110, y: 70 } });
+  await expect(page.getByRole('button', { name: 'Confirm point', exact: true })).toBeEnabled();
+  await page.getByRole('button', { name: 'Confirm point', exact: true }).click();
+  await expect(stops.first().getByRole('combobox', { name: 'Address', exact: true })).toHaveValue('Meeting by the river');
+  expect(searches).toBe(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test('a separate walking map keeps numbered photos and the city plan out of the main route', async ({ page }) => {
+  test.setTimeout(60000);
+  await page.addInitScript(() => localStorage.setItem('codoc:language', 'en'));
+  await page.setViewportSize({ width: 390, height: 844 });
+  const state = await mockApi(page);
+  const media = new Map<string, string>();
+  await page.route('**/api/journeys/media**', async route => {
+    const path = new URL(route.request().url()).pathname;
+    if (route.request().method() === 'POST') {
+      const id = (media.size + 1).toString(16).padStart(64, '0');
+      media.set(id, route.request().postDataJSON().image);
+      return route.fulfill({ json: { id } });
+    }
+    const image = media.get(path.split('/').at(-1)!);
+    if (!image) return route.fulfill({ status: 404 });
+    return route.fulfill({ contentType: 'image/jpeg', body: Buffer.from(image.split(',')[1], 'base64') });
+  });
+  await page.route('**/api/journeys/routes/places?*', route => route.fulfill({ json: { available: true, source: 'OpenStreetMap', places: [
+    { id: 'museum', label: 'City Museum', longitude: 13.41, latitude: 52.501, url: 'https://www.openstreetmap.org/node/1', photoReference: 'File:Museum.jpg' },
+    { id: 'tower', label: 'Town Tower', longitude: 13.412, latitude: 52.502, url: 'https://www.openstreetmap.org/node/2', photoReference: 'File:Tower.jpg' },
+  ] } }));
+  await page.route('https://commons.wikimedia.org/w/api.php?*', route => route.fulfill({ json: { query: { pages: [{ imageinfo: [{
+    thumburl: 'https://upload.wikimedia.org/museum.jpg', mime: 'image/jpeg', extmetadata: {
+      Artist: { value: '<a>Photo Author</a>' }, LicenseShortName: { value: 'CC BY-SA 4.0' }, LicenseUrl: { value: 'https://creativecommons.org/licenses/by-sa/4.0/' },
+    },
+  }] }] } } }));
+  await page.route('https://upload.wikimedia.org/museum.jpg', route => route.fulfill({ path: 'public/backgrounds/thumbs/sage-paper.jpg', contentType: 'image/jpeg' }));
+  await page.goto('/start/tours');
+  const stops = page.locator('.route-stops > li');
+  await stops.first().getByRole('combobox', { name: 'Address', exact: true }).fill('Museum Berlin');
+  await page.getByRole('option', { name: 'Berlin Museum' }).getByRole('button').click();
+  const panel = stops.first().locator('.route-place-panel');
+  await panel.locator('summary').click();
+  await panel.getByRole('button', { name: 'Generate a walking map' }).click();
+  await expect(panel.locator('.route-walk-print')).toBeVisible({ timeout: 30000 });
+  expect(state.snapshot.photos).toHaveLength(2);
+  expect(state.snapshot.stops).toHaveLength(4);
+  expect(state.snapshot.legs.every((leg: any) => leg.mode === 'foot')).toBe(true);
+  expect(state.snapshot.photos.map((photo: any) => state.snapshot.stops.findIndex((stop: any) => stop.id === photo.stopId) + 1)).toEqual([2, 3]);
+  await expect(stops).toHaveCount(2);
+  const mapImage = media.get(state.snapshot.mapId)!;
+  const size = await page.evaluate(async image => {
+    const bitmap = await createImageBitmap(await (await fetch(image)).blob());
+    const size = [bitmap.width, bitmap.height]; bitmap.close(); return size;
+  }, mapImage);
+  expect(size).toEqual([2200, 1800]);
+  await panel.getByText('Photo credits', { exact: true }).click();
+  await expect(panel.locator('.route-photo-credits')).toContainText('2. Photo Author');
+  await page.screenshot({ path: '../ticket-infra/reports/walking-map-collage-mobile.png', fullPage: true });
+});
 
 for (const slug of ['cards', 'labels', 'price-tags', 'properties'])
   test(`${slug}: a 320px phone completes the form and gets a publication`, async ({ page }) => {
@@ -138,8 +213,9 @@ test('airport itinerary saves a print-resolution map and a coherent timeline on 
   await page.getByRole('button', { name: 'Рассчитать время выезда к рейсу' }).click();
   await expect(page.locator('.route-timeline')).toContainText('Регистрация и досмотр');
   await expect(page.locator('.route-timeline')).toContainText('Europe/Berlin → Asia/Dubai');
-  await page.getByRole('button', { name: 'Сохранить маршрут и карту для печати' }).click();
-  await expect(page.getByText('Маршрут сохранён', { exact: true })).toBeVisible({ timeout: 20000 });
+  await page.getByRole('button', { name: '\u041f\u043e\u0441\u043c\u043e\u0442\u0440\u0435\u0442\u044c \u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442' }).click();
+  await expect(page.locator('.journey-artwork-page svg')).toBeVisible();
+  await expect.poll(() => state.image, { timeout: 20000 }).toMatch(/^data:image/);
   const dimensions = await page.evaluate(async (image) => {
     const bitmap = await createImageBitmap(await (await fetch(image)).blob());
     const size = [bitmap.width, bitmap.height];
@@ -149,11 +225,79 @@ test('airport itinerary saves a print-resolution map and a coherent timeline on 
   expect(dimensions).toEqual([2400, 1500]);
   expect(state.snapshot.timeline.map((row: any) => row.kind)).toContain('flight');
   expect(state.snapshot.stops[0].zone).toBe('Europe/Berlin');
-  await page.getByRole('button', { name: 'Посмотреть результат' }).click();
   await page.getByRole('button', { name: 'Получить ссылку и PDF' }).click();
   await expect(
     page.getByRole('heading', { name: 'Готово. Теперь можно поделиться.' }),
   ).toBeVisible();
   expect(state.document.data.route).toBe('b'.repeat(64));
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test('route edits keep notes with their point and require selecting an edited address', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('codoc:language', 'en'));
+  await mockApi(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/start/tours');
+  const stops = page.locator('.route-stops > li');
+  await stops.nth(0).getByRole('combobox', { name: 'Address', exact: true }).fill('Museum Berlin');
+  await page.getByRole('option', { name: 'Berlin Museum' }).getByRole('button').click();
+  await stops.nth(0).getByLabel('Notes for this stop (optional)').fill('Meet by the main entrance');
+  await stops.nth(1).getByRole('combobox', { name: 'Address', exact: true }).fill('Airport Berlin');
+  await page.getByRole('option', { name: 'Berlin Airport' }).getByRole('button').click();
+  await stops.nth(0).getByRole('button', { name: /Move stop/ }).press('ArrowDown');
+  await expect(stops.nth(0)).toContainText('Departure point');
+  await expect(stops.nth(0).getByRole('combobox', { name: 'Address', exact: true })).toHaveValue('Berlin Airport');
+  await expect(stops.nth(1).getByLabel('Notes for this stop (optional)')).toHaveValue('Meet by the main entrance');
+  const address = stops.nth(0).getByRole('combobox', { name: 'Address', exact: true });
+  await address.fill('Unconfirmed location');
+  await expect(address).toHaveAttribute('aria-invalid', 'true');
+  await address.press('Escape');
+  await expect(address).toHaveValue('Berlin Airport');
+  await expect(address).toHaveAttribute('aria-invalid', 'false');
+  await stops.nth(0).locator('.route-place-panel summary').click();
+  await stops.nth(0).getByRole('button', { name: 'Find nearby places' }).click();
+  await expect(stops.nth(0)).toContainText('require the administrator to connect 2GIS');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test('solutions dropdown remains inside a narrow phone viewport', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('codoc:language', 'en'));
+  await mockApi(page);
+  await page.setViewportSize({ width: 320, height: 740 });
+  await page.goto('/travel-itineraries/');
+  await page.locator('.solutions-menu > summary').click();
+  const menu = page.locator('.solutions-menu-panel');
+  await expect(menu).toBeVisible();
+  const bounds = await menu.boundingBox();
+  expect(bounds!.x).toBeGreaterThanOrEqual(0);
+  expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(320);
+  await page.screenshot({ path: '../reports/route-solutions-mobile.png' });
+  await page.keyboard.press('Escape');
+  await expect(menu).toBeHidden();
+});
+
+test('nearby visits create a daytime plan and enter the route only when requested', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('codoc:language', 'en'));
+  await mockApi(page);
+  await page.route('**/api/journeys/routes/places?*', route => route.fulfill({ json: { available: true, places: [{
+    id: '12345', label: 'City Gallery', longitude: 13.41, latitude: 52.5, url: 'https://2gis.ru/firm/12345',
+    schedule: { Thu: { working_hours: [{ from: '10:00', to: '18:00' }] } },
+  }] } }));
+  await page.goto('/start/tours');
+  const stops = page.locator('.route-stops > li');
+  await stops.nth(0).getByRole('combobox', { name: 'Address', exact: true }).fill('Museum Berlin');
+  await page.getByRole('option', { name: 'Berlin Museum' }).getByRole('button').click();
+  const panel = stops.nth(0).locator('.route-place-panel');
+  await panel.locator('summary').click();
+  await panel.getByRole('button', { name: 'Find nearby places' }).click();
+  await panel.getByRole('checkbox', { name: 'City Gallery' }).check();
+  await panel.getByLabel('Visit date').fill('2026-11-12');
+  await panel.getByRole('button', { name: 'Plan this day' }).click();
+  await expect(panel).toContainText('10:00–11:00 · City Gallery');
+  await expect(stops).toHaveCount(2);
+  await panel.getByRole('button', { name: 'Add day plan to notes' }).click();
+  await expect(stops.nth(0).getByLabel('Notes for this stop (optional)')).toHaveValue('2026-11-12\n10:00–11:00 City Gallery');
+  await panel.getByRole('button', { name: 'Add stop', exact: true }).click();
+  await expect(stops).toHaveCount(3);
+  await expect(stops.nth(1).getByRole('combobox', { name: 'Address', exact: true })).toHaveValue('City Gallery');
 });

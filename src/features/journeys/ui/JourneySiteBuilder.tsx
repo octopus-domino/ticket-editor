@@ -11,6 +11,8 @@ import { AddressFeedback } from './AddressFeedback';
 import { Link } from 'react-router-dom';
 import { localizePresetDraft } from '../domain/localizePresetDraft';
 import { JourneyBrandingEditor } from './JourneyBrandingEditor';
+import { BackgroundLibrary } from '@/shared/backgrounds/BackgroundLibrary';
+import { BackgroundSurface } from '@/shared/backgrounds/BackgroundSurface';
 
 export function JourneySiteBuilder() {
   const [definition, setDefinition] = useLanguageDraft<JourneyDefinition>(
@@ -72,11 +74,11 @@ export function JourneySiteBuilder() {
         <button className="journey-preview-close" onClick={() => setPreview(false)}>
           {t('← Вернуться в конструктор')}
         </button>
-        <JourneyWizard
+        <BackgroundSurface id={definition.backgroundPreset}><JourneyWizard
           key={definition.slug + definition.kind}
           definition={definition}
           previewOnly
-        />
+        /></BackgroundSurface>
       </>
     );
   return (
@@ -110,7 +112,7 @@ export function JourneySiteBuilder() {
                 disabled={Boolean(editing)}
                 aria-pressed={definition.kind === value.kind}
                 onClick={() =>
-                  setDefinition({ ...value, slug: definition.slug, branding: definition.branding })
+                  setDefinition({ ...value, slug: definition.slug, branding: definition.branding, backgroundPreset: definition.backgroundPreset })
                 }
               >
                 <strong>{JOURNEY_CAPABILITIES[value.kind].label}</strong>
@@ -239,6 +241,12 @@ export function JourneySiteBuilder() {
             <option value="rose">{t('Роза')}</option>
             <option value="ink">{t('Чернила')}</option>
           </select>
+        </fieldset>
+        <fieldset><legend>{t('Site background')}</legend>
+          <BackgroundLibrary selectedId={definition.backgroundPreset ?? ''} disabled={busy}
+            onSelect={preset => setDefinition(value => ({ ...value, backgroundPreset: preset.id }))} />
+          <button type="button" className="journey-secondary" disabled={!definition.backgroundPreset}
+            onClick={() => setDefinition(value => ({ ...value, backgroundPreset: undefined }))}>{t('Remove background')}</button>
         </fieldset>
         <JourneyBrandingEditor
           value={definition.branding ?? {}}

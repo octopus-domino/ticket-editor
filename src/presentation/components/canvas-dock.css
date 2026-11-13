@@ -86,17 +86,36 @@
 @media (max-width: 760px) {
   .editor-shell .editor-layout {
     display: grid !important;
-    grid-template-columns: 48px minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1fr) 84px;
-    grid-template-areas: 'dock canvas' 'slides slides';
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 46px minmax(0, 1fr) 54px;
+    grid-template-areas: 'dock' 'canvas' 'slides';
   }
   .canvas-dock {
-    padding: 5px;
-    gap: 1px;
+    flex-direction: row;
+    align-self: stretch;
+    align-items: center;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 1px 4px;
+    gap: 0;
+    border-radius: 0;
+    box-shadow: none;
   }
   .canvas-dock button {
-    width: 36px;
-    height: 36px;
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
     font-size: 18px;
+  }
+  .canvas-dock hr { width: 1px; height: 24px; flex: 0 0 1px; }
+  .editor-shell > .toolbar { max-height: 48px; }
+  .editor-shell > .mobile-editor-controls { padding: 0 4px; }
+  .editor-shell .editor-layout > .slides-panel { max-height: 54px; }
+  .editor-shell .slides-panel .slide-thumb { height: 44px; min-width: 62px; flex-basis: 62px; }
+  .editor-shell .canvas-area { padding: 2px !important; min-height: 0; }
+  .editor-shell[data-canvas-fullscreen='true'][data-tools-open] .editor-layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 46px minmax(0, 1fr);
+    grid-template-areas: 'dock' 'canvas';
   }
 }

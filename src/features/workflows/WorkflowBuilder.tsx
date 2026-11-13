@@ -431,6 +431,20 @@ export default function WorkflowBuilder() {
               onChange={(e) => change({ ...draft, completionMessage: e.target.value })}
             />
           </label>
+          <details className="workflow-attendance">
+            <summary>{t('Attendance check after issuing')}</summary>
+            <label className="workflow-checkbox"><input type="checkbox" checked={Boolean(draft.attendance)}
+              onChange={event => change({ ...draft, attendance: event.target.checked ? {
+                title: t('Attendance verification'), instructions: t('Show this QR at the entrance. The organiser can check the document and mark your visit.'),
+              } : null })} />{t('Add a verification card with a QR code to the PDF')}</label>
+            {draft.attendance && <>
+              <label>{t('Title')}<input maxLength={120} required value={draft.attendance.title}
+                onChange={event => change({ ...draft, attendance: { ...draft.attendance!, title: event.target.value } })} /></label>
+              <label>{t('Instructions')}<textarea maxLength={300} required value={draft.attendance.instructions}
+                onChange={event => change({ ...draft, attendance: { ...draft.attendance!, instructions: event.target.value } })} /></label>
+              <p>{t('Only the workflow owner can record checks and attendance. Guests can view the status.')}</p>
+            </>}
+          </details>
           {saved?.administrator && (
             <label className="workflow-checkbox">
               <input

@@ -35,10 +35,12 @@ async function exportedSlides(page: Page) {
 }
 
 for (const kind of ['document', 'template'] as const) {
-  test(`imports an image into an existing ${kind} without losing pages and supports undo`, async ({
+ for (const sourceKind of ['image', 'pdf'] as const) {
+  test(`imports ${sourceKind} into an existing ${kind} without losing pages and supports undo`, async ({
     page,
   }) => {
     const errors: string[] = [];
+    await page.setViewportSize({ width: 390, height: 844 });
     page.on('pageerror', (error) => errors.push(error.message));
     let recognitionRequests = 0;
     await page.addInitScript((slide) => {
@@ -72,6 +74,7 @@ for (const kind of ['document', 'template'] as const) {
         });
       if (path === '/api/recognition/capabilities')
         return route.fulfill({ json: { ocr: true, ollama: false } });
+      if (path === '/api/recognition/pdf-page') return route.fulfill({ json: { image: `data:image/png;base64,${png}`, pages: 2 } });
       if (path === '/api/recognition') {
         recognitionRequests++;
         return route.fulfill({
@@ -131,19 +134,26 @@ for (const kind of ['document', 'template'] as const) {
       return canvas.toDataURL('image/png').split(',')[1];
     });
     const upload = async () => {
-      await page.getByRole('button', { name: 'Import from image', exact: true }).click();
+      await page.getByRole('button', { name: 'Import image or PDF', exact: true }).click();
       await page
-        .getByRole('dialog')
+        .getByRole('region', { name: 'Import image or PDF' })
         .locator('input[type=file]')
         .setInputFiles({
-          name: 'styled-page.png',
-          mimeType: 'image/png',
-          buffer: Buffer.from(png, 'base64'),
+          name: sourceKind === 'pdf' ? 'styled-page.pdf' : 'styled-page.png',
+          mimeType: sourceKind === 'pdf' ? 'application/pdf' : 'image/png',
+          buffer: sourceKind === 'pdf' ? Buffer.from('%PDF-1.7 test') : Buffer.from(png, 'base64'),
         });
     };
     await upload();
+    if (sourceKind === 'pdf') {
+      await expect(page.getByLabel('PDF page', { exact: false })).toHaveValue('1');
+      await page.getByLabel('PDF page', { exact: false }).fill('2');
+      await expect(page.getByRole('button', { name: 'Recognize locally', exact: true })).toBeDisabled();
+      await page.getByRole('button', { name: 'Load page', exact: true }).click();
+      await expect(page.getByLabel('PDF page', { exact: false })).toHaveValue('2');
+    }
     // Closing a pending import must not touch the current document.
-    await page.getByRole('dialog').getByRole('button', { name: 'Close', exact: true }).click();
+    await page.getByRole('region', { name: 'Import image or PDF' }).getByRole('button', { name: 'Close', exact: true }).click();
     await expect(page.locator('.slide-thumb')).toHaveCount(1);
     await upload();
     await page
@@ -155,7 +165,7 @@ for (const kind of ['document', 'template'] as const) {
     const apply = page.getByRole('button', { name: 'Add as a new slide', exact: true });
     await expect(apply).toBeEnabled();
     await apply.click();
-    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(page.getByRole('region', { name: 'Import image or PDF' })).toHaveCount(0);
     await expect(page.locator('.slide-thumb')).toHaveCount(2);
     const slides = await exportedSlides(page);
     expect(slides[0].id).toBe('existing');
@@ -194,4 +204,5 @@ for (const kind of ['document', 'template'] as const) {
     await expect(page.locator('.slide-thumb')).toHaveCount(2);
     expect(errors).toEqual([]);
   });
+ }
 }

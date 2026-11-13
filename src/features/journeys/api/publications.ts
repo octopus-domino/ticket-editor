@@ -16,6 +16,7 @@ export interface PublishedSite {
   site: JourneyDefinition;
   updatedAt: string;
 }
+export interface PublishedRelease { id: string; title: string; kind: string; count: number; createdAt: string }
 
 /** Attach old resources only through locally held management-key proof. */
 export async function restoreLocalPublications() {
@@ -47,4 +48,6 @@ export const publicationsApi = {
     ),
   sites: (page: number) =>
     journeyRequest<PublicationPage<PublishedSite>>(`/api/publications/sites?page=${page}`),
+  batches: (page: number) =>
+    journeyRequest<PublicationPage<PublishedRelease>>(`/api/publications/batches?page=${page}`),
 };

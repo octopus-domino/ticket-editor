@@ -94,6 +94,8 @@ export interface BaseElement extends Bounds {
 }
 
 export interface TextElement extends BaseElement {
+  autoFit?: boolean;
+  minFontSize?: number;
   /** False preserves an imported text box instead of resizing it during rendering. */
   autoHeight?: boolean;
   type: 'text';
@@ -377,6 +379,7 @@ export interface Slide {
   height: number;
   background: string;
   backgroundImage?: string;
+  repeat?: { path: string; pageSize: number };
   padding: Padding;
   elements: CanvasElement[];
 }

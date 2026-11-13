@@ -7,6 +7,9 @@ export interface RouteStop {
   latitude: number;
   zone: string;
   stayMinutes: number;
+  description?: string;
+  confirmed?: boolean;
+  walkId?: string;
 }
 export interface RouteLeg {
   mode: 'car' | 'foot' | 'flight';
@@ -23,6 +26,7 @@ export interface TimelineRow {
   end: string;
   zone: string;
   startZone?: string;
+  description?: string;
 }
 export class RoutePlanningError extends Error {
   constructor(
@@ -54,6 +58,7 @@ function validate(stops: RouteStop[], legs: RouteLeg[]) {
   for (const stop of stops) {
     if (
       !stop.label.trim() ||
+      stop.confirmed === false ||
       !Number.isFinite(stop.latitude) ||
       !Number.isFinite(stop.longitude) ||
       Math.abs(stop.latitude) > 85 ||
@@ -123,6 +128,7 @@ export function buildRouteTimeline(
   for (let i = 0; i < stops.length; i++) {
     const stop = stops[i];
     add('stop', stop.label, clock + minutes(stop.stayMinutes), stop.zone);
+    if (stop.description?.trim()) rows[rows.length - 1].description = stop.description.trim();
     if (i === legs.length) break;
     const leg = legs[i];
     if (leg.mode === 'flight') {

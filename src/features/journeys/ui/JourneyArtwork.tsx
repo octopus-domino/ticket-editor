@@ -17,6 +17,8 @@ const faces = [
   ['DejaVu Sans', 'normal', 700, 'sans-bold'],
   ['DejaVu Serif', 'normal', 400, 'serif'],
   ['DejaVu Serif', 'italic', 400, 'serif-italic'],
+  ['Marck Script', 'normal', 400, 'handwriting'],
+  ['Zhi Mang Xing', 'normal', 400, 'handwriting-zh'],
 ] as const;
 const fonts = faces
   .map(
@@ -88,7 +90,7 @@ export function JourneyArtwork({
             if (!Array.isArray(value.pages) || !value.pages.length)
               throw new Error(t('Не удалось прочитать макет.'));
             await Promise.all(
-              (['INVITATION', 'TICKET'].includes(document.kind) ? faces : faces.slice(0, 2)).map(
+              faces.filter(([family]) => value.pages.some(page => page.svg.includes(family))).map(
                 async ([family, style, weight]) => {
                   const loaded = await window.document.fonts.load(
                     `${style} ${weight} 19px "${family}"`,

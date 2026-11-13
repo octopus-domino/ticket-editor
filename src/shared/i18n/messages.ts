@@ -13,6 +13,7 @@ import { JOURNEY_MESSAGES } from './journey-messages';
 import { JOURNEY_EXTRA_MESSAGES } from './journey-extra-messages';
 import { JOURNEY_TOOLS_MESSAGES } from './journey-tools-messages';
 import { PUBLICATION_MESSAGES } from './publication-messages';
+import { ROUTE_IMPROVEMENT_MESSAGES } from './route-improvement-messages';
 // Columns: English | Russian | Simplified Chinese | Polish | Italian | Spanish | Dutch | French | German.
 const rows = String.raw`
 Document library|Библиотека документов|文档库|Biblioteka dokumentów|Libreria documenti|Biblioteca de documentos|Documentbibliotheek|Bibliothèque de documents|Dokumentenbibliothek
@@ -212,7 +213,7 @@ for (const row of (
   JOURNEY_MESSAGES +
   JOURNEY_EXTRA_MESSAGES +
   JOURNEY_TOOLS_MESSAGES +
-  PUBLICATION_MESSAGES
+  PUBLICATION_MESSAGES + ROUTE_IMPROVEMENT_MESSAGES
 )
   .trim()
   .split('\n')

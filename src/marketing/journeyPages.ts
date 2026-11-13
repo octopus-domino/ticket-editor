@@ -13,6 +13,12 @@ export const JOURNEY_PAGES = [
     actionLabel: t('Create a website'),
     kind: 'hub',
   },
+  { path: '/daily-poetry-cards/', label: t('Daily poetry cards'), heading: t('Seven days of poetry'),
+    description: t('A little warmth for each day. Choose a language, age and mood; we will find real poems for seven personal cards.'),
+    action: '/start/poetry', actionLabel: t('Choose poems'), kind: 'poetry' },
+  { path: '/shared-photo-albums/', label: t('Shared photo albums'), heading: t('An album made together'),
+    description: t('Invite family and friends to add photos and handwritten captions. Keep one shared album and print it as a PDF.'),
+    action: '/start/albums', actionLabel: t('Create an album'), kind: 'albums' },
   {
     path: '/invitations-online/',
     label: t('Invitations with RSVP'),

@@ -144,3 +144,6 @@
 .template-editor-canvas .editor-shell {
   height: 100%;
 }
+.constructor-publication-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 8px 12px; }
+.constructor-publication-actions details { font-size: 13px; }
+.constructor-publication-actions button { min-height: 44px; }

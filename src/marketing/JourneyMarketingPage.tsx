@@ -5,13 +5,15 @@ import { JOURNEY_PAGES, JOURNEY_STEPS, JOURNEY_FAQ } from './journeyPages';
 import { JourneyDiscovery } from './JourneyDiscovery';
 import './landing.css';
 import { reachGoal } from '@/shared/analytics/metrika';
+import { ReadySolutionsMenu } from './ReadySolutionsMenu';
+import { solutionBenefit } from './solutionBenefits';
 
 export function JourneyMarketingPage() {
   const {pathname}=useLocation();
   const page=JOURNEY_PAGES.find(item=>item.path.replace(/\/$/,'')===pathname.replace(/\/$/,''))??JOURNEY_PAGES[0];
   return <div className="codoc-landing">
     <header className="codoc-header codoc-container"><Link className="codoc-brand" to="/">CoDoc.</Link>
-      <nav aria-label={t('Ready-to-use services')}>{JOURNEY_PAGES.map(item=><Link key={item.path} to={item.path} aria-current={item.path===page.path?'page':undefined}>{item.label}</Link>)}</nav>
+      <ReadySolutionsMenu />
       <LanguageSwitcher/>
     </header>
     <main>
@@ -21,6 +23,7 @@ export function JourneyMarketingPage() {
         <p className="codoc-micro">{t('No design skills needed. Start with a ready form.')}</p>
       </section>
       <section className="codoc-container discovery-steps"><h2>{t('Three steps to a finished result')}</h2><ol>{JOURNEY_STEPS.map(([title,text],index)=><li key={title}><span>0{index+1}</span><h3>{title}</h3><p>{text}</p></li>)}</ol></section>
+      {solutionBenefit(page.kind) && <section className="codoc-container discovery-details"><h2>{t('Benefits for you and your recipients')}</h2><p>{solutionBenefit(page.kind)}</p></section>}
       {page.kind==='builder'&&<section className="codoc-container discovery-details"><h2>{t('A website built from your settings')}</h2><p>{t('Choose invitations, certificates or a menu. Add fields, mark required answers and choose a theme. Publish the site and keep its management link for future changes.')}</p><Link className="codoc-button" to="/sites/new">{t('Open the website builder')} ↗</Link></section>}
       <JourneyDiscovery/>
       <section className="codoc-container discovery-details"><h2>{t('Questions before you start')}</h2>

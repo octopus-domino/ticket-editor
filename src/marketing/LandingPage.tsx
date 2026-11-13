@@ -10,6 +10,7 @@ import { FeedbackWidget } from '@/features/feedback/ui/FeedbackWidget';
 import { SEARCH_PAGES } from './searchPages';
 import { LanguageSwitcher } from '@/shared/i18n/LanguageSwitcher';
 import { JourneyDiscovery } from './JourneyDiscovery';
+import { ReadySolutionsMenu } from './ReadySolutionsMenu';
 
 export function LandingPage() {
   const user = useStore(authStore, (s) => s.user);
@@ -31,13 +32,13 @@ export function LandingPage() {
           <span aria-hidden="true">co</span>CoDoc.
         </Link>
         <nav aria-label={__tr('Основная навигация')}>
-          <Link to="/solutions/">{__tr('Ready-to-use services')}</Link>
           <a href="#possibilities">{__tr('Возможности')}</a>
           <a href="#stamps">{__tr('Штампы и печати')}</a>
           <a href="#workflow">{__tr('Как это работает')}</a>
           <Link to="/learn">{__tr('Learning center')}</Link>
           <a href="#questions">{__tr('Вопросы')}</a>
         </nav>
+        <ReadySolutionsMenu />
         <LanguageSwitcher />
         <Link className="codoc-button codoc-button-small" to={user || offline ? '/app' : '/login'}>
           {user || offline ? __tr('Мои документы') : __tr('Войти')} ↗

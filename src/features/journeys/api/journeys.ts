@@ -31,11 +31,24 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   return body ? (JSON.parse(body) as T) : (undefined as T);
 }
 export const journeyApi = {
+  batchZip: async (id: string, key: string) => {
+    const response = await (key ? publicFetch : authFetch)(`${key ? API_BASE : ''}/api/${key ? 'journeys' : 'publications'}/batches/${encodeURIComponent(id)}/zip`, {
+      headers: { 'X-Management-Key': key },
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({})); throw new Error(journeyError(response.status, body.error));
+    }
+    return response.blob();
+  },
   batch: (id: string, key: string) =>
-    request<JourneyBatch>(`/api/journeys/batches/${encodeURIComponent(id)}`, {
+    request<JourneyBatch>(`/api/${key ? 'journeys' : 'publications'}/batches/${encodeURIComponent(id)}`, {
       headers: { 'X-Management-Key': key },
     }),
   status: (id: string) => request<JourneyStatus>(`/api/journeys/${encodeURIComponent(id)}/status`),
+  changeStatus: (id: string, key: string, action: 'REVOKE' | 'RESTORE' | 'RESET_USAGE') =>
+    request<JourneyStatus>(`/api/${key ? 'journeys' : 'publications'}/${encodeURIComponent(id)}/status`, {
+      method: 'POST', headers: { 'X-Management-Key': key }, body: JSON.stringify({ action }),
+    }),
   consume: (id: string, key: string) =>
     request<JourneyStatus>(
       `/api/${key ? 'journeys' : 'publications'}/${encodeURIComponent(id)}/consume`,
@@ -45,18 +58,16 @@ export const journeyApi = {
       },
     ),
   batchPdf: async (id: string, key: string) => {
-    const response = await publicFetch(
-      `${API_BASE}/api/journeys/batches/${encodeURIComponent(id)}/pdf`,
+    const response = await (key ? publicFetch : authFetch)(
+      `${key ? API_BASE : ''}/api/${key ? 'journeys' : 'publications'}/batches/${encodeURIComponent(id)}/pdf`,
       {
         headers: { 'X-Management-Key': key },
       },
     );
-    if (!response.ok)
-      throw new Error(
-        response.status === 429
-          ? 'Подготовка занята. Повторите чуть позже.'
-          : 'Не удалось подготовить выпуск. Проверьте ссылку управления.',
-      );
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      throw new Error(journeyError(response.status, body.error));
+    }
     return response.blob();
   },
   create: (

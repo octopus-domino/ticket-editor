@@ -8,6 +8,7 @@ import {
   restoreLocalPublications,
   type PublishedDocument,
   type PublishedSite,
+  type PublishedRelease,
 } from '../api/publications';
 import { pdfUrl, publicUrl, siteUrl } from '../api/journeys';
 import { JourneyButton } from './JourneyButton';
@@ -19,13 +20,14 @@ import './publications.css';
 export default function PublicationsPage() {
   const user = useStore(authStore, (state) => state.user);
   const [params, setParams] = useSearchParams();
-  const tab = params.get('tab') === 'documents' ? 'documents' : 'sites';
+  const tab = params.get('tab') === 'documents' ? 'documents' : params.get('tab') === 'batches' ? 'batches' : 'sites';
   const site = params.get('site') ?? '';
   const [page, setPage] = useState(0);
   const [search, setSearch] = useState('');
   const [query, setQuery] = useState('');
   const [documents, setDocuments] = useState<PublishedDocument[]>([]);
   const [sites, setSites] = useState<PublishedSite[]>([]);
+  const [releases, setReleases] = useState<PublishedRelease[]>([]);
   const [pages, setPages] = useState(0);
   const [total, setTotal] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -61,11 +63,12 @@ export default function PublicationsPage() {
     setBusy(true);
     setError('');
     const load =
-      tab === 'sites' ? publicationsApi.sites(page) : publicationsApi.documents(page, site, query);
+      tab === 'sites' ? publicationsApi.sites(page) : tab === 'batches' ? publicationsApi.batches(page) : publicationsApi.documents(page, site, query);
     void load
       .then((result) => {
         if (!active) return;
         if (tab === 'sites') setSites(result.items as PublishedSite[]);
+        else if (tab === 'batches') setReleases(result.items as PublishedRelease[]);
         else setDocuments(result.items as PublishedDocument[]);
         setPages(result.pages);
         setTotal(result.total);
@@ -80,7 +83,7 @@ export default function PublicationsPage() {
       active = false;
     };
   }, [ready, tab, page, query, site]);
-  function select(next: 'sites' | 'documents', slug = '') {
+  function select(next: 'sites' | 'documents' | 'batches', slug = '') {
     setPage(0);
     setParams({ tab: next, ...(slug ? { site: slug } : {}) });
   }
@@ -110,6 +113,7 @@ export default function PublicationsPage() {
         <JourneyButton aria-pressed={tab === 'documents'} onClick={() => select('documents')}>
           {t('My documents')}
         </JourneyButton>
+        <JourneyButton aria-pressed={tab === 'batches'} onClick={() => select('batches')}>{t('My releases')}</JourneyButton>
       </nav>
       {tab === 'documents' && (
         <label>
@@ -172,7 +176,12 @@ export default function PublicationsPage() {
                     </div>
                   </article>
                 ))
-              : documents.map(({ document, status, siteSlug }) => (
+              : tab === 'batches' ? releases.map(release => <article key={release.id}>
+                  <h2>{release.title}</h2>
+                  <p>{t('Documents in release: {0}', release.count)}</p>
+                  <small>{new Date(release.createdAt).toLocaleString(getLocale())}</small>
+                  <div className="publications-actions"><Link className="journey-button" to={`/issues/${encodeURIComponent(release.id)}`}>{t('Open release management')}</Link></div>
+                </article>) : documents.map(({ document, status, siteSlug }) => (
                   <article key={document.id}>
                     <h2>{document.data.recipient || document.title}</h2>
                     <p>

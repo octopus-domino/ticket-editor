@@ -22,6 +22,7 @@ export function BackgroundLibrary({ onSelect, selectedId, disabled, onBusyChange
   };
   return <details className="background-library">
     <summary>{t('Background library')} <span>{BACKGROUND_CATALOG.length}</span></summary>
+    {pending && <p role="status" className="background-library-status">{t('Loading background…')}</p>}
     <p>{t('Choose a background. Existing text and objects stay in place.')}</p>
     <label>{t('Background category')}<select disabled={Boolean(pending) || disabled} value={category} onChange={event => setCategory(event.target.value)}>
       {Object.entries(categories).map(([id, label]) => <option key={id} value={id}>{label}</option>)}
@@ -36,7 +37,6 @@ export function BackgroundLibrary({ onSelect, selectedId, disabled, onBusyChange
         </button>;
       })}
     </div>
-    {pending && <p role="status">{t('Loading background…')}</p>}
     {error && <p role="alert">{error}</p>}
   </details>;
 }

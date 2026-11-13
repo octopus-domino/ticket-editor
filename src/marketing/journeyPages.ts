@@ -196,6 +196,16 @@ export const JOURNEY_PAGES = [
     actionLabel: t('Fill in the form'),
     kind: 'tours',
   },
+  {
+    path:'/documents-for-small-business/',label:t('Documents for small business'),heading:t('Documents for small business'),
+    description:t('Price tags, menus and proposals from your data. Prepare PDF documents with QR links and keep updates in one place.'),
+    action:'/start/proposals',actionLabel:t('Fill in the form'),kind:'business',
+  },
+  {
+    path:'/certificates-for-courses/',label:t('Certificates for courses'),heading:t('Certificates for courses'),
+    description:t('Create certificates from a participant list. Download PDFs, verify publication by QR and collect course feedback.'),
+    action:'/start/certificates',actionLabel:t('Fill in the form'),kind:'courses',
+  },
 ] as const;
 
 export const JOURNEY_STEPS = [

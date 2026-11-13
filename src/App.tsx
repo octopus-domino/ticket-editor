@@ -2,6 +2,7 @@ import { t as __tr } from '@/shared/i18n';
 import React, { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
+import './shared/authoring-layout.css';
 import { authStore } from './auth/store';
 import { useStore } from '@/shared/store/store';
 import { LandingPage } from './marketing/LandingPage';

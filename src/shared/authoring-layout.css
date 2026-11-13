@@ -1,0 +1,19 @@
+/* Working surfaces use the viewport; reading copy keeps a comfortable line length. */
+@media (min-width: 1024px) {
+  :is(main.journey-main, main.journey-builder, .workflow-page, .asset-libraries-page, .product-library, .learning-page, .signing-page, .template-new) {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: none;
+    margin-inline: 0;
+    padding-inline: clamp(24px, 3vw, 64px);
+  }
+  main.journey-main .journey-workspace { grid-template-columns: minmax(420px, 1fr) minmax(0, 1.25fr); gap: clamp(24px, 3vw, 56px); }
+  main.journey-main .journey-workspace > * { min-width: 0; }
+  .journey-app .journey-header { max-width: none; }
+  .schema-page .schema-form, .bm-page .dm-table { max-width: none; }
+  .workflow-page .workflow-builder { grid-template-columns: minmax(240px, 18%) minmax(0, 1fr); }
+  .poetry-wizard .poetry-preferences { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .poetry-wizard .poetry-region { grid-column: 1 / -1; }
+  .journey-main > p, .workflow-page > p { max-width: 75ch; }
+}
+.journey-steps { flex-wrap: wrap; }

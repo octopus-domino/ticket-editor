@@ -3,6 +3,8 @@ import { t } from '@/shared/i18n';
 /** These explain shipped workflows; they must not promise payments or automatic delivery. */
 export function solutionBenefit(kind: string): string {
   const benefits: Record<string, string> = {
+    business:t('For sales: import positions from Excel and check calculated totals. Clients receive one readable proposal with a PDF that handles long tables.'),
+    courses:t('For courses and awards: issue personal certificates together. Recipients can print their PDF and open its publication record by QR.'),
     poetry: t('A little warmth for each day. Choose a language, age and mood; we will find real poems for seven personal cards.'),
     albums: t('Invite family and friends to add photos and handwritten captions. Keep one shared album and print it as a PDF.'),
     invite: t('For celebrations: collect guest replies in one registry. Guests get the date, venue and reply form through one link.'),

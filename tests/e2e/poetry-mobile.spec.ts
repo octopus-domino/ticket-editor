@@ -22,12 +22,13 @@ test('poetry on a phone uses the selected local region and keeps age, mood and l
     await expect(form.getByRole('button', { name: 'Choose poems for seven days', exact: true })).toBeDisabled();
     await form.getByLabel('Poem language', { exact: true }).selectOption('ru');
     await form.getByLabel('Mood', { exact: true }).selectOption('funny');
+    await form.getByLabel('Your mood in a few words (optional)').fill('радостный');
     await form.getByLabel('Who are these cards for?', { exact: true }).selectOption('child');
     await form.getByRole('button', { name: 'Use my location', exact: true }).tap();
     await expect(form.getByRole('status')).toHaveText('Your location');
     await form.getByRole('button', { name: 'Choose poems for seven days', exact: true }).tap();
     await expect.poll(() => request).toBeDefined();
-    expect(request).toMatchObject({ latitude: 43.12, longitude: 131.89, zone: 'Asia/Vladivostok', language: 'ru', mood: 'funny', audience: 'child' });
+    expect(request).toMatchObject({ latitude: 43.12, longitude: 131.89, zone: 'Asia/Vladivostok', language: 'ru', mood: 'funny', audience: 'child', moodText: 'радостный' });
     expect(request).not.toHaveProperty('label');
     await expect(form.getByRole('alert')).toHaveText('The poetry sources are unavailable. Try again a little later.');
     await expect(form.getByRole('button', { name: 'Choose poems for seven days', exact: true })).toBeEnabled();

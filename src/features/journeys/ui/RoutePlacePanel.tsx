@@ -23,6 +23,7 @@ export function RoutePlacePanel({ stop, onNotes, onAdd, onWalkChange, onWalkBusy
   const [expanded, setExpanded] = useState(false);
   const [visits, setVisits] = useState<CityVisit[]>([]);
   const [skipped, setSkipped] = useState<RecommendedPlace[]>([]);
+  const [describing,setDescribing]=useState('');
   const [, setLegs] = useState<PlannedLeg[]>([]);
   const controller = useRef<AbortController | null>(null);
   const active = useRef(false);
@@ -46,20 +47,25 @@ export function RoutePlacePanel({ stop, onNotes, onAdd, onWalkChange, onWalkBusy
     } catch (reason) { if (!abort.signal.aborted) setError((reason as Error).message); }
     finally { if (!abort.signal.aborted) { active.current = false; setBusy(false); onWalkBusy(false); } }
   };
-  const autoWalk = async () => {
+  const descriptions = async (items:RecommendedPlace[],signal:AbortSignal) => Promise.all(items.map(async place=>{
+    if(!place.id.startsWith('wikimapia-')||place.description)return place;
+    try{const info=await journeyRequest<{description:string}>(`/api/journeys/routes/places/${place.id}?language=${getLocale()}`,{signal});return {...place,description:info.description};}
+    catch{return place;}
+  }));
+  const autoWalk = async (selection?:RecommendedPlace[]) => {
     if (active.current) return;
     active.current = true; setBusy(true); onWalkBusy(true); setError('');
     const abort = new AbortController(); controller.current = abort;
     try {
-      const result = await discover('attractions', abort.signal);
+      const result = selection ? {available:true,places:selection,source} : await discover('attractions', abort.signal);
       if (abort.signal.aborted) return;
       setAvailable(result.available); setPlaces(result.places); setSource(result.source ?? 'OpenStreetMap'); setKind('attractions');
-      const candidates = nearestPlaces(stop, result.places).slice(0, 4);
+      const candidates = await descriptions(nearestPlaces(stop, result.places).slice(0, selection?5:4),abort.signal);
       if (!candidates.length) { setError(t('No nearby places found.')); return; }
       const added: RouteStop[] = candidates.map(place => ({
         id: crypto.randomUUID(), label: place.label, longitude: place.longitude, latitude: place.latitude,
         zone: stop.zone, confirmed: true, stayMinutes: 60,
-        description: place.openingHours ? `${t('Opening hours')}: ${place.openingHours}` : t('Opening hours are unconfirmed. Check before visiting.'),
+        description: [place.description?.slice(0,350),place.url].filter(Boolean).join('\n').slice(0,500),
       }));
       added.push({ ...stop, id: crypto.randomUUID(), stayMinutes: 0, description: t('Return to the starting point after the walk.') });
       const roads: PlannedLeg[] = [];
@@ -81,7 +87,7 @@ export function RoutePlacePanel({ stop, onNotes, onAdd, onWalkChange, onWalkBusy
     active.current = true; setBusy(true); onWalkBusy(true); setError(''); setVisits([]); setLegs([]); setSkipped([]);
     const abort = new AbortController(); controller.current = abort;
     try {
-      const ordered = nearestPlaces(stop, places.filter(place => selected.includes(place.id)));
+      const ordered = await descriptions(nearestPlaces(stop, places.filter(place => selected.includes(place.id))),abort.signal);
       const accepted: CityVisit[] = [], omitted: RecommendedPlace[] = [], roads: PlannedLeg[] = [];
       let current: Pick<RouteStop, 'longitude' | 'latitude'> = stop, clock = 9 * 60;
       for (const place of ordered) {
@@ -111,7 +117,7 @@ export function RoutePlacePanel({ stop, onNotes, onAdd, onWalkChange, onWalkBusy
     else if (active.current) { controller.current?.abort(); active.current = false; setBusy(false); onWalkBusy(false); }
   }}>
     <summary>{t('Private itineraries')}</summary>
-    <p>{t('Choose accommodation or sights separately, then add only what you need to your route.')}</p>
+    <p>{t('This walk has a separate map and its own pages in the trip PDF.')}</p>
     <button type="button" className="journey-primary" disabled={busy} onClick={() => void autoWalk()}>{t('Generate a walking map')}</button>
     <p>{t('Find up to four nearby sights, connect them by walking roads and return to this point. Allow one hour per visit. Check opening hours before travelling.')}</p>
 
@@ -134,9 +140,14 @@ export function RoutePlacePanel({ stop, onNotes, onAdd, onWalkChange, onWalkBusy
           onChange={event => { setSelected(ids => event.target.checked ? [...ids, place.id] : ids.filter(id => id !== place.id)); setVisits([]); setLegs([]); setSkipped([]); }} />}
         <a href={place.url} target="_blank" rel="noopener noreferrer">{place.label} ↗</a>
         {place.openingHours && <small>{place.openingHours}</small>}
-        <button type="button" className="journey-secondary" onClick={() => onAdd(place)}>{t('Add stop')}</button>
+        {place.description && <p>{place.description}</p>}
+        {kind === 'attractions' && place.id.startsWith('wikimapia-') && !place.description && <button type="button" disabled={describing===place.id} onClick={async()=>{
+          setDescribing(place.id);const [detailed]=await descriptions([place],new AbortController().signal);setPlaces(items=>items.map(item=>item.id===place.id?detailed:item));setDescribing('');
+        }}>{t('About this place')}</button>}
+        {kind === 'hotels' && <button type="button" className="journey-secondary" onClick={() => onAdd(place)}>{t('Add stop')}</button>}
       </li>)}</ul>
       {kind === 'attractions' && selected.length > 0 && <>
+        <button type="button" disabled={busy} onClick={()=>void autoWalk(places.filter(place=>selected.includes(place.id)))}>{t('Create walk from selected places')}</button>
         <label>{t('Visit date')}<input type="date" value={date} onChange={event => { setDate(event.target.value); setVisits([]); setLegs([]); setSkipped([]); }} /></label>
         <p>{t('The day plan uses walking routes and published opening hours, with one hour per visit between 09:00 and 21:00. Places without reliable hours remain outside the timed plan. Check holiday hours before travelling.')}</p>
         <button type="button" className="journey-secondary" disabled={!date} onClick={() => void plan()}>{t('Plan this day')}</button>
@@ -150,6 +161,6 @@ export function RoutePlacePanel({ stop, onNotes, onAdd, onWalkChange, onWalkBusy
     {busy && <p role="status">{t('Calculating the route…')}</p>}
     {error && <p role="alert">{error}</p>}
     {expanded && <RouteWalk ref={walk} value={stop.walkId} onChange={onWalkChange} />}
-    {places.length > 0 && <small>{source === 'OpenStreetMap' ? <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap contributors</a> : '2GIS'}</small>}
+    {places.length > 0 && <small><a href={source==='Wikimapia'?'https://wikimapia.org/':source==='2GIS'?'https://2gis.ru/':'https://www.openstreetmap.org/copyright'} target="_blank" rel="noopener noreferrer">{source}</a></small>}
   </details>;
 }

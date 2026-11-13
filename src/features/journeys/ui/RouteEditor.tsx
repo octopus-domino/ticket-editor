@@ -12,6 +12,7 @@ import type { PlannedLeg, RouteSnapshot } from '../domain/route';
 import { planRoute } from '../api/routePlanner';
 import { reorderRoute } from '../domain/reorderRoute';
 import { RouteReorderHandle } from './RouteReorderHandle';
+import { TimeZoneSelect } from './TimeZoneSelect';
 import { RouteAddressInput, type RouteAddress } from './RouteAddressInput';
 import type { RouteMapHandle } from './RouteMap';
 import './route.css';
@@ -238,7 +239,7 @@ export const RouteEditor = forwardRef<RouteEditorHandle, { value: string; onChan
               {stop.label && stop.confirmed !== false && <RoutePlacePanel stop={stop}
                 visitDate={start.slice(0, 10)}
                 onWalkChange={walkId => {
-                  invalidate(); setStops(items => items.map(item => item.id === stop.id ? { ...item, walkId } : item));
+                  setDirty(true); setStops(items => items.map(item => item.id === stop.id ? { ...item, walkId } : item));
                 }}
                 onWalkBusy={value => { busyRef.current = value; setBusy(value); callbacks.current.onBusyChange(value); }}
                 onNotes={notes => {
@@ -256,13 +257,13 @@ export const RouteEditor = forwardRef<RouteEditorHandle, { value: string; onChan
               <div className="route-inline">
                 <label>
                   {t('Time zone')}
-                  <input
+                  <TimeZoneSelect
                     value={stop.zone}
-                    onChange={(event) => {
+                    onChange={(zone) => {
                       invalidate();
                       setStops((items) =>
                         items.map((item, i) =>
-                          i === index ? { ...item, zone: event.target.value } : item,
+                          i === index ? { ...item, zone } : item,
                         ),
                       );
                     }}

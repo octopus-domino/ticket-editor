@@ -19,16 +19,20 @@ export default function AlbumWizard({ definition, custom = false, previewOnly = 
   };
   return <main className="journey-main">
     <h1>{definition.title}</h1><p>{definition.description}</p>
-    {!created && <form onSubmit={async event=>{
+    <ol className="journey-steps"><li>1. {t('Title')}</li><li>2. {t('Add photos')}</li><li>3. {t('Invite contributors')}</li><li>4. PDF</li></ol>
+    <details open={!created}><summary>{t('Title')}</summary><form onSubmit={async event=>{
       event.preventDefault();if(busy||previewOnly)return;setBusy(true);setError('');
-      try{const [result]=await journeyApi.create('ALBUM',title,data,[]);rememberKey(result.document.id,result.managementKey);setCreated(result);}
+      try{
+        if(created){const document=await journeyApi.update({...created.document,title,data},created.managementKey);setCreated({...created,document});}
+        else{const [result]=await journeyApi.create('ALBUM',title,data,[]);rememberKey(result.document.id,result.managementKey);setCreated(result);}
+      }
       catch(reason){setError((reason as Error).message);}finally{setBusy(false);}
     }}>
       <label>{t('Title')}<input value={title} required maxLength={120} onChange={event=>setTitle(event.target.value)}/></label>
       {definition.fields.map(field=><label key={field.name}>{field.label}<textarea required={field.required} maxLength={2000} value={data[field.name]??''} onChange={event=>setData({...data,[field.name]:event.target.value})}/></label>)}
-      <button type="submit" disabled={busy||previewOnly}>{t('Create')}</button>
-    </form>}
-    <JourneyBackgroundPicker value={data} onChange={fields=>void patch(fields)} onBusyChange={setBusy}/>
+      <button type="submit" disabled={busy||previewOnly}>{t(created?'Save':'Create')}</button>
+    </form></details>
+    <JourneyBackgroundPicker value={data} onChange={patch} onBusyChange={setBusy}/>
     {error&&<p role="alert">{error}</p>}
     {created&&<>
       <AlbumPanel id={created.document.id} manage/>

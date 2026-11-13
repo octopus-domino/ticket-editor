@@ -23,7 +23,7 @@ for (const path of ['/solutions/','/website-builder/','/invitations-online/','/c
 const titles = new Set(),
   descriptions = new Set();
 for (const url of urls) {
-  assert.equal(url.origin, 'https://codoc.site');
+  assert.equal(url.origin, 'https://www.codoc.site');
   const html = await readFile(new URL(`${url.pathname.slice(1)}index.html`, root), 'utf8');
   assert.match(html, /<html lang="ru">/);
   assert.equal(

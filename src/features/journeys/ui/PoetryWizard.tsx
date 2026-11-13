@@ -19,6 +19,7 @@ interface Prepared { id: string; bundle: { language: string; cards: { date: stri
 
 export default function PoetryWizard({ definition, custom = false, previewOnly = false }: { definition: JourneyDefinition; custom?: boolean; previewOnly?: boolean }) {
   const [language, setLanguage] = useState<Locale>(getLocale), [mood, setMood] = useState('heartfelt'), [audience, setAudience] = useState('middle');
+  const [moodText, setMoodText] = useState('');
   const [region, setRegion] = useState<Region | null>(null), [point, setPoint] = useState<{ latitude: number; longitude: number } | null>(null);
   const [regionEdited, setRegionEdited] = useState(false);
   const [title, setTitle] = useState(t('Seven days of poetry')), [fields, setFields] = useState<Record<string,string>>({});
@@ -45,7 +46,7 @@ export default function PoetryWizard({ definition, custom = false, previewOnly =
     const controller = new AbortController(); abort.current = controller;
     try {
       const result = await journeyRequest<Prepared>('/api/journeys/poetry', { method: 'POST', signal: controller.signal,
-        body: JSON.stringify({ latitude: region.latitude, longitude: region.longitude, zone: region.zone, language, mood, audience, seed: crypto.randomUUID() }) });
+        body: JSON.stringify({ latitude: region.latitude, longitude: region.longitude, zone: region.zone, language, mood, audience, moodText: moodText.trim() || undefined, seed: crypto.randomUUID() }) });
       if (!controller.signal.aborted) setPrepared(result);
     } catch (reason) { if (!controller.signal.aborted) setError((reason as Error).message); }
     finally { running.current = false; setBusy(false); }
@@ -73,6 +74,7 @@ export default function PoetryWizard({ definition, custom = false, previewOnly =
         <label>{t('Mood')}<select aria-label={t('Mood')} value={mood} onChange={event => { setMood(event.target.value); setPrepared(null); }}>
           <option value="heartfelt">{t('Warm and heartfelt')}</option><option value="funny">{t('Cheerful and funny')}</option>
         </select></label>
+        <label>{t('Your mood in a few words (optional)')}<input maxLength={200} minLength={2} value={moodText} onChange={event => { setMoodText(event.target.value); setPrepared(null); }} /></label>
         <label>{t('Who are these cards for?')}<select aria-label={t('Who are these cards for?')} value={audience} onChange={event => { setAudience(event.target.value); setPrepared(null); }}>
           {AGES.map(([code, label]) => <option key={code} value={code}>{t(label)}</option>)}
         </select></label>
@@ -97,7 +99,7 @@ export default function PoetryWizard({ definition, custom = false, previewOnly =
         <button type="submit" disabled={!region || regionEdited || locating}>{t(prepared ? 'Choose another seven poems' : 'Choose poems for seven days')}</button>
       </fieldset>
     </form>
-    <details><summary>{t('How the poems are chosen')}</summary><p>{t('Real texts come from Wikisource, with authors and source links. Age affects themes and length; weather helps choose the mood. Preview the cards before sharing.')}</p></details>
+    <details><summary>{t('How the poems are chosen')}</summary><p>{t('PoemShip helps find poems by mood and age. Other poetry libraries provide a fallback. Each card keeps its author and source. Preview before sharing.')}</p></details>
     {busy && <div role="status"><p>{t(prepared ? 'Saving cards…' : 'Looking for poems that feel right…')}</p>{!prepared && <button type="button" onClick={() => abort.current?.abort()}>{t('Cancel')}</button>}</div>}
     {error && <p role="alert">{error}</p>}
     {prepared && !created && <section>

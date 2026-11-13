@@ -13,6 +13,7 @@ import { LanguageSwitcher } from '@/shared/i18n/LanguageSwitcher';
 import WorkflowRunner from '../workflows/WorkflowRunner';
 import { localizeInvalidField, clearFieldValidation } from './ui/formValidation';
 import { BackgroundSurface } from '@/shared/backgrounds/BackgroundSurface';
+import { ReadySolutionsMenu } from '../../marketing/ReadySolutionsMenu';
 
 function ConfiguredJourney() {
   const params = useParams();
@@ -69,6 +70,7 @@ export default function JourneyApp({
           CoDoc<span> {t('/ для вашего события')}</span>
         </Link>
         <nav>
+          <ReadySolutionsMenu />
           <Link to={workspaceUrl('/app/publications')}>{t('My sites and documents')}</Link>
           {mode === 'public' ? (
             <Link to="/solutions/">{t('Создать свой документ ↗')}</Link>

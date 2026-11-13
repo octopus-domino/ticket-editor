@@ -5,6 +5,7 @@ export interface RecommendedPlace {
   id: string; label: string; longitude: number; latitude: number; url: string;
   openingHours?: string;
   photoReference?: string;
+  description?: string;
   schedule?: Record<string, { working_hours?: { from: string; to: string }[] }>;
 }
 export interface CityVisit { place: RecommendedPlace; start: string; end: string }

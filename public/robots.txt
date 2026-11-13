@@ -7,4 +7,4 @@ Disallow: /register
 Disallow: /auth/
 Disallow: /oauth2/
 
-Sitemap: https://codoc.site/sitemap.xml
+Sitemap: https://www.codoc.site/sitemap.xml

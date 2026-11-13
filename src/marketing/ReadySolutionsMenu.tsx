@@ -4,9 +4,9 @@ import { t } from '@/shared/i18n';
 import { JOURNEY_PAGES } from './journeyPages';
 import './solutions-menu.css';
 
-const groups = [
-  { label: () => t('Events and people'), kinds: ['invite', 'tickets', 'certificates', 'badges', 'greetings', 'gifts', 'albums'] },
-  { label: () => t('Work and business'), kinds: ['proposals', 'cards', 'labels', 'price-tags', 'menu', 'passes', 'properties'] },
+export const SOLUTION_GROUPS = [
+  { label: () => t('Events and people'), kinds: ['courses', 'invite', 'tickets', 'certificates', 'badges', 'greetings', 'gifts', 'albums'] },
+  { label: () => t('Work and business'), kinds: ['business', 'proposals', 'cards', 'labels', 'price-tags', 'menu', 'passes', 'properties'] },
   { label: () => t('Everyday plans'), kinds: ['tours', 'schedule', 'resume', 'poetry'] },
 ];
 export function ReadySolutionsMenu() {
@@ -22,7 +22,7 @@ export function ReadySolutionsMenu() {
     <summary>{t('Solutions')} <span aria-hidden="true">⌄</span></summary>
     <nav className="solutions-menu-panel" aria-label={t('Ready-to-use services')}>
       <Link className="solutions-menu-all" to="/solutions/" onClick={close}>{t('All solutions')}</Link>
-      {groups.map(group => <section key={group.kinds[0]}><h3>{group.label()}</h3>
+      {SOLUTION_GROUPS.map(group => <section key={group.kinds[0]}><h3>{group.label()}</h3>
         {JOURNEY_PAGES.filter(page => group.kinds.includes(page.kind)).map(page =>
           <Link key={page.path} to={page.path} onClick={close} aria-current={pathname === page.path ? 'page' : undefined}>{page.label}</Link>)}
       </section>)}

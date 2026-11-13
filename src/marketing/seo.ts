@@ -2,7 +2,7 @@ import { SEARCH_PAGES } from './searchPages';
 import { t, getLocale } from '@/shared/i18n';
 import { JOURNEY_PAGES, JOURNEY_FAQ } from './journeyPages';
 
-export const SITE_URL = 'https://codoc.site';
+export const SITE_URL = 'https://www.codoc.site';
 export interface PageMetadata {
   path: string;
   title: string;

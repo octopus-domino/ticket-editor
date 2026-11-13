@@ -4,8 +4,12 @@ import { JOURNEY_PAGES } from './journeyPages';
 import './journey-discovery.css';
 import { reachGoal } from '@/shared/analytics/metrika';
 import { solutionBenefit } from './solutionBenefits';
+import { useState } from 'react';
+import { SOLUTION_GROUPS } from './ReadySolutionsMenu';
 
 export function JourneyDiscovery() {
+  const [query,setQuery]=useState(''),[group,setGroup]=useState('all');
+  const kinds=SOLUTION_GROUPS.find(item=>item.kinds[0]===group)?.kinds;
   return (
     <section
       className="codoc-container journey-discovery"
@@ -19,8 +23,16 @@ export function JourneyDiscovery() {
         </div>
         <p>{JOURNEY_PAGES[0].description}</p>
       </div>
+      <div className="discovery-filters">
+        <label>{t('Search')}<input type="search" value={query} onChange={event=>setQuery(event.target.value)} /></label>
+        <div role="group" aria-label={t('Ready-to-use services')}>
+          <button type="button" aria-pressed={group==='all'} onClick={()=>setGroup('all')}>{t('All solutions')}</button>
+          {SOLUTION_GROUPS.map(item=><button type="button" key={item.kinds[0]} aria-pressed={group===item.kinds[0]} onClick={()=>setGroup(item.kinds[0])}>{item.label()}</button>)}
+        </div>
+      </div>
       <div className="discovery-grid">
-        {JOURNEY_PAGES.filter((page) => page.kind !== 'hub' && page.kind !== 'builder').map(
+        {JOURNEY_PAGES.filter((page) => page.kind !== 'hub' && page.kind !== 'builder'
+          && (!kinds || kinds.includes(page.kind)) && `${page.label} ${page.description}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())).map(
           (page, index) => (
             <article className={`discovery-card discovery-${page.kind}`} key={page.path}>
               <div className="discovery-preview" aria-hidden="true">

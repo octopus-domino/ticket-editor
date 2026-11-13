@@ -7,12 +7,13 @@ export function timedCityWalk(origin: RouteStop, visits: CityVisit[], roads: Pla
   if (!visits.length || roads.length !== visits.length + 1) throw new Error('Invalid walking plan');
   const stops = [{ ...origin, walkId: undefined, stayMinutes: 0 }, ...visits.map(visit => ({
     ...visit.place, id: crypto.randomUUID(), zone: origin.zone, stayMinutes: 60,
+    description:[visit.place.description?.slice(0,350),visit.place.url].filter(Boolean).join('\n').slice(0,500),
   })), { ...origin, id: crypto.randomUUID(), walkId: undefined, stayMinutes: 0 }];
   const startLocal = `${date}T09:00`, timeline: TimelineRow[] = [];
   let clock = routeInstant(startLocal, origin.zone);
-  const add = (kind: TimelineRow['kind'], label: string, end: number) => {
+  const add = (kind: TimelineRow['kind'], label: string, end: number, description?:string) => {
     if (end < clock) throw new Error('Invalid walking time');
-    timeline.push({ kind, label, start: new Date(clock).toISOString(), end: new Date(end).toISOString(), zone: origin.zone });
+    timeline.push({ kind, label, start: new Date(clock).toISOString(), end: new Date(end).toISOString(), zone: origin.zone, ...(description?{description}: {}) });
     clock = end;
   };
   add('stop', origin.label, clock);
@@ -20,7 +21,7 @@ export function timedCityWalk(origin: RouteStop, visits: CityVisit[], roads: Pla
     add('foot', `${stops[index].label} → ${visit.place.label}`, clock + roads[index].durationSeconds * 1000);
     const start = routeInstant(visit.start, origin.zone);
     if (start > clock) add('waiting', visit.place.label, start);
-    add('stop', visit.place.label, routeInstant(visit.end, origin.zone));
+    add('stop', visit.place.label, routeInstant(visit.end, origin.zone),[visit.place.description?.slice(0,350),visit.place.url].filter(Boolean).join('\n').slice(0,500));
   });
   add('foot', `${visits.at(-1)!.place.label} → ${origin.label}`, clock + roads.at(-1)!.durationSeconds * 1000);
   add('stop', origin.label, clock);

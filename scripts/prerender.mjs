@@ -57,7 +57,7 @@ try {
   }
   const sitemap = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${pages
     .filter((page) => page.path !== '/404/')
-    .map((page) => `  <url><loc>${SITE_URL}${page.path}</loc></url>`)
+    .map((page) => `  <url><loc>${SITE_URL}${page.path}</loc><lastmod>${new Date().toISOString().slice(0,10)}</lastmod></url>`)
     .join('\n')}\n</urlset>\n`;
   await writeFile(new URL('../dist/sitemap.xml', import.meta.url), sitemap);
   console.log(`Prerendered ${pages.length - 1} public pages, 404 page and sitemap`);

@@ -63,7 +63,7 @@ export function AlbumPanel({ id, manage }: { id: string; manage: boolean }) {
       <details><summary>{t('Link access')}</summary><p>{t('A new link disables the old contributor link. Existing photos stay in the album.')}</p>
         <button type="button" disabled={busy} onClick={() => void inviteGuests(true)}>{t('Replace the contributor link')}</button></details>
     </details>}
-    {contributionKey && <fieldset disabled={busy}>
+    {(contributionKey || album?.canManage) && <fieldset disabled={busy}>
       <legend>{t('Add your memories')}</legend>
       <label>{t('Your name (optional)')}<input maxLength={100} value={name} onChange={event => setName(event.target.value)} /></label>
       <label>{t('Photo caption')}<textarea maxLength={300} rows={3} style={{ fontFamily: handwriting(caption) }} value={caption} onChange={event => setCaption(event.target.value)} /></label>
@@ -72,10 +72,15 @@ export function AlbumPanel({ id, manage }: { id: string; manage: boolean }) {
         if (!files.length) return;
         void run(async () => {
           if (files.length + (state.current?.photos.length ?? 0) > 40) throw new Error(t('An album can contain up to 40 photos.'));
+          let uploadKey = contributionKey;
+          if (!uploadKey && state.current?.canManage) {
+            const invitation = await journeyRequest<{key:string}>(`${path}/invitation?rotate=false`, {method:'POST',headers});
+            uploadKey = invitation.key; setContributionKey(uploadKey);
+          }
           for (const file of files) {
             const image = await prepareJourneyImage(file, false, 1200, 420000);
             const result = await journeyRequest<{ album: AlbumState; photoId: string; editKey: string }>(`${path}/photos`, {
-              method: 'POST', headers: { 'X-Contribution-Key': contributionKey }, body: JSON.stringify({ image, caption, contributor: name }),
+              method: 'POST', headers: { 'X-Contribution-Key': uploadKey }, body: JSON.stringify({ image, caption, contributor: name }),
             });
             setAlbum({ ...result.album, canManage: state.current?.canManage ?? false });
             setEditKeys(current => { const keys = { ...current, [result.photoId]: result.editKey }; try { localStorage.setItem(`codoc:album:${id}:edits`, JSON.stringify(keys)); } catch { /* Organisers can still edit the shared album. */ } return keys; });

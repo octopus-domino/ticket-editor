@@ -110,7 +110,7 @@ export function RoutePlacePanel({ stop, onNotes, onAdd, onWalkChange, onWalkBusy
     if (opened) document.querySelectorAll<HTMLDetailsElement>('.route-place-panel[open]').forEach(panel => { if (panel !== event.currentTarget) panel.open = false; });
     else if (active.current) { controller.current?.abort(); active.current = false; setBusy(false); onWalkBusy(false); }
   }}>
-    <summary>{t('Hotels and places to visit')}</summary>
+    <summary>{t('Private itineraries')}</summary>
     <p>{t('Choose accommodation or sights separately, then add only what you need to your route.')}</p>
     <button type="button" className="journey-primary" disabled={busy} onClick={() => void autoWalk()}>{t('Generate a walking map')}</button>
     <p>{t('Find up to four nearby sights, connect them by walking roads and return to this point. Allow one hour per visit. Check opening hours before travelling.')}</p>

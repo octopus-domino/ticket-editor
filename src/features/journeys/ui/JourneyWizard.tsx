@@ -18,12 +18,16 @@ import { readBranding } from '../domain/branding';
 import type { RouteEditorHandle } from './RouteEditor';
 import { JourneyConstructorButton } from './JourneyConstructorButton';
 import { JourneyPrintSize } from './JourneyPrintSize';
+import { JourneyBackgroundPicker } from './JourneyBackgroundPicker';
+import { AlbumPanel } from './AlbumPanel';
 const RouteEditor = lazy(() =>
   import('./RouteEditor').then((module) => ({ default: module.RouteEditor })),
 );
 const PoetryWizard = lazy(() => import('./PoetryWizard'));
+const AlbumWizard = lazy(() => import('./AlbumWizard'));
 interface WizardProps { definition: JourneyDefinition; custom?: boolean; previewOnly?: boolean }
 export function JourneyWizard(props: WizardProps) {
+  if(props.definition.kind === 'ALBUM') return <Suspense fallback={<p>{t('Loading…')}</p>}><AlbumWizard {...props}/></Suspense>;
   return props.definition.kind === 'POETRY' ? <Suspense fallback={<p>{t('Loading…')}</p>}><PoetryWizard {...props} /></Suspense> : <BasicJourneyWizard {...props} />;
 }
 
@@ -297,6 +301,7 @@ function BasicJourneyWizard({
                       setData((value) => ({ ...value, branding: JSON.stringify(branding) }))
                     }
                   />
+                  <JourneyBackgroundPicker value={data} onBusyChange={setMediaBusy} onChange={patch => setData(value => ({...value,...patch}))} />
                   <ProposalActionBar data={definition.kind === 'PROPOSAL' ? data : undefined}>
                     <button
                       className="journey-primary"
@@ -370,6 +375,7 @@ function BasicJourneyWizard({
           {created.map((value) => (
             <article key={value.document.id}>
               <h2>{value.document.data.recipient ?? value.document.title}</h2>
+              {value.document.kind === 'ALBUM' && <AlbumPanel id={value.document.id} manage />}
               <JourneyConstructorButton id={value.document.id} />
               <JourneyShare url={publicUrl(value.document.id)} title={value.document.title} />
               <div className="journey-result-links">

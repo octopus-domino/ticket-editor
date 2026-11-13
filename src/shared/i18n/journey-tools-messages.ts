@@ -1,4 +1,5 @@
 export const JOURNEY_TOOLS_MESSAGES = String.raw`
+Private itineraries|Приватные маршруты|私人行程|Prywatne trasy|Itinerari privati|Rutas privadas|Privéroutes|Itinéraires privés|Private Routen
 Course reviews|Отзывы о курсе|课程评价|Opinie o kursie|Recensioni del corso|Opiniones del curso|Cursusbeoordelingen|Avis sur le cours|Kursbewertungen
 Rate this course|Оцените курс|评价此课程|Oceń kurs|Valuta questo corso|Valora este curso|Beoordeel deze cursus|Évaluez ce cours|Diesen Kurs bewerten
 Daily poetry cards|Открытки со стихами на каждый день|每日诗歌卡片|Codzienne kartki z poezją|Cartoline poetiche quotidiane|Tarjetas de poesía diarias|Dagelijkse poëziekaarten|Cartes poétiques du quotidien|Tägliche Gedichtkarten

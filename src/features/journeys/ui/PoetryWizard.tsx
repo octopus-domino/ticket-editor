@@ -11,6 +11,7 @@ import { RouteAddressInput } from './RouteAddressInput';
 import type { RouteMapHandle } from './RouteMap';
 import './album.css';
 import './route.css';
+import { JourneyBackgroundPicker } from './JourneyBackgroundPicker';
 const RouteMap = lazy(() => import('./RouteMap').then(module => ({ default: module.RouteMap })));
 const AGES = [['child', 'Child'], ['teen', 'Teenager'], ['youth', 'Young adult'], ['middle', 'Middle age'], ['older', 'Older adult']] as const;
 interface Region { latitude: number; longitude: number; zone: string; label: string }
@@ -63,6 +64,7 @@ export default function PoetryWizard({ definition, custom = false, previewOnly =
   };
   return <main className="journey-main poetry-wizard">
     <h1>{definition.title}</h1><p>{definition.description}</p>
+    {!created && <JourneyBackgroundPicker value={fields} onBusyChange={setBusy} onChange={patch => setFields(value => ({...value,...patch}))} />}
     <form onSubmit={event => { event.preventDefault(); void prepare(); }}>
       <fieldset disabled={busy || Boolean(created)} className="poetry-preferences">
         <label>{t('Poem language')}<select aria-label={t('Poem language')} value={language} onChange={event => { setLanguage(event.target.value as Locale); setPrepared(null); }}>

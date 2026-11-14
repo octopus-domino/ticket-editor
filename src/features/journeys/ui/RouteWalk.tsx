@@ -64,7 +64,7 @@ export const RouteWalk = forwardRef<RouteWalkHandle, { value?: string; onChange:
   const time = (instant: string, zone: string) => new Intl.DateTimeFormat(getLocale(), { timeZone: zone, hour: '2-digit', minute: '2-digit' }).format(new Date(instant));
   return <section className="route-walk">
     {snapshot && <>
-      <h4>{t('City walk')} · {snapshot.startLocal.slice(0, 10)}</h4>
+      <h4>{snapshot.stops[0]?.meta?.walk_title||t('City walk')} · {snapshot.startLocal.slice(0, 10)}</h4>
       <p>{t('This walk has a separate map and its own pages in the trip PDF.')}</p>
       {snapshot.mapId ? <img className="route-walk-print" src={`${API_BASE}/api/journeys/media/${encodeURIComponent(snapshot.mapId)}`} alt={t('City walk')} /> :
         <Suspense fallback={<p>{t('Loading map…')}</p>}><RouteMap stops={snapshot.stops} legs={snapshot.legs} photos={snapshot.photos} onReady={handle => { map.current = handle; }} /></Suspense>}

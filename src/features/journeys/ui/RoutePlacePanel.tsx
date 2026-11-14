@@ -9,6 +9,7 @@ import { RouteAddressInput, type RouteAddress } from './RouteAddressInput';
 import { placePhotos } from '../api/placePhotos';
 import { timedCityWalk } from '../domain/timedCityWalk';
 import { YandexPlaceMap } from '../yandex/YandexPlaceMap';
+import { offersPetersburgWalks, petersburgWalkPresets, type CityWalkPreset } from '../domain/petersburgWalks';
 
 export function RoutePlacePanel({ stop, onNotes, onAdd, onWalkChange, onWalkBusy, visitDate }: {
   stop: RouteStop; onNotes: (notes: string) => void; onAdd: (address: RouteAddress) => void;
@@ -87,36 +88,42 @@ export function RoutePlacePanel({ stop, onNotes, onAdd, onWalkChange, onWalkBusy
     try{const info=await journeyRequest<{description:string}>(`/api/journeys/routes/places/${place.id}?language=${getLocale()}`,{signal});return {...place,description:info.description};}
     catch{return place;}
   }));
-  const autoWalk = async (selection?:RecommendedPlace[]) => {
+  const autoWalk = async (selection?:RecommendedPlace[], preset?:CityWalkPreset) => {
     if (active.current) return;
     active.current = true; setBusy(true); onWalkBusy(true); setError('');
     const abort = new AbortController(); controller.current = abort;
     try {
-      const result = selection ? {available:true,places:selection,source} : await discover('attractions', abort.signal);
+      const walkStart:RouteStop = preset ? { ...stop, ...preset.places[0], id:crypto.randomUUID(),
+        zone:stop.zone, confirmed:true, stayMinutes:20, walkId:undefined,
+        meta:{...preset.places[0].meta,walk_title:preset.title} } : stop;
+      const result = preset ? {available:true,places:preset.places,source:'curated'}
+        : selection ? {available:true,places:selection,source} : await discover('attractions', abort.signal);
       if (abort.signal.aborted) return;
       setAvailable(result.available); setPlaces(result.places); setSource(result.source ?? 'OpenStreetMap'); setKind('attractions');
-      const candidates = await descriptions(nearestPlaces(stop, result.places).slice(0, theme?10:selection?5:4),abort.signal);
-      setSelected(candidates.map(place => place.id));
+      const candidates = preset ? preset.places.slice(1)
+        : await descriptions(nearestPlaces(stop, result.places).slice(0, theme?10:selection?5:4),abort.signal);
+      setSelected((preset?preset.places:candidates).map(place => place.id));
       if (!candidates.length) { setError(t('No nearby places found.')); return; }
       const added: RouteStop[] = candidates.map(place => ({
         id: crypto.randomUUID(), label: place.label, longitude: place.longitude, latitude: place.latitude,
-        zone: stop.zone, confirmed: true, stayMinutes: 60,
+        zone: stop.zone, confirmed: true, stayMinutes: preset?20:60,
         description: [place.description?.slice(0,350),place.url].filter(Boolean).join('\n').slice(0,500),
         ...(place.meta?{meta:place.meta}:{}),
       }));
-      added.push({ ...stop, id: crypto.randomUUID(), stayMinutes: 0, description: t('Return to the starting point after the walk.') });
+      if(!preset) added.push({ ...stop, id: crypto.randomUUID(), stayMinutes: 0, description: t('Return to the starting point after the walk.') });
       const roads: PlannedLeg[] = [];
-      let current = stop;
+      let current = walkStart;
       for (const next of added) {
         const road = await journeyRequest<PlannedLeg>('/api/journeys/routes/road', { method: 'POST', signal: abort.signal,
           body: JSON.stringify({ start: { longitude: current.longitude, latitude: current.latitude }, end: { longitude: next.longitude, latitude: next.latitude }, mode: 'foot' }) });
         roads.push({ ...road, mode: 'foot' }); current = next;
       }
-      const origin = { ...stop, walkId: undefined, stayMinutes: 0 };
+      const origin = { ...walkStart, walkId: undefined, stayMinutes: preset?20:0 };
       setLegs(roads);setMapStops([origin,...added]);
-      const photos = await photosFor(candidates,added.slice(0,candidates.length),abort.signal);
+      const photos = preset ? await journeyRequest<RoutePhoto[]>(`/api/journeys/routes/places/themed/enrich?language=${getLocale()}`,{method:'POST',signal:abort.signal,body:JSON.stringify([origin,...added])}).catch(()=>[])
+        : await photosFor(candidates,added.slice(0,candidates.length),abort.signal);
       for(const photo of photos){const point=added.find(item=>item.id===photo.stopId);if(point?.meta)point.meta={...point.meta,photo_image_id:photo.imageId};}
-      if (!abort.signal.aborted) await walk.current?.save([origin, ...added], roads, `${date || visitDate || today()}T${theme?visitTime:'09:00'}`, abort.signal, photos);
+      if (!abort.signal.aborted) await walk.current?.save([origin, ...added], roads, `${date || visitDate || today()}T${theme&&!preset?visitTime:'09:00'}`, abort.signal, photos);
     } catch (reason) { if (!abort.signal.aborted) setError((reason as Error).message); }
     finally { if (!abort.signal.aborted) { active.current = false; setBusy(false); onWalkBusy(false); } }
   };
@@ -157,6 +164,15 @@ export function RoutePlacePanel({ stop, onNotes, onAdd, onWalkChange, onWalkBusy
   }}>
     <summary>{t('Private itineraries')}</summary>
     <p>{t('This walk has a separate map and its own pages in the trip PDF.')}</p>
+    {offersPetersburgWalks(stop.longitude,stop.latitude)&&<details className="route-ready-walks">
+      <summary>{t('Ready-made walks in Saint Petersburg')}</summary>
+      <p>{t('Street walks with four stops. Museum tickets and opening hours are checked separately.')}</p>
+      {petersburgWalkPresets().map(preset=><article key={preset.id}>
+        <h4>{preset.title}</h4><p>{preset.description}</p>
+        <ol>{preset.places.map(place=><li key={place.id}>{place.label}</li>)}</ol>
+        <button type="button" className="journey-secondary" disabled={busy} onClick={()=>{setTheme('');void autoWalk(undefined,preset);}}>{t('Use this walk')} · {preset.title}</button>
+      </article>)}
+    </details>}
     <fieldset disabled={busy} className="route-inputs">
       <label>{t('Walk theme')}<select aria-label={t('Walk theme')} value={theme} onChange={event=>{setTheme(event.target.value);setPlaces([]);setSelected([]);setVisits([]);setSkipped([]);setVisitTime(event.target.value==='bars'?'20:00':'09:00');}}>
         <option value="">{t('Any theme')}</option><option value="bars">{t('Bars and pubs')}</option><option value="mystic">{t('Mysteries and legends')}</option>
@@ -195,7 +211,9 @@ export function RoutePlacePanel({ stop, onNotes, onAdd, onWalkChange, onWalkBusy
         {place.source==='wikimapia'&&place.inOsm===false&&<small>{t('Community place')}</small>}
         {place.visitStatus==='CLOSED'&&<small>{t('Closed according to OSM')}</small>}
         {place.visitStatus==='UNKNOWN'&&<small>{t('Opening hours not provided')}</small>}
-        {place.description && <details><summary>{t('About this place')}</summary><p>{place.description}</p></details>}
+        {place.description && (place.source==='HOITH'||place.source==='curated'||theme==='buildings'
+          ? <p className="route-place-description">{place.description}</p>
+          : <details><summary>{t('About this place')}</summary><p>{place.description}</p></details>)}
         {kind === 'attractions' && place.id.startsWith('wikimapia-') && !place.description && <button type="button" disabled={describing===place.id} onClick={async()=>{
           setDescribing(place.id);const [detailed]=await descriptions([place],new AbortController().signal);setPlaces(items=>items.map(item=>item.id===place.id?detailed:item));setDescribing('');
         }}>{t('About this place')}</button>}
@@ -215,6 +233,6 @@ export function RoutePlacePanel({ stop, onNotes, onAdd, onWalkChange, onWalkBusy
     {busy && <p role="status">{t('Calculating the route…')}</p>}
     {error && <p role="alert">{error}</p>}
     {expanded && <RouteWalk ref={walk} value={stop.walkId} onChange={onWalkChange} />}
-    {places.length > 0 && <small>{source==='mystic'?t('Curated places'):source==='HOITH'?'HOITH':<a href={source==='Wikimapia'?'https://wikimapia.org/':source==='2GIS'?'https://2gis.ru/':'https://www.openstreetmap.org/copyright'} target="_blank" rel="noopener noreferrer">{source}</a>}</small>}
+    {places.length > 0 && <small>{source==='mystic'||source==='curated'?t('Curated places'):source==='HOITH'?'HOITH':<a href={source==='Wikimapia'?'https://wikimapia.org/':source==='2GIS'?'https://2gis.ru/':'https://www.openstreetmap.org/copyright'} target="_blank" rel="noopener noreferrer">{source}</a>}</small>}
   </details>;
 }

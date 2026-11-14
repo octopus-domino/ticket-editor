@@ -50,6 +50,7 @@ export function RouteMap({
   const onPickRef = useRef(onPick);
   onPickRef.current = onPick;
   const photosRef = useRef(photos); photosRef.current = photos;
+  const legsRef = useRef(legs); legsRef.current = legs;
   useEffect(() => {
     if (!container.current) return;
     let map: Map;
@@ -121,21 +122,31 @@ export function RouteMap({
               };
               map.once('idle', done);
             });
-          // Re-render at print resolution using the same viewport, then restore the interactive map.
+          // Match the print aspect ratio and fit walks independently of the phone's viewport.
           const previous = map.getPixelRatio();
+          const element=map.getContainer(),previousStyle=element.style.cssText;
+          const previousCamera={center:map.getCenter(),zoom:map.getZoom(),bearing:map.getBearing(),pitch:map.getPitch()};
+          const previousPadding=map.getPadding();
           try {
             const photos = photosRef.current.slice(0, 12);
             // Collage stays below 4 million pixels: the server's bounded image budget.
             const width = photos.length ? 2200 : 2400, height = photos.length ? 1800 : 1500;
             const photoRows=Math.ceil(photos.length/4);
             const mapHeight = photos.length ? height-(photoRows===1?425:photoRows*320) : 1500;
+            element.style.height=`${element.clientWidth*mapHeight/width}px`;
+            element.style.aspectRatio='auto';map.resize();
+            if(legsRef.current.length>0&&legsRef.current.every(leg=>leg.mode==='foot')){
+              const coordinates:[number,number][]=[...stopsRef.current.map(point=>[point.longitude,point.latitude] as [number,number]),...legsRef.current.flatMap(leg=>leg.coordinates)];
+              const inset=Math.max(12,element.clientWidth*.035);
+              if(coordinates.length)map.fitBounds(routeMapBounds(coordinates),{padding:{top:inset,right:inset,left:inset,bottom:inset+(photos.length?0:84*element.clientWidth/width)},maxZoom:19,duration:0});
+            }
             map.setPixelRatio(width / Math.max(1, map.getContainer().clientWidth));
             map.triggerRepaint();
             await new Promise<void>((resolve, reject) => {
               const done = () => { clearTimeout(timer); map.off('remove', removed); resolve(); };
-              const removed = () => { clearTimeout(timer); map.off('render', done); reject(new Error(t('The map could not be loaded. Check WebGL support in your browser.'))); };
-              const timer = setTimeout(() => { map.off('render', done); map.off('remove', removed); reject(new Error(t('Wait until the map has finished loading.'))); }, 15000);
-              map.once('render', done); map.once('remove', removed);
+              const removed = () => { clearTimeout(timer); map.off('idle', done); reject(new Error(t('The map could not be loaded. Check WebGL support in your browser.'))); };
+              const timer = setTimeout(() => { map.off('idle', done); map.off('remove', removed); reject(new Error(t('Wait until the map has finished loading.'))); }, 15000);
+              map.once('idle', done); map.once('remove', removed);
             });
             const canvas = document.createElement('canvas');
             canvas.width = width;
@@ -187,6 +198,7 @@ export function RouteMap({
             throw new Error(t('Could not prepare the image.'));
           } finally {
             map.setPixelRatio(previous);
+            element.style.cssText=previousStyle;map.resize();map.setPadding(previousPadding);map.jumpTo(previousCamera);
           }
         },
       });
@@ -257,7 +269,8 @@ export function RouteMap({
         ...stops.map((stop): [number, number] => [stop.longitude, stop.latitude]),
         ...legs.flatMap((leg) => leg.coordinates),
       ];
-      map.fitBounds(routeMapBounds(coordinates), { padding: 55, maxZoom: 14, duration: 0 });
+      const walking=legs.length>0&&legs.every(leg=>leg.mode==='foot');
+      map.fitBounds(routeMapBounds(coordinates), { padding: walking?24:55, maxZoom: walking?18:14, duration: 0 });
     }
     return () => {
       markers.forEach((marker) => marker.remove());

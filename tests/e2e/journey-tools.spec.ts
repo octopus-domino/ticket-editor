@@ -306,6 +306,35 @@ test('nearby visits create a daytime plan and enter the route only when requeste
   await expect(stops).toHaveCount(2);
 });
 
+for(const width of [390,1440])test(`a ready Petersburg walk preserves its order and the main trip at ${width}px`,async({page})=>{
+  test.setTimeout(90000);await page.setViewportSize({width,height:900});
+  await page.addInitScript(()=>localStorage.setItem('codoc:language','en'));
+  const state=await mockApi(page);
+  await page.route('**/api/journeys/routes/places/themed/enrich?*',route=>route.fulfill({json:[]}));
+  await page.route('**/api/journeys/routes/addresses?*',route=>route.fulfill({json:[{label:'Saint Petersburg',longitude:30.315,latitude:59.938}]}));
+  await page.route('**/api/journeys/routes/road',route=>{
+    const {start,end}=route.request().postDataJSON();
+    return route.fulfill({json:{mode:'foot',coordinates:[[start.longitude,start.latitude],[end.longitude,end.latitude]],durationSeconds:600,distanceMeters:800}});
+  });
+  await page.route('**/api/journeys/routes/places/photos**',route=>route.fulfill({json:[]}));
+  await page.route('**/api/journeys/routes/places/*/photo**',route=>route.fulfill({status:404}));
+  await page.goto('/start/tours');const stops=page.locator('.route-stops > li');
+  await stops.nth(1).getByRole('combobox',{name:'Address',exact:true}).fill('Petersburg');
+  await page.getByRole('option',{name:'Saint Petersburg'}).getByRole('button').click();
+  const panel=stops.nth(1).locator('.route-place-panel');await panel.locator(':scope > summary').click();
+  await panel.getByText('Ready-made walks in Saint Petersburg',{exact:true}).click();
+  await expect(panel.locator('.route-ready-walks article')).toHaveCount(3);
+  await panel.getByRole('button',{name:'Use this walk · Imperial detective',exact:true}).click();
+  await expect(panel.locator('.route-walk-print')).toBeVisible({timeout:40000});
+  expect(state.snapshot.stops.map((stop:any)=>stop.label)).toEqual(['Mikhailovsky Castle','Summer Garden','Field of Mars','Church of the Savior on Spilled Blood']);
+  expect(state.snapshot.stops[0].meta.walk_title).toBe('Imperial detective');
+  expect(state.snapshot.legs).toHaveLength(3);
+  expect(state.snapshot.legs.every((leg:any)=>leg.mode==='foot')).toBe(true);
+  await expect(stops).toHaveCount(2);
+  await expect(stops.nth(1).getByRole('combobox',{name:'Address',exact:true})).toHaveValue('Saint Petersburg');
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+});
+
 test('historic buildings can be searched and saved as a separate walk on a phone',async({page})=>{
   test.setTimeout(90000);await page.setViewportSize({width:390,height:844});
   await page.addInitScript(()=>localStorage.setItem('codoc:language','en'));
@@ -325,6 +354,9 @@ test('historic buildings can be searched and saved as a separate walk on a phone
   await expect(panel.locator('.route-walk-print')).toBeVisible({timeout:30000});
   expect(query).toBe('Fixture architect');expect(state.snapshot.stops[1].description).toContain('1860');
   expect(state.snapshot.stops[1].meta.source).toBe('HOITH');expect(state.snapshot.stops[1].meta.architect).toBe('Fixture architect');
+  await expect(panel.locator('.route-place-description')).toContainText('1860');
+  await expect(panel.locator('.route-place-description')).toBeVisible();
+  await expect(panel.getByText('About this place',{exact:true})).toHaveCount(0);
   await expect(stops).toHaveCount(2);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });
 

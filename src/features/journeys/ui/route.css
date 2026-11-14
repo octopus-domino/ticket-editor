@@ -66,6 +66,12 @@
 .route-place-results li { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .route-place-results input[type='checkbox'] { width: 22px; height: 22px; flex: 0 0 22px; }
 .route-place-results a { flex: 1; overflow-wrap: anywhere; min-width: 100px; }
+.route-place-description { flex-basis: 100%; margin: 0; line-height: 1.5; overflow-wrap: anywhere; }
+.route-ready-walks article { padding: 14px; margin: 12px 0; border: 1px solid #d8ddd7; border-radius: 12px; }
+.route-ready-walks h4 { margin: 0 0 6px; }
+.route-ready-walks p { line-height: 1.5; }
+.route-ready-walks ol { padding-inline-start: 24px; }
+.route-ready-walks button { max-width: 100%; white-space: normal; }
 .route-address {
   position: relative;
   min-width: 0;

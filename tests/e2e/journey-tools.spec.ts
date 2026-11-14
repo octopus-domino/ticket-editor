@@ -338,9 +338,10 @@ for(const width of [390,1440])test(`a ready Petersburg walk preserves its order 
 test('historic buildings can be searched and saved as a separate walk on a phone',async({page})=>{
   test.setTimeout(90000);await page.setViewportSize({width:390,height:844});
   await page.addInitScript(()=>localStorage.setItem('codoc:language','en'));
-  const state=await mockApi(page);let query='';
+  const state=await mockApi(page);let query='',beforeYear='';
   await page.route('**/api/journeys/buildings/nearby?*',route=>{
     query=new URL(route.request().url()).searchParams.get('q')??'';
+    beforeYear=new URL(route.request().url()).searchParams.get('beforeYear')??'';
     return route.fulfill({json:[{id:101,address:'Historic house',longitude:13.4002,latitude:52.5002,constructionYear:1860,architect:'Fixture architect',style:'Classicism',sourceUrl:'https://example.org/house'}]});
   });
   await page.route('**/api/journeys/routes/places/themed/enrich?*',route=>route.fulfill({json:[]}));
@@ -353,6 +354,7 @@ test('historic buildings can be searched and saved as a separate walk on a phone
   await panel.getByRole('button',{name:'Generate a walking map',exact:true}).click();
   await expect(panel.locator('.route-walk-print')).toBeVisible({timeout:30000});
   expect(query).toBe('Fixture architect');expect(state.snapshot.stops[1].description).toContain('1860');
+  expect(beforeYear).toBe('0');await expect(panel.getByLabel('Construction period')).toHaveValue('0');
   expect(state.snapshot.stops[1].meta.source).toBe('HOITH');expect(state.snapshot.stops[1].meta.architect).toBe('Fixture architect');
   await expect(panel.locator('.route-place-description')).toContainText('1860');
   await expect(panel.locator('.route-place-description')).toBeVisible();

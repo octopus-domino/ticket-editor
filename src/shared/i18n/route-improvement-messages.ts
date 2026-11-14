@@ -1,4 +1,9 @@
 export const ROUTE_IMPROVEMENT_MESSAGES = String.raw`
+Heritage status|Охранный статус|文物保护状态|Status ochrony|Tutela del patrimonio|Protección patrimonial|Erfgoedstatus|Protection patrimoniale|Denkmalschutzstatus
+Construction period|Период постройки|建造时期|Okres budowy|Periodo di costruzione|Periodo de construcción|Bouwperiode|Période de construction|Bauzeit
+Any year|Любой год|不限年份|Dowolny rok|Qualsiasi anno|Cualquier año|Elk jaar|Toutes les années|Jedes Baujahr
+Built by 1945|До 1945 года включительно|1945年及以前|Do 1945 roku włącznie|Fino al 1945 incluso|Hasta 1945 inclusive|Tot en met 1945|Jusqu’en 1945 inclus|Bis einschließlich 1945
+Built by 1900|До 1900 года включительно|1900年及以前|Do 1900 roku włącznie|Fino al 1900 incluso|Hasta 1900 inclusive|Tot en met 1900|Jusqu’en 1900 inclus|Bis einschließlich 1900
 Ready-made walks in Saint Petersburg|Готовые прогулки по Петербургу|圣彼得堡精选步行路线|Gotowe spacery po Petersburgu|Passeggiate pronte a San Pietroburgo|Paseos preparados por San Petersburgo|Kant-en-klare wandelingen in Sint-Petersburg|Promenades à Saint-Pétersbourg|Fertige Spaziergänge in Sankt Petersburg
 Use this walk|Выбрать прогулку|选择此路线|Wybierz spacer|Scegli la passeggiata|Elegir este paseo|Kies deze wandeling|Choisir cette promenade|Spaziergang auswählen
 Street walks with four stops. Museum tickets and opening hours are checked separately.|Четыре места, прогулка снаружи. Билеты в музеи и часы работы проверяйте отдельно.|四站户外漫步。博物馆门票和开放时间请另行确认。|Cztery miejsca na zewnątrz. Bilety i godziny muzeów sprawdź osobno.|Quattro tappe all’aperto. Verifica a parte biglietti e orari dei musei.|Cuatro paradas al aire libre. Comprueba aparte entradas y horarios.|Vier plekken buiten. Controleer museumtickets en openingstijden apart.|Quatre étapes en extérieur. Vérifiez séparément billets et horaires des musées.|Vier Stationen im Freien. Museumstickets und Öffnungszeiten separat prüfen.

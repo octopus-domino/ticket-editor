@@ -27,7 +27,7 @@ export function petersburgWalkPresets():CityWalkPreset[]{
   return definitions.map(([id,title,description,keys])=>({id,title:t(title),description:t(description),places:keys.map(key=>{
     const [name,story,longitude,latitude,page,pointId]=points[key];
     return {id:`preset-spb-${pointId}`,label:t(name),description:t(story),longitude,latitude,
-      url:`https://ru.wikipedia.org/wiki/${encodeURIComponent(page)}`,source:'curated',
+      url:`https://ru.wikipedia.org/wiki/${page}`,source:'curated',
       meta:{source:'curated',theme:'cultural',visit_status:'UNKNOWN'}};
   })}));
 }

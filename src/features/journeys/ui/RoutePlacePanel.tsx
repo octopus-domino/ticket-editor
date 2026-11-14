@@ -18,6 +18,7 @@ export function RoutePlacePanel({ stop, onNotes, onAdd, onWalkChange, onWalkBusy
   const [kind, setKind] = useState<'hotels' | 'attractions'>('attractions');
   const [theme,setTheme]=useState(''),[visitTime,setVisitTime]=useState('09:00');
   const [buildingQuery,setBuildingQuery]=useState('');
+  const [buildingYear,setBuildingYear]=useState('0');
   const [places, setPlaces] = useState<RecommendedPlace[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
   const [focusedId,setFocusedId]=useState<string>();
@@ -53,12 +54,12 @@ export function RoutePlacePanel({ stop, onNotes, onAdd, onWalkChange, onWalkBusy
   const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:stop.zone}).format(new Date());
   const discover = (kind: string, signal: AbortSignal) => {
     if(theme==='buildings'&&kind==='attractions'){
-      const params=new URLSearchParams({lon:String(stop.longitude),lat:String(stop.latitude),limit:'7',q:buildingQuery});
-      return journeyRequest<{id:number;address:string;longitude:number;latitude:number;constructionYear?:number;architect?:string;style?:string;sourceUrl?:string}[]>(
+      const params=new URLSearchParams({lon:String(stop.longitude),lat:String(stop.latitude),limit:'7',q:buildingQuery,beforeYear:buildingYear});
+      return journeyRequest<{id:number;name?:string;constructionPeriod?:string;heritageStatus?:string;address:string;longitude:number;latitude:number;constructionYear?:number;architect?:string;style?:string;sourceUrl?:string}[]>(
         `/api/journeys/buildings/nearby?${params}`,{signal}).then(rows=>({available:true,source:'HOITH',places:rows.map((row):RecommendedPlace=>({
-          id:`building-${row.id}`,label:row.address?.slice(0,180)||t('Historic building'),longitude:row.longitude,latitude:row.latitude,
+          id:`building-${row.id}`,label:[row.name,row.address].filter(Boolean).join(' · ').slice(0,180)||t('Historic building'),longitude:row.longitude,latitude:row.latitude,
           url:row.sourceUrl||'https://disk.yandex.ru/d/6rI165UaOpvG0A',source:'HOITH',
-          description:[row.constructionYear?`${t('Year built')}: ${row.constructionYear}`:'',row.architect?`${t('Architect')}: ${row.architect}`:'',row.style?`${t('Architectural style')}: ${row.style}`:''].filter(Boolean).join(' · '),
+          description:[row.constructionPeriod||row.constructionYear?`${t('Year built')}: ${row.constructionPeriod||row.constructionYear}`:'',row.architect?`${t('Architect')}: ${row.architect}`:'',row.style?`${t('Architectural style')}: ${row.style}`:'',row.heritageStatus?`${t('Heritage status')}: ${row.heritageStatus}`:''].filter(Boolean).join(' · '),
           meta:{source:'HOITH',theme:'buildings',...(row.constructionYear?{construction_year:String(row.constructionYear)}:{}),...(row.architect?{architect:row.architect}:{}),...(row.style?{style:row.style}:{})},
         }))}));
     }
@@ -180,6 +181,9 @@ export function RoutePlacePanel({ stop, onNotes, onAdd, onWalkChange, onWalkBusy
         <option value="buildings">{t('Historic buildings')}</option>
       </select></label>
       {theme==='buildings'&&<label>{t('Address, architect or style')}<input type="search" maxLength={100} value={buildingQuery} onChange={event=>{setBuildingQuery(event.target.value);setPlaces([]);setSelected([]);}} /></label>}
+      {theme==='buildings'&&<label>{t('Construction period')}<select value={buildingYear} onChange={event=>{setBuildingYear(event.target.value);setPlaces([]);setSelected([]);}}>
+        <option value="0">{t('Any year')}</option><option value="1945">{t('Built by 1945')}</option><option value="1900">{t('Built by 1900')}</option>
+      </select></label>}
       {theme&&theme!=='buildings'&&<><label>{t('Visit date')}<input type="date" value={date} onChange={event=>{setDate(event.target.value);setPlaces([]);setSelected([]);}} /></label>
         <label>{t('Visit time')}<input type="time" value={visitTime} onChange={event=>{setVisitTime(event.target.value);setPlaces([]);setSelected([]);}} /></label>
         <small>{t('Opening hours are a guide. Closed places remain in the results.')}</small></>}

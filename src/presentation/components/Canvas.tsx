@@ -27,6 +27,7 @@ import {
 import type { ElementSelectEvent } from './elements/types';
 import { useCanvasTransform } from '../hooks/canvas/useCanvasTransform';
 import { canvasMode } from '@/shared/mobile/canvasMode';
+import { TableCellEditor } from './TableCellEditor';
 
 interface Props {
   slide: Slide;
@@ -223,6 +224,7 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
       current.length <= 1 &&
       el.type !== 'text' &&
       el.type !== 'footer' &&
+      el.type !== 'table' &&
       nativeEvt instanceof MouseEvent &&
       nativeEvt.button === 0
     ) {
@@ -415,6 +417,16 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
 
         <DataHighlightLayer slide={slide} zoom={zoom} active={dataHighlight} />
       </Stage>
+
+      {editing?.kind === 'table' && slide.elements.filter(el => el.id === editing.id && el.type === 'table').map(el =>
+        el.type === 'table' && <TableCellEditor key={el.id} table={el} zoom={zoom}
+          row={editing.tableRow ?? 0} col={editing.tableCol ?? 0}
+          onClose={() => modalsStore.closeEditor()}
+          onMove={(tableRow, tableCol) => modalsStore.setEditing({ ...editing, tableRow, tableCol })}
+          onUpdate={patch => docStore.commit(draft => {
+            const target = draft.slides.find(s => s.id === draft.activeId)?.elements.find(item => item.id === el.id);
+            if (target?.type === 'table') Object.assign(target, patch);
+          }, `cell-${el.id}-${editing.tableRow}-${editing.tableCol}`)} />)}
 
       {editingRichElement && editing && (
         <RichTextInlineEditor

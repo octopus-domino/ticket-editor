@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 
 interface InlineEditorProps {
   x: number; y: number; width: number; height: number;
@@ -26,7 +27,8 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
     if (!isOpen || !editorRef.current) return;
     committedRef.current = false;
     const editor = editorRef.current;
-    editor.innerHTML = html || value || '<p><br></p>';
+    if (html) editor.innerHTML = html;
+    else editor.textContent = value;
     editor.focus();
 
     const range = document.createRange();
@@ -62,7 +64,7 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div className="inline-editor-overlay" style={{ position: 'fixed', left: x, top: y, width, height, zIndex: 1000 }}>
       <div
         ref={editorRef}
@@ -78,12 +80,13 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
           width: '100%', height: '100%', padding: `${padding.top}px ${padding.right}px ${padding.bottom}px ${padding.left}px`,
           fontSize: `${fontSize}px`, fontFamily, fontStyle, textDecoration, color: fill,
           backgroundColor: background === 'transparent' ? 'rgba(255,255,255,0.9)' : background,
+          boxSizing: 'border-box', minHeight: Math.max(32, fontSize * lineHeight + padding.top + padding.bottom),
           textAlign: align, display: 'flex', flexDirection: 'column',
           justifyContent: verticalAlign === 'middle' ? 'center' : verticalAlign === 'bottom' ? 'flex-end' : 'flex-start',
           lineHeight, outline: 'none', border: '2px solid #3b82f6', borderRadius: '4px',
           boxShadow: '0 4px 20px rgba(0,0,0,0.15)', overflow: 'auto', wordWrap: 'break-word', whiteSpace: 'pre-wrap',
         }}
       />
-    </div>
+    </div>, document.body
   );
 };

@@ -3,8 +3,9 @@ import { t } from '@/shared/i18n/core';
 import { isGuest } from '@/shared/session/guest';
 import { guestApi,guestGenerationBody } from './guestApi';
 import { describeApiFailure } from './businessErrors';
+import { resolveApiBase } from './resolveApiBase';
 
-const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? '';
+const API_BASE = resolveApiBase(import.meta.env.VITE_API_BASE as string | undefined, import.meta.env.PROD);
 
 let refreshing: Promise<boolean> | null = null;
 

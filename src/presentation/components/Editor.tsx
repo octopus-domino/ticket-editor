@@ -386,7 +386,7 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave, documentId, saveCon
     !!stampElement && stampElement.type === 'stamp' && isFeatureEnabled('FEATURE_STAMP_EDITOR');
   const showDiagramEditor =
     !!diagramElement && diagramElement.type === 'diagram' && isFeatureEnabled('FEATURE_DIAGRAM');
-  const showPlainInlineEditor = !!editing && !editing.isRich;
+  const showPlainInlineEditor = !!editing && !editing.isRich && editing.kind !== 'table';
 
   return (
     <div className="editor-shell" data-canvas-fullscreen={canvasMode.fullscreen} data-tools-open={toolsOpen} role="application" aria-label={__tr("Редактор билетов")}>

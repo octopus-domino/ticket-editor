@@ -1,4 +1,5 @@
 import { t as __tr } from '@/shared/i18n';
+import { startToolDrag } from '../hooks/canvas/toolDrag';
 import React, { useState } from 'react';
 import type { DocFormat, Orientation, Padding, CanvasElement } from '@/shared/types';
 import { FORMATS } from '@/shared/constants';
@@ -195,13 +196,7 @@ export const LeftPanel: React.FC = () => {
     }
   };
 
-  const startDragNew = (e: React.DragEvent, elementType: string) => {
-    e.dataTransfer.setData(
-      'application/json',
-      JSON.stringify({ kind: 'new-element', elementType }),
-    );
-    e.dataTransfer.effectAllowed = 'copy';
-  };
+  const startDragNew = startToolDrag;
 
   const renderElementTiles = () => {
     if (editorMode === 'schema') {

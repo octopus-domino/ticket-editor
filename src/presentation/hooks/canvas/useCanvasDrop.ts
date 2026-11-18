@@ -22,6 +22,8 @@ import type { StampTemplate } from '@/lib/stamps/library';
 import { modelStore } from '@/features/data-models/state/ModelStore';
 import { getByPath, appendPlaceholderPatch } from '@/lib/modelBinding';
 import type { CanvasElement } from '@/shared/types';
+import { closeMobilePanel } from '@/shared/mobile/panels';
+import { finishToolDrag } from './toolDrag';
 
 export function useCanvasDrop(params: {
   docStore: DocumentStore;
@@ -38,6 +40,8 @@ export function useCanvasDrop(params: {
   const onDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
+      finishToolDrag();
+      closeMobilePanel();
       const stage = stageRef.current;
       if (!stage) return;
       const raw = e.dataTransfer.getData('application/json');

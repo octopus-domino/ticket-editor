@@ -1,3 +1,4 @@
+body.canvas-tool-dragging .mobile-panel-backdrop { pointer-events: none !important; }
 .editor-shell {
   position: relative;
 }

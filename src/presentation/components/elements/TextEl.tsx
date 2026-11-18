@@ -102,7 +102,8 @@ export const TextEl: React.FC<Props> = ({
 
   useLayoutEffect(() => {
     if (isArc || el.autoHeight === false) return;
-    const neededHeight = Math.ceil(contentHeight);
+    const minimumHeight = padding.top + padding.bottom + el.fontSize * lineHeightCoef;
+    const neededHeight = Math.ceil(Math.max(contentHeight, minimumHeight));
     if (
       Math.abs(neededHeight - el.height) > 2
       && Math.abs(neededHeight - lastEmittedHeightRef.current) > 2
@@ -110,7 +111,7 @@ export const TextEl: React.FC<Props> = ({
       lastEmittedHeightRef.current = neededHeight;
       onUpdate({ height: neededHeight });
     }
-  }, [contentHeight, el.height, el.autoHeight, onUpdate, isArc]);
+  }, [contentHeight, el.height, el.autoHeight, el.fontSize, lineHeightCoef, padding.top, padding.bottom, onUpdate, isArc]);
 
   const scaleX = el.flipX ? -1 : 1;
   const scaleY = el.flipY ? -1 : 1;

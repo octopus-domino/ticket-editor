@@ -7,6 +7,7 @@ import { useStore } from '@/shared/store/store';
 import './canvas-dock.css';
 import { useEffect } from 'react';
 import { toggleMobilePanel, useMobilePanel } from '@/shared/mobile/panels';
+import { startToolDrag, finishToolDrag } from '../hooks/canvas/toolDrag';
 
 export function CanvasDock({
   onTools,
@@ -58,6 +59,7 @@ export function CanvasDock({
         title={t('Text')}
         aria-label={t('Text')}
         onClick={() => add(newSimpleText())}
+        draggable onDragStart={(event) => startToolDrag(event, 'simple-text')} onDragEnd={finishToolDrag}
       >
         T
       </button>
@@ -66,6 +68,7 @@ export function CanvasDock({
         title={t('Rectangle')}
         aria-label={t('Rectangle')}
         onClick={() => add(newShape('rect'))}
+        draggable onDragStart={(event) => startToolDrag(event, 'rect')} onDragEnd={finishToolDrag}
       >
         □
       </button>
@@ -74,10 +77,12 @@ export function CanvasDock({
         title={t('Circle')}
         aria-label={t('Circle')}
         onClick={() => add(newShape('circle'))}
+        draggable onDragStart={(event) => startToolDrag(event, 'circle')} onDragEnd={finishToolDrag}
       >
         ○
       </button>
-      <button type="button" title={t('Line')} aria-label={t('Line')} onClick={() => add(newLine())}>
+      <button type="button" title={t('Line')} aria-label={t('Line')} onClick={() => add(newLine())}
+        draggable onDragStart={(event) => startToolDrag(event, 'line')} onDragEnd={finishToolDrag}>
         ╱
       </button>
       <hr />

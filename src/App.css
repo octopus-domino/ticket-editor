@@ -119,7 +119,7 @@ input, select, textarea { font-family: inherit; }
   display: block;
   flex-shrink: 0;
   width: max-content;
-  margin: 40px;
+    margin: 16px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
   background: #fff;
 }
@@ -769,6 +769,8 @@ input, select, textarea { font-family: inherit; }
 }
 
 .rt-popover-wrap { position: relative; display: inline-flex; align-items: center; }
+.rt-floating-popover { max-width: calc(100vw - 16px); max-height: calc(100dvh - 16px); overflow: auto; }
+.rt-floating-popover > .rt-popover { position: static; margin: 0; }
 .rt-popover {
   position: absolute;
   top: 100%;

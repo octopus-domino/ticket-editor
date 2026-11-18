@@ -6,6 +6,7 @@ import { canvasMode, useCanvasMode, toggleCanvasFullscreen } from '@/shared/mobi
 import { useStore } from '@/shared/store/store';
 import './canvas-dock.css';
 import { useEffect } from 'react';
+import { toggleMobilePanel, useMobilePanel } from '@/shared/mobile/panels';
 
 export function CanvasDock({
   onTools,
@@ -20,6 +21,7 @@ export function CanvasDock({
   const selection = useSelectionStore();
   const selected = useStore(selection, (state) => state.selectedIds);
   const mode = useCanvasMode();
+  const panel = useMobilePanel();
   useEffect(() => {
     const escape = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && canvasMode.getState().fullscreen) toggleCanvasFullscreen();
@@ -108,6 +110,8 @@ export function CanvasDock({
         ⋯
       </button>
       <hr />
+      <button type="button" className="canvas-dock-properties" title={t('Свойства')} aria-label={t('Свойства')}
+        aria-pressed={panel === 'properties'} onClick={() => toggleMobilePanel('properties')}>☷</button>
       <button
         type="button"
         title={t(mode.fullscreen ? 'Exit full screen' : 'Full screen')}

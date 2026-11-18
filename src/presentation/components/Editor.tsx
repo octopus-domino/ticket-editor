@@ -48,7 +48,7 @@ import { resetFillRasterizer } from '@/lib/stamps/fillRasterizer';
 import { MobileEditorControls } from './MobileEditorControls';
 import { CanvasDock } from './CanvasDock';
 import { useCanvasMode } from '@/shared/mobile/canvasMode';
-import { toggleMobilePanel } from '@/shared/mobile/panels';
+import { COMPACT_EDITOR_MAX_WIDTH, toggleMobilePanel } from '@/shared/mobile/panels';
 
 const InlineEditorHost = lazy(() =>
   import('./InlineEditorHost').then((m) => ({ default: m.InlineEditorHost })),
@@ -410,7 +410,7 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave, documentId, saveCon
       <Toolbar />
       <MobileEditorControls />
       <div className="editor-layout">
-        <CanvasDock onTools={() => { if (window.innerWidth <= 760) toggleMobilePanel('tools'); else setToolsOpen(value => !value); }} onGroup={groupSelected} onMenu={() => modalsStore.setContextMenu({ x: Math.min(window.innerWidth - 250, 80), y: 140, elementId: selectedIds[0] ?? null })} />
+          <CanvasDock onTools={() => { if (window.innerWidth <= COMPACT_EDITOR_MAX_WIDTH) toggleMobilePanel('tools'); else setToolsOpen(value => !value); }} onGroup={groupSelected} onMenu={() => modalsStore.setContextMenu({ x: Math.min(window.innerWidth - 250, 80), y: 140, elementId: selectedIds[0] ?? null })} />
         <ErrorBoundary fallback={<div style={{ padding: 20 }}>{__tr("Ошибка в левой панели")}</div>}>
           <LeftPanel />
         </ErrorBoundary>

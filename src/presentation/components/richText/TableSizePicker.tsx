@@ -24,7 +24,9 @@ export const TableSizePicker: React.FC<Props> = ({ onPick }) => {
                 className={`rt-table-cell ${active ? 'active' : ''}`}
                 onMouseEnter={() => setHover({ r, c })}
                 onMouseLeave={() => setHover({ r: -1, c: -1 })}
-                onMouseDown={(e) => { e.preventDefault(); onPick(r + 1, c + 1); }}
+                aria-label={`${r + 1} × ${c + 1}`}
+                onMouseDown={e => e.preventDefault()}
+                onClick={() => onPick(r + 1, c + 1)}
               />
             );
           })

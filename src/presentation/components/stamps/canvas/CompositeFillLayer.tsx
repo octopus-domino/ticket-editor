@@ -88,8 +88,8 @@ const CompositeFillLayerInner: React.FC<Props> = ({
       )
       .join(';');
 
-    return geo + '###' + f;
-  }, [shapes, fills]);
+    return `${width}x${height}:` + geo + '###' + f;
+  }, [shapes, fills, width, height]);
 
   const entry = useFillRasterizer({
     key: signature,

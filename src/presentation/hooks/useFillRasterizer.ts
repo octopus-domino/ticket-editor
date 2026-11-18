@@ -28,17 +28,17 @@ export interface UseFillRasterizerArgs {
 export function useFillRasterizer(args: UseFillRasterizerArgs): FillCacheEntry | null {
   const { key, width, height, shapes, fills, enabled } = args;
 
-  const [entry, setEntry] = useState<FillCacheEntry | null>(
-    () => getFillRasterizer().get(key) ?? null,
+  const [entry, setEntry] = useState<{ key: string; value: FillCacheEntry } | null>(
+    () => { const value = getFillRasterizer().get(key); return value ? { key, value } : null; },
   );
 
   // Подписка на обновления кэша по key.
   useEffect(() => {
     const rasterizer = getFillRasterizer();
     const cached = rasterizer.get(key);
-    if (cached) setEntry(cached);
+    setEntry(cached ? { key, value: cached } : null);
     return rasterizer.subscribe((changedKey, changedEntry) => {
-      if (changedKey === key) setEntry(changedEntry);
+      if (changedKey === key) setEntry({ key, value: changedEntry });
     });
   }, [key]);
 
@@ -56,5 +56,5 @@ export function useFillRasterizer(args: UseFillRasterizerArgs): FillCacheEntry |
     return () => window.clearTimeout(timeoutId);
   }, [key, width, height, shapes, fills, enabled]);
 
-  return entry;
+  return enabled && entry?.key === key ? entry.value : null;
 }

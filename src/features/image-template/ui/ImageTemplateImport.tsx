@@ -4,6 +4,7 @@ import { t } from '@/shared/i18n';
 import { authFetch } from '@/shared/api/client';
 import { serializeSlideToSvg } from '@/lib/svg/serialize';
 import { originalImageSlide, prepareImage, preparePdfPage, recognizeImage } from '../api/recognitionClient';
+import { recognizedSlide } from '../domain/recognizedLayout';
 import './image-template.css';
 
 const messages: Record<string, string> = {
@@ -43,17 +44,17 @@ function composeWithBackground(slide: Slide, imageSrc: string): Slide {
 export function ImageTemplateImport({
   onDraft,
   onBusy,
+  onSlides,
   context = 'template',
 }: {
   onDraft(slide: Slide | null): void;
   onBusy(value: boolean): void;
+  onSlides?(slides: Slide[]): void;
   context?: 'template' | 'document';
 }) {
   const [source, setSource] = useState('');
   const [pdfFile, setPdfFile] = useState<File | null>(null);
-  const [pdfPage, setPdfPage] = useState(1);
   const [pdfPages, setPdfPages] = useState(0);
-  const [loadedPdfPage, setLoadedPdfPage] = useState(0);
   const [filename, setFilename] = useState('');
   const [rawSlide, setRawSlide] = useState<Slide | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
@@ -63,6 +64,9 @@ export function ImageTemplateImport({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [keepBackground, setKeepBackground] = useState(false);
+  const [nativeDraft, setNativeDraft] = useState<unknown>(null);
+  const [otherSlides, setOtherSlides] = useState<Slide[]>([]);
+  const [progress, setProgress] = useState('');
   const controller = useRef<AbortController | null>(null);
   const revision = useRef(0);
 
@@ -98,7 +102,8 @@ export function ImageTemplateImport({
 
   useEffect(() => {
     onDraft(composedSlide);
-  }, [composedSlide, onDraft]);
+    onSlides?.(composedSlide ? [composedSlide, ...otherSlides] : []);
+  }, [composedSlide, onDraft, onSlides, otherSlides]);
 
   function reset() {
     controller.current?.abort();
@@ -107,6 +112,8 @@ export function ImageTemplateImport({
     setWarnings([]);
     setError('');
     setKeepBackground(false);
+    setOtherSlides([]);
+    setProgress('');
     onDraft(null);
   }
 
@@ -114,9 +121,9 @@ export function ImageTemplateImport({
     reset();
     setSource('');
     setFilename('');
+    setNativeDraft(null);
     const pdf = Boolean(file && (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)));
     setPdfFile(pdf ? file! : null);
-    setPdfPage(page);
     setPdfPages(0);
     if (!file) return;
     const current = revision.current;
@@ -131,7 +138,7 @@ export function ImageTemplateImport({
         setSource(image);
         setFilename(file.name);
         setPdfPages(result?.pages ?? 0);
-        setLoadedPdfPage(result ? page : 0);
+        setNativeDraft(result?.draft ?? null);
       }
     } catch (reason) {
       if (current === revision.current)
@@ -149,14 +156,18 @@ export function ImageTemplateImport({
     const current = revision.current;
     const abort = new AbortController();
     controller.current = abort;
-    const timeout = window.setTimeout(() => abort.abort(), 150_000);
+    const timeout = window.setTimeout(() => abort.abort(), 150_000 * Math.max(1, pdfPages));
     setBusy(true);
     onBusy(true);
     try {
-      const result = await recognizeImage(source, language, engine, filename, abort.signal);
+      const result = engine === 'ocr' && nativeDraft
+        ? recognizedSlide(nativeDraft, filename)
+        : await recognizeImage(source, language, engine, filename, abort.signal);
+      const remaining = await remainingPages(abort.signal, current, false);
       if (current === revision.current) {
         setRawSlide(result.slide);
-        setWarnings(result.warnings);
+        setOtherSlides(remaining.slides);
+        setWarnings([...new Set([...result.warnings, ...remaining.warnings])]);
       }
     } catch (reason) {
       if (current === revision.current)
@@ -183,8 +194,12 @@ export function ImageTemplateImport({
     onBusy(true);
     try {
       const original = await originalImageSlide(source, filename);
+      const abort = new AbortController();
+      controller.current = abort;
+      const remaining = await remainingPages(abort.signal, current, true);
       if (current === revision.current) {
         setRawSlide(original);
+        setOtherSlides(remaining.slides);
       }
     } catch {
       if (current === revision.current) setError('recognition.invalid_image');
@@ -194,6 +209,26 @@ export function ImageTemplateImport({
         onBusy(false);
       }
     }
+  }
+
+  async function remainingPages(signal: AbortSignal, current: number, original: boolean) {
+    const slides: Slide[] = [];
+    const notes: string[] = [];
+    if (!pdfFile) return { slides, warnings: notes };
+    for (let page = 2; page <= pdfPages; page++) {
+      if (signal.aborted || current !== revision.current) throw new DOMException('Aborted', 'AbortError');
+      setProgress(`${page} / ${pdfPages}`);
+      const prepared = await preparePdfPage(pdfFile, page, signal);
+      const name = `${filename} · ${page}`;
+      if (original) slides.push(await originalImageSlide(prepared.image, name));
+      else {
+        const result = engine === 'ocr' && prepared.draft ? recognizedSlide(prepared.draft, name)
+          : await recognizeImage(prepared.image, language, engine, name, signal);
+        slides.push(result.slide);
+        notes.push(...result.warnings);
+      }
+    }
+    return { slides, warnings: notes };
   }
 
   const hasRecognizedText = rawSlide !== null && rawSlide.elements.some((el) => el.type === 'text');
@@ -212,12 +247,9 @@ export function ImageTemplateImport({
         />
       </label>
       <p>{t('Use a PNG, JPEG, WebP or PDF up to 8 MB.')}</p>
-      {pdfFile && pdfPages > 0 && <label>{t('PDF page')} (1–{pdfPages})
-        <input type="number" min={1} max={pdfPages} value={pdfPage} disabled={busy}
-          onChange={event => { setPdfPage(Number(event.target.value)); setRawSlide(null); }} />
-        <button type="button" disabled={busy || !Number.isInteger(pdfPage) || pdfPage < 1 || pdfPage > pdfPages || pdfPage === loadedPdfPage}
-          onClick={() => void select(pdfFile, pdfPage)}>{t('Load page')}</button>
-      </label>}
+      {pdfFile && pdfPages > 0 && <p>{t('PDF page')}: 1–{pdfPages} · {pdfPages} {t('Slides')}
+        {progress && <span role="status"> · {progress}</span>}
+      </p>}
       <label>
         {t('Recognition language')}
         <select
@@ -248,7 +280,7 @@ export function ImageTemplateImport({
           </select>
         </label>
       )}
-      {hasRecognizedText && (
+      {hasRecognizedText && pdfPages <= 1 && (
         <label className="image-template-keep-bg">
           <input
             type="checkbox"
@@ -260,10 +292,10 @@ export function ImageTemplateImport({
         </label>
       )}
       <div className="image-template-actions">
-        <button type="button" disabled={!source || busy || (pdfFile !== null && pdfPage !== loadedPdfPage)} onClick={() => void keepOriginal()}>
+        <button type="button" disabled={!source || busy} onClick={() => void keepOriginal()}>
           {t('Keep original appearance')}
         </button>
-        <button type="button" disabled={!source || busy || (pdfFile !== null && pdfPage !== loadedPdfPage)} onClick={() => void recognize()}>
+        <button type="button" disabled={!source || busy} onClick={() => void recognize()}>
           {t(busy ? 'Recognizing…' : 'Recognize locally')}
         </button>
         {busy && (
@@ -307,6 +339,7 @@ export function ImageTemplateImport({
       {composedSlide && (
         <p role="status">
           {t('Editable objects')}: {composedSlide.elements.length}
+          {otherSlides.length > 0 && <> · {t('Slides')}: {otherSlides.length + 1}</>}
           {keepBackground && (
             <>
               {' · '}

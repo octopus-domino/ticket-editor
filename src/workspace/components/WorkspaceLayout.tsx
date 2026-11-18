@@ -21,6 +21,12 @@ export const WorkspaceLayout: React.FC = () => {
   const navigate = useNavigate();
   const location=useLocation();
   useEffect(()=>closeMobilePanel(),[location.pathname]);
+  useEffect(() => {
+    if (!mobilePanel) return;
+    const close = (event: KeyboardEvent) => { if (event.key === 'Escape') closeMobilePanel(); };
+    window.addEventListener('keydown', close);
+    return () => window.removeEventListener('keydown', close);
+  }, [mobilePanel]);
   const { schemas, activeSchema } = useSchemas();
   const user = useStore(authStore, (s) => s.user);
   const offline = useStore(authStore, (s) => s.offline);

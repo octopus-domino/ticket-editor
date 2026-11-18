@@ -1,4 +1,5 @@
 import { stampContentSvg } from './stamp';
+import { tableAxis } from '../tableGeometry';
 /* ============================================================
    lib/svg/exporters.ts
    ============================================================ */
@@ -459,18 +460,32 @@ export function toSvgLine(el: LineElement): string {
 
 export function toSvgTable(el: TableElement): string {
   const { width: w, height: h, rows, cols, data, borderColor, headerBg, fontSize } = el;
-  const cellW = w / cols;
-  const cellH = h / rows;
+  const xs = tableAxis(w, cols, el.columnWidths);
+  const ys = tableAxis(h, rows, el.rowHeights);
+  const padding = el.cellPadding ?? 4;
   let svg = '';
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
-      const bg = r === 0 ? headerBg : '#ffffff';
-      const cx = c * cellW;
-      const cy = r * cellH;
+      const cellStyle = el.cellStyles?.[r]?.[c];
+      const bg = cellStyle?.background ?? (r === 0 ? headerBg : '#ffffff');
+      const cellFontSize = cellStyle?.fontSize ?? fontSize;
+      const cellFont = cellStyle?.fontFamily ?? 'Arial';
+      const cellColor = cellStyle?.color ?? '#111';
+      const cx = xs[c], cy = ys[r];
+      const cellW = xs[c + 1] - cx, cellH = ys[r + 1] - cy;
       svg += `<rect x="${cx}" y="${cy}" width="${cellW}" height="${cellH}" fill="${escapeXml(bg)}" stroke="${escapeXml(borderColor)}" stroke-width="1" />`;
       const text = data[r]?.[c] || '';
       if (text) {
-        svg += `<text x="${cx + 4}" y="${cy + fontSize + 4}" font-size="${fontSize}" font-family="Arial" fill="#111">${escapeXml(text)}</text>`;
+        const clipId = `table-${escapeXml(el.id)}-${r}-${c}`;
+        svg += `<defs><clipPath id="${clipId}"><rect x="${cx + padding}" y="${cy + padding}" width="${Math.max(1, cellW - padding * 2)}" height="${Math.max(1, cellH - padding * 2)}" /></clipPath></defs>`;
+        const bold = cellStyle?.fontStyle.includes('bold') ?? false;
+        const italic = cellStyle?.fontStyle.includes('italic') ?? false;
+        const layout = layoutRuns([{ text, fontSize: cellFontSize, fontFamily: cellFont, color: cellColor,
+          bold, italic, underline: false, strike: false }], Math.max(1, cellW - padding * 2), 1);
+        svg += `<g clip-path="url(#${clipId})">`;
+        for (const line of layout.lines) for (const run of line)
+          svg += `<text x="${cx + padding + run.x}" y="${cy + padding + run.y + cellFontSize * .85}" font-size="${cellFontSize}" font-family="${escapeXml(cellFont)}" font-weight="${bold ? 700 : 400}" font-style="${italic ? 'italic' : 'normal'}" fill="${escapeXml(cellColor)}">${escapeXml(run.text)}</text>`;
+        svg += '</g>';
       }
     }
   }

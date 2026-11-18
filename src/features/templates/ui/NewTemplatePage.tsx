@@ -29,6 +29,7 @@ export function NewTemplatePage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [recognized, setRecognized] = useState<Slide | null>(null);
+  const [recognizedSlides, setRecognizedSlides] = useState<Slide[]>([]);
   const [recognizing, setRecognizing] = useState(false);
   const selectedSchema =
     schemaId ?? params.get('schemaId') ?? (tutorial ? '' : activeSchema?.id) ?? '';
@@ -40,7 +41,7 @@ export function NewTemplatePage() {
     try {
       const slides =
         presetId === '__image__' && recognized
-          ? [recognized]
+          ? (recognizedSlides.length ? recognizedSlides : [recognized])
           : tutorial
             ? buildTutorialBrochure()
             : (DOCUMENT_PRESETS.find((preset) => preset.id === presetId)?.build() ?? [
@@ -100,7 +101,7 @@ export function NewTemplatePage() {
           ))}
         </select>
         {presetId === '__image__' && (
-          <ImageTemplateImport onDraft={setRecognized} onBusy={setRecognizing} />
+          <ImageTemplateImport onDraft={setRecognized} onSlides={setRecognizedSlides} onBusy={setRecognizing} />
         )}
         <label htmlFor="template-name">{__tr('Название шаблона')}</label>
         <input

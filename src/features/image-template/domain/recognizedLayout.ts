@@ -221,7 +221,8 @@ function buildText(ctx: BuildContext, p: Record<string, unknown>): CanvasElement
   const longest = longestLine(text, fontSize, fontFamily, fontStyle);
   const fitted = Math.min(
     fontSize,
-    (fontSize * ctx.bounds.width) / Math.max(1, longest),
+    // Token wrapping measures words separately; leave room for kerning and fractional pixel rounding.
+    (fontSize * ctx.bounds.width * .97) / Math.max(1, longest),
     ctx.bounds.height / Math.max(1, text.split('\n').length * 1.2),
   );
 
@@ -289,6 +290,16 @@ function buildTable(ctx: BuildContext, p: Record<string, unknown>): CanvasElemen
     fontSize: numberInRange(p.fontSize, 1, 512, 16) * ctx.scale,
     borderColor: normalizeColor(p.borderColor, '#777777'),
     headerBg: normalizeColor(p.headerBg, '#ffffff'),
+    columnWidths: normalizeNumberArray(p.columnWidths),
+    rowHeights: normalizeNumberArray(p.rowHeights),
+    cellPadding: numberInRange(p.cellPadding, 0, 40, 6) * ctx.scale,
+    cellStyles: Array.isArray(p.cellStyles) ? p.cellStyles.slice(0, rows.length).map(row =>
+      Array.isArray(row) ? row.slice(0, cols).map(cell => {
+        const style = isRecord(cell) ? cell : {};
+        return { fontSize: numberInRange(style.fontSize, 1, 512, 16) * ctx.scale,
+          fontFamily: normalizeFontFamily(style.fontFamily), fontStyle: normalizeFontStyle(style.fontStyle),
+          color: normalizeColor(style.color, '#111111'), background: normalizeColor(style.background, '#ffffff') };
+      }) : []) : undefined,
   };
 }
 

@@ -180,8 +180,9 @@ const DocumentEditorSession: React.FC<{ docId?: string }> = ({ docId }) => {
   const initial = hydrateDocument(doc.content);
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+    <div className="document-editor-page" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
       <div
+        className="document-editor-header"
         style={{
           padding: 8,
           borderBottom: '1px solid var(--border)',
@@ -209,7 +210,7 @@ const DocumentEditorSession: React.FC<{ docId?: string }> = ({ docId }) => {
         </span>
         {!isLocal && <ResourceHistoryPanel kind="document" id={docId} />}
       </div>
-      <div style={{ flex: 1, minHeight: 0 }}>
+      <div className="document-editor-body" style={{ flex: 1, minHeight: 0 }}>
         <Editor key={docId} documentId={docId} initialDoc={initial} onSave={handleSave} saveContext={activeSchemaId} />
       </div>
     </div>

@@ -9,6 +9,7 @@ import type { DocumentBinding } from '@/shared/types/document';
 import { createSlide } from '@/domain/slide/operations';
 import { fixGroupBoundsInPlace } from '@/lib/migrations';
 import { getByPath } from '@/lib/path';
+import { normalizeStampSizes } from '@/lib/stamps/resize';
 
 export interface DocumentState {
   slides: Slide[];
@@ -85,7 +86,7 @@ export class DocumentStore extends SimpleStore<DocumentState> {
       mutator(draft);
     });
     if (next === prev) return;
-    this.setState(next);
+    this.setState({ ...next, slides: normalizeStampSizes(prev.slides, next.slides) });
     this.pushHistory(mergeKey);
   }
 
@@ -109,7 +110,7 @@ export class DocumentStore extends SimpleStore<DocumentState> {
     const prev = this.getState();
     const next = produce(prev, mutator);
     if (next === prev) return;
-    this.setState(next);
+    this.setState({ ...next, slides: normalizeStampSizes(prev.slides, next.slides) });
   }
 
   fixAllGroupBounds(): void {

@@ -186,6 +186,14 @@ export interface LineElement extends BaseElement {
   isArrow: boolean;
 }
 
+export interface TableCellStyle {
+  fontSize: number;
+  fontFamily: string;
+  fontStyle: string;
+  color: string;
+  background: string;
+}
+
 export interface TableElement extends BaseElement {
   type: 'table';
   rows: number;
@@ -194,6 +202,10 @@ export interface TableElement extends BaseElement {
   borderColor: string;
   headerBg: string;
   fontSize: number;
+  columnWidths?: number[];
+  rowHeights?: number[];
+  cellPadding?: number;
+  cellStyles?: TableCellStyle[][];
 }
 
 export interface FooterElement extends BaseElement {

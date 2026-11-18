@@ -1,4 +1,6 @@
-import { useCallback, useId, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 import type { Slide } from '@/shared/types';
 import { t } from '@/shared/i18n';
 import { resolveBindings } from '@/features/bindings/domain/BindingResolver';
@@ -12,17 +14,27 @@ export function ImageImportActions() {
   const selection = useSelectionStore();
   const [open, setOpen] = useState(false);
   const [slide, setSlide] = useState<Slide | null>(null);
+  const [slides, setSlides] = useState<Slide[]>([]);
   const [busy, setBusy] = useState(false);
   const titleId = useId();
+  const dialogRef = useRef<HTMLDivElement>(null);
   const close = useCallback(() => {
     setOpen(false);
     setSlide(null);
+    setSlides([]);
   }, []);
+  useFocusTrap(dialogRef, open, close);
+  useEffect(() => {
+    if (!open) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = previous; };
+  }, [open]);
 
   function apply() {
     if (!slide || busy) return;
     docStore.commit((draft) => {
-      draft.slides.push(slide);
+      draft.slides.push(...(slides.length ? slides : [slide]));
       draft.activeId = slide.id;
       draft.bindings = resolveBindings(draft.slides, draft.bindings);
     });
@@ -35,11 +47,15 @@ export function ImageImportActions() {
       <button type="button" className="toolbar-btn" aria-expanded={open} onClick={() => setOpen(value => !value)}>
         {t('Import image or PDF')}
       </button>
-      {open &&
-          <div className="image-import-inline">
+      {open && createPortal(
+          <div className="image-import-backdrop" onMouseDown={event => {
+            if (event.currentTarget === event.target) close();
+          }}>
             <div
               className="image-import-dialog"
-              role="region"
+              ref={dialogRef}
+              role="dialog"
+              aria-modal="true"
               aria-labelledby={titleId}
             >
               <div className="image-import-header">
@@ -48,15 +64,18 @@ export function ImageImportActions() {
                   {t('Close')}
                 </button>
               </div>
-              <ImageTemplateImport onDraft={setSlide} onBusy={setBusy} context="document" />
+              <div className="image-import-content">
+                <ImageTemplateImport onDraft={setSlide} onSlides={setSlides} onBusy={setBusy} context="document" />
+              </div>
               <div className="image-import-footer">
                 <button type="button" disabled={!slide || busy} onClick={apply}>
                   {t('Add as a new slide')}
+                  {slides.length > 1 && ` (${slides.length})`}
                 </button>
                 <p>{t('Existing slides are kept. You can undo the import.')}</p>
               </div>
             </div>
-          </div>}
+          </div>, document.body)}
     </>
   );
 }

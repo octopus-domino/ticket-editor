@@ -1,15 +1,27 @@
-.toolbar:has(.image-import-inline) { flex-wrap: wrap; }
-.image-import-inline { flex: 1 1 100%; order: 999; min-width: 0; max-width: 100%; }
+.image-import-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgb(15 23 42 / 35%);
+  backdrop-filter: blur(3px);
+}
+
 .image-import-dialog {
-  width: 100%;
-  box-sizing: border-box;
-  max-height: 60dvh;
-  overflow: auto;
-  padding: 20px;
-  border-radius: 12px;
+  width: min(1040px, 100%);
+  max-height: min(880px, calc(100dvh - 48px));
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 16px;
   background: var(--panel);
   border: 1px solid var(--border);
+  box-shadow: 0 24px 80px rgb(15 23 42 / 20%);
 }
+
 .image-import-header,
 .image-import-footer {
   display: flex;
@@ -17,20 +29,20 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 12px;
+  padding: 16px 20px;
+  flex-shrink: 0;
 }
-.image-import-header {
-  margin-bottom: 16px;
-}
-.image-import-header h2 {
-  margin: 0;
-  font-size: 20px;
-}
-.image-import-footer {
-  margin-top: 16px;
-}
-.image-import-footer p {
-  color: var(--text-muted);
-}
+
+.image-import-header { border-bottom: 1px solid var(--border); }
+.image-import-header h2 { margin: 0; font-size: 20px; }
+.image-import-content { overflow: auto; min-height: 0; padding: 20px; }
+.image-import-content .image-template-import { border: 0; padding: 0; }
+.image-import-content .image-template-import p { margin: 0; font-size: 13px; line-height: 1.5; }
+.image-import-content input[type='file'] { max-width: 100%; padding: 12px; border: 1px dashed var(--border-strong); border-radius: 8px; }
+.image-import-content select { width: min(100%, 320px); }
+.image-import-footer { border-top: 1px solid var(--border); }
+.image-import-footer p { color: var(--text-muted); font-size: 12px; margin: 0; }
+
 .image-import-dialog button,
 .image-import-dialog select {
   padding: 8px 12px;
@@ -39,11 +51,11 @@
   background: var(--panel);
   color: var(--text);
 }
-.image-import-dialog button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-.image-import-footer button:not(:disabled) {
-  background: var(--accent);
-  color: white;
+.image-import-dialog button:disabled { opacity: .5; cursor: not-allowed; }
+.image-import-footer button:not(:disabled) { background: var(--accent); color: white; }
+
+@media (max-width: 600px) {
+  .image-import-backdrop { padding: 8px; }
+  .image-import-dialog { max-height: calc(100dvh - 16px); border-radius: 12px; }
+  .image-import-header, .image-import-footer, .image-import-content { padding: 12px; }
 }

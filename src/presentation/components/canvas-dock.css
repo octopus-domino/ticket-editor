@@ -1,6 +1,9 @@
 .editor-shell {
   position: relative;
 }
+.workspace-main .editor-shell { height: 100%; min-height: 0; }
+.canvas-dock-properties { display: none; }
+.editor-shell .zoom-bar { position: sticky; top: 8px; left: auto; transform: none; align-self: flex-end; margin: 8px 8px 0; flex-shrink: 0; }
 .canvas-dock {
   position: relative;
   grid-area: dock;
@@ -118,4 +121,44 @@
     grid-template-rows: 46px minmax(0, 1fr);
     grid-template-areas: 'dock' 'canvas';
   }
+}
+
+/* Compact document editors give their space to the page; panels remain reachable as drawers. */
+@media (max-width: 1440px) {
+  .workspace-layout:has(.editor-shell) { height: 100dvh; }
+  .workspace-layout:has(.editor-shell) .workspace-body { position: relative; }
+  .workspace-layout:has(.editor-shell) .workspace-body > aside { display: none !important; }
+  .workspace-layout:has(.editor-shell) .mobile-menu-button { display: inline-flex; align-items: center; justify-content: center; min-width: 36px; }
+  .workspace-layout:has(.editor-shell) .workspace-header .flow-breadcrumbs { display: none; }
+  .workspace-layout:has(.editor-shell) .mobile-editor-controls { display: none; }
+  .workspace-layout:has(.editor-shell) .canvas-dock-properties { display: inline-flex; align-items: center; justify-content: center; }
+  .workspace-layout:has(.editor-shell) .editor-layout { position: relative; min-width: 0; }
+  .workspace-layout:has(.editor-shell) .left-panel,
+  .workspace-layout:has(.editor-shell) .right-panel { display: none !important; }
+  .workspace-layout:has(.editor-shell)[data-mobile-panel] .mobile-panel-backdrop { display: block; position: absolute; inset: 0; z-index: 90; border: 0; background: #10152966; }
+  .workspace-layout:has(.editor-shell)[data-mobile-panel='documents'] .workspace-body > aside {
+    display: flex !important; position: absolute; inset: 0 auto 0 0; width: min(320px, 88vw) !important; z-index: 100;
+  }
+  .workspace-layout[data-mobile-panel='tools'] .editor-shell .left-panel,
+  .workspace-layout[data-mobile-panel='properties'] .editor-shell .right-panel {
+    display: flex !important; position: absolute; top: 0; bottom: 0; width: min(340px, 88vw) !important;
+    z-index: 100; overflow: auto; background: var(--panel); box-shadow: 0 0 30px #0003;
+  }
+  .workspace-layout[data-mobile-panel='tools'] .editor-shell .left-panel { left: 0; }
+  .workspace-layout[data-mobile-panel='properties'] .editor-shell .right-panel { right: 0; }
+  .workspace-main .editor-shell .canvas-area { padding: 0 !important; min-height: 0; }
+  .workspace-main .editor-shell > .toolbar { padding: 5px 8px; min-height: 44px; flex-shrink: 0; }
+  .workspace-main .editor-shell > .toolbar h1 { display: none; }
+  .workspace-main .editor-shell > .toolbar .toolbar-actions { justify-content: flex-start; gap: 4px; }
+  .document-editor-header { gap: 6px !important; padding: 4px 8px !important; }
+  .document-editor-header > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+@media (min-width: 761px) and (max-width: 1440px) {
+  .workspace-main .editor-shell[data-tools-open]:not([data-canvas-fullscreen='true']) .editor-layout {
+    grid-template-columns: 48px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) 64px;
+    grid-template-areas: 'dock canvas' 'slides slides';
+  }
+  .workspace-main .editor-shell .slides-panel { max-height: 64px; padding: 4px 10px; gap: 8px; }
+  .workspace-main .editor-shell .slides-panel .slide-thumb { height: 48px; min-width: 72px; }
+  .workspace-main .editor-shell .canvas-dock { padding: 3px; }
 }

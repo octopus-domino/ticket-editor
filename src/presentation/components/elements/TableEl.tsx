@@ -4,6 +4,7 @@ import type { TableElement } from '@/shared/types';
 import type { CommonProps } from './types';
 import { useActiveModelValues } from '@/features/data-models/state/useActiveModelValues';
 import { resolveWithValues } from '@/lib/modelBinding';
+import { tableAxis } from '@/lib/tableGeometry';
 
 interface Props extends CommonProps<TableElement> {
   el: TableElement;
@@ -15,19 +16,23 @@ export const TableEl: React.FC<Props> = ({
   onContextMenu, onDblClick,
 }) => {
   const modelValues = useActiveModelValues();
-  const cellW = el.width / el.cols;
-  const cellH = el.height / el.rows;
+  const xs = tableAxis(el.width, el.cols, el.columnWidths);
+  const ys = tableAxis(el.height, el.rows, el.rowHeights);
+  const padding = el.cellPadding ?? 6;
   const cells: React.ReactNode[] = [];
   const texts: React.ReactNode[] = [];
 
   for (let r = 0; r < el.rows; r++) {
     for (let c = 0; c < el.cols; c++) {
-      const bg = r === 0 ? el.headerBg : '#fff';
+      const cellW = xs[c + 1] - xs[c];
+      const cellH = ys[r + 1] - ys[r];
+      const style = el.cellStyles?.[r]?.[c];
+      const bg = style?.background ?? (r === 0 ? el.headerBg : '#fff');
       cells.push(
         <Rect
           key={`r-${r}-${c}`}
-          x={c * cellW}
-          y={r * cellH}
+          x={xs[c]}
+          y={ys[r]}
           width={cellW}
           height={cellH}
           fill={bg}
@@ -45,14 +50,15 @@ export const TableEl: React.FC<Props> = ({
       texts.push(
         <Text
           key={`t-${r}-${c}`}
-          x={c * cellW + 6}
-          y={r * cellH + 6}
-          width={Math.max(1, cellW - 12)}
-          height={Math.max(1, cellH - 12)}
+          x={xs[c] + padding}
+          y={ys[r] + padding}
+          width={Math.max(1, cellW - padding * 2)}
+          height={Math.max(1, cellH - padding * 2)}
           text={display}
-          fontSize={el.fontSize}
-          fill={stillUnresolved && isPh ? '#2563eb' : '#111'}
-          fontStyle={stillUnresolved && isPh ? 'italic' : 'normal'}
+          fontSize={style?.fontSize ?? el.fontSize}
+          fontFamily={style?.fontFamily ?? 'Arial'}
+          fill={stillUnresolved && isPh ? '#2563eb' : style?.color ?? '#111'}
+          fontStyle={stillUnresolved && isPh ? 'italic' : style?.fontStyle ?? 'normal'}
           wrap="word"
           ellipsis
           listening={false}

@@ -2,6 +2,7 @@ import { t as __tr } from '@/shared/i18n';
 import React, { useEffect, useRef, useState } from 'react';
 import type { Editor } from '@tiptap/react';
 import { TableSizePicker } from './TableSizePicker';
+import { RichTextPopover } from './RichTextPopover';
 import { CellFillPopover, CellBorderPopover, CellPadPopover } from './TableCellPopovers';
 
 type PopKind = null | 'size' | 'fill' | 'border' | 'pad';
@@ -9,16 +10,20 @@ type PopKind = null | 'size' | 'fill' | 'border' | 'pad';
 export const TableOperationsToolbar: React.FC<{ editor: Editor }> = ({ editor }) => {
   const [pop, setPop] = useState<PopKind>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const anchorRef = useRef<HTMLElement | null>(null);
 
-  const toggle = (k: Exclude<PopKind, null>) =>
+  const toggle = (k: Exclude<PopKind, null>, anchor: HTMLElement) => {
+    anchorRef.current = anchor;
     setPop((v) => (v === k ? null : k));
+  };
 
   const insideTable = editor.isActive('table');
 
   useEffect(() => {
     if (!pop) return;
     const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node) && !panelRef.current?.contains(e.target as Node)) {
         setPop(null);
       }
     };
@@ -52,10 +57,11 @@ export const TableOperationsToolbar: React.FC<{ editor: Editor }> = ({ editor })
           type="button"
           className="rt-btn"
           title={__tr("Вставить таблицу")}
-          onMouseDown={(e) => { e.preventDefault(); toggle('size'); }}
+          onMouseDown={e => e.preventDefault()}
+          onClick={e => toggle('size', e.currentTarget)}
         >
           {__tr("⊞ Таблица")}</button>
-        {pop === 'size' && <TableSizePicker onPick={handleInsertTable} />}
+        {pop === 'size' && <RichTextPopover anchor={anchorRef.current} panelRef={panelRef}><TableSizePicker onPick={handleInsertTable} /></RichTextPopover>}
       </div>
 
       {insideTable && (
@@ -100,13 +106,13 @@ export const TableOperationsToolbar: React.FC<{ editor: Editor }> = ({ editor })
           <div className="rt-popover-wrap">
             <button type="button" className="rt-btn"
               title={__tr("Границы ячейки")}
-              onMouseDown={(e) => { e.preventDefault(); toggle('border'); }}>
+              onMouseDown={e => e.preventDefault()} onClick={e => toggle('border', e.currentTarget)}>
               {__tr("╳ Границы")}</button>
             {pop === 'border' && (
-              <CellBorderPopover
+              <RichTextPopover anchor={anchorRef.current} panelRef={panelRef}><CellBorderPopover
                 editor={editor}
                 onSet={(patch) => { setCellAttrs(patch); setPop(null); }}
-              />
+              /></RichTextPopover>
             )}
           </div>
 
@@ -114,10 +120,10 @@ export const TableOperationsToolbar: React.FC<{ editor: Editor }> = ({ editor })
           <div className="rt-popover-wrap">
             <button type="button" className="rt-btn"
               title={__tr("Отступы в ячейке")}
-              onMouseDown={(e) => { e.preventDefault(); toggle('pad'); }}>
+              onMouseDown={e => e.preventDefault()} onClick={e => toggle('pad', e.currentTarget)}>
               {__tr("↔ Отступы")}</button>
             {pop === 'pad' && (
-              <CellPadPopover onSet={(padding) => { setCellAttrs({ cellPadding: padding }); setPop(null); }} />
+              <RichTextPopover anchor={anchorRef.current} panelRef={panelRef}><CellPadPopover onSet={(padding) => { setCellAttrs({ cellPadding: padding }); setPop(null); }} /></RichTextPopover>
             )}
           </div>
 
@@ -126,10 +132,10 @@ export const TableOperationsToolbar: React.FC<{ editor: Editor }> = ({ editor })
           <div className="rt-popover-wrap">
             <button type="button" className="rt-btn"
               title={__tr("Заливка ячейки")}
-              onMouseDown={(e) => { e.preventDefault(); toggle('fill'); }}>
+              onMouseDown={e => e.preventDefault()} onClick={e => toggle('fill', e.currentTarget)}>
               {__tr("▣ Заливка")}</button>
             {pop === 'fill' && (
-              <CellFillPopover onSet={(c) => { setCellAttrs({ bgColor: c }); setPop(null); }} />
+              <RichTextPopover anchor={anchorRef.current} panelRef={panelRef}><CellFillPopover onSet={(c) => { setCellAttrs({ bgColor: c }); setPop(null); }} /></RichTextPopover>
             )}
           </div>
         </>

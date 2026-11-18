@@ -189,6 +189,7 @@ export const RouteEditor = forwardRef<RouteEditorHandle, { value: string; onChan
           'Choose addresses, add flights from your tickets and allow time for check-in and transfers.',
         )}
       </p>
+      <div className="route-planning-workspace">
       <fieldset disabled={busy} className="route-inputs">
         <ol className="route-stops">
           {stops.map((stop, index) => (
@@ -242,10 +243,10 @@ export const RouteEditor = forwardRef<RouteEditorHandle, { value: string; onChan
                 <textarea maxLength={500} rows={2} value={stop.description ?? ''}
                   onChange={event => { invalidate(); setStops(items => items.map((item, i) => i === index ? { ...item, description: event.target.value } : item)); }} />
               </label>
-              {index > 0 && stop.label && stop.confirmed !== false && <RoutePlacePanel stop={stop}
+              {stop.label && stop.confirmed !== false && <RoutePlacePanel stop={stop}
                 visitDate={start.slice(0, 10)}
-                onWalkChange={walkId => {
-                  setDirty(true); setStops(items => items.map(item => item.id === stop.id ? { ...item, walkId } : item));
+                onWalkChange={(walkId, minutes) => {
+                    invalidate(); setStops(items => items.map(item => item.id === stop.id ? { ...item, walkId, stayMinutes: Math.max(item.stayMinutes, minutes ?? 0) } : item));
                 }}
                 onWalkBusy={value => { busyRef.current = value; setBusy(value); callbacks.current.onBusyChange(value); }}
                 onNotes={notes => {
@@ -440,6 +441,7 @@ export const RouteEditor = forwardRef<RouteEditorHandle, { value: string; onChan
           }}
         />
       </Suspense>
+      </div>
       </div>
       </div>
       {rows.length > 0 && (

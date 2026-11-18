@@ -1,0 +1,17 @@
+.journey-main--travel{--travel-ink:#275b4d;max-width:1440px;margin:auto}
+.journey-main--travel .journey-intro h1{color:var(--travel-ink);letter-spacing:-.035em}
+.journey-main--travel[data-step="0"] .journey-workspace{grid-template-columns:minmax(0,1fr)}
+.journey-main--travel[data-step="0"] .journey-preview{display:none}
+.journey-main--travel .journey-form-panel{background:#fbfcf8;border:1px solid #dce3d8;border-radius:24px}
+.journey-main--travel .route-editor{border:0;padding:0;min-width:0}
+.journey-main--travel .route-planning-workspace{display:grid;grid-template-columns:minmax(320px,.9fr) minmax(0,1.1fr);gap:24px;align-items:start}
+.journey-main--travel .route-planning-workspace>.route-inputs{min-width:0}
+.journey-main--travel .route-map-picker{position:sticky;top:20px;min-width:0;overflow:hidden;border-radius:20px;border:1px solid #dce3d8;background:#e7ede2}
+.journey-main--travel .route-map-picker .route-map{height:clamp(380px,65vh,720px)}
+.journey-main--travel .route-stops{padding:0;list-style:none;display:grid;gap:18px}
+.journey-main--travel .route-stops>li{padding:18px;border:1px solid #dce3d8;border-radius:18px;background:white;min-width:0}
+.journey-main--travel .route-place-panel{border-radius:12px;background:#f1f5ed;padding:12px}
+.journey-main--travel .route-place-panel summary{color:var(--travel-ink);cursor:pointer}
+.journey-main--travel .route-walk-print{width:100%;height:auto}
+@media(max-width:900px){.journey-main--travel .route-planning-workspace{grid-template-columns:minmax(0,1fr)}.journey-main--travel .route-map-picker{position:relative;top:auto;grid-row:1}.journey-main--travel .route-map-picker .route-map{height:340px}.journey-main--travel .route-stops>li{padding:14px}}
+@media(max-width:480px){.journey-main--travel .journey-form-panel{border-radius:16px;padding:14px}.journey-main--travel .route-map-picker .route-map{height:280px}}

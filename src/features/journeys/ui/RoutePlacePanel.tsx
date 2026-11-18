@@ -1,242 +1,94 @@
-import { useEffect, useRef, useState } from 'react';
-import { getLocale, t } from '@/shared/i18n';
-import { journeyRequest } from '../api/journeys';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { t } from '@/shared/i18n';
 import type { RouteStop } from '../domain/routeTimeline';
-import type { PlannedLeg, RoutePhoto } from '../domain/route';
-import { cityVisitPlan, nearestPlaces, type CityVisit, type RecommendedPlace } from '../domain/cityVisitPlan';
+import { importPrivateWalk } from '../domain/privateWalk';
 import { RouteWalk, type RouteWalkHandle } from './RouteWalk';
-import { RouteAddressInput, type RouteAddress } from './RouteAddressInput';
-import { placePhotos } from '../api/placePhotos';
-import { timedCityWalk } from '../domain/timedCityWalk';
-import { YandexPlaceMap } from '../yandex/YandexPlaceMap';
-import { offersPetersburgWalks, petersburgWalkPresets, type CityWalkPreset } from '../domain/petersburgWalks';
+import type { RouteAddress } from './RouteAddressInput';
+import { RouteHotels } from './RouteHotels';
+import './private-walk-picker.css';
 
-export function RoutePlacePanel({ stop, onNotes, onAdd, onWalkChange, onWalkBusy, visitDate }: {
+/** CoDoc owns the trip; the embedded private application owns all walk construction. */
+export function RoutePlacePanel({ stop, onAdd, onWalkChange, onWalkBusy, visitDate }: {
   stop: RouteStop; onNotes: (notes: string) => void; onAdd: (address: RouteAddress) => void;
-  onWalkChange: (id?: string) => void; onWalkBusy: (busy: boolean) => void; visitDate: string;
+  onWalkChange: (id?: string, minutes?: number) => void; onWalkBusy: (busy: boolean) => void; visitDate: string;
 }) {
-  const [kind, setKind] = useState<'hotels' | 'attractions'>('attractions');
-  const [theme,setTheme]=useState(''),[visitTime,setVisitTime]=useState('09:00');
-  const [buildingQuery,setBuildingQuery]=useState('');
-  const [buildingYear,setBuildingYear]=useState('0');
-  const [places, setPlaces] = useState<RecommendedPlace[]>([]);
-  const [selected, setSelected] = useState<string[]>([]);
-  const [focusedId,setFocusedId]=useState<string>();
-  const [available, setAvailable] = useState<boolean | null>(null);
-  const [busy, setBusy] = useState(false), [error, setError] = useState('');
-  const [date, setDate] = useState(visitDate);
-  const [source, setSource] = useState('OpenStreetMap');
-  const [expanded, setExpanded] = useState(false);
-  const [visits, setVisits] = useState<CityVisit[]>([]);
-  const [skipped, setSkipped] = useState<RecommendedPlace[]>([]);
-  const [describing,setDescribing]=useState('');
-  const [legs, setLegs] = useState<PlannedLeg[]>([]);
-  const [mapStops,setMapStops]=useState<RouteStop[]>([]);
-  const controller = useRef<AbortController | null>(null);
-  const active = useRef(false);
-  const walkBusyCallback = useRef(onWalkBusy); walkBusyCallback.current = onWalkBusy;
+  const [channel, setChannel] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const frame = useRef<HTMLIFrameElement>(null);
+  const dialog = useRef<HTMLDialogElement>(null);
   const walk = useRef<RouteWalkHandle>(null);
-  const selectPlace=(id:string,checked?:boolean)=>{
-    if(busy||!places.some(place=>place.id===id))return;
-    setFocusedId(id);
-    setSelected(ids=>{
-      const include=checked??!ids.includes(id);
-      return include?ids.includes(id)||ids.length>=(theme?10:5)?ids:[...ids,id]:ids.filter(item=>item!==id);
-    });
-    setVisits([]);setLegs([]);setMapStops([]);setSkipped([]);
-  };
+  const active = useRef(false);
+  const abort = useRef<AbortController>();
+  const callbacks = useRef({ onWalkBusy, onWalkChange });
+  callbacks.current = { onWalkBusy, onWalkChange };
+  const startLocal = `${visitDate || new Date().toISOString().slice(0, 10)}T09:00`;
+  const sharedLink = new URLSearchParams(location.search).get('walk');
+
+  useEffect(() => () => {
+    abort.current?.abort();
+    callbacks.current.onWalkBusy(false);
+  }, []);
+
+  const saveTransfer = useCallback(async (value: unknown) => {
+      if (active.current) return;
+      active.current = true;
+      setBusy(true); setError(''); callbacks.current.onWalkBusy(true);
+      abort.current = new AbortController();
+      try {
+        const imported = importPrivateWalk(value, stop, startLocal);
+        if (!walk.current) throw new Error(t('Wait until the map has finished loading.'));
+        await walk.current.save(imported.stops, imported.legs, imported.startLocal, abort.current.signal, undefined, imported.timeline);
+        const url = new URL(location.href);
+        url.searchParams.delete('walk');
+        history.replaceState(null, '', url);
+        setChannel('');
+      } catch (reason) {
+        if (!abort.current.signal.aborted) setError(reason instanceof Error ? reason.message : t('Could not prepare the image.'));
+      } finally {
+        active.current = false; setBusy(false); callbacks.current.onWalkBusy(false);
+      }
+  }, [stop, startLocal]);
+
   useEffect(() => {
-    setBusy(false);
-    setPlaces([]); setSelected([]); setAvailable(null); setVisits([]); setLegs([]);setMapStops([]); setSkipped([]); setError('');
-    return () => { controller.current?.abort(); active.current = false; walkBusyCallback.current(false); };
-  }, [stop.longitude, stop.latitude]);
-  useEffect(() => { if (visitDate) setDate(visitDate); }, [visitDate]);
-  const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:stop.zone}).format(new Date());
-  const discover = (kind: string, signal: AbortSignal) => {
-    if(theme==='buildings'&&kind==='attractions'){
-      const params=new URLSearchParams({lon:String(stop.longitude),lat:String(stop.latitude),limit:'7',q:buildingQuery,beforeYear:buildingYear});
-      return journeyRequest<{id:number;name?:string;constructionPeriod?:string;heritageStatus?:string;address:string;longitude:number;latitude:number;constructionYear?:number;architect?:string;style?:string;sourceUrl?:string}[]>(
-        `/api/journeys/buildings/nearby?${params}`,{signal}).then(rows=>({available:true,source:'HOITH',places:rows.map((row):RecommendedPlace=>({
-          id:`building-${row.id}`,label:[row.name,row.address].filter(Boolean).join(' · ').slice(0,180)||t('Historic building'),longitude:row.longitude,latitude:row.latitude,
-          url:row.sourceUrl||'https://disk.yandex.ru/d/6rI165UaOpvG0A',source:'HOITH',
-          description:[row.constructionPeriod||row.constructionYear?`${t('Year built')}: ${row.constructionPeriod||row.constructionYear}`:'',row.architect?`${t('Architect')}: ${row.architect}`:'',row.style?`${t('Architectural style')}: ${row.style}`:'',row.heritageStatus?`${t('Heritage status')}: ${row.heritageStatus}`:''].filter(Boolean).join(' · '),
-          meta:{source:'HOITH',theme:'buildings',...(row.constructionYear?{construction_year:String(row.constructionYear)}:{}),...(row.architect?{architect:row.architect}:{}),...(row.style?{style:row.style}:{})},
-        }))}));
-    }
-    const query=new URLSearchParams({longitude:String(stop.longitude),latitude:String(stop.latitude),kind,language:getLocale()});
-    if(theme&&kind==='attractions'){
-      query.set('theme',theme);query.set('maxStops','7');query.set('visitTime',`${date||visitDate||today()}T${visitTime}`);
-    }
-    return journeyRequest<{ available: boolean; places: RecommendedPlace[]; source?: string }>(
-      `/api/journeys/routes/places${theme&&kind==='attractions'?'/themed':''}?${query}`, { signal });
-  };
-  const photosFor = (candidates:RecommendedPlace[],stops:RouteStop[],signal:AbortSignal):Promise<RoutePhoto[]> => theme
-    ? journeyRequest<RoutePhoto[]>(`/api/journeys/routes/places/themed/enrich?language=${getLocale()}`,{method:'POST',signal,body:JSON.stringify(stops)}).catch(()=>[])
-    : placePhotos(candidates.map((place,index)=>({...place,stopId:stops[index].id})),signal);
-  const search = async () => {
-    setKind('hotels');
-    if (active.current) return;
-    active.current = true; setBusy(true); onWalkBusy(true); setError(''); setVisits([]); setLegs([]); setSkipped([]); setPlaces([]); setSelected([]);
-    const abort = new AbortController(); controller.current = abort;
-    try {
-      const result = await discover('hotels', abort.signal);
-      if (!abort.signal.aborted) { setAvailable(result.available); setPlaces(result.places); setSelected(result.places.slice(0, theme?7:4).map(place => place.id)); setSource(result.source ?? 'OpenStreetMap'); }
-    } catch (reason) { if (!abort.signal.aborted) setError((reason as Error).message); }
-    finally { if (!abort.signal.aborted) { active.current = false; setBusy(false); onWalkBusy(false); } }
-  };
-  const descriptions = async (items:RecommendedPlace[],signal:AbortSignal) => Promise.all(items.map(async place=>{
-    if(!place.id.startsWith('wikimapia-')||place.description)return place;
-    try{const info=await journeyRequest<{description:string}>(`/api/journeys/routes/places/${place.id}?language=${getLocale()}`,{signal});return {...place,description:info.description};}
-    catch{return place;}
-  }));
-  const autoWalk = async (selection?:RecommendedPlace[], preset?:CityWalkPreset) => {
-    if (active.current) return;
-    active.current = true; setBusy(true); onWalkBusy(true); setError('');
-    const abort = new AbortController(); controller.current = abort;
-    try {
-      const walkStart:RouteStop = preset ? { ...stop, ...preset.places[0], id:crypto.randomUUID(),
-        zone:stop.zone, confirmed:true, stayMinutes:20, walkId:undefined,
-        meta:{...preset.places[0].meta,walk_title:preset.title} } : stop;
-      const result = preset ? {available:true,places:preset.places,source:'curated'}
-        : selection ? {available:true,places:selection,source} : await discover('attractions', abort.signal);
-      if (abort.signal.aborted) return;
-      setAvailable(result.available); setPlaces(result.places); setSource(result.source ?? 'OpenStreetMap'); setKind('attractions');
-      const candidates = preset ? preset.places.slice(1)
-        : await descriptions(nearestPlaces(stop, result.places).slice(0, theme?10:selection?5:4),abort.signal);
-      setSelected((preset?preset.places:candidates).map(place => place.id));
-      if (!candidates.length) { setError(t('No nearby places found.')); return; }
-      const added: RouteStop[] = candidates.map(place => ({
-        id: crypto.randomUUID(), label: place.label, longitude: place.longitude, latitude: place.latitude,
-        zone: stop.zone, confirmed: true, stayMinutes: preset?20:60,
-        description: [place.description?.slice(0,350),place.url].filter(Boolean).join('\n').slice(0,500),
-        ...(place.meta?{meta:place.meta}:{}),
-      }));
-      if(!preset) added.push({ ...stop, id: crypto.randomUUID(), stayMinutes: 0, description: t('Return to the starting point after the walk.') });
-      const roads: PlannedLeg[] = [];
-      let current = walkStart;
-      for (const next of added) {
-        const road = await journeyRequest<PlannedLeg>('/api/journeys/routes/road', { method: 'POST', signal: abort.signal,
-          body: JSON.stringify({ start: { longitude: current.longitude, latitude: current.latitude }, end: { longitude: next.longitude, latitude: next.latitude }, mode: 'foot' }) });
-        roads.push({ ...road, mode: 'foot' }); current = next;
-      }
-      const origin = { ...walkStart, walkId: undefined, stayMinutes: preset?20:0 };
-      setLegs(roads);setMapStops([origin,...added]);
-      const photos = preset ? await journeyRequest<RoutePhoto[]>(`/api/journeys/routes/places/themed/enrich?language=${getLocale()}`,{method:'POST',signal:abort.signal,body:JSON.stringify([origin,...added])}).catch(()=>[])
-        : await photosFor(candidates,added.slice(0,candidates.length),abort.signal);
-      for(const photo of photos){const point=added.find(item=>item.id===photo.stopId);if(point?.meta)point.meta={...point.meta,photo_image_id:photo.imageId};}
-      if (!abort.signal.aborted) await walk.current?.save([origin, ...added], roads, `${date || visitDate || today()}T${theme&&!preset?visitTime:'09:00'}`, abort.signal, photos);
-    } catch (reason) { if (!abort.signal.aborted) setError((reason as Error).message); }
-    finally { if (!abort.signal.aborted) { active.current = false; setBusy(false); onWalkBusy(false); } }
-  };
-  const plan = async () => {
-    if (active.current || !date) return;
-    active.current = true; setBusy(true); onWalkBusy(true); setError(''); setVisits([]); setLegs([]); setSkipped([]);
-    const abort = new AbortController(); controller.current = abort;
-    try {
-      const ordered = await descriptions(nearestPlaces(stop, places.filter(place => selected.includes(place.id))),abort.signal);
-      const accepted: CityVisit[] = [], omitted: RecommendedPlace[] = [], roads: PlannedLeg[] = [];
-      let current: Pick<RouteStop, 'longitude' | 'latitude'> = stop, clock = 9 * 60;
-      for (const place of ordered) {
-        const road = await journeyRequest<PlannedLeg>('/api/journeys/routes/road', { method: 'POST', signal: abort.signal,
-          body: JSON.stringify({ start: { longitude: current.longitude, latitude: current.latitude }, end: { longitude: place.longitude, latitude: place.latitude }, mode: 'foot' }) });
-        const result = cityVisitPlan([place], date, [road.durationSeconds], clock);
-        if (!result.visits.length) { omitted.push(place); continue; }
-        accepted.push(result.visits[0]); roads.push({ ...road, mode: 'foot' }); current = place;
-        const end = result.visits[0].end.slice(11).split(':').map(Number); clock = end[0] * 60 + end[1];
-      }
-      if (!abort.signal.aborted) {
-        setVisits(accepted); setSkipped(omitted);
-        if (!accepted.length) return;
-        const back = await journeyRequest<PlannedLeg>('/api/journeys/routes/road', { method: 'POST', signal: abort.signal,
-          body: JSON.stringify({ start: { longitude: current.longitude, latitude: current.latitude }, end: { longitude: stop.longitude, latitude: stop.latitude }, mode: 'foot' }) });
-        roads.push({ ...back, mode: 'foot' });
-        const timed = timedCityWalk(stop, accepted, roads, date);
-        const photos = await placePhotos(accepted.map((visit, index) => ({ ...visit.place, stopId: timed.stops[index + 1].id })), abort.signal);
-        await walk.current?.save(timed.stops, roads, timed.startLocal, abort.signal, photos, timed.timeline);
-      }
-    } catch (reason) { if (!abort.signal.aborted) setError((reason as Error).message === 'journey.route.walk-too-long' ? t('This walk is too long for one day. Choose fewer or closer places.') : (reason as Error).message); }
-    finally { if (!abort.signal.aborted) { active.current = false; setBusy(false); onWalkBusy(false); } }
-  };
-  return <details className="route-place-panel" onToggle={event => {
-    if (event.target !== event.currentTarget) return;
-    const opened = event.currentTarget.open; setExpanded(opened);
-    if (opened) document.querySelectorAll<HTMLDetailsElement>('.route-place-panel[open]').forEach(panel => { if (panel !== event.currentTarget) panel.open = false; });
-    else if (active.current) { controller.current?.abort(); active.current = false; setBusy(false); onWalkBusy(false); }
-  }}>
+    if (!channel) return;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    dialog.current?.showModal();
+    const listener = (event: MessageEvent) => {
+      if (event.origin !== location.origin || event.source !== frame.current?.contentWindow ||
+          event.data?.type !== 'private-walk:complete' || event.data.channel !== channel) return;
+      void saveTransfer(event.data.walk);
+    };
+    window.addEventListener('message', listener);
+    return () => { window.removeEventListener('message', listener); previousFocus?.focus(); };
+  }, [channel, saveTransfer]);
+
+  const url = new URL('/private-journey/', location.origin);
+  url.search = new URLSearchParams({ embed: 'codoc', channel, points: `${stop.latitude},${stop.longitude}` }).toString();
+  return <details className="route-place-panel">
     <summary>{t('Private itineraries')}</summary>
     <p>{t('This walk has a separate map and its own pages in the trip PDF.')}</p>
-    {offersPetersburgWalks(stop.longitude,stop.latitude)&&<details className="route-ready-walks">
-      <summary>{t('Ready-made walks in Saint Petersburg')}</summary>
-      <p>{t('Street walks with four stops. Museum tickets and opening hours are checked separately.')}</p>
-      {petersburgWalkPresets().map(preset=><article key={preset.id}>
-        <h4>{preset.title}</h4><p>{preset.description}</p>
-        <ol>{preset.places.map(place=><li key={place.id}>{place.label}</li>)}</ol>
-        <button type="button" className="journey-secondary" disabled={busy} onClick={()=>{setTheme('');void autoWalk(undefined,preset);}}>{t('Use this walk')} · {preset.title}</button>
-      </article>)}
-    </details>}
-    <fieldset disabled={busy} className="route-inputs">
-      <label>{t('Walk theme')}<select aria-label={t('Walk theme')} value={theme} onChange={event=>{setTheme(event.target.value);setPlaces([]);setSelected([]);setVisits([]);setSkipped([]);setVisitTime(event.target.value==='bars'?'20:00':'09:00');}}>
-        <option value="">{t('Any theme')}</option><option value="bars">{t('Bars and pubs')}</option><option value="mystic">{t('Mysteries and legends')}</option>
-        <option value="religious">{t('Religious places')}</option><option value="cultural">{t('Culture and art')}</option>
-        <option value="buildings">{t('Historic buildings')}</option>
-      </select></label>
-      {theme==='buildings'&&<label>{t('Address, architect or style')}<input type="search" maxLength={100} value={buildingQuery} onChange={event=>{setBuildingQuery(event.target.value);setPlaces([]);setSelected([]);}} /></label>}
-      {theme==='buildings'&&<label>{t('Construction period')}<select value={buildingYear} onChange={event=>{setBuildingYear(event.target.value);setPlaces([]);setSelected([]);}}>
-        <option value="0">{t('Any year')}</option><option value="1945">{t('Built by 1945')}</option><option value="1900">{t('Built by 1900')}</option>
-      </select></label>}
-      {theme&&theme!=='buildings'&&<><label>{t('Visit date')}<input type="date" value={date} onChange={event=>{setDate(event.target.value);setPlaces([]);setSelected([]);}} /></label>
-        <label>{t('Visit time')}<input type="time" value={visitTime} onChange={event=>{setVisitTime(event.target.value);setPlaces([]);setSelected([]);}} /></label>
-        <small>{t('Opening hours are a guide. Closed places remain in the results.')}</small></>}
-    </fieldset>
-    <button type="button" className="journey-primary" disabled={busy || (kind==='attractions' && places.length>0 && selected.length===0)} onClick={() => void autoWalk(kind==='attractions' && places.length>0 ? places.filter(place=>selected.includes(place.id)) : undefined)}>{t('Generate a walking map')}</button>
-    <p>{theme?t('Discover quieter places and local stories, then create a separate walking map.'):t('Find up to four nearby sights, connect them by walking roads and return to this point. Allow one hour per visit. Check opening hours before travelling.')}</p>
-
-    <details><summary>{t('Hotels')}</summary>
-    <div className="route-actions">
-      <a href={`https://www.booking.com/searchresults.html?ss=${encodeURIComponent(stop.label)}`} target="_blank" rel="noopener noreferrer">Booking.com ↗</a>
-      <a href="https://ostrovok.ru/" target="_blank" rel="noopener noreferrer">{t('Ostrovok')} ↗</a>
-      <a href={`https://2gis.ru/search/${encodeURIComponent(`${stop.label} достопримечательности`)}`} target="_blank" rel="noopener noreferrer">2GIS ↗</a>
-    </div>
-    <p>{t('Find a hotel, then select its address below to add it as a stop. Prices and booking remain on the hotel service.')}</p>
-    <RouteAddressInput value="" onSelect={onAdd} />
-    <button type="button" className="journey-secondary" disabled={busy} onClick={() => void search()}>{t('Find nearby places')}</button>
-    </details>
-    <fieldset disabled={busy} className="route-inputs">
-      {available === false && <p role="status">{t('Nearby recommendations require the administrator to connect 2GIS. You can use the search links above now.')}</p>}
-      {available === true && !places.length && <p>{t('No nearby places found.')}</p>}
-      <YandexPlaceMap center={[stop.longitude,stop.latitude]} focusedId={focusedId} stops={mapStops} legs={legs}
-        points={places.map(place=>({...place,selected:kind==='attractions'&&selected.includes(place.id)}))}
-        onSelect={id=>{if(kind==='attractions')selectPlace(id);else setFocusedId(id);}} />
-      <ul className="route-place-results">{places.map(place => <li key={place.id}>
-        {kind === 'attractions' && <input type="checkbox" aria-label={place.label} checked={selected.includes(place.id)} disabled={!selected.includes(place.id) && selected.length >= (theme?10:5)}
-          onChange={event => selectPlace(place.id,event.target.checked)} />}
-        <a href={place.url} target="_blank" rel="noopener noreferrer">{place.label} ↗</a>
-        {place.openingHours && <small>{place.openingHours}</small>}
-        {place.source==='wikimapia'&&place.inOsm===false&&<small>{t('Community place')}</small>}
-        {place.visitStatus==='CLOSED'&&<small>{t('Closed according to OSM')}</small>}
-        {place.visitStatus==='UNKNOWN'&&<small>{t('Opening hours not provided')}</small>}
-        {place.description && (place.source==='HOITH'||place.source==='curated'||theme==='buildings'
-          ? <p className="route-place-description">{place.description}</p>
-          : <details><summary>{t('About this place')}</summary><p>{place.description}</p></details>)}
-        {kind === 'attractions' && place.id.startsWith('wikimapia-') && !place.description && <button type="button" disabled={describing===place.id} onClick={async()=>{
-          setDescribing(place.id);const [detailed]=await descriptions([place],new AbortController().signal);setPlaces(items=>items.map(item=>item.id===place.id?detailed:item));setDescribing('');
-        }}>{t('About this place')}</button>}
-        {kind === 'hotels' && <button type="button" className="journey-secondary" onClick={() => onAdd(place)}>{t('Add stop')}</button>}
-      </li>)}</ul>
-      {kind === 'attractions' && selected.length > 0 && <>
-        {!theme&&<details><summary>{t('Plan this day')}</summary><label>{t('Visit date')}<input type="date" value={date} onChange={event => { setDate(event.target.value); setVisits([]); setLegs([]); setSkipped([]); }} /></label>
-          <p>{t('The day plan uses walking routes and published opening hours, with one hour per visit between 09:00 and 21:00. Places without reliable hours remain outside the timed plan. Check holiday hours before travelling.')}</p>
-          <button type="button" className="journey-secondary" disabled={!date} onClick={() => void plan()}>{t('Plan this day')}</button></details>}
-      </>}
-    </fieldset>
-    {visits.length > 0 && <>
-      <ol>{visits.map(visit => <li key={visit.place.id}>{visit.start.slice(11)}–{visit.end.slice(11)} · {visit.place.label}</li>)}</ol>
-      <button type="button" className="journey-secondary" disabled={busy} onClick={() => onNotes(`${date}\n${visits.map(visit => `${visit.start.slice(11)}–${visit.end.slice(11)} ${visit.place.label}`).join('\n')}`)}>{t('Add day plan to notes')}</button>
-    </>}
-    {skipped.length > 0 && <p>{t('Not scheduled: missing opening hours or not enough time.')} {skipped.map(place => place.label).join(', ')}</p>}
-    {busy && <p role="status">{t('Calculating the route…')}</p>}
-    {error && <p role="alert">{error}</p>}
-    {expanded && <RouteWalk ref={walk} value={stop.walkId} onChange={onWalkChange} />}
-    {places.length > 0 && <small>{source==='mystic'||source==='curated'?t('Curated places'):source==='HOITH'?'HOITH':<a href={source==='Wikimapia'?'https://wikimapia.org/':source==='2GIS'?'https://2gis.ru/':'https://www.openstreetmap.org/copyright'} target="_blank" rel="noopener noreferrer">{source}</a>}</small>}
+    <button type="button" className="journey-secondary" disabled={busy} onClick={() => { setError(''); setChannel(crypto.randomUUID()); }}>
+      {t('Private itineraries')} ↗
+    </button>
+    <RouteWalk ref={walk} value={stop.walkId} onChange={onWalkChange} />
+    {sharedLink && <button type="button" className="journey-secondary" disabled={busy} onClick={() => {
+      try {
+        const encoded = sharedLink.replace(/-/g, '+').replace(/_/g, '/');
+        const bytes = Uint8Array.from(atob(encoded), char => char.charCodeAt(0));
+        void saveTransfer(JSON.parse(new TextDecoder().decode(bytes)));
+      } catch {
+        setError(t('Could not prepare the image.'));
+      }
+    }}>{t('Use this walk')}</button>}
+    <RouteHotels stop={stop} onAdd={onAdd} />
+    {channel && <dialog ref={dialog} className="private-walk-overlay" aria-label={t('Private itineraries')}
+      onCancel={event => { event.preventDefault(); if (!active.current) setChannel(''); }}>
+      <header><strong>{t('Private itineraries')}</strong><button type="button" disabled={busy} onClick={() => setChannel('')} aria-label={t('Close')}>×</button></header>
+      <iframe ref={frame} src={url.href} title={t('Private itineraries')} allow="geolocation; clipboard-write" />
+      {busy && <p role="status">{t('Calculating the route…')}</p>}
+      {error && <p role="alert">{error}</p>}
+    </dialog>}
+    {!channel && error && <p role="alert">{error}</p>}
   </details>;
 }

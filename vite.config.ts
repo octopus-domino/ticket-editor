@@ -33,6 +33,10 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
+      '/private-journey': {
+        target: process.env.PRIVATE_JOURNEY_DEV_URL || 'http://127.0.0.1:5174',
+        changeOrigin: true,
+      },
       // Все API-запросы → Spring Boot.
       // Браузер видит один origin (localhost:5173) → cookie работают
       // без SameSite=None и Secure.

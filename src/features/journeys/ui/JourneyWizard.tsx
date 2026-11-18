@@ -1,6 +1,7 @@
 import { useLanguageDraft } from './useLanguageDraft';
+import './travel.css';
 import { t, getLocale } from '@/shared/i18n';
-import { lazy, Suspense, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { CreatedJourney, JourneyDefinition } from '../domain/definitions';
 import { journeyApi, managementUrl, pdfUrl, publicUrl, rememberKey } from '../api/journeys';
@@ -41,6 +42,13 @@ function BasicJourneyWizard({
   previewOnly?: boolean;
 }) {
   const [step, setStep] = useLanguageDraft(`wizard:${definition.slug}:step`, 0);
+  const sharedImportOpened = useRef(false);
+  useEffect(() => {
+    if (!sharedImportOpened.current && definition.kind === 'TOUR' && new URLSearchParams(location.search).has('walk')) {
+      sharedImportOpened.current = true;
+      setStep(0);
+    }
+  }, [definition.kind, setStep]);
   const [title, setTitle] = useLanguageDraft(
     `wizard:${definition.slug}:title`,
     definition.kind === 'PROPOSAL'
@@ -137,7 +145,8 @@ function BasicJourneyWizard({
   }
   return (
     <main
-      className={`journey-main ${definition.kind === 'PROPOSAL' ? 'journey-main-proposal' : ''}`}
+      className={`journey-main ${definition.kind === 'PROPOSAL' ? 'journey-main-proposal' : ''} ${definition.kind === 'TOUR' ? 'journey-main--travel' : ''}`}
+      data-step={step}
     >
       <div className="journey-intro">
         <span className="journey-eyebrow">

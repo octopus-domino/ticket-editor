@@ -11,7 +11,7 @@ const RouteMap = lazy(() => import('./RouteMap').then(module => ({ default: modu
 export interface RouteWalkHandle { save(stops: RouteStop[], legs: PlannedLeg[], startLocal: string, signal?: AbortSignal, photos?: RoutePhoto[], timeline?: TimelineRow[]): Promise<void> }
 
 /** Each city walk has its own immutable snapshot, numbered map and printable PDF pages. */
-export const RouteWalk = forwardRef<RouteWalkHandle, { value?: string; onChange: (id?: string) => void }>(function RouteWalk({ value, onChange }, ref) {
+export const RouteWalk = forwardRef<RouteWalkHandle, { value?: string; onChange: (id?: string, minutes?: number) => void }>(function RouteWalk({ value, onChange }, ref) {
   const [snapshot, setSnapshot] = useState<RouteSnapshot | null>(null);
   const [error, setError] = useState('');
   const [downloading, setDownloading] = useState(false);
@@ -45,7 +45,9 @@ export const RouteWalk = forwardRef<RouteWalkHandle, { value?: string; onChange:
     const saved = { ...draft, mapId: asset.id };
     const result = await journeyRequest<{ id: string }>('/api/journeys/routes', { method: 'POST', body: JSON.stringify(saved), signal });
     signal?.throwIfAborted();
-    loaded.current = result.id; setSnapshot(saved); callbacks.current.onChange(result.id);
+    loaded.current = result.id; setSnapshot(saved);
+    const duration = new Date(timeline.at(-1)!.end).getTime() - new Date(timeline[0].start).getTime();
+    callbacks.current.onChange(result.id, Math.ceil(duration / 60000));
     } catch (reason) { setSnapshot(previous); throw reason; }
   } }));
   const download = async () => {

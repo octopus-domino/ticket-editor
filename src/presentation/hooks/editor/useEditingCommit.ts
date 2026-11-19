@@ -2,6 +2,7 @@ import { t as __tr } from '@/shared/i18n';
 import { useCallback } from 'react';
 import type { DocumentStore } from '@/infra/state/DocumentStore';
 import type { EditingState } from '../../stores/ModalsStore';
+import { hasRichStructure } from '@/lib/richText/content';
 
 export function useEditingCommit(docStore: DocumentStore) {
   return useCallback((editing: EditingState, html: string | undefined, text: string) => {
@@ -15,7 +16,7 @@ export function useEditingCommit(docStore: DocumentStore) {
       switch (editing.field) {
         case 'text': {
           if (el.type !== 'text') return;
-          const hasRichContent = html && (html.includes('<table') || html.includes('<img'));
+          const hasRichContent = hasRichStructure(html);
           const isEmpty = !safeText.trim() && !hasRichContent;
 
           el.text = isEmpty ? __tr("Введите текст") : safeText;

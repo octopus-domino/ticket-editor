@@ -19,6 +19,7 @@ import { TEXT_COLORS, BG_COLORS, FONT_SIZES, FONT_FAMILIES } from './palettes';
 import { normalizeTableWidthsInHtml, serializeRichHtml } from '@/lib/richText/tableSync';
 import type { EditingState } from '../../stores/ModalsStore';
 import type { TextElement } from '@/shared/types';
+import { hasRichStructure } from '@/lib/richText/content';
 
 interface Props {
   editing: EditingState;
@@ -115,7 +116,7 @@ export const RichTextInlineEditor: React.FC<Props> = ({
     if (html.includes('<table') && /<\/table>\s*$/.test(html)) html += '<p><br></p>';
 
     const text = editor.getText();
-    const hasRichContent = html.includes('<table') || html.includes('<img');
+    const hasRichContent = hasRichStructure(html);
     const isEmpty = !text.trim() && !hasRichContent;
 
     onCommit(isEmpty ? '' : html, isEmpty ? '' : text);

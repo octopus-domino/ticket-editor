@@ -3,6 +3,7 @@ import { TEXT_PLACEHOLDER } from '@/shared/constants';
 import { isTranslation } from '@/shared/i18n/core';
 import { layoutRuns } from '@/lib/richText/layout';
 import { getByPath } from '@/lib/path';
+import { hasRichStructure } from './richText/content';
 
 export { getByPath };
 
@@ -28,6 +29,7 @@ function isEmptyText(text: string | undefined | null): boolean {
 }
 
 function isEmptyHtml(html: string | undefined | null): boolean {
+  if (hasRichStructure(html)) return false;
   if (!html) return true;
   const t = html.replace(/<[^>]+>/g, '').trim();
   return t === '' || isTranslation(TEXT_PLACEHOLDER, t);

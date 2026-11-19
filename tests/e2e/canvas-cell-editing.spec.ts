@@ -3,6 +3,7 @@ import { test, expect, type Page } from '@playwright/test';
 async function openEditor(page: Page, rich = false) {
   await page.addInitScript((rich) => {
     localStorage.setItem('codoc:language', 'en');
+    if (localStorage.getItem('ticket-editor:offline-doc')) return;
     localStorage.setItem('ticket-editor:offline-doc', JSON.stringify({ version: '2.0', activeId: 'S1', data: [], slides: [{
       id: 'S1', name: 'Cells', width: 600, height: 700, format: 'custom', orientation: 'portrait',
       padding: { top: 0, left: 0, right: 0, bottom: 0 }, background: '#fff', elements: [{
@@ -57,6 +58,44 @@ async function expectCellBounds(input: ReturnType<Page['locator']>, cell: Awaite
   const bounds = (await input.boundingBox())!;
   for (const key of ['x', 'y', 'width', 'height'] as const) expect(bounds[key]).toBeCloseTo(cell[key], 0);
 }
+
+test('an inserted empty rich table stays visible, editable and saved after reload', async ({ page }) => {
+  test.setTimeout(45000);
+  await page.setViewportSize({ width: 1366, height: 900 });
+  await openEditor(page, true);
+  const stage = page.locator('.konvajs-content');
+  await stage.dblclick({ position: { x: 90, y: 380 } });
+  const editor = page.locator('.rt-editor-content .ProseMirror');
+  await expect(editor).toBeVisible();
+  await editor.click();
+  await page.keyboard.press('Control+A');
+  await page.keyboard.press('Backspace');
+  await page.locator('.rt-toolbar').getByRole('button', { name: /⊞/ }).click();
+  await page.locator('.rt-floating-popover').getByRole('button', { name: '2 × 3', exact: true }).click();
+  await expect(editor.locator('table td, table th')).toHaveCount(6);
+  await page.keyboard.press('Escape');
+  await expect(editor).toHaveCount(0);
+  await expect.poll(() => page.evaluate(async () => {
+    const path = '/node_modules/.vite/deps/konva.js';
+    const { default: Konva } = await import(path);
+    return Konva.stages.find((stage: any) => stage.container().isConnected)?.find('.rich-table-cell').length;
+  })).toBe(6);
+  await expect.poll(() => page.evaluate(() => {
+    const saved = JSON.parse(localStorage.getItem('ticket-editor:offline-doc')!);
+    const html = saved.slides[0].elements.find((element: any) => element.id === 'rich').html;
+    const document = new DOMParser().parseFromString(html, 'text/html');
+    return document.querySelectorAll('th, td').length === 6 && !document.body.textContent?.trim();
+  })).toBe(true);
+  await page.reload();
+  await expect(stage).toBeVisible();
+  await page.getByRole('button', { name: '100%', exact: true }).click();
+  await expect(stage).toHaveCSS('width', '600px');
+  const cell = await paintedCell(page, 'rich', 0, true);
+  expect(cell.width).toBeGreaterThan(100);
+  await page.mouse.dblclick(cell.x + cell.width / 2, cell.y + cell.height / 2);
+  await expect(page.getByRole('textbox', { name: 'Rich table cell 1, 1', exact: true })).toBeFocused();
+  await page.screenshot({ path: 'test-results/empty-rich-table.png' });
+});
 
 test('rich text table opens just the clicked cell after a paragraph, with merged cells, zoom and scroll', async ({ page }) => {
   await page.setViewportSize({ width: 1366, height: 768 });

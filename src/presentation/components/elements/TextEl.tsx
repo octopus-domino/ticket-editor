@@ -15,6 +15,7 @@ import { t } from '@/shared/i18n';
 import { drawArcText, canvasFont } from '@/lib/stamps/render';
 import { useActiveModelValues } from '@/features/data-models/state/useActiveModelValues';
 import { resolveWithValues } from '@/lib/modelBinding';
+import { hasRichStructure } from '@/lib/richText/content';
 
 const HIT_RECT_NAME = 'hit-rect';
 
@@ -39,7 +40,7 @@ export const TextEl: React.FC<Props> = ({
 
   const rawText = el.text ?? '';
   const rawHtml = el.html ?? '';
-  const htmlEmpty = !rawHtml || rawHtml.replace(/<[^>]+>/g, '').trim() === '';
+  const htmlEmpty = !hasRichStructure(rawHtml) && (!rawHtml || rawHtml.replace(/<[^>]+>/g, '').trim() === '');
   const isPlaceholder =
     htmlEmpty && (rawText.trim() === '' || isTranslation(TEXT_PLACEHOLDER, rawText));
 

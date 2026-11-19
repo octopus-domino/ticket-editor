@@ -4,6 +4,7 @@ import type { Editor } from '@tiptap/react';
 import { TableSizePicker } from './TableSizePicker';
 import { RichTextPopover } from './RichTextPopover';
 import { CellFillPopover, CellBorderPopover, CellPadPopover } from './TableCellPopovers';
+import { initializeTableWidths } from './tableInsertion';
 
 type PopKind = null | 'size' | 'fill' | 'border' | 'pad';
 
@@ -38,6 +39,7 @@ export const TableOperationsToolbar: React.FC<{ editor: Editor }> = ({ editor })
 
   const handleInsertTable = (r: number, c: number) => {
     editor.chain().focus().insertTable({ rows: r, cols: c, withHeaderRow: true }).run();
+    initializeTableWidths(editor, c);
 
     const { doc } = editor.state;
     const lastNode = doc.lastChild;

@@ -2,14 +2,15 @@
    presentation/hooks/useAutoFitZoom.ts
    ============================================================ */
 
-import { useEffect } from 'react';
+import { useCallback, useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
 import { COMPACT_EDITOR_MAX_WIDTH } from '@/shared/mobile/panels';
 
 interface Args {
   wrapRef: React.RefObject<HTMLElement>;
   slideWidth: number;
   slideHeight: number;
-  setZoom: (z: number) => void;
+  setZoom: Dispatch<SetStateAction<number>>;
+  pageKey?: string;
   padding?: number;
   topReserve?: number;
   minZoom?: number;
@@ -17,14 +18,21 @@ interface Args {
 }
 
 export function useAutoFitZoom({
-  wrapRef, slideWidth, slideHeight, setZoom,
+  wrapRef, slideWidth, slideHeight, setZoom, pageKey,
   padding = 16, topReserve = 48, minZoom = 0.2, maxZoom = 2,
 }: Args) {
+  const manual = useRef(false);
+  useEffect(() => { manual.current = false; }, [pageKey]);
+  const changeZoom = useCallback((value: SetStateAction<number>) => {
+    manual.current = true;
+    setZoom(value);
+  }, [setZoom]);
   useEffect(() => {
     const wrap = wrapRef.current;
     if (!wrap || !slideWidth || !slideHeight) return;
 
     const fit = () => {
+      if (manual.current) return;
       // Отнимаем паддинги и резерв под ZoomBar
       const availableW = Math.max(100, wrap.clientWidth - padding * 2);
       const availableH = Math.max(100, wrap.clientHeight - padding * 2 - topReserve);
@@ -53,5 +61,6 @@ export function useAutoFitZoom({
       window.removeEventListener('resize', onResize);
       observer.disconnect();
     };
-  }, [wrapRef, slideWidth, slideHeight, setZoom, padding, topReserve, minZoom, maxZoom]);
+  }, [wrapRef, slideWidth, slideHeight, setZoom, pageKey, padding, topReserve, minZoom, maxZoom]);
+  return changeZoom;
 }

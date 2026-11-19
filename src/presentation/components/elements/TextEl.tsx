@@ -11,6 +11,7 @@ import {
 import { RichTable } from './RichTable';
 import { TEXT_PLACEHOLDER } from '@/shared/constants';
 import { isTranslation } from '@/shared/i18n/core';
+import { t } from '@/shared/i18n';
 import { drawArcText, canvasFont } from '@/lib/stamps/render';
 import { useActiveModelValues } from '@/features/data-models/state/useActiveModelValues';
 import { resolveWithValues } from '@/lib/modelBinding';
@@ -46,8 +47,8 @@ export const TextEl: React.FC<Props> = ({
   const isArc = el.textMode === 'arc';
 
   const displayText = useMemo(
-    () => resolveWithValues(rawText, modelValues),
-    [rawText, modelValues],
+    () => isPlaceholder ? t(TEXT_PLACEHOLDER) : resolveWithValues(rawText, modelValues),
+    [rawText, modelValues, isPlaceholder],
   );
   const displayHtml = useMemo(
     () => (htmlEmpty ? undefined : resolveWithValues(rawHtml, modelValues)),

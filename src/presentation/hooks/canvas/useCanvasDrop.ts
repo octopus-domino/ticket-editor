@@ -24,13 +24,15 @@ import { getByPath, appendPlaceholderPatch } from '@/lib/modelBinding';
 import type { CanvasElement } from '@/shared/types';
 import { closeMobilePanel } from '@/shared/mobile/panels';
 import { finishToolDrag } from './toolDrag';
+import type { SelectionStore } from '../../stores/SelectionStore';
 
 export function useCanvasDrop(params: {
   docStore: DocumentStore;
   stageRef: RefObject<Konva.Stage>;
   zoom: number;
+  selStore: SelectionStore;
 }) {
-  const { docStore, stageRef, zoom } = params;
+  const { docStore, stageRef, zoom, selStore } = params;
 
   const onDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -273,10 +275,11 @@ export function useCanvasDrop(params: {
             }
             s.elements.push(el);
           }, 'drop-new-element');
+          selStore.setIds([el.id]);
         }
       }
     },
-    [docStore, stageRef, zoom],
+    [docStore, stageRef, zoom, selStore],
   );
 
   return { onDragOver, onDrop };

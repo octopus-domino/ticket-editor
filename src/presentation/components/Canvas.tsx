@@ -77,7 +77,7 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
   const rubber = useCanvasRubberBand({ selStore });
   const fill = useCanvasFillMode({ docStore, modalsStore, slide, stageRef });
   const draft = useCanvasConnectorDraft({ docStore, slide });
-  const drop = useCanvasDrop({ docStore, stageRef, zoom });
+  const drop = useCanvasDrop({ docStore, stageRef, zoom, selStore });
   const hover = useCanvasHoverAnchor({ slide });
   const dbl = useCanvasDblClick({ modalsStore, zoom, stageRef });
 

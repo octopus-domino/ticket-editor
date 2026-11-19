@@ -160,3 +160,48 @@ test('tools can be dragged from both compact toolbar and library drawer', async 
   await stage.dblclick({ position: { x: 500, y: 420 } });
   await expect(page.locator('textarea[aria-label^="Table cell"]')).toBeVisible();
 });
+
+test('manual zoom from buttons and Ctrl-wheel survives viewport resize without a canvas click', async ({ page }) => {
+  await page.setViewportSize({ width: 1366, height: 768 });
+  await openEditor(page);
+  const stage = page.locator('.konvajs-content');
+  await page.locator('.zoom-bar').getByRole('button', { name: '+', exact: true }).click();
+  await expect(stage).toHaveCSS('width', '660px');
+  await page.setViewportSize({ width: 1300, height: 768 });
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  await expect(stage).toHaveCSS('width', '660px');
+  const area = (await page.locator('.canvas-area').boundingBox())!;
+  await page.mouse.move(area.x + 300, area.y + 160);
+  await page.keyboard.down('Control');
+  await page.mouse.wheel(0, -100);
+  await page.keyboard.up('Control');
+  await expect(stage).toHaveCSS('width', '690px');
+  await page.setViewportSize({ width: 1366, height: 768 });
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  await expect(stage).toHaveCSS('width', '690px');
+});
+
+test('dropped simple and rich text remain visible and selected when a data set is active', async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 900 });
+  await openEditor(page);
+  await page.evaluate(async () => {
+    const path = '/src/features/data-models/state/ModelStore.ts';
+    const { modelStore } = await import(path);
+    modelStore.setState((state: any) => ({ ...state, models: [{ id: 'data', name: 'Data', schemaId: 'S', values: {} }], selectedId: 'data' }));
+  });
+  await page.getByRole('button', { name: 'Tool library', exact: true }).click();
+  for (const label of ['Text', 'Rich']) {
+    const tile = page.locator('.left-panel .tool-tile').filter({ hasText: label }).first();
+    await tile.dragTo(page.locator('.konvajs-content'), { targetPosition: { x: 240, y: label === 'Text' ? 100 : 400 } });
+    const result = await page.evaluate(async () => {
+      const path = '/node_modules/.vite/deps/konva.js';
+      const { default: Konva } = await import(path);
+      const stage = Konva.stages.find((stage: any) => stage.container().isConnected);
+      const transformer = stage.findOne('Transformer');
+      const selected = transformer.nodes()[0];
+      return { selected: selected?.id(), texts: selected?.find('Text').map((node: any) => node.text()) ?? [] };
+    });
+    expect(result.selected).toBeTruthy();
+    expect(result.texts.join('')).toContain('Enter text');
+  }
+});

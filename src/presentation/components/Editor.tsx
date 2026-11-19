@@ -177,8 +177,9 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave, documentId, saveCon
 
   const activeSlide = slides.find((s) => s.id === activeId);
 
-  useAutoFitZoom({
+  const changeZoom = useAutoFitZoom({
     wrapRef,
+    pageKey: `${documentId}:${activeId}`,
     slideWidth: activeSlide?.width ?? 0,
     slideHeight: activeSlide?.height ?? 0,
     setZoom,
@@ -418,14 +419,14 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave, documentId, saveCon
         <main className="canvas-area" ref={wrapRef}>
           <ZoomBar
             zoom={zoom}
-            onChange={setZoom}
+            onChange={changeZoom}
             selectedCount={selectedIds.length}
             fillMode={modalsStore.getState().fillMode}
             dataHighlight={modalsStore.getState().dataHighlight}
             onToggleDataHighlight={() => modalsStore.toggleDataHighlight()}
           />
           <ErrorBoundary fallback={<div style={{ padding: 20 }}>{__tr("Ошибка в холсте")}</div>}>
-            <Canvas slide={activeSlide} zoom={zoom} onZoomChange={setZoom} wrapRef={wrapRef} />
+            <Canvas slide={activeSlide} zoom={zoom} onZoomChange={changeZoom} wrapRef={wrapRef} />
           </ErrorBoundary>
 
           {simpleTextEditing && editing && (

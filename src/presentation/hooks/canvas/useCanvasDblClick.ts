@@ -1,7 +1,10 @@
 ﻿import { useCallback } from 'react';
 import type { ModalsStore } from '../../stores/ModalsStore';
+import type { RefObject } from 'react';
+import type Konva from 'konva';
 import type { CanvasElement } from '@/shared/types';
 import { findTableCellAt } from '@/domain/slide/hitTest';
+import { findCanvasCellAt } from './useCanvasCellFrame';
 
 export interface DblClickViewport {
   viewportLeft: number;
@@ -13,8 +16,9 @@ export interface DblClickViewport {
 export function useCanvasDblClick(params: {
   modalsStore: ModalsStore;
   zoom: number;
+  stageRef: RefObject<Konva.Stage>;
 }) {
-  const { modalsStore, zoom } = params;
+  const { modalsStore, zoom, stageRef } = params;
 
   const handle = useCallback((el: CanvasElement, vp: DblClickViewport) => {
     const screenX = vp.viewportLeft + el.x * zoom;
@@ -25,10 +29,13 @@ export function useCanvasDblClick(params: {
     /* ---------- text: rich, если не отключён явно ---------- */
     if (el.type === 'text') {
       const isRich = el.richText !== false;
+      const point = { x: vp.clientX - vp.viewportLeft, y: vp.clientY - vp.viewportTop };
+      const cell = findCanvasCellAt(stageRef.current, el.id, point, 'rich-table-cell');
       modalsStore.openEditor({
         id: el.id,
         field: 'text',
-        kind: 'text',
+        kind: cell ? 'richTableCell' : 'text',
+        richTableIndex: cell?.getAttr('tableIndex'), richCellIndex: cell?.getAttr('cellIndex'),
         value: el.text ?? '',
         html: el.html,
         x: screenX, y: screenY,
@@ -48,7 +55,7 @@ export function useCanvasDblClick(params: {
           left: el.padding.left * zoom,
         },
         background: el.background,
-        isRich,
+        isRich: isRich && !cell,
       });
       return;
     }
@@ -111,7 +118,10 @@ export function useCanvasDblClick(params: {
     if (el.type === 'table') {
       const worldX = (vp.clientX - vp.viewportLeft) / zoom;
       const worldY = (vp.clientY - vp.viewportTop) / zoom;
-      const cell = findTableCellAt(el, worldX, worldY);
+      const painted = findCanvasCellAt(stageRef.current, el.id,
+        { x: vp.clientX - vp.viewportLeft, y: vp.clientY - vp.viewportTop }, 'table-cell');
+      const cell = painted ? { row: painted.getAttr('row') as number, col: painted.getAttr('col') as number }
+        : findTableCellAt(el, worldX, worldY);
       if (!cell) return;
       const cellW = (el.width * zoom) / el.cols;
       const cellH = (el.height * zoom) / el.rows;
@@ -139,7 +149,7 @@ export function useCanvasDblClick(params: {
     if (el.type === 'diagram') {
       modalsStore.openDiagramEditor(el.id);
     }
-  }, [modalsStore, zoom]);
+  }, [modalsStore, zoom, stageRef]);
 
   return { handle };
 }

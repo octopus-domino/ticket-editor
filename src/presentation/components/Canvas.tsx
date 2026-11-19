@@ -28,6 +28,7 @@ import type { ElementSelectEvent } from './elements/types';
 import { useCanvasTransform } from '../hooks/canvas/useCanvasTransform';
 import { canvasMode } from '@/shared/mobile/canvasMode';
 import { TableCellEditor } from './TableCellEditor';
+import { RichTableCellEditor } from './RichTableCellEditor';
 
 interface Props {
   slide: Slide;
@@ -78,7 +79,7 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
   const draft = useCanvasConnectorDraft({ docStore, slide });
   const drop = useCanvasDrop({ docStore, stageRef, zoom });
   const hover = useCanvasHoverAnchor({ slide });
-  const dbl = useCanvasDblClick({ modalsStore, zoom });
+  const dbl = useCanvasDblClick({ modalsStore, zoom, stageRef });
 
   const isDragActive = drag.isActive;
   useLayoutEffect(() => {
@@ -419,7 +420,7 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
       </Stage>
 
       {editing?.kind === 'table' && slide.elements.filter(el => el.id === editing.id && el.type === 'table').map(el =>
-        el.type === 'table' && <TableCellEditor key={el.id} table={el} zoom={zoom}
+        el.type === 'table' && <TableCellEditor key={el.id} table={el} zoom={zoom} stageRef={stageRef}
           row={editing.tableRow ?? 0} col={editing.tableCol ?? 0}
           onClose={() => modalsStore.closeEditor()}
           onMove={(tableRow, tableCol) => modalsStore.setEditing({ ...editing, tableRow, tableCol })}
@@ -440,6 +441,18 @@ export const Canvas: React.FC<Props> = ({ slide, zoom, onZoomChange, wrapRef }) 
           }}
         />
       )}
+      {editing?.kind === 'richTableCell' && slide.elements.filter(el => el.id === editing.id).map(el =>
+        el.type === 'text' && <RichTableCellEditor key={`${el.id}:${editing.richTableIndex}:${editing.richCellIndex}`}
+          element={el} tableIndex={editing.richTableIndex ?? 0} cellIndex={editing.richCellIndex ?? 0} stageRef={stageRef}
+          onClose={() => modalsStore.closeEditor()}
+          onMove={richCellIndex => modalsStore.setEditing({ ...editing, richCellIndex })}
+          onUpdate={html => docStore.commit(draft => {
+            const target = draft.slides.find(s => s.id === draft.activeId)?.elements.find(item => item.id === el.id);
+            if (target?.type === 'text') {
+              target.html = html; target.richText = true;
+              target.text = new DOMParser().parseFromString(html, 'text/html').body.textContent ?? '';
+            }
+          }, `rich-cell-${el.id}-${editing.richTableIndex}-${editing.richCellIndex}`)} />)}
     </div>
   );
 };

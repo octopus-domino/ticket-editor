@@ -169,6 +169,7 @@ export const TextEl: React.FC<Props> = ({
   const bg = el.background && el.background !== 'transparent' ? el.background : 'transparent';
   const hitFill = bg === 'transparent' ? 'rgba(0,0,0,0.001)' : bg;
   let cursorY = offsetYContent;
+  let tableIndex = 0;
 
   return (
     <Group ref={groupRef} {...baseProps}>
@@ -224,6 +225,7 @@ export const TextEl: React.FC<Props> = ({
         return (
           <RichTable
             key={`b-${bi}`}
+            tableIndex={tableIndex++}
             data={item.data}
             x={padding.left}
             y={blockTop}

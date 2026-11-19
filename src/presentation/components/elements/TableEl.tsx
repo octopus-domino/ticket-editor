@@ -31,6 +31,7 @@ export const TableEl: React.FC<Props> = ({
       cells.push(
         <Rect
           key={`r-${r}-${c}`}
+          name="table-cell" row={r} col={c}
           x={xs[c]}
           y={ys[r]}
           width={cellW}

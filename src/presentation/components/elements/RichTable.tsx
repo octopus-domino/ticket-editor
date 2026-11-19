@@ -20,11 +20,12 @@ interface Props {
   fallbackFill: string;
   lineHeightCoef?: number;
   depth?: number;
+  tableIndex?: number;
 }
 
 export const RichTable: React.FC<Props> = ({
   data, x, y, width, fontFamily, fallbackFontSize, fallbackFill,
-  lineHeightCoef = 1.5, depth = 0,
+  lineHeightCoef = 1.5, depth = 0, tableIndex,
 }) => {
   const layout = useMemo(
     () => computeTableLayout(data, width, fallbackFontSize, lineHeightCoef),
@@ -40,6 +41,7 @@ export const RichTable: React.FC<Props> = ({
         <CellBackground
           key={`bg-${i}`}
           cell={cell}
+          tableIndex={tableIndex} cellIndex={i}
           colOffsets={colOffsets}
           rowOffsets={rowOffsets}
         />
@@ -70,7 +72,9 @@ const CellBackground: React.FC<{
   cell: RichTableCell;
   colOffsets: number[];
   rowOffsets: number[];
-}> = ({ cell, colOffsets, rowOffsets }) => {
+  tableIndex?: number;
+  cellIndex: number;
+}> = ({ cell, colOffsets, rowOffsets, tableIndex, cellIndex }) => {
   const cx = colOffsets[cell.colIndex];
   const cy = rowOffsets[cell.rowIndex];
   const cw = colOffsets[Math.min(cell.colIndex + cell.colspan, colOffsets.length - 1)] - cx;
@@ -81,6 +85,9 @@ const CellBackground: React.FC<{
 
   return (
     <>
+      {tableIndex !== undefined && <Rect name="rich-table-cell" tableIndex={tableIndex} cellIndex={cellIndex}
+        cellData={cell}
+        x={cx} y={cy} width={cw} height={ch} listening={false} />}
       {fill !== 'none' && (
         <Rect x={cx} y={cy} width={cw} height={ch} fill={fill} listening={false} />
       )}

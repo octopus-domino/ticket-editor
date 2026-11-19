@@ -1,12 +1,13 @@
 ﻿import { SimpleStore } from '@/shared/store/store';
 import type { CanvasElement, TextAlign, TextVerticalAlign, Padding } from '@/shared/types';
 
-export type EditingKind = 'text' | 'shape' | 'footer' | 'stamp' | 'table' | 'placeholder';
+export type EditingKind = 'text' | 'shape' | 'footer' | 'stamp' | 'table' | 'richTableCell' | 'placeholder';
 export type EditingField = 'text' | 'footerText' | 'shapeText' | 'tableCell' | 'topText' | 'centerText' | 'bottomText';
 
 export interface EditingState {
   id: string; field: EditingField; kind: EditingKind; zone?: 'top' | 'center' | 'bottom';
   tableRow?: number; tableCol?: number; value: string; html?: string;
+  richTableIndex?: number; richCellIndex?: number;
   x: number; y: number; width: number; height: number;
   fontSize: number; fontFamily: string; fontStyle: string; textDecoration: string;
   fill: string; align: TextAlign; verticalAlign: TextVerticalAlign; lineHeight: number;

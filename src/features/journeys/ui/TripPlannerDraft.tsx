@@ -293,11 +293,19 @@ export default function TripPlannerDraft() {
         onChange={event => edit({ title: event.target.value })} /></label>
       <TripSummaryBar rows={Object.entries(draft.days).map(([number, details]) => ({
         id: number, place: details.city?.trim() || `${t('Trip day')} ${number}`, lodging: details.lodging,
-        onSelect: () => selectDay(Number(number)),
+        onSelect: () => {
+          selectDay(Number(number));
+          if (details.cityPoint) setShowingCities(true);
+        },
+        onFindHotel: details.city?.trim() ? () => {
+          selectDay(Number(number));
+          setLodgingToEdit(Number(number));
+        } : undefined,
       }))} />
       {hasCityPins && duration >= 2 && lastPlannedDay <= duration && <button type="button"
         aria-expanded={showingCities} onClick={() => setShowingCities(!showingCities)}>{t('Trip map')}</button>}
       {cityMap && <TripCityMap cities={cityMap.cities} legs={cityMap.legs} accommodations={cityMap.accommodations}
+        focusStopId={cityMap.days.find(item => dayDate.toISOString().startsWith(item.date))?.cityId}
         onChangeLodging={id => {
           const number = Number(id.replace('lodging-', ''));
           selectDay(number);

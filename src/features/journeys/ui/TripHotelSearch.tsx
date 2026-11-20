@@ -11,8 +11,9 @@ type Hotel = Pick<TripLodging, 'name' | 'latitude' | 'longitude' | 'cost'> & {
 type Result = { available: boolean; provider?: TripLodging['provider']; hotels: Hotel[]; catalogOnly?: boolean };
 const ignoreMapHandle = () => undefined;
 
-export function TripHotelSearch({ city, cityPoint, checkIn, checkOut, onSelect }: {
-  city: string; cityPoint?: CityPoint; checkIn: string; checkOut: string; onSelect: (lodging: TripLodging) => void;
+export function TripHotelSearch({ city, cityPoint, checkIn, checkOut, focus, onFocusHandled, onSelect }: {
+  city: string; cityPoint?: CityPoint; checkIn: string; checkOut: string; focus?: boolean;
+  onFocusHandled?: () => void; onSelect: (lodging: TripLodging) => void;
 }) {
   const [guests, setGuests] = useState(2);
   const [result, setResult] = useState<Result>();
@@ -31,6 +32,18 @@ export function TripHotelSearch({ city, cityPoint, checkIn, checkOut, onSelect }
       && geographicDistance(cityPoint, { latitude: hotel.latitude, longitude: hotel.longitude }) <= maxKm * 1000)));
   const pins = (visible ?? []).flatMap(hotel => Number.isFinite(hotel.latitude) && Number.isFinite(hotel.longitude)
     ? [{ id: hotel.id, label: hotel.name, longitude: hotel.longitude!, latitude: hotel.latitude!, zone: 'UTC', stayMinutes: 0 }] : []);
+
+  const panel = useRef<HTMLDetailsElement>(null);
+  const queryButton = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!focus || !panel.current) return;
+    panel.current.open = true;
+    const frame = requestAnimationFrame(() => {
+      queryButton.current?.focus();
+      onFocusHandled?.();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [focus, onFocusHandled]);
 
   async function search() {
     if (request.current) return;
@@ -52,7 +65,7 @@ export function TripHotelSearch({ city, cityPoint, checkIn, checkOut, onSelect }
       }
     }
   }
-  return <details>
+  return <details ref={panel}>
     <summary>{t('Find hotels')}</summary>
     <label>{t('Guests')} <input type="number" min={1} max={12} value={guests || ''} onChange={event => {
       request.current?.abort();
@@ -61,7 +74,7 @@ export function TripHotelSearch({ city, cityPoint, checkIn, checkOut, onSelect }
       setResult(undefined);
       setGuests(event.target.valueAsNumber || 0);
     }} /></label>
-    <button type="button" disabled={city.trim().length < 2 || !checkIn || checkIn >= checkOut
+    <button ref={queryButton} type="button" disabled={city.trim().length < 2 || !checkIn || checkIn >= checkOut
       || guests < 1 || guests > 12 || !Number.isInteger(guests) || busy} onClick={() => void search()}>{t('Search')}</button>
     {busy && <p role="status">{t('Loading…')}</p>}
     {result && !result.available && <p role="status">{t('Hotel search is unavailable.')}</p>}

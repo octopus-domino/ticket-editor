@@ -21,9 +21,11 @@ export function TripLodgingEditor({ date, city, cityPoint, lodging, focus, onFoc
   useEffect(() => {
     if (!focus || !details.current) return;
     details.current.open = true;
-    name.current?.focus();
-    onFocusHandled?.();
-  }, [focus, onFocusHandled]);
+    if (!city?.trim()) {
+      name.current?.focus();
+      onFocusHandled?.();
+    }
+  }, [city, focus, onFocusHandled]);
   const point = values.latitude != null && values.longitude != null
     ? { latitude: values.latitude, longitude: values.longitude } : undefined;
   function change(field: 'name' | 'address' | 'checkIn' | 'checkOut', value: string) {
@@ -36,7 +38,8 @@ export function TripLodgingEditor({ date, city, cityPoint, lodging, focus, onFoc
     <label>{t('Check-in date')} <input type="date" value={values.checkIn} onChange={event => change('checkIn', event.target.value)} /></label>
     <label>{t('Check-out date')} <input type="date" value={values.checkOut} onChange={event => change('checkOut', event.target.value)} /></label>
     {city?.trim() && <TripHotelSearch key={JSON.stringify([city, values.checkIn, values.checkOut])} city={city} cityPoint={cityPoint}
-      checkIn={values.checkIn} checkOut={values.checkOut} onSelect={onSave} />}
+      checkIn={values.checkIn} checkOut={values.checkOut} focus={focus}
+      onFocusHandled={onFocusHandled} onSelect={onSave} />}
     <label>{t('Lodging cost')} <input type="number" min="0" step="0.01" value={values.cost?.amount ?? ''} onChange={event => {
       const amount = event.target.valueAsNumber;
       setValues(old => ({ ...old, cost: Number.isFinite(amount) && amount >= 0 ? { amount, currency } : undefined }));

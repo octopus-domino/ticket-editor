@@ -188,3 +188,17 @@ test('keeps plans per day and preserves an older draft on day one', () => {
   fireEvent.click(screen.getByRole('button', { name: t('Next day') }));
   expect(screen.getByDisplayValue('Moscow')).toBeTruthy();
 });
+
+test('opens the existing hotel search from the day summary', () => {
+  localStorage.setItem('codoc/trip-planner/draft/v2', JSON.stringify({
+    id: 'trip-hotel', version: 2, startDate: '2026-12-31', endDate: '2027-01-01',
+    days: { 2: { city: 'Tver', stops: [] } },
+  }));
+  render(<TripPlannerDraft />);
+  const overview = screen.getByRole('region', { name: t('Trip overview') });
+  fireEvent.click(within(overview).getByRole('button', { name: t('Find hotels') }));
+  expect(screen.getByLabelText(t('City'))).toHaveValue('Tver');
+  const search = screen.getByLabelText(t('Guests')).closest('details')!;
+  expect(search.open).toBe(true);
+  expect(search.parentElement?.closest('details')?.open).toBe(true);
+});

@@ -288,3 +288,18 @@ test('keeps several cities in one day, repeats the city on another day and deriv
   fireEvent.click(within(days[0] as HTMLElement).getByRole('button', { name: t('Move day later') }));
   expect(within(days[1] as HTMLElement).getByRole('button', { name: 'Tver' })).toBeInTheDocument();
 });
+
+test('autosaves a typed title and flushes the last edit before closing the page', async () => {
+  vi.useFakeTimers();
+  try {
+    render(<MemoryRouter><TripPlannerDraft /></MemoryRouter>);
+    fireEvent.change(screen.getByLabelText(t('Trip name')), { target: { value: 'Autosaved trip' } });
+    await act(async () => { vi.advanceTimersByTime(451); });
+    expect(JSON.parse(localStorage.getItem('codoc/trip-planner/draft/v2')!).title).toBe('Autosaved trip');
+    fireEvent.change(screen.getByLabelText(t('Trip name')), { target: { value: 'Before leaving' } });
+    fireEvent(window, new Event('pagehide'));
+    expect(JSON.parse(localStorage.getItem('codoc/trip-planner/draft/v2')!).title).toBe('Before leaving');
+  } finally {
+    vi.useRealTimers();
+  }
+});

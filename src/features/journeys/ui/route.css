@@ -453,3 +453,34 @@
 .trip-planner .trip-planner-day > fieldset legend { font-weight: 700; color: #203c32; }
 .trip-planner .trip-planner-day .journey-primary { background: #26674e; border-color: #26674e; }
 .trip-saved-transfers { margin-block: .6rem 1.2rem; }
+
+.trip-workspace-tabs { display: none; }
+.trip-planner-grid {
+  grid-template-areas: 'day map summary';
+  grid-template-columns: minmax(15rem, 1.05fr) minmax(17rem, 1.45fr) minmax(13rem, .85fr);
+}
+.trip-planner-overview { grid-area: map; }
+.trip-planner-day { grid-area: day; }
+.trip-planner-summary { grid-area: summary; min-width: 0; }
+.trip-planner-summary .trip-day-timeline-item > ol { flex-direction: column; }
+.trip-planner-summary .trip-day-timeline-item > ol > li:not(.trip-summary-connection) { flex: auto; }
+.trip-planner-grid[data-hotel-search='true'] {
+  grid-template-areas: 'map summary';
+  grid-template-columns: minmax(0, 3fr) minmax(13rem, 1fr);
+}
+@media (max-width: 1023px) {
+  .trip-planner-grid, .trip-planner-grid[data-hotel-search='true'] {
+    grid-template-areas: 'day map' 'summary summary';
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  }
+  .trip-planner-grid[data-hotel-search='true'] { grid-template-areas: 'map map' 'summary summary'; }
+}
+@media (max-width: 767px) {
+  .trip-workspace-tabs { display: flex; gap: .35rem; }
+  .trip-workspace-tabs > button { flex: 1; min-height: 44px; }
+  .trip-workspace-tabs > button[aria-pressed='true'] { background: #26674e; color: white; }
+  .trip-planner-grid, .trip-planner-grid[data-hotel-search='true'] { display: block; }
+  .trip-planner-grid[data-mobile-tab='plan'] > :not(.trip-planner-day),
+  .trip-planner-grid[data-mobile-tab='map'] > :not(.trip-planner-overview),
+  .trip-planner-grid[data-mobile-tab='summary'] > :not(.trip-planner-summary) { display: none; }
+}

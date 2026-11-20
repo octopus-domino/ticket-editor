@@ -9,7 +9,7 @@ for(const width of [1440,390])test(`authoring surfaces use available width at ${
     return route.fulfill({status:401,json:{error:'Unauthorized'}});
   });
   for(const kind of ['invite','certificates','menu','tours','poetry','albums']){
-    await page.goto(`/start/${kind}`);
+    await page.goto(`/start/${kind}${kind === 'tours' ? '?legacy=1' : ''}`);
     const main=page.locator('main').first();await expect(main).toBeVisible();
     const box=await main.boundingBox();
     if(width>=1024)expect(box!.width,kind).toBeGreaterThan(width*.85);

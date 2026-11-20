@@ -23,6 +23,7 @@ export interface TripVisit {
 }
 
 export interface TripDayDraft extends TripVisit {
+  dayId?: string;
   visits?: (TripVisit & { id: string })[];
 }
 
@@ -178,12 +179,16 @@ export function tripPayload(draft: LocalTripDraft, title: string, connections: P
   };
 }
 
+export class TripAccountSaveError extends Error {
+  constructor(readonly status: number) { super(String(status)); }
+}
+
 export async function saveTripToAccount(draft: LocalTripDraft, title: string, connections?: PlannedConnection[]) {
   const response = await authFetch(`/api/trips/${encodeURIComponent(draft.id)}`, {
     method: 'PUT', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(tripPayload(draft, title, connections)),
   });
-  if (!response.ok) throw new Error(String(response.status));
+  if (!response.ok) throw new TripAccountSaveError(response.status);
 }
 
 export type AccountTrip = ReturnType<typeof tripPayload>;

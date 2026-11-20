@@ -11,13 +11,14 @@ const emptyLines: RouteMapLeg[] = [];
 
 const transportLabels = { PLANE: 'Flight', TRAIN: 'Train', BUS: 'Bus', CAR: 'Car', FERRY: 'Ferry' } as const;
 
-export function TripCityMap({ cities, legs, plannedLines = emptyLines, focusStopId, accommodations = emptyAccommodations, onChangeLodging, onPick, hotelMap, onSelectCity, onMapCenter }: Pick<SharedTrip, 'cities'> & {
+export function TripCityMap({ cities, legs, plannedLines = emptyLines, focusStopId, accommodations = emptyAccommodations, onChangeLodging, onPick, hotelMap, onSelectCity, onMapCenter, pickedPoint }: Pick<SharedTrip, 'cities'> & {
   legs: TripWireLeg[]; plannedLines?: RouteMapLeg[]; focusStopId?: string; accommodations?: SharedTrip['accommodations'];
   onChangeLodging?: (id: string) => void;
   onPick?: (point: CityPoint) => void;
   hotelMap?: TripHotelMapState;
   onSelectCity?: (id: string) => void;
   onMapCenter?: (center: CityPoint) => void;
+  pickedPoint?: CityPoint;
 }) {
   const [selectedId, setSelectedId] = useState<string>();
   const [lodgingId, setLodgingId] = useState<string>();
@@ -45,13 +46,13 @@ export function TripCityMap({ cities, legs, plannedLines = emptyLines, focusStop
     });
   }, [destinations, legs]);
   const mapLegs = useMemo(() => [...plannedLines, ...transfers], [plannedLines, transfers]);
-  if (!destinations.length && !transfers.length && !hotels.length && !onPick && !hotelMap) return null;
+  if (!destinations.length && !transfers.length && !hotels.length && !onPick && !hotelMap && !onSelectCity) return null;
   return <figure>
     <RouteMap rasterBasemap cityMap onReady={ignoreMapHandle} {...(hotelMap ? {
       ...hotelMap, legs: emptyLines,
     } : {
       stops: [...destinations, ...hotels], legs: mapLegs, focusStopId, fit: onPick ? 'initial' : true,
-      onPick, onUserMove: onMapCenter, onLegSelect: id => { setLodgingId(undefined); setSelectedId(id); },
+      onPick, pickedPoint, onUserMove: onMapCenter, onLegSelect: id => { setLodgingId(undefined); setSelectedId(id); },
       onStopSelect: hotels.length || onSelectCity ? id => {
         if (id.startsWith('hotel:')) { setSelectedId(undefined); setLodgingId(id.slice(6)); }
         else onSelectCity?.(id);

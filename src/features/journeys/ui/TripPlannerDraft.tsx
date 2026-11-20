@@ -1,13 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { Temporal } from '@js-temporal/polyfill';
 import { requestRoad, requestRoadVia } from '../api/routePlanner';
 import { Link } from 'react-router-dom';
 import { getLocale, t } from '@/shared/i18n';
 import { downloadFile } from '@/shared/files/download';
 import { TripTemplateAction } from './TripTemplateAction';
-import { geographicDistance, type PlannedLeg } from '../domain/route';
+import { geographicDistance } from '../domain/route';
 import { sharedTripJson, shareTripUrl } from '../domain/sharedTrip';
-import { saveTripToAccount, pointTransportModes, transferModes, tripLocations, tripPayload, type PointTransport, type CityPoint, type LocalTripDraft, type TripDayDraft, type TripVisit } from '../api/tripDraft';
+import { saveTripToAccount, TripAccountSaveError, tripLocations, tripPayload, type PointTransport, type CityPoint, type LocalTripDraft, type TripDayDraft, type TripVisit } from '../api/tripDraft';
 import { RouteMap } from './RouteMap';
 import { TripWalkImport, type WalkCandidate } from './TripWalkImport';
 import { TripTrainSearch } from './TripTrainSearch';
@@ -19,104 +19,21 @@ import { TripDetailsEditor } from './TripDetailsEditor';
 import { TripTransferEditor } from './TripTransferEditor';
 import { TripCityMap } from './TripCityMap';
 import { RouteAddressInput } from './RouteAddressInput';
+import { readDraft, tripDraftStorageKey } from '../domain/planner/draftMigration';
+import { plannerReducer } from '../domain/planner/plannerReducer';
 import './route.css';
 
-const storageKey = 'codoc/trip-planner/draft/v2';
 const noLegs: [] = [];
 const ignoreMapHandle = () => undefined;
 
 type TripDay = TripDayDraft;
 type Draft = LocalTripDraft;
 
-interface DraftHistory {
-  draft: Draft;
-  past: Draft[];
-  future: Draft[];
-}
-
 const emptyDay: TripDay = { stops: [] };
 const dayMilliseconds = 86_400_000;
 
-function validLegs(legs: PlannedLeg[] | undefined, stopCount: number) {
-  return Array.isArray(legs) && legs.length > 0 && legs.length === stopCount - 1 && legs.every((leg) =>
-    leg?.mode === 'foot' && Number.isFinite(leg.durationSeconds) &&
-    Array.isArray(leg.coordinates) && leg.coordinates.length >= 2 &&
-    leg.coordinates.every((point) => Array.isArray(point) && point.length === 2 &&
-      Number.isFinite(point[0]) && Number.isFinite(point[1])));
-}
-
-function readVisit(day: TripVisit | null): TripVisit | null {
-  if (!day || !Array.isArray(day.stops) || !day.stops.every((stop) =>
-    typeof stop?.id === 'string' && typeof stop.label === 'string' &&
-    Number.isFinite(stop.longitude) && Number.isFinite(stop.latitude))) return null;
-  const walk = day.importedWalk;
-  const lodging = day.lodging;
-  const train = day.train;
-  const point = day.cityPoint;
-  const ideas = Array.isArray(day.ideas) ? day.ideas.filter(idea => idea && typeof idea.id === 'string'
-    && typeof idea.label === 'string' && Math.abs(idea.latitude) <= 90 && Math.abs(idea.longitude) <= 180) : undefined;
-  const transfer = day.transfer;
-  const road = transfer?.road;
-  const validPoint = (item: CityPoint) => item && Number.isFinite(item.latitude) && Number.isFinite(item.longitude)
-    && Math.abs(item.latitude) <= 90 && Math.abs(item.longitude) <= 180;
-  const validRoad = road && Number.isFinite(road.durationSeconds) && road.durationSeconds > 0
-    && Number.isFinite(road.distanceMeters) && road.distanceMeters >= 0
-    && Array.isArray(road.geometry) && road.geometry.length >= 2 && road.geometry.every(validPoint)
-    && (road.via === undefined || (Array.isArray(road.via) && road.via.length <= 5 && road.via.every(validPoint)));
-  return { stops: day.stops, ideas, city: typeof day.city === 'string' ? day.city : undefined,
-    incomingMode: day.incomingMode && pointTransportModes.includes(day.incomingMode) ? day.incomingMode : undefined,
-    cityPoint: point && Math.abs(point.latitude) <= 85 && Math.abs(point.longitude) <= 180 ? point : undefined,
-    importedWalk: walk && typeof walk.title === 'string' && validLegs(walk.legs, day.stops.length) ? walk : undefined,
-    route: validLegs(day.route, day.stops.length) ? day.route : undefined,
-    lodging: lodging && typeof lodging.name === 'string' && typeof lodging.address === 'string'
-      && typeof lodging.checkIn === 'string' && typeof lodging.checkOut === 'string'
-      && lodging.checkIn < lodging.checkOut ? lodging : undefined,
-    train: train && [train.number, train.title, train.from, train.to, train.departure, train.arrival]
-      .every(value => typeof value === 'string') && Date.parse(train.departure) <= Date.parse(train.arrival)
-      && [train.fromCity, train.toCity].every(value => value === undefined || typeof value === 'string')
-      ? train : undefined,
-    transfer: transfer && transferModes.includes(transfer.transport)
-      && [transfer.from, transfer.to, transfer.departure, transfer.arrival].every(value => typeof value === 'string')
-      && Date.parse(transfer.departure) < Date.parse(transfer.arrival)
-      ? { ...transfer, road: transfer.transport === 'CAR' && validRoad ? road : undefined } : undefined };
-}
-
-function readDay(day: TripDay | null): TripDay | null {
-  const start = readVisit(day);
-  if (!start) return null;
-  const visits = Array.isArray(day?.visits) ? day.visits.flatMap(item => {
-    const value = readVisit(item);
-    return value && typeof item.id === 'string' && /^[a-z][a-z0-9-]{1,42}$/.test(item.id) ? [{ ...value, id: item.id }] : [];
-  }) : undefined;
-  return { ...start, visits: visits?.length ? visits : undefined };
-}
-
-function readDraft(): Draft {
-  try {
-    const stored = JSON.parse(localStorage.getItem(storageKey) ?? 'null') as (Partial<Draft> & Partial<TripDay>) | null;
-    if (stored?.version === 2 && typeof stored.startDate === 'string' && typeof stored.endDate === 'string') {
-      const legacy = readDay(stored as TripDay);
-      const days: Draft['days'] = legacy ? { 1: legacy } : {};
-      for (const [key, value] of Object.entries(stored.days ?? {})) {
-        const day = readDay(value);
-        if (day && /^[1-9]\d*$/.test(key) && Number.isSafeInteger(Number(key))) days[Number(key)] = day;
-      }
-      const id = typeof stored.id === 'string' && /^[a-zA-Z0-9_-]{1,64}$/.test(stored.id) ? stored.id : crypto.randomUUID();
-      const budget = stored.budget && Number.isFinite(stored.budget.amount) && stored.budget.amount >= 0
-        && /^[A-Z]{3}$/.test(stored.budget.currency) ? stored.budget : undefined;
-      const documents = Array.isArray(stored.documents) ? stored.documents.filter(document =>
-        typeof document?.id === 'string' && typeof document.title === 'string' && typeof document.url === 'string') : undefined;
-      return { id, version: 2, startDate: stored.startDate, endDate: stored.endDate, days,
-        title: typeof stored.title === 'string' ? stored.title.slice(0, 180) : undefined, budget, documents };
-    }
-  } catch {
-    // A damaged or unavailable local store cannot prevent opening the planner.
-  }
-  return { id: crypto.randomUUID(), version: 2, startDate: '', endDate: '', days: {} };
-}
-
 export default function TripPlannerDraft() {
-  const [{ draft, past, future }, setHistory] = useState<DraftHistory>(() => ({
+  const [{ draft, past, future }, dispatch] = useReducer(plannerReducer, undefined, () => ({
     draft: readDraft(), past: [], future: [],
   }));
   const [status, setStatus] = useState('');
@@ -125,10 +42,13 @@ export default function TripPlannerDraft() {
   const [sharing, setSharing] = useState(false);
   const [share, setShare] = useState<{ draft: Draft; url: string }>();
   const [fileShare, setFileShare] = useState<Draft>();
+  const [mobileTab, setMobileTab] = useState<'plan' | 'map' | 'summary'>('plan');
   const [selectedDay, setSelectedDay] = useState(1);
+  const [selectedDayId, setSelectedDayId] = useState<string>();
   const [selectedVisit, setSelectedVisit] = useState<string>();
   const [choosingCity, setChoosingCity] = useState(false);
-  const [placingCities, setPlacingCities] = useState(true);
+  const [placingCities, setPlacingCities] = useState(false);
+  const [pendingMapPoint, setPendingMapPoint] = useState<CityPoint>();
   const cityInput = useRef<HTMLInputElement>(null);
   const startDateInput = useRef<HTMLInputElement>(null);
   const [focusedDay, setFocusedDay] = useState<number>();
@@ -140,7 +60,8 @@ export default function TripPlannerDraft() {
   const duration = Math.max(0, (Date.parse(draft.endDate) - Date.parse(draft.startDate)) / dayMilliseconds + 1) || 0;
   const lastPlannedDay = Math.max(1, ...Object.keys(draft.days).map(Number));
   const lastDay = Math.max(duration, lastPlannedDay);
-  const dayNumber = Math.min(selectedDay, lastDay);
+  const currentDay = selectedDayId && Object.entries(draft.days).find(([, value]) => value.dayId === selectedDayId);
+  const dayNumber = currentDay ? Number(currentDay[0]) : Math.min(selectedDay, lastDay);
   const dayDraft = draft.days[dayNumber] ?? emptyDay;
   const extra = dayDraft.visits?.find(visit => visit.id === selectedVisit);
   const day = extra ?? dayDraft;
@@ -161,23 +82,44 @@ export default function TripPlannerDraft() {
   const [preview, setPreview] = useState<WalkCandidate | null>(null);
   const pinRequest = useRef<AbortController>();
   useEffect(() => () => pinRequest.current?.abort(), []);
-  function persist(next: Draft) {
+  const lastSaved = useRef(draft);
+  const latestDraft = useRef(draft);
+  latestDraft.current = draft;
+  const [localSave, setLocalSave] = useState<'idle' | 'pending' | 'saved' | 'failed'>('idle');
+  const persist = useCallback((next: Draft) => {
     try {
-      localStorage.setItem(storageKey, JSON.stringify(next));
-      setStatus(t('Trip saved on this device.'));
+      localStorage.setItem(tripDraftStorageKey, JSON.stringify(next));
+      lastSaved.current = next;
+      setLocalSave('saved');
     } catch {
-      setStatus(t('Could not save the trip on this device.'));
+      setLocalSave('failed');
     }
-  }
+  }, []);
+  useEffect(() => {
+    if (draft === lastSaved.current) return;
+    setLocalSave('pending');
+    const timer = window.setTimeout(() => { if (latestDraft.current === draft) persist(draft); }, 450);
+    return () => clearTimeout(timer);
+  }, [draft, persist]);
+  useEffect(() => {
+    const flush = () => {
+      if (lastSaved.current !== latestDraft.current) persist(latestDraft.current);
+    };
+    const onVisibility = () => { if (document.visibilityState === 'hidden') flush(); };
+    window.addEventListener('pagehide', flush);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('pagehide', flush);
+      document.removeEventListener('visibilitychange', onVisibility);
+      flush();
+    };
+  }, [persist]);
 
   function edit(changes: Partial<Draft>) {
     pinRequest.current?.abort();
     setStatus('');
-    setHistory((previous) => ({
-      draft: { ...previous.draft, ...changes },
-      past: [...previous.past.slice(-49), previous.draft],
-      future: [],
-    }));
+    setAccountSaved(false);
+    dispatch({ type: 'edit', changes });
   }
 
   async function moveCity(cityPoint: CityPoint) {
@@ -231,7 +173,7 @@ export default function TripPlannerDraft() {
     if (extra) days[dayNumber] = { ...dayDraft, visits: dayDraft.visits?.map(visit =>
       visit.id === extra.id ? { ...visit, ...changes } : visit) };
     else if (next.stops.length || next.ideas?.length || next.city?.trim() || next.cityPoint ||
-      next.lodging || next.train || next.transfer || dayDraft.visits?.length) days[dayNumber] = { ...dayDraft, ...changes };
+      next.lodging || next.train || next.transfer || dayDraft.visits?.length) days[dayNumber] = { ...dayDraft, dayId: dayDraft.dayId ?? crypto.randomUUID(), ...changes };
     else delete days[dayNumber];
     edit({ days });
     if (saveImmediately) persist({ ...draft, days });
@@ -268,7 +210,7 @@ export default function TripPlannerDraft() {
   function nextDay() {
     const target = dayNumber + 1;
     if (target > lastDay) {
-      const days = { ...draft.days, [target]: { ...emptyDay } };
+      const days = { ...draft.days, [target]: { ...emptyDay, dayId: crypto.randomUUID() } };
       const endDate = duration > 0 ? Temporal.PlainDate.from(draft.startDate).add({ days: target - 1 }).toString()
         : draft.endDate;
       edit({ days, endDate });
@@ -282,7 +224,8 @@ export default function TripPlannerDraft() {
     pinRequest.current?.abort();
     const next = past[past.length - 1];
     setPreview(null);
-    setHistory({ draft: next, past: past.slice(0, -1), future: [draft, ...future] });
+    setAccountSaved(false);
+    dispatch({ type: 'undo' });
     persist(next);
   }
 
@@ -291,12 +234,14 @@ export default function TripPlannerDraft() {
     pinRequest.current?.abort();
     const next = future[0];
     setPreview(null);
-    setHistory({ draft: next, past: [...past, draft], future: future.slice(1) });
+    setAccountSaved(false);
+    dispatch({ type: 'redo' });
     persist(next);
   }
 
   function selectDay(next: number, visitId?: string) {
     mapCenter.current = undefined;
+    setPendingMapPoint(undefined);
     setSelectedVisit(visitId);
     setChoosingCity(false);
     setEditingTransfer(false);
@@ -304,6 +249,7 @@ export default function TripPlannerDraft() {
     setStatus('');
     setPreview(null);
     setSelectedDay(next);
+    setSelectedDayId(draft.days[next]?.dayId);
   }
 
   function findHotelsFromMap() {
@@ -320,6 +266,7 @@ export default function TripPlannerDraft() {
   function findHotels(number: number, visitId?: string) {
     if (number !== dayNumber || visitId !== selectedVisit) selectDay(number, visitId);
     setShowingCities(true);
+    setMobileTab('map');
     setHotelMap(undefined);
     setHotelSearchDay(number);
     const visit = visitId ? draft.days[number]?.visits?.find(item => item.id === visitId) : draft.days[number];
@@ -351,17 +298,24 @@ export default function TripPlannerDraft() {
 
   async function saveAccount() {
     if (!validDates() || saving) return;
-    persist(draft);
+    const snapshot = draft;
+    persist(snapshot);
     setSaving(true);
+    setStatus('');
     try {
-      await saveTripToAccount(draft, title, connections);
-      setAccountSaved(true);
-      setStatus(t('Trip saved to account.'));
-    } catch {
-      setStatus(t('Could not save the trip to your account.'));
-    } finally {
-      setSaving(false);
-    }
+      await saveTripToAccount(snapshot, title, connections);
+      if (latestDraft.current === snapshot) {
+        setAccountSaved(true);
+        setStatus(t('Trip saved to account.'));
+      }
+    } catch (error) {
+      const code = error instanceof TripAccountSaveError ? error.status : undefined;
+      setStatus(!navigator.onLine ? t('You are offline. The trip is saved on this device.')
+        : code === 401 || code === 403 ? t('Sign in to save the trip to your account.')
+          : code === 409 ? t('The account trip changed. Your edits are saved on this device.')
+            : code === 429 ? t('Too many requests. Try saving again shortly.')
+              : t('Could not save the trip to your account.'));
+    } finally { setSaving(false); }
   }
 
   async function createShare() {
@@ -403,12 +357,16 @@ export default function TripPlannerDraft() {
     edit({ days });
     persist({ ...draft, days });
     selectDay(to);
+    setSelectedDayId(before?.dayId);
   }
 
   return (
     <section className="trip-planner" aria-label={t('Travel planner')}>
       <header className="trip-planner-header">
         <h2>{t('Travel planner')}</h2>
+        <small aria-live="polite">{saving ? t('Saving?') : accountSaved ? t('Trip saved to account.')
+          : localSave === 'pending' ? t('Saving?') : localSave === 'saved' ? t('Trip saved on this device.')
+            : localSave === 'failed' ? t('Could not save the trip on this device.') : ''}</small>
       </header>
       <div className="trip-planner-dates">
         <label>{t('Trip name')} <input maxLength={180} value={draft.title ?? ''}
@@ -416,7 +374,14 @@ export default function TripPlannerDraft() {
         <label>{t('Start date')} <input ref={startDateInput} type="date" value={draft.startDate} onChange={event => setStartDate(event.target.value)} /></label>
         <label>{t('End date')} <input type="date" value={draft.endDate} onChange={event => { edit({ endDate: event.target.value }); persist({ ...draft, endDate: event.target.value }); }} /></label>
       </div>
-      <div className="trip-planner-grid" data-hotel-search={Boolean(hotelSearch)}>
+      <nav className="trip-workspace-tabs" aria-label={t('Travel planner')}>
+        {([['plan', 'City list'], ['map', 'Trip map'], ['summary', 'Trip overview']] as const).map(([id, label]) =>
+          <button key={id} type="button" aria-pressed={mobileTab === id} onClick={() => {
+            setMobileTab(id);
+            if (id === 'map') setShowingCities(true);
+          }}>{t(label)}</button>)}
+      </nav>
+      <div className="trip-planner-grid" data-hotel-search={Boolean(hotelSearch)} data-mobile-tab={mobileTab}>
         <div className="trip-planner-overview">
           {!hotelSearch && <div className="trip-map-actions">
             <button type="button" aria-expanded={showingCities}
@@ -437,7 +402,8 @@ export default function TripPlannerDraft() {
               legs={cityMap?.legs ?? []} plannedLines={lines} accommodations={cityMap?.accommodations}
               hotelMap={hotelSearch ? hotelMap ?? { stops: [{ ...hotelSearch.point, id: '__day_point__',
                 label: hotelSearch.city, zone: 'UTC', stayMinutes: 0 }] } : undefined}
-              onPick={placingCities ? point => addVisit(undefined, point) : undefined}
+              onPick={placingCities ? setPendingMapPoint : undefined}
+              pickedPoint={pendingMapPoint}
               focusStopId={placingCities || focusedDay !== dayNumber ? undefined
                 : cityMap?.cities.find(item => item.latitude === day.cityPoint?.latitude
                   && item.longitude === day.cityPoint?.longitude)?.id ?? activeLocation}
@@ -457,6 +423,13 @@ export default function TripPlannerDraft() {
                 const location = locations.find(item => id === `lodging-${item.id}`);
                 if (location) findHotels(location.number, location.id === String(location.number) ? undefined : location.id);
               }} />}
+            {placingCities && pendingMapPoint && !hotelSearch && <div className="trip-map-actions">
+              <button type="button" onClick={() => {
+                addVisit(undefined, pendingMapPoint);
+                setPendingMapPoint(undefined);
+              }}>{t('Add city')}</button>
+              <button type="button" onClick={() => setPendingMapPoint(undefined)}>{t('Cancel')}</button>
+            </div>}
             {hotelSearch && <section className="trip-inline-hotels" aria-label={t('Find hotels')}>
               <header>
                 <h3>{hotelSearch.city}</h3>
@@ -467,6 +440,8 @@ export default function TripPlannerDraft() {
                 onSelect={lodging => { editDay({ lodging }, true); setHotelSearchDay(undefined); }} />
             </section>}
           </div>
+        </div>
+        <aside className="trip-planner-summary">
           <TripSummaryBar days={Array.from({ length: Math.min(lastDay, 366) }, (_, index) => {
             const number = index + 1;
             const timestamp = Date.parse(draft.startDate) + index * dayMilliseconds;
@@ -489,7 +464,7 @@ export default function TripPlannerDraft() {
               }),
             };
           })} />
-        </div>
+        </aside>
         {!hotelSearch && <div className="trip-planner-day">
           <fieldset>
             <legend>{t('Trip day')}</legend>

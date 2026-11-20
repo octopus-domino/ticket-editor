@@ -60,6 +60,8 @@ export const RouteEditor = forwardRef<RouteEditorHandle, { value: string; onChan
   const loaded = useRef('');
   const running = useRef<Promise<string> | null>(null);
   const busyRef = useRef(false);
+  const calculating = useRef<AbortController>();
+  useEffect(() => () => calculating.current?.abort(), []);
   const callbacks = useRef({ onChange, onBusyChange });
   callbacks.current = { onChange, onBusyChange };
   useEffect(() => {
@@ -83,6 +85,7 @@ export const RouteEditor = forwardRef<RouteEditorHandle, { value: string; onChan
     return () => controller.abort();
   }, [value]);
   const invalidate = () => {
+    calculating.current?.abort();
     setDirty(true);
     setRows([]);
     setError('');
@@ -124,11 +127,13 @@ export const RouteEditor = forwardRef<RouteEditorHandle, { value: string; onChan
     if (busyRef.current) return;
     setPickingStop(null); setPickedPoint(null);
     begin();
+    const request = new AbortController();
+    calculating.current = request;
     try {
-      const plan = await planRoute(stops, legs, start, anchor, setProgress);
+      const plan = await planRoute(stops, legs, start, anchor, setProgress, request.signal);
       setLegs(plan.legs); setRows(plan.rows); setStart(plan.start); setDirty(true);
-    } catch (reason) { showError(reason); }
-    finally { finish(); }
+    } catch (reason) { if (!request.signal.aborted) showError(reason); }
+    finally { calculating.current = undefined; finish(); }
   }
   function prepare(): Promise<string> {
     if (running.current) return running.current;
@@ -136,9 +141,11 @@ export const RouteEditor = forwardRef<RouteEditorHandle, { value: string; onChan
     if (busyRef.current) return Promise.reject(new Error(t('Calculating the route…')));
     const operation = (async () => {
       begin();
+      const request = new AbortController();
+      calculating.current = request;
       try {
         const anchor = !start && legs.some(leg => leg.mode === 'flight');
-        const plan = rows.length ? { legs, rows, start } : await planRoute(stops, legs, start, anchor, setProgress);
+        const plan = rows.length ? { legs, rows, start } : await planRoute(stops, legs, start, anchor, setProgress, request.signal);
         setLegs(plan.legs); setRows(plan.rows); setStart(plan.start);
         await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
         setProgress(t('Loading map…'));
@@ -147,9 +154,10 @@ export const RouteEditor = forwardRef<RouteEditorHandle, { value: string; onChan
         if (!map.current) throw new Error(t('Wait until the map has finished loading.'));
         setProgress(t('Preparing the map for print…'));
         const image = await map.current.capture();
-        const asset = await journeyRequest<{ id: string }>('/api/journeys/media', { method: 'POST', body: JSON.stringify({ image }) });
-        const saved = await journeyRequest<{ id: string }>('/api/journeys/routes', { method: 'POST', body: JSON.stringify({
-          stops: stops.map(stop => ({ ...stop, confirmed: undefined })), legs: plan.legs, startLocal: plan.start, timeline: plan.rows, mapId: asset.id, pointNumbering: 'interior',
+        if (request.signal.aborted) throw new DOMException('Aborted', 'AbortError');
+        const asset = await journeyRequest<{ id: string }>('/api/journeys/media', { method: 'POST', signal: request.signal, body: JSON.stringify({ image }) });
+        const saved = await journeyRequest<{ id: string }>('/api/journeys/routes', { method: 'POST', signal: request.signal, body: JSON.stringify({
+          stops: stops.map(stop => ({ ...stop, confirmed: undefined })), legs: plan.legs.map(({ calculation: _calculation, ...leg }) => leg), startLocal: plan.start, timeline: plan.rows, mapId: asset.id, pointNumbering: 'interior',
         }) });
         loaded.current = saved.id; callbacks.current.onChange(saved.id); setDirty(false);
         return saved.id;

@@ -142,7 +142,7 @@ export function DayPlanningPanel({ stops = noStops, preferences = defaultDayPref
       {result?.issues.filter(issue => issue.stopId === stop.id).map(issue => <small key={issue.kind}>{t(issueLabels[issue.kind])}</small>)}
     </li>)}</ol>
     <button type="button" disabled={!date || busy || !stops.length} onClick={() => void calculate(false)}>{t('Check the day')}</button>
-    <label>{t('Route')} <select value={mode} onChange={event => setMode(event.target.value as OptimizationMode)}>
+    <label>{t('Balanced route')} <select value={mode} onChange={event => setMode(event.target.value as OptimizationMode)}>
       {Object.entries(modes).map(([id, label]) => <option key={id} value={id}>{t(label)}</option>)}
     </select></label>
     <button type="button" disabled={!date || busy || stops.length < 4} onClick={() => void calculate(true)}>{t('Improve the order')}</button>

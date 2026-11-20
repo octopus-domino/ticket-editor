@@ -508,7 +508,7 @@ export default function TripPlannerDraft() {
           {day.city?.trim() && <button className="journey-primary" type="button" onClick={findHotelsFromMap}>
             {t('Find hotels')}
           </button>}
-          <DayPlanningPanel key={activeLocation} stops={day.planningStops} preferences={day.dayPreferences}
+          <DayPlanningPanel key={`program-${activeLocation}`} stops={day.planningStops} preferences={day.dayPreferences}
             date={Number.isFinite(dayDate.getTime()) ? dayDate.toISOString().slice(0, 10) : undefined}
             zone={day.cityPoint ? timezone(day.cityPoint.latitude, day.cityPoint.longitude) : Intl.DateTimeFormat().resolvedOptions().timeZone}
             onMap={plan => {

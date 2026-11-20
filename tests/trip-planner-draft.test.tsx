@@ -224,7 +224,7 @@ test('adds cities with address suggestions before choosing dates', async () => {
     render(<MemoryRouter><TripPlannerDraft /></MemoryRouter>);
     fireEvent.change(screen.getByRole('combobox', { name: t('City') }), { target: { value: 'Mos' } });
     fireEvent.click(await screen.findByRole('button', { name: 'Moscow' }, { timeout: 2000 }));
-    fireEvent.click(screen.getByRole('button', { name: t('Add city') }));
+    fireEvent.click(screen.getByRole('button', { name: t('Next day') }));
     fireEvent.change(screen.getByRole('combobox', { name: t('City') }), { target: { value: 'Tve' } });
     fireEvent.click(await screen.findByRole('button', { name: 'Tver' }, { timeout: 2000 }));
     const stored = JSON.parse(localStorage.getItem('codoc/trip-planner/draft/v2')!);

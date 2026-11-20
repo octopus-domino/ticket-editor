@@ -55,7 +55,7 @@ export function TripDistanceTool() {
 
   return <section aria-label={t('Measure distance')}>
     <p>{t('Select at least two points on the trip map.')}</p>
-    <RouteMap stops={points.map((point, index) => ({ ...point, id: String(index),
+    <RouteMap rasterBasemap stops={points.map((point, index) => ({ ...point, id: String(index),
       label: String(index + 1), zone: 'UTC', stayMinutes: 0 }))}
       legs={roads?.legs ?? [{ mode: 'transfer', coordinates }]} onReady={ignoreMapHandle} cityMap fit={false}
       onPick={points.length < 8 ? point => update([...points, point]) : undefined} />

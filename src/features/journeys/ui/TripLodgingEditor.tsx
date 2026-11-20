@@ -35,7 +35,7 @@ export function TripLodgingEditor({ date, lodging, onSave }: {
     <button type="button" aria-pressed={picking} onClick={() => setPicking(!picking)}>
       {picking ? t('Cancel') : t('Choose on map')}
     </button>
-    {(picking || point) && <RouteMap stops={point ? [{ ...point, id: 'lodging', label: values.name || t('Trip lodging'),
+    {(picking || point) && <RouteMap rasterBasemap stops={point ? [{ ...point, id: 'lodging', label: values.name || t('Trip lodging'),
       zone: 'UTC', stayMinutes: 0 }] : []} legs={[]} cityMap onReady={ignoreMapHandle}
       onPick={picking ? next => { setValues(old => ({ ...old, ...next })); setPicking(false); } : undefined} />}
     {point && <button type="button" onClick={() => setValues(old => ({ ...old, latitude: undefined, longitude: undefined }))}>

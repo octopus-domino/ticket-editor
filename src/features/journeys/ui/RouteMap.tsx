@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   Map,
   Marker,
+  type GeoJSONSource,
   NavigationControl,
   setWorkerUrl,
   setWorkerCount,
@@ -65,6 +66,7 @@ export function RouteMap({
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<Map | null>(null);
   const initialFitDone = useRef(false);
+  const pinBoundsKey = useRef<string>();
   const fitted = useRef<{ stops: RouteStop[]; legs: RouteMapLeg[] } | null>(null);
   const [ready, setReady] = useState(false);
   const [styleGeneration, setStyleGeneration] = useState(0);
@@ -101,6 +103,8 @@ export function RouteMap({
         pixelRatio: rasterBasemap ? 1 : Math.min(window.devicePixelRatio || 1, 2),
         dragRotate: !rasterBasemap,
         pitchWithRotate: !rasterBasemap,
+        touchPitch: !rasterBasemap,
+        ...(rasterBasemap ? { maxPitch: 0 } : {}),
         attributionControl: { compact: true },
       });
     } catch {
@@ -134,7 +138,8 @@ export function RouteMap({
       if (Math.abs(event.lngLat.lat) <= 85)
         onPickRef.current?.({ longitude, latitude: event.lngLat.lat });
     });
-    map.addControl(new NavigationControl({ visualizePitch: false }), 'top-right');
+    if (rasterBasemap) map.touchZoomRotate.disableRotation();
+    map.addControl(new NavigationControl({ visualizePitch: false, showCompass: !rasterBasemap }), 'top-right');
     const observer = new ResizeObserver(() => map.resize());
     observer.observe(container.current);
     const fail = window.setTimeout(() => {
@@ -266,24 +271,22 @@ export function RouteMap({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !ready) return;
-    for (const id of ['route-road', 'route-flight']) {
-      if (map.getLayer(id)) map.removeLayer(id);
-    }
-    if (map.getSource('journey-route')) map.removeSource('journey-route');
-    if (legs.length) {
-      map.addSource('journey-route', {
-        type: 'geojson',
-        data: {
-          type: 'FeatureCollection',
-          features: legs
-            .filter((leg) => leg.coordinates.length >= 2)
-            .map((leg) => ({
-              type: 'Feature',
-              properties: { mode: leg.mode, ...(leg.id ? { legId: leg.id } : {}) },
-              geometry: { type: 'MultiLineString', coordinates: mapRouteLines(leg.coordinates) },
-            })),
-        },
-      });
+    const source = map.getSource<GeoJSONSource>('journey-route');
+    if (!source && !legs.length) return;
+    const data = {
+      type: 'FeatureCollection' as const,
+      features: legs
+        .filter(leg => leg.coordinates.length >= 2)
+        .map(leg => ({
+          type: 'Feature' as const,
+          properties: { mode: leg.mode, ...(leg.id ? { legId: leg.id } : {}) },
+          geometry: { type: 'MultiLineString' as const, coordinates: mapRouteLines(leg.coordinates) },
+        })),
+    };
+    if (source) {
+      source.setData(data);
+    } else {
+      map.addSource('journey-route', { type: 'geojson', data });
       map.addLayer({
         id: 'route-road',
         type: 'line',
@@ -299,7 +302,15 @@ export function RouteMap({
         paint: { 'line-color': '#af5347', 'line-width': 4, 'line-dasharray': [2, 2] },
       });
     }
-    const markers = stops.map((stop, index) => {
+  }, [legs, ready, styleGeneration]);
+
+  // Labels, order and coordinates are the only fields used to draw the pins.
+  const markerKey = JSON.stringify(stops.map(({ id, label, latitude, longitude }) => ({ id, label, latitude, longitude })));
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready) return;
+    const markerStops = JSON.parse(markerKey) as Pick<RouteStop, 'id' | 'label' | 'latitude' | 'longitude'>[];
+    const markers = markerStops.map((stop, index) => {
       const element = document.createElement(canSelectStops ? 'button' : 'span');
       if (element instanceof HTMLButtonElement) {
         element.type = 'button';
@@ -310,8 +321,8 @@ export function RouteMap({
         };
       }
       element.className = 'route-map-marker';
-      element.textContent = routePointMarker(index, stops.length);
-      element.title = cityMap ? stop.label : `${routePointCaption(index, stops.length)} · ${stop.label}`;
+      element.textContent = routePointMarker(index, markerStops.length);
+      element.title = cityMap ? stop.label : `${routePointCaption(index, markerStops.length)} · ${stop.label}`;
       const marker = new Marker({ element, anchor: 'center', draggable: canMoveStops })
         .setLngLat([stop.longitude, stop.latitude])
         .addTo(map);
@@ -324,22 +335,27 @@ export function RouteMap({
       });
       return marker;
     });
-    const shouldFit = fit === true || (fit === 'initial' && !initialFitDone.current);
-    if (fit === 'initial') initialFitDone.current = true;
-    if (shouldFit && (stops.length || legs.some(leg => leg.coordinates.length)) &&
-        (fitted.current?.stops !== stops || fitted.current?.legs !== legs)) {
-      fitted.current = { stops, legs };
-      const coordinates: [number, number][] = [
-        ...stops.map((stop): [number, number] => [stop.longitude, stop.latitude]),
-        ...legs.flatMap((leg) => leg.coordinates),
-      ];
-      const walking=legs.length>0&&legs.every(leg=>leg.mode==='foot');
-      map.fitBounds(routeMapBounds(coordinates), { padding: walking?24:55, maxZoom: walking?18:14, duration: 0 });
-    }
-    return () => {
-      markers.forEach((marker) => marker.remove());
-    };
-  }, [stops, legs, ready, styleGeneration, cityMap, canMoveStops, canSelectStops, fit]);
+    return () => { markers.forEach(marker => marker.remove()); };
+  }, [markerKey, ready, styleGeneration, cityMap, canMoveStops, canSelectStops]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready || fit === false || (fit === 'initial' && initialFitDone.current)) return;
+    const pins: [number, number][] = stops.map(stop => [stop.longitude, stop.latitude]);
+    const usePins = rasterBasemap && pins.length > 0;
+    const key = usePins ? JSON.stringify(pins) : undefined;
+    if (usePins ? pinBoundsKey.current === key : fitted.current?.stops === stops && fitted.current?.legs === legs) return;
+    const coordinates = usePins ? pins : [...pins, ...legs.flatMap(leg => leg.coordinates)];
+    if (!coordinates.length) return;
+    initialFitDone.current = true;
+    pinBoundsKey.current = key;
+    fitted.current = { stops, legs };
+    const walking = legs.length > 0 && legs.every(leg => leg.mode === 'foot');
+    map.fitBounds(routeMapBounds(coordinates), {
+      padding: walking ? 24 : 55, maxZoom: usePins ? 15 : walking ? 18 : 14, duration: 0,
+    });
+  }, [fit, legs, ready, rasterBasemap, stops]);
+
   useEffect(() => {
     const map = mapRef.current;
     const stop = stopsRef.current.find(item => item.id === focusStopId);

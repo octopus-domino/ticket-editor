@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Temporal } from '@js-temporal/polyfill';
 import { requestRoad, requestRoadVia } from '../api/routePlanner';
 import { Link } from 'react-router-dom';
@@ -132,12 +132,12 @@ export default function TripPlannerDraft() {
   const title = draft.title?.trim() || t('Travel planner');
   const hasCityPins = Object.values(draft.days).some(details => details.cityPoint || details.transfer?.road?.geometry.length
     || (details.lodging?.latitude != null && details.lodging.longitude != null));
-  const cityPins = Object.entries(draft.days).flatMap(([number, details]) => details.cityPoint ? [{
+  const cityPins = useMemo(() => Object.entries(draft.days).flatMap(([number, details]) => details.cityPoint ? [{
     ...details.cityPoint, id: number, name: details.city?.trim() || `${t('City')} ${number}`,
-  }] : []);
+  }] : []), [draft.days]);
   const { connections, lines } = useTripConnections(cityPins, draft);
-  const cityMap = showingCities && hasCityPins && duration >= 2 && lastPlannedDay <= duration
-    ? tripPayload(draft, title) : undefined;
+  const cityMap = useMemo(() => showingCities && hasCityPins && duration >= 2 && lastPlannedDay <= duration
+    ? tripPayload(draft, title) : undefined, [draft, duration, hasCityPins, lastPlannedDay, showingCities, title]);
   const connectionsByDay = new Map(connections.map(connection => [connection.to.id, connection]));
   const hasDayPlan = Boolean(day.city || day.cityPoint || day.stops.length || day.train || day.transfer || day.lodging);
   const dayDate = new Date(Date.parse(draft.startDate) + (dayNumber - 1) * dayMilliseconds);
@@ -223,14 +223,16 @@ export default function TripPlannerDraft() {
     persist({ ...draft, days });
   }
 
-  function addCity(point?: CityPoint) {
-    const target = point && !day.cityPoint ? dayNumber : lastPlannedDay + 1;
-    const next = { ...draft, days: { ...draft.days,
-      [target]: point ? { ...(draft.days[target] ?? emptyDay), cityPoint: point } : { ...emptyDay } } };
-    edit({ days: next.days });
+  function nextDay() {
+    const target = dayNumber + 1;
+    if (target > lastDay) {
+      const days = { ...draft.days, [target]: { ...emptyDay } };
+      const endDate = duration > 0 ? Temporal.PlainDate.from(draft.startDate).add({ days: target - 1 }).toString()
+        : draft.endDate;
+      edit({ days, endDate });
+      persist({ ...draft, days, endDate });
+    }
     selectDay(target);
-    if (point) persist(next);
-    else requestAnimationFrame(() => cityInput.current?.focus());
   }
 
   function undo() {
@@ -359,7 +361,7 @@ export default function TripPlannerDraft() {
           </div>
           {showingCities && !choosingCity && <TripCityMap cities={cityMap?.cities ?? cityPins}
             legs={cityMap?.legs ?? []} plannedLines={lines} accommodations={cityMap?.accommodations}
-            onPick={placingCities ? point => addCity(point) : undefined}
+            onPick={placingCities ? point => void moveCity(point) : undefined}
             focusStopId={placingCities || focusedDay !== dayNumber ? undefined
               : cityMap?.days.find(item => dayDate.toISOString().startsWith(item.date))?.cityId ?? String(dayNumber)}
             onChangeLodging={id => {
@@ -388,9 +390,9 @@ export default function TripPlannerDraft() {
                 </time></>
               )}{' '}
             </span>
-            <button type="button" disabled={dayNumber >= lastDay} onClick={() => selectDay(dayNumber + 1)}>{t('Next day')}</button>
-            <RouteAddressInput key={dayNumber} inputRef={cityInput} label={t('City')} value={day.city ?? ''}
-              onConfirmText={city => editDay({ city }, true)}
+            <button type="button" onClick={nextDay}>{t('Next day')}</button>
+            <RouteAddressInput key={dayNumber} inputRef={cityInput} label={t('City')} confirmLabel={t('Add city')} value={day.city ?? ''}
+              onConfirmText={city => editDay({ city, cityPoint: city.trim() === day.city?.trim() ? day.cityPoint : undefined }, true)}
               onSelect={({ label, latitude, longitude }) => {
                 setPlacingCities(false);
                 if (label.trim().toLowerCase() === day.city?.trim().toLowerCase()) void moveCity({ latitude, longitude });
@@ -399,7 +401,7 @@ export default function TripPlannerDraft() {
             <button type="button" aria-pressed={choosingCity} onClick={() => setChoosingCity(!choosingCity)}>
               {choosingCity ? t('Cancel') : t('Choose on map')}
             </button>
-            {choosingCity && <RouteMap
+            {choosingCity && <RouteMap rasterBasemap
               stops={day.cityPoint ? [{ ...day.cityPoint, id: `city-${dayNumber}`,
                 label: day.city?.trim() || t('City'), zone: 'UTC', stayMinutes: 0 }] : []}
               legs={noLegs} onReady={ignoreMapHandle} cityMap
@@ -409,7 +411,6 @@ export default function TripPlannerDraft() {
             {day.cityPoint && <button type="button" onClick={() => editDay({ cityPoint: undefined }, true)}>
               {t('Remove map pin')}
             </button>}
-            <button type="button" onClick={() => addCity()}>{t('Add city')}</button>
           </fieldset>
           {day.city?.trim() && <button className="journey-primary" type="button" onClick={() => findHotels(dayNumber)}>
             {t('Find hotels')}
@@ -449,7 +450,7 @@ export default function TripPlannerDraft() {
           </div>}
           <button type="button" onClick={undo} disabled={!past.length}>{t('Undo')}</button>
           <button type="button" onClick={redo} disabled={!future.length}>{t('Redo')}</button>
-          {(preview || day.stops.length > 0) && <RouteMap
+          {(preview || day.stops.length > 0) && <RouteMap rasterBasemap
             stops={preview?.stops ?? day.stops}
             legs={preview?.legs ?? day.importedWalk?.legs ?? day.route ?? noLegs}
             onReady={ignoreMapHandle}

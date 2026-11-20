@@ -124,7 +124,7 @@ export function TripTransferEditor({ date, city, destination: destinationName, p
     </>}
     {transport === 'CAR' && pins.length >= 2 && <>
       <p>{t('Select departure and arrival cities on the map.')}</p>
-      <RouteMap stops={pins.map(({ point, name }, index) => ({ ...point, id: String(index), label: name,
+      <RouteMap rasterBasemap stops={pins.map(({ point, name }, index) => ({ ...point, id: String(index), label: name,
         zone: 'UTC', stayMinutes: 0 }))}
         legs={road ? [{ mode: 'car', durationSeconds: road.durationSeconds,
           coordinates: road.geometry.map(point => [point.longitude, point.latitude]) }]

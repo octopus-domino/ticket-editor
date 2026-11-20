@@ -1,14 +1,16 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { getLocale, t } from '@/shared/i18n';
 import type { CityPoint, TripWireLeg } from '../api/tripDraft';
 import type { SharedTrip } from '../domain/sharedTrip';
 import { RouteMap, type RouteMapLeg } from './RouteMap';
 
 const ignoreMapHandle = () => undefined;
+const emptyAccommodations: SharedTrip['accommodations'] = [];
+const emptyLines: RouteMapLeg[] = [];
 
 const transportLabels = { PLANE: 'Flight', TRAIN: 'Train', BUS: 'Bus', CAR: 'Car', FERRY: 'Ferry' } as const;
 
-export function TripCityMap({ cities, legs, plannedLines = [], focusStopId, accommodations = [], onChangeLodging, onPick }: Pick<SharedTrip, 'cities'> & {
+export function TripCityMap({ cities, legs, plannedLines = emptyLines, focusStopId, accommodations = emptyAccommodations, onChangeLodging, onPick }: Pick<SharedTrip, 'cities'> & {
   legs: TripWireLeg[]; plannedLines?: RouteMapLeg[]; focusStopId?: string; accommodations?: SharedTrip['accommodations'];
   onChangeLodging?: (id: string) => void;
   onPick?: (point: CityPoint) => void;
@@ -18,32 +20,35 @@ export function TripCityMap({ cities, legs, plannedLines = [], focusStopId, acco
   const lodging = accommodations.find(item => item.id === lodgingId);
   const selected = legs.find(leg => leg.id === selectedId);
   const cityName = (id: string) => cities.find(city => city.id === id)?.name || t('City');
-  const destinations = cities.flatMap(city => city.latitude == null || city.longitude == null ? [] : [{
+  const destinations = useMemo(() => cities.flatMap(city => city.latitude == null || city.longitude == null ? [] : [{
     id: city.id, label: city.name || t('City'), latitude: city.latitude, longitude: city.longitude, zone: 'UTC', stayMinutes: 0,
-  }]);
-  const pins = new Map(destinations.map(point => [point.id, point]));
-  const hotels = accommodations.flatMap(item => item.latitude == null || item.longitude == null ? [] : [{
+  }]), [cities]);
+  const hotels = useMemo(() => accommodations.flatMap(item => item.latitude == null || item.longitude == null ? [] : [{
     id: `hotel:${item.id}`, label: item.name, latitude: item.latitude, longitude: item.longitude, zone: 'UTC', stayMinutes: 0,
-  }]);
-  const transfers = legs.flatMap((leg): RouteMapLeg[] => {
-    if (leg.geometry && leg.geometry.length >= 2) return [{ id: leg.id,
-      mode: leg.transport === 'PLANE' ? 'flight' : leg.transport === 'WALK' ? 'foot' : 'car',
-      durationSeconds: leg.durationSeconds ?? 0,
-      coordinates: leg.geometry.map(({ longitude, latitude }) => [longitude, latitude]) }];
-    const from = pins.get(leg.fromCityId);
-    const to = pins.get(leg.toCityId);
-    return from && to ? [{ id: leg.id, mode: 'transfer', coordinates: [
-      [from.longitude, from.latitude], [to.longitude, to.latitude],
-    ] }] : [];
-  });
+  }]), [accommodations]);
+  const transfers = useMemo(() => {
+    const pins = new Map(destinations.map(point => [point.id, point]));
+    return legs.flatMap((leg): RouteMapLeg[] => {
+      if (leg.geometry && leg.geometry.length >= 2) return [{ id: leg.id,
+        mode: leg.transport === 'PLANE' ? 'flight' : leg.transport === 'WALK' ? 'foot' : 'car',
+        durationSeconds: leg.durationSeconds ?? 0,
+        coordinates: leg.geometry.map(({ longitude, latitude }) => [longitude, latitude]) }];
+      const from = pins.get(leg.fromCityId);
+      const to = pins.get(leg.toCityId);
+      return from && to ? [{ id: leg.id, mode: 'transfer', coordinates: [
+        [from.longitude, from.latitude], [to.longitude, to.latitude],
+      ] }] : [];
+    });
+  }, [destinations, legs]);
+  const mapLegs = useMemo(() => [...plannedLines, ...transfers], [plannedLines, transfers]);
   if (!destinations.length && !transfers.length && !hotels.length && !onPick) return null;
   return <figure>
-    <RouteMap stops={[...destinations, ...hotels]} legs={[...plannedLines, ...transfers]} onReady={ignoreMapHandle} focusStopId={focusStopId} fit={onPick ? 'initial' : true} onPick={onPick}
+    <RouteMap rasterBasemap stops={[...destinations, ...hotels]} legs={mapLegs} onReady={ignoreMapHandle} focusStopId={focusStopId} fit={onPick ? 'initial' : true} onPick={onPick}
       onLegSelect={id => { setLodgingId(undefined); setSelectedId(id); }}
       onStopSelect={hotels.length ? id => {
         if (id.startsWith('hotel:')) { setSelectedId(undefined); setLodgingId(id.slice(6)); }
       } : undefined} cityMap />
-    {[...transfers, ...plannedLines].some(transfer => transfer.mode === 'transfer') &&
+    {mapLegs.some(transfer => transfer.mode === 'transfer') &&
       <figcaption>{t('Dashed lines show connections between cities.')}</figcaption>}
     {transfers.length > 0 && <ul>{transfers.map(line => {
       const leg = legs.find(item => item.id === line.id)!;

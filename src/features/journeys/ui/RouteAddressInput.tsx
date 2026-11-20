@@ -14,6 +14,7 @@ export function RouteAddressInput({
   label,
   inputRef,
   onConfirmText,
+  confirmLabel,
 }: {
   value: string;
   onSelect: (address: RouteAddress) => void;
@@ -21,6 +22,7 @@ export function RouteAddressInput({
   label?: string;
   inputRef?: Ref<HTMLInputElement>;
   onConfirmText?: (label: string) => void;
+  confirmLabel?: string;
 }) {
   const [query, setQuery] = useState(value);
   const [options, setOptions] = useState<RouteAddress[]>([]);
@@ -127,6 +129,13 @@ export function RouteAddressInput({
           }
         }}
       />
+      {confirmLabel && <button type="button" disabled={!query.trim() || query === value || busy}
+        onClick={() => {
+          const match = options[active] ?? options.find(option => option.label === query.trim())
+            ?? (options.length === 1 ? options[0] : undefined);
+          if (match) select(match);
+          else if (!options.length) onConfirmText?.(query.trim());
+        }}>{confirmLabel}</button>}
       {options.length > 0 && (
         <ul id={listId} role="listbox">
           {options.map((option, index) => (

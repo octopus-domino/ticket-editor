@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { searchRailPlaces, searchRailSchedule } from '../api/tripRail';
 import { requestRoad } from '../api/routePlanner';
 import type { CityPoint, LocalTripDraft, PointTransport, TripTrain } from '../api/tripDraft';
@@ -78,15 +78,16 @@ export function useTripConnections(points: Point[], draft: LocalTripDraft) {
     })();
     return () => controller.abort();
   }, [signature]);
-  const connections = segments.map(segment => ({ ...segment, result: results[segmentKey(segment)] }));
-  const lines = connections.map(({ from, to, mode, result }): RouteMapLeg => {
+  const connections = useMemo(() => (JSON.parse(signature) as Segment[])
+    .map(segment => ({ ...segment, result: results[segmentKey(segment)] })), [results, signature]);
+  const lines = useMemo(() => connections.map(({ from, to, mode, result }): RouteMapLeg => {
     const id = `planned-${from.id}-${to.id}`;
     if (result?.coordinates && result.coordinates.length > 1) return {
       id, mode: mode === 'PLANE' ? 'flight' : mode === 'WALK' ? 'foot' : 'car',
       coordinates: result.coordinates, durationSeconds: result.seconds,
     };
     return { id, mode: 'transfer', coordinates: [[from.longitude, from.latitude], [to.longitude, to.latitude]] };
-  });
+  }), [connections]);
   return { connections, lines };
 }
 

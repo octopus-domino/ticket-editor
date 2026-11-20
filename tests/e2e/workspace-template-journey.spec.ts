@@ -89,6 +89,7 @@ async function mockWorkspace(page: Page) {
 test('creates template in selected folder, reopens the same item and generates without a schema', async ({
   page,
 }) => {
+  await page.setViewportSize({ width: 1920, height: 919 });
   const api = await mockWorkspace(page);
   await page.goto('/app');
   await page.getByText('My folder', { exact: true }).click();
@@ -107,6 +108,17 @@ test('creates template in selected folder, reopens the same item and generates w
     .click();
   await treeItem.click();
   await expect(page).toHaveURL(/templates\/T\/edit/);
+  const toolbar = page.locator('.editor-shell > .toolbar');
+  const stage = page.locator('.stage-wrap');
+  await expect(stage).toBeVisible();
+  const canvasRect = (await page.locator('.canvas-area').boundingBox())!;
+  const stageRect = (await stage.boundingBox())!;
+  expect((await toolbar.boundingBox())!.height).toBeLessThan(55);
+  expect((await page.locator('.slides-panel').boundingBox())!.height).toBeLessThan(70);
+  expect(Math.abs(stageRect.x + stageRect.width / 2 - canvasRect.x - canvasRect.width / 2)).toBeLessThan(12);
+  await toolbar.locator('summary').click();
+  await expect(toolbar.getByRole('button', { name: /JSON/ })).toBeVisible();
+  await toolbar.locator('summary').click();
   const panel = page.locator('.right-panel');
   await panel.getByRole('button', { name: '📦 Генерация' }).click();
   await expect(panel.locator('.gen-preview')).toContainText('Документ без подстановки данных');
@@ -137,6 +149,7 @@ test('creates template in selected folder, reopens the same item and generates w
 test('data section offers schema selection after opening a template without schema', async ({
   page,
 }) => {
+  await page.setViewportSize({ width: 1920, height: 919 });
   await mockWorkspace(page);
   await page.goto('/app/templates/new');
   await page.getByLabel('Название шаблона').fill('Static');

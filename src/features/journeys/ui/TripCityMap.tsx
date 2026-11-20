@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { getLocale, t } from '@/shared/i18n';
-import type { TripWireLeg } from '../api/tripDraft';
+import type { CityPoint, TripWireLeg } from '../api/tripDraft';
 import type { SharedTrip } from '../domain/sharedTrip';
 import { RouteMap, type RouteMapLeg } from './RouteMap';
 
@@ -8,9 +8,10 @@ const ignoreMapHandle = () => undefined;
 
 const transportLabels = { PLANE: 'Flight', TRAIN: 'Train', BUS: 'Bus', CAR: 'Car', FERRY: 'Ferry' } as const;
 
-export function TripCityMap({ cities, legs, focusStopId, accommodations = [], onChangeLodging }: Pick<SharedTrip, 'cities'> & {
+export function TripCityMap({ cities, legs, focusStopId, accommodations = [], onChangeLodging, onPick }: Pick<SharedTrip, 'cities'> & {
   legs: TripWireLeg[]; focusStopId?: string; accommodations?: SharedTrip['accommodations'];
   onChangeLodging?: (id: string) => void;
+  onPick?: (point: CityPoint) => void;
 }) {
   const [selectedId, setSelectedId] = useState<string>();
   const [lodgingId, setLodgingId] = useState<string>();
@@ -35,9 +36,9 @@ export function TripCityMap({ cities, legs, focusStopId, accommodations = [], on
       [from.longitude, from.latitude], [to.longitude, to.latitude],
     ] }] : [];
   });
-  if (!destinations.length && !transfers.length && !hotels.length) return null;
+  if (!destinations.length && !transfers.length && !hotels.length && !onPick) return null;
   return <figure>
-    <RouteMap stops={[...destinations, ...hotels]} legs={transfers} onReady={ignoreMapHandle} focusStopId={focusStopId}
+    <RouteMap stops={[...destinations, ...hotels]} legs={transfers} onReady={ignoreMapHandle} focusStopId={focusStopId} fit={!onPick} onPick={onPick}
       onLegSelect={id => { setLodgingId(undefined); setSelectedId(id); }}
       onStopSelect={hotels.length ? id => {
         if (id.startsWith('hotel:')) { setSelectedId(undefined); setLodgingId(id.slice(6)); }

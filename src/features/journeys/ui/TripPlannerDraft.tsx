@@ -16,7 +16,7 @@ import { TripDetailsEditor } from './TripDetailsEditor';
 import { TripTransferEditor } from './TripTransferEditor';
 import { TripDistanceTool } from './TripDistanceTool';
 import { TripCityMap } from './TripCityMap';
-import { TripCitySearch } from './TripCitySearch';
+import { RouteAddressInput } from './RouteAddressInput';
 import './route.css';
 
 const storageKey = 'codoc/trip-planner/draft/v2';
@@ -114,8 +114,10 @@ export default function TripPlannerDraft() {
   const [fileShare, setFileShare] = useState<Draft>();
   const [selectedDay, setSelectedDay] = useState(1);
   const [choosingCity, setChoosingCity] = useState(false);
+  const [placingCities, setPlacingCities] = useState(true);
+  const cityInput = useRef<HTMLInputElement>(null);
   const [measuring, setMeasuring] = useState(false);
-  const [showingCities, setShowingCities] = useState(false);
+  const [showingCities, setShowingCities] = useState(true);
   const [editingTransfer, setEditingTransfer] = useState(false);
   const [lodgingToEdit, setLodgingToEdit] = useState<number>();
   const duration = Math.max(0, (Date.parse(draft.endDate) - Date.parse(draft.startDate)) / dayMilliseconds + 1) || 0;
@@ -128,6 +130,10 @@ export default function TripPlannerDraft() {
     || (details.lodging?.latitude != null && details.lodging.longitude != null));
   const cityMap = showingCities && hasCityPins && duration >= 2 && lastPlannedDay <= duration
     ? tripPayload(draft, title) : undefined;
+  const cityPins = Object.entries(draft.days).flatMap(([number, details]) => details.cityPoint ? [{
+    ...details.cityPoint, id: number, name: details.city?.trim() || `${t('City')} ${number}`,
+  }] : []);
+  const hasDayPlan = Boolean(day.city || day.cityPoint || day.stops.length || day.train || day.transfer || day.lodging);
   const dayDate = new Date(Date.parse(draft.startDate) + (dayNumber - 1) * dayMilliseconds);
   const [preview, setPreview] = useState<WalkCandidate | null>(null);
   const pinRequest = useRef<AbortController>();
@@ -202,6 +208,16 @@ export default function TripPlannerDraft() {
     else delete days[dayNumber];
     edit({ days });
     if (saveImmediately) persist({ ...draft, days });
+  }
+
+  function addCity(point?: CityPoint) {
+    const target = point && !day.cityPoint ? dayNumber : lastPlannedDay + 1;
+    const next = { ...draft, days: { ...draft.days,
+      [target]: point ? { ...(draft.days[target] ?? emptyDay), cityPoint: point } : { ...emptyDay } } };
+    edit({ days: next.days });
+    selectDay(target);
+    if (point) persist(next);
+    else requestAnimationFrame(() => cityInput.current?.focus());
   }
 
   function undo() {
@@ -287,137 +303,171 @@ export default function TripPlannerDraft() {
     }
   }
   return (
-    <section aria-label={t('Travel planner')}>
-      <h2>{t('Travel planner')}</h2>
-      <label>{t('Trip name')} <input maxLength={180} value={draft.title ?? ''}
-        onChange={event => edit({ title: event.target.value })} /></label>
-      <TripSummaryBar rows={Object.entries(draft.days).map(([number, details]) => ({
-        id: number, place: details.city?.trim() || `${t('Trip day')} ${number}`, lodging: details.lodging,
-        onSelect: () => {
-          selectDay(Number(number));
-          if (details.cityPoint) setShowingCities(true);
-        },
-        onFindHotel: details.city?.trim() ? () => {
-          selectDay(Number(number));
-          setLodgingToEdit(Number(number));
-        } : undefined,
-      }))} />
-      {hasCityPins && duration >= 2 && lastPlannedDay <= duration && <button type="button"
-        aria-expanded={showingCities} onClick={() => setShowingCities(!showingCities)}>{t('Trip map')}</button>}
-      {cityMap && <TripCityMap cities={cityMap.cities} legs={cityMap.legs} accommodations={cityMap.accommodations}
-        focusStopId={cityMap.days.find(item => dayDate.toISOString().startsWith(item.date))?.cityId}
-        onChangeLodging={id => {
-          const number = Number(id.replace('lodging-', ''));
-          selectDay(number);
-          setLodgingToEdit(number);
-        }} />}
-      <label>{t('Start date')} <input type="date" value={draft.startDate} onChange={(event) => edit({ startDate: event.target.value })} /></label>
-      <label>{t('End date')} <input type="date" value={draft.endDate} onChange={(event) => edit({ endDate: event.target.value })} /></label>
-      <TripDetailsEditor budget={draft.budget} documents={draft.documents ?? []}
-        costs={Object.values(draft.days).flatMap(details =>
-          [details.transfer?.cost, details.lodging?.cost].filter(cost => cost !== undefined))}
-        onChange={edit} />
-      {lastDay > 1 && <fieldset>
-        <legend>{t('Trip day')}</legend>
-        <button type="button" disabled={dayNumber <= 1} onClick={() => selectDay(dayNumber - 1)}>{t('Previous day')}</button>
-        <span aria-live="polite">
-          {' '}{dayNumber} / {lastDay}
-          {Number.isFinite(dayDate.getTime()) && (
-            <> · <time dateTime={dayDate.toISOString().split('T')[0]}>
-              {dayDate.toLocaleDateString(getLocale(), { timeZone: 'UTC', dateStyle: 'medium' })}
-            </time></>
-          )}{' '}
-        </span>
-        <button type="button" disabled={dayNumber >= lastDay} onClick={() => selectDay(dayNumber + 1)}>{t('Next day')}</button>
-        <label>{t('City')} <input value={day.city ?? ''} onChange={(event) => editDay({ city: event.target.value })} /></label>
-        <TripCitySearch key={dayNumber} query={day.city ?? ''} onSelect={({ name, latitude, longitude }) => {
-          if (name.trim().toLowerCase() === day.city?.trim().toLowerCase()) void moveCity({ latitude, longitude });
-          else editDay({ city: name, cityPoint: { latitude, longitude } }, true);
-        }} />
-        <button type="button" aria-pressed={choosingCity} onClick={() => setChoosingCity(!choosingCity)}>
-          {choosingCity ? t('Cancel') : t('Choose on map')}
-        </button>
-        {(choosingCity || day.cityPoint) && <RouteMap
-          stops={day.cityPoint ? [{ ...day.cityPoint, id: `city-${dayNumber}`,
-            label: day.city?.trim() || t('City'), zone: 'UTC', stayMinutes: 0 }] : []}
-          legs={noLegs} onReady={ignoreMapHandle} cityMap
-          onPick={choosingCity ? cityPoint => { void moveCity(cityPoint); setChoosingCity(false); } : undefined}
-          onStopMove={day.cityPoint ? (_id, cityPoint) => void moveCity(cityPoint) : undefined}
-        />}
-        {day.cityPoint && <button type="button" onClick={() => editDay({ cityPoint: undefined }, true)}>
-          {t('Remove map pin')}
-        </button>}
-      </fieldset>}
-      <button type="button" aria-expanded={measuring} onClick={() => setMeasuring(!measuring)}>
-        {t('Measure distance')}
-      </button>
-      {measuring && <TripDistanceTool />}
-      {Boolean(day.ideas?.length) && <ul aria-label={t('Trip ideas')}>{day.ideas?.map(idea => <li key={idea.id}>
-        {idea.label}{' '}<button type="button" onClick={() =>
-          editDay({ ideas: day.ideas?.filter(item => item.id !== idea.id) }, true)}>{t('Remove')}</button>
-      </li>)}</ul>}
-      <TripWalkImport key={dayNumber} onPreview={setPreview} />
-      {Number.isFinite(dayDate.getTime()) && (
-        <>
-          <TripTrainSearch key={dayDate.getTime()} date={dayDate.toISOString().split('T')[0]}
-            selected={day.train} onSelect={train => editDay({ train, transfer: train ? undefined : day.transfer }, true)} />
-          {day.transfer && <p>{day.transfer.from} {' → '} {day.transfer.to}{' '}
-            <button type="button" onClick={() => editDay({ transfer: undefined }, true)}>{t('Remove')}</button>
-          </p>}
-          <button type="button" aria-expanded={editingTransfer} onClick={() => setEditingTransfer(!editingTransfer)}>
-            {editingTransfer ? t('Cancel') : t('Enter transfer manually')}
+    <section className="trip-planner" aria-label={t('Travel planner')}>
+      <header className="trip-planner-header">
+        <h2>{t('Travel planner')}</h2>
+      </header>
+      <div className="trip-planner-grid">
+        <div className="trip-planner-overview">
+          <div className="trip-map-actions">
+            <button type="button" aria-expanded={showingCities}
+              onClick={() => setShowingCities(true)}>{t('Trip map')}</button>
+            <button type="button" aria-pressed={!showingCities} onClick={() => {
+              setShowingCities(false);
+              setChoosingCity(false);
+              cityInput.current?.focus();
+            }}>{t('City list')}</button>
+            {showingCities && <button type="button" aria-pressed={placingCities} onClick={() => {
+              setShowingCities(true);
+              setPlacingCities(!placingCities);
+              setChoosingCity(false);
+            }}>{t('Add cities on the map')}</button>}
+          </div>
+          {showingCities && !choosingCity && <TripCityMap cities={cityMap?.cities ?? cityPins}
+            legs={cityMap?.legs ?? []} accommodations={cityMap?.accommodations}
+            onPick={placingCities ? point => addCity(point) : undefined}
+            focusStopId={placingCities ? undefined : cityMap?.days.find(item => dayDate.toISOString().startsWith(item.date))?.cityId ?? String(dayNumber)}
+            onChangeLodging={id => {
+              const number = Number(id.replace('lodging-', ''));
+              selectDay(number);
+              setLodgingToEdit(number);
+            }} />}
+          <TripSummaryBar rows={Object.entries(draft.days).map(([number, details]) => ({
+            id: number, place: details.city?.trim() || `${t('Trip day')} ${number}`, lodging: details.lodging,
+            onSelect: () => {
+              selectDay(Number(number));
+              if (details.cityPoint) {
+                setShowingCities(true);
+                setPlacingCities(false);
+              }
+            },
+            onFindHotel: details.city?.trim() ? () => {
+              selectDay(Number(number));
+              setLodgingToEdit(Number(number));
+            } : undefined,
+          }))} />
+        </div>
+        <div className="trip-planner-day">
+          <fieldset>
+            <legend>{t('Trip day')}</legend>
+            <button type="button" disabled={dayNumber <= 1} onClick={() => selectDay(dayNumber - 1)}>{t('Previous day')}</button>
+            <span aria-live="polite">
+              {' '}{dayNumber} / {lastDay}
+              {Number.isFinite(dayDate.getTime()) && (
+                <> · <time dateTime={dayDate.toISOString().split('T')[0]}>
+                  {dayDate.toLocaleDateString(getLocale(), { timeZone: 'UTC', dateStyle: 'medium' })}
+                </time></>
+              )}{' '}
+            </span>
+            <button type="button" disabled={dayNumber >= lastDay} onClick={() => selectDay(dayNumber + 1)}>{t('Next day')}</button>
+            <RouteAddressInput key={dayNumber} inputRef={cityInput} label={t('City')} value={day.city ?? ''}
+              onConfirmText={city => editDay({ city }, true)}
+              onSelect={({ label, latitude, longitude }) => {
+                setPlacingCities(false);
+                if (label.trim().toLowerCase() === day.city?.trim().toLowerCase()) void moveCity({ latitude, longitude });
+                else editDay({ city: label, cityPoint: { latitude, longitude } }, true);
+              }} />
+            <button type="button" aria-pressed={choosingCity} onClick={() => setChoosingCity(!choosingCity)}>
+              {choosingCity ? t('Cancel') : t('Choose on map')}
+            </button>
+            {choosingCity && <RouteMap
+              stops={day.cityPoint ? [{ ...day.cityPoint, id: `city-${dayNumber}`,
+                label: day.city?.trim() || t('City'), zone: 'UTC', stayMinutes: 0 }] : []}
+              legs={noLegs} onReady={ignoreMapHandle} cityMap
+              onPick={choosingCity ? cityPoint => { void moveCity(cityPoint); setChoosingCity(false); } : undefined}
+              onStopMove={day.cityPoint ? (_id, cityPoint) => void moveCity(cityPoint) : undefined}
+            />}
+            {day.cityPoint && <button type="button" onClick={() => editDay({ cityPoint: undefined }, true)}>
+              {t('Remove map pin')}
+            </button>}
+            <button type="button" onClick={() => addCity()}>{t('Add city')}</button>
+          </fieldset>
+          <button type="button" aria-expanded={measuring} onClick={() => setMeasuring(!measuring)}>
+            {t('Measure distance')}
           </button>
-          {editingTransfer && <TripTransferEditor key={`transfer-${dayDate.getTime()}`} date={dayDate.toISOString().split('T')[0]}
-            city={day.city} pins={Object.values(draft.days).flatMap(details => details.city && details.cityPoint
-              ? [{ name: details.city, point: details.cityPoint }] : [])}
-            onSave={transfer => { editDay({ transfer, train: undefined }, true); setEditingTransfer(false); }} />}
-          <TripLodgingEditor key={`${dayDate.getTime()}-${JSON.stringify(day.lodging)}`}
-            date={dayDate.toISOString().split('T')[0]} city={day.city} cityPoint={day.cityPoint} lodging={day.lodging}
-            focus={lodgingToEdit === dayNumber} onFocusHandled={() => setLodgingToEdit(undefined)}
-            onSave={lodging => editDay({ lodging }, true)} />
-        </>
-      )}
-      {!preview && day.importedWalk && <p>{day.importedWalk.title}</p>}
-      {preview && <div>
-        <strong>{preview.title}</strong>
+          {measuring && <TripDistanceTool />}
+          {Boolean(day.ideas?.length) && <ul aria-label={t('Trip ideas')}>{day.ideas?.map(idea => <li key={idea.id}>
+            {idea.label}{' '}<button type="button" onClick={() =>
+              editDay({ ideas: day.ideas?.filter(item => item.id !== idea.id) }, true)}>{t('Remove')}</button>
+          </li>)}</ul>}
+          <TripWalkImport key={dayNumber} onPreview={setPreview} />
+          {hasDayPlan && Number.isFinite(dayDate.getTime()) && (
+            <>
+              <TripTrainSearch key={dayDate.getTime()} date={dayDate.toISOString().split('T')[0]}
+                selected={day.train} onSelect={train => editDay({ train, transfer: train ? undefined : day.transfer }, true)} />
+              {day.transfer && <p>{day.transfer.from} {' → '} {day.transfer.to}{' '}
+                <button type="button" onClick={() => editDay({ transfer: undefined }, true)}>{t('Remove')}</button>
+              </p>}
+              <button type="button" aria-expanded={editingTransfer} onClick={() => setEditingTransfer(!editingTransfer)}>
+                {editingTransfer ? t('Cancel') : t('Enter transfer manually')}
+              </button>
+              {editingTransfer && <TripTransferEditor key={`transfer-${dayDate.getTime()}`} date={dayDate.toISOString().split('T')[0]}
+                city={draft.days[dayNumber - 1]?.city || day.city} destination={draft.days[dayNumber - 1]?.city ? day.city : undefined} pins={Object.values(draft.days).flatMap(details => details.city && details.cityPoint
+                  ? [{ name: details.city, point: details.cityPoint }] : [])}
+                onSave={transfer => { editDay({ transfer, train: undefined }, true); setEditingTransfer(false); }} />}
+              <TripLodgingEditor key={`${dayDate.getTime()}-${JSON.stringify(day.lodging)}`}
+                date={dayDate.toISOString().split('T')[0]} city={day.city} cityPoint={day.cityPoint} lodging={day.lodging}
+                focus={lodgingToEdit === dayNumber} onFocusHandled={() => setLodgingToEdit(undefined)}
+                onSave={lodging => editDay({ lodging }, true)} />
+            </>
+          )}
+          {!preview && day.importedWalk && <p>{day.importedWalk.title}</p>}
+          {preview && <div>
+            <strong>{preview.title}</strong>
+            <button type="button" onClick={() => {
+              editDay({ stops: preview.stops, importedWalk: { title: preview.title, legs: preview.legs }, route: undefined }, true);
+              setPreview(null);
+            }}>{day.stops.length ? t('Replace day stops') : t('Use this walk')}</button>
+            <button type="button" onClick={() => setPreview(null)}>{t('Cancel')}</button>
+          </div>}
+          <button type="button" onClick={undo} disabled={!past.length}>{t('Undo')}</button>
+          <button type="button" onClick={redo} disabled={!future.length}>{t('Redo')}</button>
+          {(preview || day.stops.length > 0) && <RouteMap
+            stops={preview?.stops ?? day.stops}
+            legs={preview?.legs ?? day.importedWalk?.legs ?? day.route ?? noLegs}
+            onReady={ignoreMapHandle}
+          />}
+          {!preview && day.stops.length > 0 && <>
+            <ol>{day.stops.map(stop => <li key={stop.id}>{stop.label}</li>)}</ol>
+            <button type="button" onClick={() => editDay({
+              stops: [], importedWalk: undefined, route: undefined,
+            }, true)}>{t('Remove walk from day')}</button>
+          </>}
+        </div>
+      </div>
+      <div className="trip-planner-dates">
+        <label>{t('Trip name')} <input maxLength={180} value={draft.title ?? ''}
+          onChange={event => edit({ title: event.target.value })} /></label>
+        <label>{t('Start date')} <input type="date" value={draft.startDate} onChange={(event) => edit({ startDate: event.target.value })} /></label>
+        <label>{t('End date')} <input type="date" value={draft.endDate} onChange={(event) => edit({ endDate: event.target.value })} /></label>
+      </div>
+      <div className="trip-planner-details">
+        <TripDetailsEditor budget={draft.budget} documents={draft.documents ?? []}
+          costs={Object.values(draft.days).flatMap(details =>
+            [details.transfer?.cost, details.lodging?.cost].filter(cost => cost !== undefined))}
+          onChange={edit} />
+      </div>
+      <footer className="trip-planner-actions">
+        <button type="button" onClick={() => { if (validDates()) persist(draft); }}>{t('Save')}</button>
         <button type="button" onClick={() => {
-          editDay({ stops: preview.stops, importedWalk: { title: preview.title, legs: preview.legs }, route: undefined }, true);
-          setPreview(null);
-        }}>{day.stops.length ? t('Replace day stops') : t('Use this walk')}</button>
-        <button type="button" onClick={() => setPreview(null)}>{t('Cancel')}</button>
-      </div>}
-      <button type="button" onClick={undo} disabled={!past.length}>{t('Undo')}</button>
-      <button type="button" onClick={redo} disabled={!future.length}>{t('Redo')}</button>
-      {(preview || day.stops.length > 0) && <RouteMap
-        stops={preview?.stops ?? day.stops}
-        legs={preview?.legs ?? day.importedWalk?.legs ?? day.route ?? noLegs}
-        onReady={ignoreMapHandle}
-      />}
-      {!preview && day.stops.length > 0 && <>
-        <ol>{day.stops.map(stop => <li key={stop.id}>{stop.label}</li>)}</ol>
-        <button type="button" onClick={() => editDay({
-          stops: [], importedWalk: undefined, route: undefined,
-        }, true)}>{t('Remove walk from day')}</button>
-      </>}
-      <button type="button" onClick={() => { if (validDates()) persist(draft); }}>{t('Save')}</button>
-      <button type="button" onClick={() => {
-        if (!validDates()) return;
-        const json = JSON.stringify(tripPayload(draft, title), null, 2);
-        downloadFile(new Blob([json], { type: 'application/json' }), `trip-${draft.startDate}.json`);
-      }}>{t('Export JSON')}</button>
-      <button type="button" disabled={sharing} onClick={() => void createShare()}>{t('Share')}</button>
-      {share?.draft === draft && <input aria-label={t('Trip link')} readOnly value={share.url}
-        onFocus={event => event.currentTarget.select()} />}
-      {fileShare === draft && <button type="button" onClick={() => {
-        try {
-          const json = sharedTripJson(tripPayload(draft, title));
-          downloadFile(new Blob([json], { type: 'application/json' }), `shared-trip-${draft.startDate}.json`);
-        } catch {
-          setStatus(t('Could not create the trip link.'));
-        }
-      }}>{t('Download share file')}</button>}
-      <button type="button" disabled={saving} onClick={() => void saveAccount()}>{t('Save trip to account')}</button>
-      {accountSaved && <Link to={`/trip/${draft.id}`}>{t('Open account trip')}</Link>}
+          if (!validDates()) return;
+          const json = JSON.stringify(tripPayload(draft, title), null, 2);
+          downloadFile(new Blob([json], { type: 'application/json' }), `trip-${draft.startDate}.json`);
+        }}>{t('Export JSON')}</button>
+        <button type="button" disabled={sharing} onClick={() => void createShare()}>{t('Share')}</button>
+        {share?.draft === draft && <input aria-label={t('Trip link')} readOnly value={share.url}
+          onFocus={event => event.currentTarget.select()} />}
+        {fileShare === draft && <button type="button" onClick={() => {
+          try {
+            const json = sharedTripJson(tripPayload(draft, title));
+            downloadFile(new Blob([json], { type: 'application/json' }), `shared-trip-${draft.startDate}.json`);
+          } catch {
+            setStatus(t('Could not create the trip link.'));
+          }
+        }}>{t('Download share file')}</button>}
+        <button type="button" disabled={saving} onClick={() => void saveAccount()}>{t('Save trip to account')}</button>
+        {accountSaved && <Link to={`/trip/${draft.id}`}>{t('Open account trip')}</Link>}
+      </footer>
       {status && <p role="status">{status}</p>}
     </section>
   );

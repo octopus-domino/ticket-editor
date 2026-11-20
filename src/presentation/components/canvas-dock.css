@@ -163,3 +163,10 @@ body.canvas-tool-dragging .mobile-panel-backdrop { pointer-events: none !importa
   .workspace-main .editor-shell .slides-panel .slide-thumb { height: 48px; min-width: 72px; }
   .workspace-main .editor-shell .canvas-dock { padding: 3px; }
 }
+
+
+@media (max-width: 760px) {
+  .workspace-main .editor-shell > .toolbar { overflow: visible; }
+  .workspace-main .editor-shell > .toolbar .toolbar-actions { flex: 1; width: auto; }
+  .workspace-main .editor-shell > .toolbar .toolbar-more-panel { right: 8px; }
+}

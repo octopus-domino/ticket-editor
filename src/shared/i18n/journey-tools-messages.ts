@@ -227,6 +227,9 @@ Car|Автомобиль|汽车|Samochód|Auto|Coche|Auto|Voiture|Auto
 Ferry|Паром|渡轮|Prom|Traghetto|Ferry|Veerboot|Ferry|Fähre
 Departure|Отправление|出发|Odjazd|Partenza|Salida|Vertrek|Départ|Abfahrt
 Arrival|Прибытие|到达|Przyjazd|Arrivo|Llegada|Aankomst|Arrivée|Ankunft
+City list|Список городов|城市列表|Lista miast|Elenco delle città|Lista de ciudades|Stedenlijst|Liste de villes|Städteliste
+Add city|Добавить город|添加城市|Dodaj miasto|Aggiungi città|Añadir ciudad|Stad toevoegen|Ajouter une ville|Stadt hinzufügen
+Add cities on the map|Добавлять города на карте|在地图上添加城市|Dodawaj miasta na mapie|Aggiungi città sulla mappa|Añadir ciudades en el mapa|Steden toevoegen op de kaart|Ajouter des villes sur la carte|Städte auf der Karte hinzufügen
 Trip map|Карта поездки|行程地图|Mapa podróży|Mappa del viaggio|Mapa del viaje|Reiskaart|Carte du voyage|Reisekarte
 Remove map pin|Убрать отметку с карты|移除地图标记|Usuń znacznik z mapy|Rimuovi il segnaposto|Quitar marcador del mapa|Verwijder de kaartmarkering|Retirer le repère de la carte|Kartenmarkierung entfernen
 Trip budget|Бюджет поездки|行程预算|Budżet podróży|Budget del viaggio|Presupuesto del viaje|Reisbudget|Budget du voyage|Reisebudget

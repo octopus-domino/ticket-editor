@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState, type Ref } from 'react';
 import { getLocale, t } from '@/shared/i18n';
 import { journeyRequest } from '../api/journeys';
 
@@ -11,10 +11,16 @@ export function RouteAddressInput({
   value,
   onSelect,
   onEditing,
+  label,
+  inputRef,
+  onConfirmText,
 }: {
   value: string;
   onSelect: (address: RouteAddress) => void;
   onEditing?: (edited: boolean) => void;
+  label?: string;
+  inputRef?: Ref<HTMLInputElement>;
+  onConfirmText?: (label: string) => void;
 }) {
   const [query, setQuery] = useState(value);
   const [options, setOptions] = useState<RouteAddress[]>([]);
@@ -82,12 +88,13 @@ export function RouteAddressInput({
   return (
     <div className="route-address">
       <input
-        aria-label={t('Address')}
+        ref={inputRef}
+        aria-label={label ?? t('Address')}
         role="combobox"
         aria-autocomplete="list"
         aria-expanded={options.length > 0}
         aria-controls={listId}
-        aria-invalid={Boolean(query) && query !== value}
+        aria-invalid={!onConfirmText && Boolean(query) && query !== value}
         aria-activedescendant={active >= 0 ? `${listId}-${active}` : undefined}
         value={query}
         maxLength={180}
@@ -116,6 +123,7 @@ export function RouteAddressInput({
           if (event.key === 'Enter') {
             event.preventDefault();
             if (active >= 0 && options[active]) select(options[active]);
+            else if (!options.length && query.trim()) onConfirmText?.(query.trim());
           }
         }}
       />

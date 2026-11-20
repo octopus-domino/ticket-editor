@@ -13,11 +13,11 @@ const modeLabels = {
 const ignoreMapHandle = () => undefined;
 const timeOptions = { disambiguation: 'reject' } as const;
 
-export function TripTransferEditor({ date, city, pins = [], onSave }: {
-  date: string; city?: string; pins?: { name: string; point: CityPoint }[]; onSave: (transfer: TripTransfer) => void;
+export function TripTransferEditor({ date, city, destination: destinationName, pins = [], onSave }: {
+  date: string; city?: string; destination?: string; pins?: { name: string; point: CityPoint }[]; onSave: (transfer: TripTransfer) => void;
 }) {
   const [from, setFrom] = useState(city ?? '');
-  const [to, setTo] = useState('');
+  const [to, setTo] = useState(destinationName ?? '');
   const [transport, setTransport] = useState<TripTransfer['transport']>('PLANE');
   const [departure, setDeparture] = useState('10:00');
   const [arrival, setArrival] = useState(`${date}T12:00`);
@@ -94,10 +94,12 @@ export function TripTransferEditor({ date, city, pins = [], onSave }: {
     }
   }
   return <>
-    <label>{t('Transport type')} <select value={transport}
-      onChange={event => { resetRoad(); setVia([]); setDrawing(false); setTransport(event.target.value as TripTransfer['transport']); }}>
-      {transferModes.map(mode => <option key={mode} value={mode}>{t(modeLabels[mode])}</option>)}
-    </select></label>
+    <div className="trip-transport-options" role="group" aria-label={t('Transport type')}>
+      {transferModes.map(mode => <button key={mode} type="button" aria-pressed={transport === mode}
+        onClick={() => { resetRoad(); setVia([]); setDrawing(false); setTransport(mode); }}>
+        {t(modeLabels[mode])}
+      </button>)}
+    </div>
     <fieldset>
       <legend>{t('Departure')}</legend>
       <label>{t('City')} <input maxLength={180} value={from} onChange={event => { resetRoad(); setFrom(event.target.value); }} /></label>

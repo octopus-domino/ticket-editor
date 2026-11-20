@@ -3,6 +3,7 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import { t } from '../src/shared/i18n';
 import TripPlannerDraft from '../src/features/journeys/ui/TripPlannerDraft';
 import * as routes from '../src/features/journeys/api/routePlanner';
+import * as journeys from '../src/features/journeys/api/journeys';
 
 vi.mock('../src/features/journeys/ui/RouteMap', () => ({
   RouteMap: ({ onPick, legs, stops, onStopSelect, onStopMove, onLegSelect }: { onPick?: unknown;
@@ -35,7 +36,7 @@ test('builds and saves an intercity road transfer from map markers', async () =>
   try {
     render(<TripPlannerDraft />);
     fireEvent.click(screen.getByRole('button', { name: t('Enter transfer manually') }));
-    fireEvent.change(screen.getByLabelText(t('Transport type')), { target: { value: 'CAR' } });
+    fireEvent.click(within(screen.getByRole('group', { name: t('Transport type') })).getByRole('button', { name: t('Car') }));
     fireEvent.click(screen.getByRole('button', { name: 'Moscow marker' }));
     fireEvent.click(screen.getByRole('button', { name: 'Tver marker' }));
     await act(async () => fireEvent.click(screen.getByRole('button', { name: t('Road distance') })));
@@ -50,12 +51,14 @@ test('builds and saves an intercity road transfer from map markers', async () =>
       road: { durationSeconds: 7200, distanceMeters: 180_000,
         geometry: [{ longitude: 37.6, latitude: 55.7 }, { longitude: 35.9, latitude: 56.8 }] },
     });
-    fireEvent.click(screen.getByRole('button', { name: t('Trip map') }));
+    expect(screen.getByRole('button', { name: t('Trip map') })).toHaveAttribute('aria-expanded', 'true');
     fireEvent.click(screen.getByRole('button', { name: 'Route line' }));
     expect(within(screen.getByRole('region', { name: t('Transfer details') }))
       .getByRole('link', { name: t('Booking link') })).toHaveAttribute('href', 'https://example.org/booking');
     request.mockResolvedValueOnce({ coordinates: [[37.7, 55.8], [35.9, 56.8]],
       durationSeconds: 5400, distanceMeters: 140_000 });
+    fireEvent.click(within(screen.getByRole('group', { name: t('Trip day') }))
+      .getByRole('button', { name: t('Choose on map') }));
     await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Move Moscow' })));
     const moved = JSON.parse(localStorage.getItem('codoc/trip-planner/draft/v2')!);
     expect(moved.days[1].cityPoint).toEqual({ longitude: 37.7, latitude: 55.8 });
@@ -74,6 +77,8 @@ test('persists a manual transfer with different departure and arrival offsets', 
   render(<TripPlannerDraft />);
   fireEvent.change(screen.getByLabelText(t('Start date')), { target: { value: '2026-12-31' } });
   fireEvent.change(screen.getByLabelText(t('End date')), { target: { value: '2027-01-01' } });
+  fireEvent.change(screen.getByLabelText(t('City')), { target: { value: 'Moscow' } });
+  fireEvent.keyDown(screen.getByLabelText(t('City')), { key: 'Enter' });
   fireEvent.click(screen.getByRole('button', { name: t('Enter transfer manually') }));
   const departure = within(screen.getByRole('group', { name: t('Departure') }));
   const arrival = within(screen.getByRole('group', { name: t('Arrival') }));
@@ -174,11 +179,13 @@ test('keeps plans per day and preserves an older draft on day one', () => {
   const { unmount } = render(<TripPlannerDraft />);
   expect(screen.getByText('Old stop')).toBeTruthy();
   fireEvent.change(screen.getByLabelText(t('City')), { target: { value: 'Petersburg' } });
+  fireEvent.keyDown(screen.getByLabelText(t('City')), { key: 'Enter' });
   const next = screen.getByRole('button', { name: t('Next day') });
   fireEvent.click(next);
   fireEvent.click(next);
   expect(screen.queryByText('Old stop')).toBeNull();
   fireEvent.change(screen.getByLabelText(t('City')), { target: { value: 'Moscow' } });
+  fireEvent.keyDown(screen.getByLabelText(t('City')), { key: 'Enter' });
   fireEvent.change(screen.getByLabelText(t('End date')), { target: { value: '2026-12-31' } });
   fireEvent.click(screen.getByRole('button', { name: t('Save') }));
   expect(screen.getByRole('status').textContent).toBe(t('Some planned days are outside the trip dates.'));
@@ -205,4 +212,24 @@ test('opens the existing hotel search from the day summary', () => {
   const search = screen.getByLabelText(t('Guests')).closest('details')!;
   expect(search.open).toBe(true);
   expect(search.parentElement?.closest('details')?.open).toBe(true);
+});
+
+test('adds cities with address suggestions before choosing dates', async () => {
+  const suggest = vi.spyOn(journeys, 'journeyRequest')
+    .mockResolvedValueOnce([{ label: 'Moscow', latitude: 55.75, longitude: 37.62 }])
+    .mockResolvedValueOnce([{ label: 'Tver', latitude: 56.86, longitude: 35.91 }]);
+  try {
+    render(<TripPlannerDraft />);
+    fireEvent.change(screen.getByRole('combobox', { name: t('City') }), { target: { value: 'Mos' } });
+    fireEvent.click(await screen.findByRole('button', { name: 'Moscow' }, { timeout: 2000 }));
+    fireEvent.click(screen.getByRole('button', { name: t('Add city') }));
+    fireEvent.change(screen.getByRole('combobox', { name: t('City') }), { target: { value: 'Tve' } });
+    fireEvent.click(await screen.findByRole('button', { name: 'Tver' }, { timeout: 2000 }));
+    const stored = JSON.parse(localStorage.getItem('codoc/trip-planner/draft/v2')!);
+    expect(stored.days[1]).toMatchObject({ city: 'Moscow', cityPoint: { latitude: 55.75, longitude: 37.62 } });
+    expect(stored.days[2]).toMatchObject({ city: 'Tver', cityPoint: { latitude: 56.86, longitude: 35.91 } });
+    expect(screen.getByLabelText(t('Start date'))).toHaveValue('');
+  } finally {
+    suggest.mockRestore();
+  }
 });

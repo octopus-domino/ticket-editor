@@ -39,6 +39,7 @@ test('returns a ready Journey walk to its trip day and restores it after reload'
   await page.goto('/start/tours');
   const open = page.getByRole('button', { name: 'Travel planner', exact: true });
   await open.click();
+  await expect(page.locator('.journey-form-panel')).toHaveCount(0);
   const planner = page.getByRole('region', { name: 'Travel planner' });
   await planner.getByLabel('Trip name').fill('Winter trip');
   await expect(planner.getByRole('button', { name: 'Build walking route' })).toHaveCount(0);
@@ -131,4 +132,34 @@ test('receives the finished walk from the built Journey application', async ({ p
   await expect(planner.getByText(first.name, { exact: true })).toBeVisible();
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('codoc/trip-planner/draft/v2')!).days['2']
     .importedWalk.legs[0].coordinates)).toEqual([[first.lng, first.lat], [second.lng, second.lat]]);
+});
+
+test('plans from address suggestions and selects transport between the chosen cities', async ({ page }) => {
+  test.skip(process.env.VITE_ENABLE_TRIP_PLANNER !== 'true', 'Requires the trip planner flag');
+  await page.addInitScript(() => localStorage.setItem('codoc:language', 'en'));
+  await page.route('**/api/journeys/routes/addresses?**', request => {
+    const query = new URL(request.request().url()).searchParams.get('q');
+    return request.fulfill({ json: query === 'Mos'
+      ? [{ label: 'Moscow', latitude: 55.75, longitude: 37.62 }]
+      : [{ label: 'Tver', latitude: 56.86, longitude: 35.91 }] });
+  });
+  await page.goto('/start/tours');
+  const planner = page.getByRole('region', { name: 'Travel planner' });
+  await expect(planner).toBeVisible();
+  await expect(page.locator('.journey-form-panel')).toHaveCount(0);
+  await planner.getByRole('button', { name: 'City list' }).click();
+  const city = planner.getByRole('combobox', { name: 'City', exact: true });
+  await city.fill('Mos');
+  await planner.getByRole('listbox').getByRole('button', { name: 'Moscow' }).click();
+  await planner.getByRole('button', { name: 'Add city', exact: true }).click();
+  await city.fill('Tve');
+  await planner.getByRole('listbox').getByRole('button', { name: 'Tver' }).click();
+  await planner.getByLabel('Start date').fill('2026-12-31');
+  await planner.getByLabel('End date').fill('2027-01-01');
+  await planner.getByRole('button', { name: 'Enter transfer manually' }).click();
+  const types = planner.getByRole('group', { name: 'Transport type' });
+  await types.getByRole('button', { name: 'Car' }).click();
+  await expect(types.getByRole('button', { name: 'Car' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(planner.getByRole('group', { name: 'Departure' }).getByLabel('City')).toHaveValue('Moscow');
+  await expect(planner.getByRole('group', { name: 'Arrival' }).getByLabel('City')).toHaveValue('Tver');
 });

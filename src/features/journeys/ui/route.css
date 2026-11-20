@@ -187,3 +187,96 @@
   border: 1px solid #ccd9d4;
   border-radius: 0.75rem;
 }
+
+.trip-planner {
+  display: grid;
+  gap: 1rem;
+}
+.trip-planner-dates,
+.trip-planner-actions,
+.trip-planner-details {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: .5rem .75rem;
+}
+.trip-planner-header h2 {
+  flex: 1 0 100%;
+  margin: 0;
+}
+.trip-planner-dates label {
+  display: grid;
+  gap: .25rem;
+}
+.trip-planner-dates label:first-of-type {
+  flex: 1 1 14rem;
+}
+.trip-planner-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  align-items: start;
+  gap: 1rem;
+}
+.trip-planner-overview,
+.trip-planner-day {
+  min-width: 0;
+}
+.trip-planner-day {
+  display: grid;
+  gap: .5rem;
+}
+.trip-planner-day fieldset {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .4rem;
+  min-width: 0;
+}
+.trip-planner-day .route-map {
+  min-height: 12rem;
+}
+.trip-planner-overview:empty { display: none; }
+.trip-planner-grid:has(.trip-planner-overview:empty) {
+  grid-template-columns: minmax(0, 1fr);
+}
+.trip-planner-overview figure {
+  margin: .5rem 0 0;
+}
+.trip-planner-overview .route-map {
+  height: clamp(18rem, 55vh, 38rem);
+}
+.trip-planner-details,
+.trip-planner-actions {
+  align-items: start;
+  padding-top: .65rem;
+  border-top: 1px solid #d8ddd7;
+}
+.trip-planner-details details[open] {
+  flex: 1 0 100%;
+}
+@media (max-width: 760px) {
+  .trip-planner-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .trip-planner-overview .route-map {
+    height: clamp(15rem, 48vh, 25rem);
+  }
+}
+
+.trip-mode-switch,
+.trip-map-actions,
+.trip-transport-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .5rem;
+}
+.trip-mode-switch {
+  margin-bottom: 1rem;
+}
+.trip-mode-switch button[aria-pressed='true'],
+.trip-transport-options button[aria-pressed='true'] {
+  color: #fff;
+  background: var(--journey-accent, #275b4d);
+}
+.trip-planner-day .route-address { flex: 1 0 100%; }

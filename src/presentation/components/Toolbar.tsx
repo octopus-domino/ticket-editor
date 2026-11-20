@@ -103,34 +103,38 @@ export const Toolbar: React.FC = () => {
         <button className="toolbar-btn" onClick={() => docStore.redo()} disabled={!canRedo}>
           ↷
         </button>
-        <div style={{ width: 8 }} />
         <button className="toolbar-btn" onClick={openSaveAs}>
           {__tr("💾 Сохранить как шаблон")}</button>
-        {isFeatureEnabled('FEATURE_EMAIL') && (
-          <>
-            <button
-              className="toolbar-btn"
-              onClick={() => openEmail('send')}
-              disabled={!activeSlide}
-              title={__tr("Отправить текущий слайд по электронной почте")}
-            >
-              {__tr("📤 Отправить по email")}</button>
-            <button
-              className="toolbar-btn"
-              onClick={() => openEmail('preview')}
-              disabled={!activeSlide}
-              title={__tr("Предпросмотр письма и скачивание .eml")}
-            >
-              {__tr("📧 Email-превью")}</button>
-          </>
-        )}
-        <button className="toolbar-btn" onClick={handleExportSvg}>
-          🖼 SVG
-        </button>
-        <button className="toolbar-btn primary" onClick={handleExportJson}>
-          📥 JSON
-        </button>
       </div>
+      <details className="toolbar-more">
+        <summary className="toolbar-btn">{__tr("Details")}</summary>
+        <div className="toolbar-more-panel">
+          {isFeatureEnabled('FEATURE_EMAIL') && (
+            <>
+              <button
+                className="toolbar-btn"
+                onClick={() => openEmail('send')}
+                disabled={!activeSlide}
+                title={__tr("Отправить текущий слайд по электронной почте")}
+              >
+                {__tr("📤 Отправить по email")}</button>
+              <button
+                className="toolbar-btn"
+                onClick={() => openEmail('preview')}
+                disabled={!activeSlide}
+                title={__tr("Предпросмотр письма и скачивание .eml")}
+              >
+                {__tr("📧 Email-превью")}</button>
+            </>
+          )}
+          <button className="toolbar-btn" onClick={handleExportSvg}>
+            🖼 SVG
+          </button>
+          <button className="toolbar-btn primary" onClick={handleExportJson}>
+            📥 JSON
+          </button>
+        </div>
+      </details>
 
       {saveAsOpen && (
         <div

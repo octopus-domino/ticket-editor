@@ -15,6 +15,7 @@
 
 ## Локальные и браузерные проверки
 
+- `npm ci --no-audit --no-fund` ? PASSED ? ????????? Git worktree, ??????????? 637 ???????.
 - `npm run check` — PASSED. Три существующих предупреждения ESLint в редакторах таблиц.
 - `npm test` — PASSED, 407 тестов в 77 файлах перед добавлением контракта маршрутизации.
 - `npx vitest run tests/route-planner-contract.test.ts` — PASSED, 2 проверки road DTO и повторного использования совпадающей legacy-геометрии.

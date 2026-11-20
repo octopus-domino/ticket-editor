@@ -132,9 +132,10 @@ function TripView({ trip, children }: { trip: SharedTrip; children?: React.React
     </header>
     <TripCityMap cities={trip.cities} legs={trip.legs} accommodations={trip.accommodations}
       focusStopId={focusStopId} onSelectCity={setFocusStopId} />
-    {trip.legs.length > 0 && <details className="trip-saved-transfers">
+    {trip.legs.length > 0 && <details className="trip-saved-transfers" open>
       <summary>{t('Transfer details')}</summary>
       <ul>{trip.legs.map(leg => <li key={leg.id}>
+        {leg.note && <strong>{leg.note}</strong>}{' '}
         {cities.get(leg.fromCityId)} → {cities.get(leg.toCityId)}
         {leg.durationSeconds != null && ` · ${travelDuration(leg.durationSeconds)}`}
         {leg.departureAt && <time dateTime={leg.departureAt}> · {leg.departureAt.replace('T', ' ')}</time>}

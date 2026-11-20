@@ -2,7 +2,7 @@ import { useLanguageDraft } from './useLanguageDraft';
 import './travel.css';
 import { t, getLocale } from '@/shared/i18n';
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import type { CreatedJourney, JourneyDefinition } from '../domain/definitions';
 import { journeyApi, managementUrl, pdfUrl, publicUrl, rememberKey } from '../api/journeys';
 import { JourneyCard } from './JourneyCard';
@@ -108,7 +108,9 @@ function BasicJourneyWizard({
     locale: getLocale(),
   };
   const [mediaBusy, setMediaBusy] = useState(false);
-  const canPlanTrip = definition.kind === 'TOUR' && !custom && !previewOnly && FLAGS.ENABLE_TRIP_PLANNER;
+  const [params] = useSearchParams();
+  const canPlanTrip = definition.kind === 'TOUR' && !custom && !previewOnly &&
+    FLAGS.ENABLE_TRIP_PLANNER && params.get('legacy') !== '1';
   const [routeBusy, setRouteBusy] = useState(false);
   const routeEditor = useRef<RouteEditorHandle>(null);
   const [error, setError] = useState('');

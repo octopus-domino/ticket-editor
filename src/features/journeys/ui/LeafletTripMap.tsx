@@ -75,7 +75,7 @@ export function LeafletTripMap({
       }
       const marker = L.marker([latitude, longitude], {
         icon: L.divIcon({ className: 'trip-leaflet-marker', html: node, iconSize: [30, 30], iconAnchor: [15, 15] }),
-        title: label, alt: label, draggable: moving, keyboard: false,
+        title: label, alt: label, draggable: moving, keyboard: false, autoPanOnFocus: false,
         interactive: !origin, zIndexOffset: origin ? -1000 : 0,
         bubblingMouseEvents: false,
       }).addTo(layer);

@@ -61,6 +61,10 @@ test('builds and saves an intercity road transfer from map markers', async () =>
     expect(moved.days[1].cityPoint).toEqual({ longitude: 37.7, latitude: 55.8 });
     expect(moved.days[1].transfer).toMatchObject({ arrival: '2026-12-31T11:30:00+03:00',
       road: { durationSeconds: 5400, distanceMeters: 140_000 } });
+    fireEvent.click(screen.getByRole('button', { name: t('Undo') }));
+    expect(JSON.parse(localStorage.getItem('codoc/trip-planner/draft/v2')!).days[1]).toEqual(stored.days[1]);
+    fireEvent.click(screen.getByRole('button', { name: t('Redo') }));
+    expect(JSON.parse(localStorage.getItem('codoc/trip-planner/draft/v2')!).days[1]).toEqual(moved.days[1]);
   } finally {
     request.mockRestore();
   }

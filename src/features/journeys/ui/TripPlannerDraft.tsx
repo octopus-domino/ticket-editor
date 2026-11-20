@@ -364,9 +364,9 @@ export default function TripPlannerDraft() {
     <section className="trip-planner" aria-label={t('Travel planner')}>
       <header className="trip-planner-header">
         <h2>{t('Travel planner')}</h2>
-        <small aria-live="polite">{saving ? t('Saving?') : accountSaved ? t('Trip saved to account.')
-          : localSave === 'pending' ? t('Saving?') : localSave === 'saved' ? t('Trip saved on this device.')
-            : localSave === 'failed' ? t('Could not save the trip on this device.') : ''}</small>
+        {!status && (saving || localSave !== 'idle') && <small role="status">{saving ? t('Saving…') : accountSaved ? t('Trip saved to account.')
+          : localSave === 'pending' ? t('Saving…') : localSave === 'saved' ? t('Trip saved on this device.')
+            : t('Could not save the trip on this device.')}</small>}
       </header>
       <div className="trip-planner-dates">
         <label>{t('Trip name')} <input maxLength={180} value={draft.title ?? ''}
@@ -375,7 +375,7 @@ export default function TripPlannerDraft() {
         <label>{t('End date')} <input type="date" value={draft.endDate} onChange={event => { edit({ endDate: event.target.value }); persist({ ...draft, endDate: event.target.value }); }} /></label>
       </div>
       <nav className="trip-workspace-tabs" aria-label={t('Travel planner')}>
-        {([['plan', 'City list'], ['map', 'Trip map'], ['summary', 'Trip overview']] as const).map(([id, label]) =>
+        {([['plan', 'City list'], ['map', 'Map'], ['summary', 'Trip overview']] as const).map(([id, label]) =>
           <button key={id} type="button" aria-pressed={mobileTab === id} onClick={() => {
             setMobileTab(id);
             if (id === 'map') setShowingCities(true);

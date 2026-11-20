@@ -38,8 +38,8 @@ test('builds and saves an intercity road transfer from map markers', async () =>
     render(<MemoryRouter><TripPlannerDraft /></MemoryRouter>);
     fireEvent.click(screen.getByRole('button', { name: t('Enter transfer manually') }));
     fireEvent.click(within(screen.getByRole('group', { name: t('Transport type') })).getByRole('button', { name: t('Car') }));
-    fireEvent.click(screen.getByRole('button', { name: 'Moscow marker' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Tver marker' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Moscow marker' }).at(-1)!);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Tver marker' }).at(-1)!);
     await act(async () => fireEvent.click(screen.getByRole('button', { name: t('Road distance') })));
     expect(request).toHaveBeenCalledWith({ longitude: 37.6, latitude: 55.7 },
       { longitude: 35.9, latitude: 56.8 }, 'car', expect.any(AbortSignal));

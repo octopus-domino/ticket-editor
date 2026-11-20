@@ -68,6 +68,12 @@ export function LeafletTripMap({
       if (node instanceof HTMLButtonElement) {
         node.type = 'button';
         node.setAttribute('aria-label', label);
+        node.addEventListener('pointerdown', event => {
+          if (event.button !== 0) return;
+          event.preventDefault();
+          event.stopPropagation();
+          node.setPointerCapture(event.pointerId);
+        });
         L.DomEvent.on(node, 'click', event => {
           L.DomEvent.stopPropagation(event);
           latest.current.onStopSelect?.(id);

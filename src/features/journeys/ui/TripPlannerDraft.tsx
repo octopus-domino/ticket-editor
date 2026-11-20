@@ -8,12 +8,13 @@ import { downloadFile } from '@/shared/files/download';
 import { TripTemplateAction } from './TripTemplateAction';
 import { geographicDistance } from '../domain/route';
 import { sharedTripJson, shareTripUrl } from '../domain/sharedTrip';
-import { saveTripToAccount, TripAccountSaveError, tripLocations, tripPayload, type PointTransport, type CityPoint, type LocalTripDraft, type TripDayDraft, type TripVisit } from '../api/tripDraft';
+import { saveTripToAccount, TripAccountSaveError, tripLocations, tripPayload, type PointTransport, type CityPoint, type LocalTripDraft, type TripDayDraft, type TripVisit, type TripTrain } from '../api/tripDraft';
 import { RouteMap } from './RouteMap';
 import { TripWalkImport, type WalkCandidate } from './TripWalkImport';
 import { TripTrainSearch } from './TripTrainSearch';
 import { TripLodgingEditor } from './TripLodgingEditor';
 import { TripHotelSearch, type TripHotelMapState } from './TripHotelSearch';
+import { tripDayDate } from '../domain/planner/travelTimes';
 import { DayPlanningPanel, type DayMapPlan } from './DayPlanningPanel';
 import { TripSummaryBar } from './TripSummaryBar';
 import { useTripConnections } from './useTripConnections';
@@ -38,6 +39,7 @@ export default function TripPlannerDraft() {
   const [{ draft, past, future }, dispatch] = useReducer(plannerReducer, undefined, () => ({
     draft: readDraft(), past: [], future: [],
   }));
+  const [pendingDates, setPendingDates] = useState<Pick<Draft, 'startDate' | 'endDate'>>();
   const [status, setStatus] = useState('');
   const [saving, setSaving] = useState(false);
   const [accountSaved, setAccountSaved] = useState(false);
@@ -210,6 +212,15 @@ export default function TripPlannerDraft() {
     persist({ ...draft, days });
   }
 
+  function chooseTrain(id: string, train: TripTrain) {
+    const location = locations.find(item => item.id === id);
+    if (!location) return;
+    const parent = draft.days[location.number];
+    const next = id === String(location.number) ? { ...parent, train }
+      : { ...parent, visits: parent.visits?.map(visit => visit.id === id ? { ...visit, train } : visit) };
+    edit({ days: { ...draft.days, [location.number]: next } });
+  }
+
   function nextDay() {
     const target = dayNumber + 1;
     if (target > lastDay) {
@@ -289,11 +300,9 @@ export default function TripPlannerDraft() {
       setStatus(t('Some planned days are outside the trip dates.'));
       return false;
     }
-    const start = Date.parse(draft.startDate);
     const shiftedTransfer = locations.some(({ number, visit: details }) => {
       const departure = (details.train ?? details.transfer)?.departure;
-      return departure && departure.slice(0, 10) !== new Date(start + (Number(number) - 1) * dayMilliseconds)
-        .toISOString().slice(0, 10);
+      return departure && departure.slice(0, 10) !== tripDayDate(draft.startDate, number);
     });
     if (shiftedTransfer) {
       setStatus(t('Update transfers after changing the trip dates.'));
@@ -348,11 +357,21 @@ export default function TripPlannerDraft() {
       checkOut: day.lodging?.checkOut ?? new Date(dayDate.getTime() + dayMilliseconds).toISOString().slice(0, 10) }
     : undefined;
 
+  function applyDates(dates: Pick<Draft, 'startDate' | 'endDate'>) {
+    edit(dates);
+    persist({ ...draft, ...dates });
+    setPendingDates(undefined);
+  }
+
+  function requestDates(dates: Pick<Draft, 'startDate' | 'endDate'>) {
+    const affected = draft.startDate && locations.some(({ visit }) => visit.lodging || visit.train || visit.transfer);
+    if (affected && (dates.startDate !== draft.startDate || dates.endDate !== draft.endDate)) setPendingDates(dates);
+    else applyDates(dates);
+  }
+
   function setStartDate(startDate: string) {
     const count = Math.max(2, lastDay);
-    const endDate = startDate ? Temporal.PlainDate.from(startDate).add({ days: count - 1 }).toString() : '';
-    edit({ startDate, endDate });
-    persist({ ...draft, startDate, endDate });
+    requestDates({ startDate, endDate: tripDayDate(startDate, count) ?? '' });
   }
 
   function reorderDay(from: number, to: number) {
@@ -378,8 +397,15 @@ export default function TripPlannerDraft() {
         <label>{t('Trip name')} <input maxLength={180} value={draft.title ?? ''}
           onChange={event => edit({ title: event.target.value })} /></label>
         <label>{t('Start date')} <input ref={startDateInput} type="date" value={draft.startDate} onChange={event => setStartDate(event.target.value)} /></label>
-        <label>{t('End date')} <input type="date" value={draft.endDate} onChange={event => { edit({ endDate: event.target.value }); persist({ ...draft, endDate: event.target.value }); }} /></label>
+        <label>{t('End date')} <input type="date" value={draft.endDate} onChange={event => requestDates({ startDate: draft.startDate, endDate: event.target.value })} /></label>
       </div>
+      {pendingDates && <section className="trip-date-review" role="alert">
+        <p>{t('Review lodging and transport before changing dates.')}</p>
+        <ul>{locations.filter(({ visit }) => visit.lodging || visit.train || visit.transfer).map(({ id, visit }) =>
+          <li key={id}>{[visit.city, visit.lodging?.name, visit.train?.title, visit.transfer?.to].filter(Boolean).join(' · ')}</li>)}</ul>
+        <button type="button" onClick={() => applyDates(pendingDates)}>{t('Apply')}</button>
+        <button type="button" onClick={() => setPendingDates(undefined)}>{t('Cancel')}</button>
+      </section>}
       <nav className="trip-workspace-tabs" aria-label={t('Travel planner')}>
         {([['plan', 'City list'], ['map', 'Map'], ['summary', 'Trip overview']] as const).map(([id, label]) =>
           <button key={id} type="button" aria-pressed={mobileTab === id} onClick={() => {
@@ -462,6 +488,7 @@ export default function TripPlannerDraft() {
                 return {
                   id, place: visit.city?.trim() || t('City'), lodging: visit.lodging,
                   connection: connectionsByDay.get(id), onChooseTransport: mode => chooseTransport(id, mode),
+                  onChooseTrain: train => chooseTrain(id, train),
                   onSelect: () => {
                     selectDay(number, visitId);
                     if (visit.cityPoint) { setPlacingCities(false); setFocusedDay(number); }

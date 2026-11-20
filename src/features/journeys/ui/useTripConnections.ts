@@ -1,3 +1,4 @@
+import { scheduledSeconds, tripDayDate } from '../domain/planner/travelTimes';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { searchRailPlaces, searchRailSchedule } from '../api/tripRail';
 import { requestRoad } from '../api/routePlanner';
@@ -7,7 +8,7 @@ import type { RouteMapLeg } from './RouteMap';
 
 type Point = CityPoint & { id: string; name: string; number: number; mode?: PointTransport };
 type Segment = { from: Point; to: Point; mode: PointTransport; date?: string };
-type Estimate = { seconds: number; coordinates?: [number, number][]; trains?: (TripTrain & { seconds: number })[] };
+type Estimate = { seconds: number; source: 'road' | 'rail' | 'flight-estimate'; checkedAt: string; stale?: boolean; coordinates?: [number, number][]; trains?: (TripTrain & { seconds: number })[] };
 async function railCity(name: string, signal: AbortSignal) {
   for (const part of name.split(',').slice(0, 4)) {
     const query = part.trim().toLowerCase().replace(/^г\.\s*/, '');
@@ -21,24 +22,26 @@ async function railCity(name: string, signal: AbortSignal) {
 
 async function estimate({ from, to, mode, date }: Segment, signal: AbortSignal): Promise<Estimate | null> {
   const distance = geographicDistance(from, to);
+  const checkedAt = new Date().toISOString();
   if (mode === 'PLANE') {
-    return { seconds: 1800 + distance * 3.6 / 800, coordinates: flightCoordinates(from, to) };
+    return { seconds: 1800 + distance * 3.6 / 800, coordinates: flightCoordinates(from, to), checkedAt, source: 'flight-estimate' };
   }
   if (mode === 'TRAIN') {
     if (!date) return null;
     const [origin, destination] = await Promise.all([railCity(from.name, signal), railCity(to.name, signal)]);
     if (!origin || !destination || origin === destination) return null;
     const schedule = await searchRailSchedule(origin, destination, date, signal);
-    const trains = schedule.trains.map(train => ({ ...train,
-      seconds: (Date.parse(train.arrival) - Date.parse(train.departure)) / 1000 }))
-      .filter(train => Number.isFinite(train.seconds) && train.seconds > 0)
+    const trains = schedule.trains.flatMap(train => {
+      const seconds = scheduledSeconds(train.departure, train.arrival);
+      return seconds === undefined ? [] : [{ ...train, seconds }];
+    })
       .sort((a, b) => Date.parse(a.departure) - Date.parse(b.departure));
-    return trains.length ? { seconds: Math.min(...trains.map(train => train.seconds)), trains } : null;
+    return trains.length ? { seconds: Math.min(...trains.map(train => train.seconds)), trains, checkedAt, source: 'rail', stale: schedule.stale } : null;
   }
-  if (distance === 0) return { seconds: 0 };
+  if (distance === 0) return { seconds: 0, checkedAt, source: 'road' };
   const road = await requestRoad({ latitude: from.latitude, longitude: from.longitude },
     { latitude: to.latitude, longitude: to.longitude }, mode === 'WALK' ? 'foot' : 'car', signal);
-  return { seconds: road.durationSeconds, coordinates: road.coordinates };
+  return { seconds: road.durationSeconds, coordinates: road.coordinates, checkedAt, source: 'road' };
 }
 
 function segmentKey(segment: Segment) {
@@ -48,12 +51,11 @@ function segmentKey(segment: Segment) {
 }
 
 export function useTripConnections(points: Point[], draft: LocalTripDraft) {
-  const firstDate = Date.parse(draft.startDate);
-  const segments: Segment[] = points.slice(1).map((to, index) => {
+  const segments: Segment[] = points.slice(1).flatMap((to, index) => {
+    const from = points[index];
+    if (from.latitude === to.latitude && from.longitude === to.longitude) return [];
     const mode = to.mode ?? 'CAR';
-    const date = new Date(firstDate + (to.number - 1) * 86_400_000);
-    return { from: points[index], to, mode,
-      date: mode === 'TRAIN' && Number.isFinite(date.getTime()) ? date.toISOString().slice(0, 10) : undefined };
+    return [{ from, to, mode, date: mode === 'TRAIN' ? tripDayDate(draft.startDate, to.number) : undefined }];
   });
   const signature = JSON.stringify(segments);
   const cache = useRef(new Map<string, Estimate | null>());

@@ -1,6 +1,6 @@
 import { Fragment } from 'react';
 import { getLocale, t } from '@/shared/i18n';
-import { pointTransportModes, type PointTransport, type TripLodging } from '../api/tripDraft';
+import { pointTransportModes, type PointTransport, type TripLodging, type TripTrain } from '../api/tripDraft';
 import { travelDuration } from '../domain/tripDocumentContent';
 import type { TripConnection } from './useTripConnections';
 
@@ -12,6 +12,7 @@ export interface TripSummaryRow {
   lodging?: Pick<TripLodging, 'name' | 'checkIn' | 'checkOut'>;
   connection?: TripConnection;
   onChooseTransport?: (mode: PointTransport) => void;
+  onChooseTrain?: (train: TripTrain) => void;
   onSelect?: () => void;
   onFindHotel?: () => void;
 }
@@ -28,7 +29,7 @@ interface TripSummaryDay {
 
 export function TripSummaryBar({ rows = [], days }: { rows?: TripSummaryRow[]; days?: TripSummaryDay[] }) {
   if (!rows.length && !days?.length) return null;
-  const cards = (items: TripSummaryRow[]) => <ol>{items.map(({ id, place, lodging, connection, onChooseTransport, onSelect, onFindHotel }) => {
+  const cards = (items: TripSummaryRow[]) => <ol>{items.map(({ id, place, lodging, connection, onChooseTransport, onChooseTrain, onSelect, onFindHotel }) => {
       const nights = lodging && (Date.parse(lodging.checkOut) - Date.parse(lodging.checkIn)) / 86_400_000;
       return <Fragment key={id}>
         {connection && <li className="trip-summary-connection">
@@ -45,6 +46,10 @@ export function TripSummaryBar({ rows = [], days }: { rows?: TripSummaryRow[]; d
             ? <>{connection.mode === 'PLANE' && `${t('Estimated flight time')}: `}{travelDuration(connection.result.seconds)}</>
             : connection.mode === 'TRAIN' && !connection.date ? t('Select trip dates for trains')
               : connection.result === null ? t('Travel time unavailable') : t('Calculating route…')}</small>
+          {connection.result?.source === 'rail' && <small>
+            {t(connection.result.stale ? 'Train timetable is out of date.' : 'Duration from timetable')}
+          </small>}
+          {connection.result?.source === 'road' && <small>{t('Road route calculated')}</small>}
           {connection.mode === 'TRAIN' && <details className="trip-connection-timetable">
             <summary title={t('Train timetable')} aria-label={t('Train timetable')}><span aria-hidden="true">🗓</span></summary>
             <div className="trip-connection-timetable-panel">
@@ -55,6 +60,12 @@ export function TripSummaryBar({ rows = [], days }: { rows?: TripSummaryRow[]; d
                   <span>{train.from} <time dateTime={train.departure}>{train.departure.slice(11, 16)}</time>
                     {' → '}{train.to} <time dateTime={train.arrival}>{train.arrival.slice(11, 16)}</time></span>
                   <small>{travelDuration(train.seconds)}</small>
+                  {onChooseTrain && <button type="button" disabled={connection.result?.stale}
+                    onClick={() => onChooseTrain({
+                      number: train.number, title: train.title, from: train.from, to: train.to,
+                      fromCity: connection.from.name, toCity: connection.to.name,
+                      departure: train.departure, arrival: train.arrival,
+                    })}>{t('Select train')}</button>}
                 </li>)}
               </ul> : <p>{!connection.date ? t('Select trip dates for trains')
                 : connection.result === null ? t('Train timetable unavailable.') : t('Calculating route…')}</p>}

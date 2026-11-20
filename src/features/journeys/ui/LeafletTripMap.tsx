@@ -54,18 +54,25 @@ export function LeafletTripMap({
     layer.clearLayers();
     const pins = JSON.parse(markerKey) as { id: string; label: string; latitude: number; longitude: number }[];
     pins.forEach(({ id, label, latitude, longitude }, index) => {
-      const node = document.createElement('span');
-      node.className = 'route-map-marker';
+      const origin = id === '__day_point__';
+      const clickable = selectable && !origin;
+      const node = document.createElement(clickable ? 'button' : 'span');
+      node.className = `route-map-marker${origin ? ' route-map-marker--origin' : ''}`;
       node.textContent = routePointMarker(index, pins.length);
+      if (node instanceof HTMLButtonElement) {
+        node.type = 'button';
+        node.setAttribute('aria-label', label);
+        L.DomEvent.on(node, 'click', event => {
+          L.DomEvent.stopPropagation(event);
+          latest.current.onStopSelect?.(id);
+        });
+      }
       const marker = L.marker([latitude, longitude], {
         icon: L.divIcon({ className: 'trip-leaflet-marker', html: node, iconSize: [30, 30], iconAnchor: [15, 15] }),
-        title: label, alt: label, draggable: moving, keyboard: selectable || moving,
+        title: label, alt: label, draggable: moving, keyboard: false,
+        interactive: !origin, zIndexOffset: origin ? -1000 : 0,
         bubblingMouseEvents: false,
       }).addTo(layer);
-      if (selectable) {
-        marker.getElement()?.setAttribute('aria-label', label);
-        marker.on('click', () => latest.current.onStopSelect?.(id));
-      }
       if (moving) marker.on('dragend', () => {
         const point = marker.getLatLng().wrap();
         latest.current.onStopMove?.(id, { latitude: point.lat, longitude: point.lng });

@@ -1,4 +1,4 @@
-﻿import { requestRoad } from '../routePlanner';
+import { requestRoad } from '../routePlanner';
 import { legCalculationKey } from '../../domain/planner/legCalculationKey';
 import type { PlanningStop, RoadCost, RoadMatrix } from '../../domain/planner/plannerTypes';
 
@@ -31,6 +31,10 @@ export async function readDayRoads(stops: PlanningStop[], cache: Map<string, Roa
   };
   await readOrder(stops);
   if (alternatives && stops.length <= 12) {
+    for (let i = 1; i < stops.length - 1 && seen.size < budget; i++) {
+      if (stops[i].priority !== 'must' && !stops[i].locked && !stops[i].fixedStartLocal)
+        await read(stops[i - 1], stops[i + 1]);
+    }
     for (let gap = 1; gap < stops.length - 2 && seen.size < budget; gap++) {
       for (let i = 1; i + gap < stops.length - 1 && seen.size < budget; i++) {
         const j = i + gap;

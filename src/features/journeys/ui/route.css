@@ -490,3 +490,20 @@
 .trip-day-program > ol { padding-inline-start: 1.4rem; }
 .trip-day-program li { padding: .45rem 0; border-bottom: 1px solid #e6ece7; }
 .trip-day-program li small { display: block; color: #4d6659; }
+
+.trip-planner[data-planner-v2='false'] .trip-planner-grid {
+  grid-template-areas: 'map day' 'summary day';
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+}
+.trip-planner[data-planner-v2='false'] .trip-planner-grid[data-hotel-search='true'] {
+  grid-template-areas: 'map' 'summary'; grid-template-columns: minmax(0, 1fr);
+}
+.trip-date-review {
+  padding: .9rem; border: 1px solid #dce6de; background: #f7faf7; border-radius: 12px;
+}
+.trip-planner[data-planner-v2='true'] :is(button, select, input):focus-visible {
+  outline: 2px solid #317559; outline-offset: 2px;
+}
+@media (max-width: 767px) {
+  .trip-planner[data-planner-v2='false'] .trip-planner-grid > * { display: initial; }
+}

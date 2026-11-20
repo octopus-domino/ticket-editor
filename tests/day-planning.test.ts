@@ -42,3 +42,15 @@ test('rejects ambiguous local appointments at the autumn clock change', () => {
     { ...defaultDayPreferences, startLocal: '00:00' });
   expect(result.issues).toContainEqual({ stopId: 'museum', kind: 'time_zone', severity: 'blocking' });
 });
+
+test('only proposes dropping a lower-priority stop to resolve a closed visit', () => {
+  const museum: PlanningStop = { ...stop('museum'), priority: 'preferred',
+    openingHours: { from: '08:00', to: '08:15', confidence: 'confirmed' } };
+  const original = [stop('start'), museum, stop('park'), stop('end')];
+  const proposal = optimizeDayRoute(original, cost, date, 'Europe/Moscow', defaultDayPreferences);
+  expect(proposal.before.issues).toContainEqual({ stopId: 'museum', kind: 'closed', severity: 'blocking' });
+  expect(proposal.removed.map(item => item.id)).toEqual(['museum']);
+  expect(proposal.after.issues.some(issue => issue.severity === 'blocking')).toBe(false);
+  expect(optimizeDayRoute([original[0], { ...museum, priority: 'must' }, ...original.slice(2)],
+    cost, date, 'Europe/Moscow', defaultDayPreferences).removed).toEqual([]);
+});

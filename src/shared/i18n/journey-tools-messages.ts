@@ -9,6 +9,11 @@ Plan the day|Спланировать день|规划一天|Zaplanuj dzień|Pian
 Add place|Добавить место|添加地点|Dodaj miejsce|Aggiungi luogo|Añadir lugar|Plaats toevoegen|Ajouter un lieu|Ort hinzufügen
 Check the day|Проверить план дня|检查日程|Sprawdź plan dnia|Verifica la giornata|Comprobar el día|Controleer de dag|Vérifier la journée|Tagesplan prüfen
 Improve the order|Улучшить порядок|优化顺序|Popraw kolejność|Migliora l’ordine|Mejorar el orden|Volgorde verbeteren|Améliorer l’ordre|Reihenfolge verbessern
+Visit priority|Приоритет посещения|参观优先级|Priorytet wizyty|Priorità della visita|Prioridad de visita|Bezoekprioriteit|Priorité de visite|Besuchspriorität
+Required stop|Обязательное место|必到地点|Obowiązkowy punkt|Tappa obbligatoria|Parada obligatoria|Verplichte halte|Étape obligatoire|Pflichtstopp
+Preferred stop|Желательное место|首选地点|Preferowany punkt|Tappa preferita|Parada preferida|Voorkeurshalte|Étape souhaitée|Bevorzugter Stopp
+Optional stop|Необязательное место|可选地点|Opcjonalny punkt|Tappa facoltativa|Parada opcional|Optionele halte|Étape facultative|Optionaler Stopp
+Suggested skips|Предлагается пропустить|建议跳过|Proponowane pominięcia|Tappe da saltare|Se sugiere omitir|Voorgestelde overslagen|Étapes à ignorer|Vorgeschlagene Auslassungen
 Visit minutes|Длительность осмотра, мин|参观分钟|Czas wizyty, min|Visita, min|Visita, min|Bezoekduur, min|Visite, min|Besuchsdauer, Min.
 Fixed visit time|Фиксированное время|固定时间|Stała godzina|Orario fisso|Hora fija|Vaste tijd|Heure fixe|Feste Uhrzeit
 Keep position|Закрепить позицию|锁定位置|Zablokuj pozycję|Blocca posizione|Fijar posición|Positie vastzetten|Bloquer la position|Position fixieren
@@ -287,6 +292,7 @@ Too many requests. Try saving again shortly.|Слишком много запр�
 Could not save the trip to your account.|Не удалось сохранить поездку в аккаунт.|无法将行程保存到账户。|Nie udało się zapisać podróży na koncie.|Impossibile salvare il viaggio nell’account.|No se pudo guardar el viaje en la cuenta.|De reis kon niet in het account worden opgeslagen.|Impossible d’enregistrer le voyage dans le compte.|Die Reise konnte nicht im Konto gespeichert werden.
 Remove walk from day|Убрать прогулку из дня|从当天移除步行路线|Usuń spacer z dnia|Rimuovi la passeggiata dal giorno|Quitar paseo del día|Wandeling uit dag verwijderen|Retirer la promenade du jour|Spaziergang aus dem Tag entfernen
 Replace day stops|Заменить прогулку у остановки|替换当天的站点|Zastąp przystanki dnia|Sostituisci le tappe del giorno|Reemplazar paradas del día|Dagstops vervangen|Remplacer les étapes du jour|Tagesstopps ersetzen
+Move to day|Перенести в день|移至某日|Przenieś do dnia|Sposta al giorno|Mover al día|Naar dag verplaatsen|Déplacer au jour|In Tag verschieben
 Move day earlier|Переместить день раньше|提前此日|Przesuń dzień wcześniej|Sposta il giorno prima|Mover el día antes|Dag eerder plaatsen|Avancer le jour|Tag vorziehen
 Move day later|Переместить день позже|推迟此日|Przesuń dzień później|Sposta il giorno dopo|Mover el día después|Dag later plaatsen|Reculer le jour|Tag nach hinten verschieben
 Trip day|День путешествия|行程日期|Dzień podróży|Giorno di viaggio|Día del viaje|Reisdag|Jour du voyage|Reisetag

@@ -154,7 +154,7 @@ function BasicJourneyWizard({
       data-step={step}
     >
       {canPlanTrip
-        ? <Suspense fallback={<p>{t('Loading…')}</p>}><TripPlannerDraft /></Suspense>
+        ? <Suspense fallback={<p>{t('Loading…')}</p>}><TripPlannerDraft v2={FLAGS.ENABLE_TRIP_PLANNER_V2 && params.get('planner') !== 'classic'} /></Suspense>
         : <div>
       <div className="journey-intro">
         <span className="journey-eyebrow">

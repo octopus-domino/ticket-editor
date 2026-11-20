@@ -1,5 +1,5 @@
 import timezone from 'tz-lookup';
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { Temporal } from '@js-temporal/polyfill';
 import { requestRoad, requestRoadVia } from '../api/routePlanner';
 import { Link } from 'react-router-dom';
@@ -15,7 +15,7 @@ import { TripTrainSearch } from './TripTrainSearch';
 import { TripLodgingEditor } from './TripLodgingEditor';
 import { TripHotelSearch, type TripHotelMapState } from './TripHotelSearch';
 import { tripDayDate } from '../domain/planner/travelTimes';
-import { DayPlanningPanel, type DayMapPlan } from './DayPlanningPanel';
+import type { DayMapPlan } from './DayPlanningPanel';
 import { TripSummaryBar } from './TripSummaryBar';
 import { useTripConnections } from './useTripConnections';
 import { TripDetailsEditor } from './TripDetailsEditor';
@@ -26,6 +26,7 @@ import { readDraft, tripDraftStorageKey } from '../domain/planner/draftMigration
 import { plannerReducer } from '../domain/planner/plannerReducer';
 import './route.css';
 
+const DayPlanningPanel = lazy(() => import('./DayPlanningPanel').then(module => ({ default: module.DayPlanningPanel })));
 const noLegs: [] = [];
 const ignoreMapHandle = () => undefined;
 
@@ -35,7 +36,7 @@ type Draft = LocalTripDraft;
 const emptyDay: TripDay = { stops: [] };
 const dayMilliseconds = 86_400_000;
 
-export default function TripPlannerDraft() {
+export default function TripPlannerDraft({ v2 = true }: { v2?: boolean }) {
   const [{ draft, past, future }, dispatch] = useReducer(plannerReducer, undefined, () => ({
     draft: readDraft(), past: [], future: [],
   }));
@@ -221,6 +222,21 @@ export default function TripPlannerDraft() {
     edit({ days: { ...draft.days, [location.number]: next } });
   }
 
+  function moveProgramStop(stopId: string, target: number) {
+    const stop = day.planningStops?.find(item => item.id === stopId && !item.locked);
+    const destination = draft.days[target] ?? emptyDay;
+    if (!stop || target === dayNumber || !Number.isSafeInteger(target) || target < 1 || target > lastDay ||
+      (destination.planningStops?.length ?? 0) >= 12) return;
+    const remaining = day.planningStops?.filter(item => item.id !== stopId);
+    const updatedSource = extra ? { ...dayDraft, visits: dayDraft.visits?.map(visit =>
+      visit.id === extra.id ? { ...visit, planningStops: remaining } : visit) } : { ...dayDraft, planningStops: remaining };
+    setDayMap(undefined);
+    edit({ days: { ...draft.days, [dayNumber]: updatedSource, [target]: {
+      ...destination, dayId: destination.dayId ?? crypto.randomUUID(),
+      planningStops: [...(destination.planningStops ?? []), stop],
+    } } });
+  }
+
   function nextDay() {
     const target = dayNumber + 1;
     if (target > lastDay) {
@@ -386,7 +402,7 @@ export default function TripPlannerDraft() {
   }
 
   return (
-    <section className="trip-planner" aria-label={t('Travel planner')}>
+    <section className="trip-planner" data-planner-v2={v2} aria-label={t('Travel planner')}>
       <header className="trip-planner-header">
         <h2>{t('Travel planner')}</h2>
         {!status && (saving || localSave !== 'idle') && <small role="status">{saving ? t('Saving…') : accountSaved ? t('Trip saved to account.')
@@ -406,13 +422,13 @@ export default function TripPlannerDraft() {
         <button type="button" onClick={() => applyDates(pendingDates)}>{t('Apply')}</button>
         <button type="button" onClick={() => setPendingDates(undefined)}>{t('Cancel')}</button>
       </section>}
-      <nav className="trip-workspace-tabs" aria-label={t('Travel planner')}>
+      {v2 && <nav className="trip-workspace-tabs" aria-label={t('Travel planner')}>
         {([['plan', 'City list'], ['map', 'Map'], ['summary', 'Trip overview']] as const).map(([id, label]) =>
           <button key={id} type="button" aria-pressed={mobileTab === id} onClick={() => {
             setMobileTab(id);
             if (id === 'map') setShowingCities(true);
           }}>{t(label)}</button>)}
-      </nav>
+      </nav>}
       <div className="trip-planner-grid" data-hotel-search={Boolean(hotelSearch)} data-mobile-tab={mobileTab}>
         <div className="trip-planner-overview">
           {!hotelSearch && <div className="trip-map-actions">
@@ -535,14 +551,17 @@ export default function TripPlannerDraft() {
           {day.city?.trim() && <button className="journey-primary" type="button" onClick={findHotelsFromMap}>
             {t('Find hotels')}
           </button>}
-          <DayPlanningPanel key={`program-${activeLocation}`} stops={day.planningStops} preferences={day.dayPreferences}
+          {v2 && <Suspense fallback={<p aria-busy="true">{t('Loading…')}</p>}><DayPlanningPanel key={`program-${activeLocation}`} stops={day.planningStops} preferences={day.dayPreferences}
+            targetDays={Array.from({ length: Math.min(lastDay, 366) }, (_, index) => index + 1)
+              .filter(number => number !== dayNumber && (draft.days[number]?.planningStops?.length ?? 0) < 12)}
+            onMoveToDay={moveProgramStop}
             date={Number.isFinite(dayDate.getTime()) ? dayDate.toISOString().slice(0, 10) : undefined}
             zone={day.cityPoint ? timezone(day.cityPoint.latitude, day.cityPoint.longitude) : Intl.DateTimeFormat().resolvedOptions().timeZone}
             onMap={plan => {
               setDayMap(plan);
               if (plan) { setShowingCities(true); setChoosingCity(false); }
             }}
-            onChange={(planningStops, dayPreferences) => editDay({ planningStops, dayPreferences })} />
+            onChange={(planningStops, dayPreferences) => editDay({ planningStops, dayPreferences })} /></Suspense>}
           {Boolean(day.ideas?.length) && <ul aria-label={t('Trip ideas')}>{day.ideas?.map(idea => <li key={idea.id}>
             {idea.label}{' '}<button type="button" onClick={() =>
               editDay({ ideas: day.ideas?.filter(item => item.id !== idea.id) }, true)}>{t('Remove')}</button>

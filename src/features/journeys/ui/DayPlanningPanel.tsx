@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import { getLocale, t } from '@/shared/i18n';
 import { readDayRoads } from '../api/planner/dayRoadMatrix';
 import { optimizeDayRoute, type OptimizationMode } from '../domain/planner/optimizeDayRoute';
-import { defaultDayPreferences, type DayPlanPreferences, type PlanningIssue, type PlanningStop, type RoadCost, type RoadMatrix } from '../domain/planner/plannerTypes';
+import { defaultDayPreferences, type DayPlanPreferences, type PlanningIssue, type PlanningStop, type RoadCost, type RoadMatrix, type StopPriority } from '../domain/planner/plannerTypes';
 import { travelDuration } from '../domain/tripDocumentContent';
 import type { RouteMapLeg } from './routeMapTypes';
 import type { RouteStop } from '../domain/routeTimeline';
+import { RouteReorderHandle } from './RouteReorderHandle';
 import { RouteAddressInput } from './RouteAddressInput';
 
 const noStops: PlanningStop[] = [];
@@ -20,10 +21,12 @@ const modes: Record<OptimizationMode, string> = {
 
 export type DayMapPlan = { stops: RouteStop[]; legs: RouteMapLeg[] };
 
-export function DayPlanningPanel({ stops = noStops, preferences = defaultDayPreferences, date, zone, onChange, onMap }: {
+export function DayPlanningPanel({ stops = noStops, preferences = defaultDayPreferences, date, zone, targetDays = [], onChange, onMap, onMoveToDay }: {
   stops?: PlanningStop[]; preferences?: DayPlanPreferences; date?: string; zone: string;
   onChange: (stops: PlanningStop[], preferences: DayPlanPreferences) => void;
   onMap: (plan?: DayMapPlan) => void;
+  targetDays?: number[];
+  onMoveToDay?: (stopId: string, day: number) => void;
 }) {
   const [entry, setEntry] = useState(0);
   const [mode, setMode] = useState<OptimizationMode>('balanced');
@@ -52,10 +55,12 @@ export function DayPlanningPanel({ stops = noStops, preferences = defaultDayPref
     setEntry(entry + 1);
   }
 
-  function move(index: number, offset: number) {
-    if (stops[index].locked || stops[index + offset]?.locked || !stops[index + offset]) return;
+  function moveTo(from: number, to: number) {
+    if (from === to || !stops[to] || stops.slice(Math.min(from, to), Math.max(from, to) + 1)
+      .some(stop => stop.locked || stop.fixedStartLocal)) return;
     const next = [...stops];
-    [next[index], next[index + offset]] = [next[index + offset], next[index]];
+    const [item] = next.splice(from, 1);
+    next.splice(to, 0, item);
     update(next);
   }
 
@@ -113,9 +118,17 @@ export function DayPlanningPanel({ stops = noStops, preferences = defaultDayPref
       <label><input type="checkbox" checked={preferences.includeBreaks} onChange={event =>
         update(stops, { ...preferences, includeBreaks: event.target.checked })} />{t('Include breaks')}</label>
     </div>
-    <ol>{stops.map((stop, index) => <li key={stop.id}>
+    <ol>{stops.map((stop, index) => <li key={stop.id} data-route-stop={index}>
+      <RouteReorderHandle index={index} disabled={stops.length < 2 || stop.locked || Boolean(stop.fixedStartLocal)}
+        onMove={moveTo} />
       <strong>{stop.title}</strong>
       {result && <p>{time(result.rows[index]?.arrival)} → {time(result.rows[index]?.start)} → {time(result.rows[index]?.end)}</p>}
+      <label>{t('Visit priority')} <select value={stop.priority} onChange={event =>
+        update(stops.map((item, i) => i === index ? { ...item, priority: event.target.value as StopPriority } : item))}>
+        <option value="must">{t('Required stop')}</option>
+        <option value="preferred">{t('Preferred stop')}</option>
+        <option value="optional">{t('Optional stop')}</option>
+      </select></label>
       <label>{t('Visit minutes')} <input type="number" min={0} max={720} value={stop.visitMinutes} onChange={event => {
         const value = event.target.valueAsNumber;
         if (Number.isFinite(value) && value >= 0 && value <= 720) update(stops.map((item, i) => i === index ? { ...item, visitMinutes: value } : item));
@@ -135,9 +148,14 @@ export function DayPlanningPanel({ stops = noStops, preferences = defaultDayPref
       <label><input type="checkbox" checked={stop.locked} onChange={event =>
         update(stops.map((item, i) => i === index ? { ...item, locked: event.target.checked } : item))} />{t('Keep position')}</label>
       <button type="button" aria-label={t('Move day earlier')} disabled={index === 0 || stop.locked || stops[index - 1]?.locked}
-        onClick={() => move(index, -1)}>↑</button>
+        onClick={() => moveTo(index, index - 1)}>↑</button>
       <button type="button" aria-label={t('Move day later')} disabled={index === stops.length - 1 || stop.locked || stops[index + 1]?.locked}
-        onClick={() => move(index, 1)}>↓</button>
+        onClick={() => moveTo(index, index + 1)}>↓</button>
+      {targetDays.length > 0 && <label>{t('Move to day')} <select value="" disabled={stop.locked}
+        onChange={event => onMoveToDay?.(stop.id, Number(event.target.value))}>
+        <option value="">{t('Move to day')}</option>
+        {targetDays.map(day => <option key={day} value={day}>{t('Trip day')} {day}</option>)}
+      </select></label>}
       <button type="button" onClick={() => update(stops.filter(item => item.id !== stop.id))}>{t('Remove')}</button>
       {result?.issues.filter(issue => issue.stopId === stop.id).map(issue => <small key={issue.kind}>{t(issueLabels[issue.kind])}</small>)}
     </li>)}</ol>
@@ -148,7 +166,8 @@ export function DayPlanningPanel({ stops = noStops, preferences = defaultDayPref
     <button type="button" disabled={!date || busy || stops.length < 4} onClick={() => void calculate(true)}>{t('Improve the order')}</button>
     {busy && <p role="status">{t('Calculating route…')}</p>}
     {result && <section aria-live="polite">
-      <p>{t('On foot')} · {travelDuration(result.walking)} · {Math.round(result.distance)} m</p>
+      <p>{result.issues.some(issue => issue.kind === 'unreachable') ? t('Travel time unavailable')
+        : <>{t('On foot')} · {travelDuration(result.walking)} · {Math.round(result.distance)} m</>}</p>
       {result.issues.filter(issue => !issue.stopId).map(issue => <p key={issue.kind}>{t(issueLabels[issue.kind])}</p>)}
       {showReorder && !proposal?.changed && <p>{t('No verified improvement found.')}</p>}
       {showReorder && proposal?.changed && loadedMatrix && <>
@@ -156,6 +175,7 @@ export function DayPlanningPanel({ stops = noStops, preferences = defaultDayPref
         <p>{proposal.order.map(stop => stop.title).join(' → ')}</p>
         <p>{travelDuration(result.walking)} → {travelDuration(proposal.after.walking)} ·
           {' '}{Math.round(result.distance)} m → {Math.round(proposal.after.distance)} m</p>
+        {proposal.removed.length > 0 && <p>{t('Suggested skips')} · {proposal.removed.map(stop => stop.title).join(', ')}</p>}
         <button type="button" onClick={() => { onChange(proposal.order, preferences); showPlan(proposal.order, loadedMatrix); }}>{t('Apply')}</button>
         <button type="button" onClick={() => setShowReorder(false)}>{t('Cancel')}</button>
       </>}

@@ -18,6 +18,8 @@ export function TripHotelSearch({ city, cityPoint, checkIn, checkOut, focus, onF
   const [guests, setGuests] = useState(2);
   const [result, setResult] = useState<Result>();
   const [active, setActive] = useState<string>();
+  const [mapOpen, setMapOpen] = useState(true);
+  const cards = useRef(new Map<string, HTMLLIElement>());
   const [starFilter, setStarFilter] = useState(0);
   const [freeCancellation, setFreeCancellation] = useState(false);
   const [maxRoubles, setMaxRoubles] = useState<number>();
@@ -89,11 +91,20 @@ export function TripHotelSearch({ city, cityPoint, checkIn, checkOut, focus, onF
         value={maxKm ?? ''} onChange={event => setMaxKm(event.target.value === '' ? undefined : event.target.valueAsNumber)} /></label>}
       {!result.catalogOnly && <label><input type="checkbox" checked={freeCancellation}
         onChange={event => setFreeCancellation(event.target.checked)} />{t('Free cancellation')}</label>}
-      {pins.length > 0 && <RouteMap cityMap stops={pins} legs={[]} onReady={ignoreMapHandle}
-        focusStopId={active} onStopSelect={setActive} />}
+      {pins.length > 0 && <div className="trip-hotel-map">
+        <button type="button" aria-pressed={mapOpen} onClick={() => setMapOpen(!mapOpen)}>
+          {t('Hotels on the map')}
+        </button>
+        {mapOpen && <RouteMap cityMap stops={pins} legs={[]} onReady={ignoreMapHandle}
+          focusStopId={active} onStopSelect={id => {
+            setActive(id);
+            cards.current.get(id)?.scrollIntoView?.({ block: 'nearest' });
+          }} />}
+      </div>}
       {!visible?.length && <p role="status">{t('No matching hotels.')}</p>}
-      <ul>{visible?.map(hotel => <li key={hotel.id}>
-        <button type="button" aria-pressed={active === hotel.id} onClick={() => setActive(hotel.id)}>{hotel.name}</button>
+      <ul className="trip-hotel-list">{visible?.map(hotel => <li key={hotel.id} data-active={active === hotel.id}
+        ref={node => { if (node) cards.current.set(hotel.id, node); else cards.current.delete(hotel.id); }}>
+        <button type="button" aria-pressed={active === hotel.id} onClick={() => { setActive(hotel.id); if (hotel.latitude != null && hotel.longitude != null) setMapOpen(true); }}>{hotel.name}</button>
         {hotel.photoUrl && /^https:\/\//i.test(hotel.photoUrl) && <img src={hotel.photoUrl} alt="" loading="lazy" width={120} />}
         {hotel.address && <p>{hotel.address}</p>}
         {(hotel.stars != null || hotel.rating != null) && <p>{hotel.stars != null && `${hotel.stars} ★ `}{hotel.rating}</p>}

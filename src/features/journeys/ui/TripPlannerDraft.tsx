@@ -116,6 +116,7 @@ export default function TripPlannerDraft() {
   const [choosingCity, setChoosingCity] = useState(false);
   const [placingCities, setPlacingCities] = useState(true);
   const cityInput = useRef<HTMLInputElement>(null);
+  const startDateInput = useRef<HTMLInputElement>(null);
   const [measuring, setMeasuring] = useState(false);
   const [showingCities, setShowingCities] = useState(true);
   const [editingTransfer, setEditingTransfer] = useState(false);
@@ -246,6 +247,12 @@ export default function TripPlannerDraft() {
     setSelectedDay(next);
   }
 
+  function findHotels(number: number) {
+    if (number !== dayNumber) selectDay(number);
+    setLodgingToEdit(number);
+    if (!draft.startDate) startDateInput.current?.focus();
+  }
+
   function validDates() {
     if (duration < 2) {
       setStatus(t('Choose at least two days for the trip.'));
@@ -336,15 +343,9 @@ export default function TripPlannerDraft() {
             id: number, place: details.city?.trim() || `${t('Trip day')} ${number}`, lodging: details.lodging,
             onSelect: () => {
               selectDay(Number(number));
-              if (details.cityPoint) {
-                setShowingCities(true);
-                setPlacingCities(false);
-              }
+              if (details.cityPoint) setPlacingCities(false);
             },
-            onFindHotel: details.city?.trim() ? () => {
-              selectDay(Number(number));
-              setLodgingToEdit(Number(number));
-            } : undefined,
+            onFindHotel: Number(number) !== dayNumber && details.city?.trim() ? () => findHotels(Number(number)) : undefined,
           }))} />
         </div>
         <div className="trip-planner-day">
@@ -382,6 +383,9 @@ export default function TripPlannerDraft() {
             </button>}
             <button type="button" onClick={() => addCity()}>{t('Add city')}</button>
           </fieldset>
+          {day.city?.trim() && <button className="journey-primary" type="button" onClick={() => findHotels(dayNumber)}>
+            {t('Find hotels')}
+          </button>}
           <button type="button" aria-expanded={measuring} onClick={() => setMeasuring(!measuring)}>
             {t('Measure distance')}
           </button>
@@ -438,7 +442,7 @@ export default function TripPlannerDraft() {
       <div className="trip-planner-dates">
         <label>{t('Trip name')} <input maxLength={180} value={draft.title ?? ''}
           onChange={event => edit({ title: event.target.value })} /></label>
-        <label>{t('Start date')} <input type="date" value={draft.startDate} onChange={(event) => edit({ startDate: event.target.value })} /></label>
+        <label>{t('Start date')} <input ref={startDateInput} type="date" value={draft.startDate} onChange={(event) => edit({ startDate: event.target.value })} /></label>
         <label>{t('End date')} <input type="date" value={draft.endDate} onChange={(event) => edit({ endDate: event.target.value })} /></label>
       </div>
       <div className="trip-planner-details">

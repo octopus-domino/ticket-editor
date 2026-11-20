@@ -5,7 +5,12 @@ import { journeyRequest } from '../src/features/journeys/api/journeys';
 import { TripHotelSearch } from '../src/features/journeys/ui/TripHotelSearch';
 
 vi.mock('../src/features/journeys/api/journeys', () => ({ journeyRequest: vi.fn() }));
-vi.mock('../src/features/journeys/ui/RouteMap', () => ({ RouteMap: () => null }));
+vi.mock('../src/features/journeys/ui/RouteMap', () => ({
+  RouteMap: ({ stops, focusStopId, onStopSelect }: {
+    stops: { id: string; label: string }[]; focusStopId?: string; onStopSelect?: (id: string) => void;
+  }) => <div data-testid="hotel-map" data-focused={focusStopId}>{stops.map(stop =>
+    <button type="button" key={stop.id} onClick={() => onStopSelect?.(stop.id)}>{`Map: ${stop.label}`}</button>)}</div>,
+}));
 
 test('filters available hotels and saves the chosen hotel with its provider and dates', async () => {
   const request = vi.mocked(journeyRequest).mockResolvedValue({
@@ -27,4 +32,21 @@ test('filters available hotels and saves the chosen hotel with its provider and 
   expect(JSON.parse(String(request.mock.calls[0][1]?.body))).toEqual({
     city: 'Тверь', checkIn: '2027-01-01', checkOut: '2027-01-02', guests: 2,
   });
+});
+
+test('synchronizes catalog hotel cards with available coordinates', async () => {
+  vi.mocked(journeyRequest).mockResolvedValueOnce({
+    available: true, provider: 'OSTROVOK_MCP', catalogOnly: true,
+    hotels: [{ id: '1', name: 'Mapped Hotel', latitude: 55.75, longitude: 37.62 }],
+  });
+  render(<TripHotelSearch city="Moscow" checkIn="2027-01-01" checkOut="2027-01-02" onSelect={vi.fn()} />);
+  fireEvent.click(screen.getByText(t('Find hotels')));
+  fireEvent.click(screen.getByRole('button', { name: t('Search') }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Map: Mapped Hotel' }));
+  const card = screen.getByRole('button', { name: 'Mapped Hotel', exact: true });
+  expect(card).toHaveAttribute('aria-pressed', 'true');
+  fireEvent.click(screen.getByRole('button', { name: t('Hotels on the map') }));
+  expect(screen.queryByTestId('hotel-map')).toBeNull();
+  fireEvent.click(card);
+  expect(screen.getByTestId('hotel-map')).toHaveAttribute('data-focused', '1');
 });

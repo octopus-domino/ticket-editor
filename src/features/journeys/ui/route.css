@@ -280,3 +280,20 @@
   background: var(--journey-accent, #275b4d);
 }
 .trip-planner-day .route-address { flex: 1 0 100%; }
+
+.trip-hotel-map { margin-block: .5rem; }
+.trip-hotel-list {
+  display: grid;
+  gap: .5rem;
+  padding: 0;
+  list-style: none;
+}
+.trip-hotel-list > li {
+  border: 1px solid #ccd9d4;
+  border-radius: .65rem;
+  padding: .65rem;
+}
+.trip-hotel-list > li[data-active='true'] {
+  border-color: var(--journey-accent, #275b4d);
+  background: #edf4f0;
+}

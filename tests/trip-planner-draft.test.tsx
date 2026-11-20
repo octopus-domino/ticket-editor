@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, expect, test, vi } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
 import { t } from '../src/shared/i18n';
 import TripPlannerDraft from '../src/features/journeys/ui/TripPlannerDraft';
 import * as routes from '../src/features/journeys/api/routePlanner';
@@ -34,7 +35,7 @@ test('builds and saves an intercity road transfer from map markers', async () =>
     coordinates: [[37.6, 55.7], [35.9, 56.8]], durationSeconds: 7200, distanceMeters: 180_000,
   });
   try {
-    render(<TripPlannerDraft />);
+    render(<MemoryRouter><TripPlannerDraft /></MemoryRouter>);
     fireEvent.click(screen.getByRole('button', { name: t('Enter transfer manually') }));
     fireEvent.click(within(screen.getByRole('group', { name: t('Transport type') })).getByRole('button', { name: t('Car') }));
     fireEvent.click(screen.getByRole('button', { name: 'Moscow marker' }));
@@ -74,7 +75,7 @@ test('builds and saves an intercity road transfer from map markers', async () =>
 });
 
 test('persists a manual transfer with different departure and arrival offsets', () => {
-  render(<TripPlannerDraft />);
+  render(<MemoryRouter><TripPlannerDraft /></MemoryRouter>);
   fireEvent.change(screen.getByLabelText(t('Start date')), { target: { value: '2026-12-31' } });
   fireEvent.change(screen.getByLabelText(t('End date')), { target: { value: '2027-01-01' } });
   fireEvent.change(screen.getByLabelText(t('City')), { target: { value: 'Moscow' } });
@@ -95,7 +96,7 @@ test('persists a manual transfer with different departure and arrival offsets', 
 });
 
 test('validates dates and saves a multi-day draft locally', () => {
-  const { unmount } = render(<TripPlannerDraft />);
+  const { unmount } = render(<MemoryRouter><TripPlannerDraft /></MemoryRouter>);
   fireEvent.change(screen.getByLabelText(t('Start date')), { target: { value: '2026-12-31' } });
   fireEvent.change(screen.getByLabelText(t('End date')), { target: { value: '2026-12-31' } });
   fireEvent.click(screen.getByRole('button', { name: t('Save') }));
@@ -104,13 +105,13 @@ test('validates dates and saves a multi-day draft locally', () => {
   fireEvent.click(screen.getByRole('button', { name: t('Save') }));
   expect(screen.getByRole('status').textContent).toBe(t('Trip saved on this device.'));
   unmount();
-  render(<TripPlannerDraft />);
+  render(<MemoryRouter><TripPlannerDraft /></MemoryRouter>);
   expect((screen.getByLabelText(t('End date')) as HTMLInputElement).value).toBe('2027-01-01');
 });
 
 test('previews an authenticated iframe transfer and imports geometry only on confirmation', async () => {
   HTMLDialogElement.prototype.showModal = vi.fn();
-  const { unmount } = render(<TripPlannerDraft />);
+  const { unmount } = render(<MemoryRouter><TripPlannerDraft /></MemoryRouter>);
   fireEvent.change(screen.getByLabelText(t('Start date')), { target: { value: '2026-12-31' } });
   fireEvent.change(screen.getByLabelText(t('End date')), { target: { value: '2027-01-01' } });
   fireEvent.click(screen.getByRole('button', { name: t('Next day') }));
@@ -137,7 +138,7 @@ test('previews an authenticated iframe transfer and imports geometry only on con
   fireEvent.click(screen.getByRole('button', { name: t('Redo') }));
   expect(screen.getByText('Pier')).toBeTruthy();
   unmount();
-  render(<TripPlannerDraft />);
+  render(<MemoryRouter><TripPlannerDraft /></MemoryRouter>);
   expect(screen.queryByText('Pier')).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: t('Next day') }));
   expect(screen.getByText('Pier')).toBeTruthy();
@@ -158,7 +159,7 @@ test('offers a preview for a valid shared walk URL without altering the URL', ()
   url.searchParams.set('walk', encoded);
   history.replaceState(null, '', url);
   try {
-    render(<TripPlannerDraft />);
+    render(<MemoryRouter><TripPlannerDraft /></MemoryRouter>);
     fireEvent.click(screen.getByRole('button', { name: t('Preview shared walk') }));
     expect(screen.getByText('Shared walk')).toBeTruthy();
     expect(screen.getByText('Legs: 1')).toBeTruthy();
@@ -176,7 +177,7 @@ test('keeps plans per day and preserves an older draft on day one', () => {
     stops: [{ id: 'old', label: 'Old stop', longitude: 30, latitude: 60, zone: 'UTC', stayMinutes: 0 }],
     importedWalk: undefined,
   }));
-  const { unmount } = render(<TripPlannerDraft />);
+  const { unmount } = render(<MemoryRouter><TripPlannerDraft /></MemoryRouter>);
   expect(screen.getByText('Old stop')).toBeTruthy();
   fireEvent.change(screen.getByLabelText(t('City')), { target: { value: 'Petersburg' } });
   fireEvent.keyDown(screen.getByLabelText(t('City')), { key: 'Enter' });
@@ -192,7 +193,7 @@ test('keeps plans per day and preserves an older draft on day one', () => {
   fireEvent.change(screen.getByLabelText(t('End date')), { target: { value: '2027-01-01' } });
   fireEvent.click(screen.getByRole('button', { name: t('Save') }));
   unmount();
-  render(<TripPlannerDraft />);
+  render(<MemoryRouter><TripPlannerDraft /></MemoryRouter>);
   expect(screen.getByText('Old stop')).toBeTruthy();
   expect(screen.getByDisplayValue('Petersburg')).toBeTruthy();
   fireEvent.click(screen.getByRole('button', { name: t('Next day') }));
@@ -205,7 +206,7 @@ test('opens the existing hotel search from the day summary', () => {
     id: 'trip-hotel', version: 2, startDate: '2026-12-31', endDate: '2027-01-01',
     days: { 2: { city: 'Tver', cityPoint: { latitude: 56.86, longitude: 35.91 }, stops: [] } },
   }));
-  render(<TripPlannerDraft />);
+  render(<MemoryRouter><TripPlannerDraft /></MemoryRouter>);
   const overview = screen.getByRole('region', { name: t('Trip overview') });
   fireEvent.click(within(overview).getByRole('button', { name: t('Find hotels') }));
   expect(screen.getByRole('heading', {name:'Tver'})).toBeVisible();
@@ -220,7 +221,7 @@ test('adds cities with address suggestions before choosing dates', async () => {
     .mockResolvedValueOnce([{ label: 'Moscow', latitude: 55.75, longitude: 37.62 }])
     .mockResolvedValueOnce([{ label: 'Tver', latitude: 56.86, longitude: 35.91 }]);
   try {
-    render(<TripPlannerDraft />);
+    render(<MemoryRouter><TripPlannerDraft /></MemoryRouter>);
     fireEvent.change(screen.getByRole('combobox', { name: t('City') }), { target: { value: 'Mos' } });
     fireEvent.click(await screen.findByRole('button', { name: 'Moscow' }, { timeout: 2000 }));
     fireEvent.click(screen.getByRole('button', { name: t('Add city') }));
@@ -246,7 +247,7 @@ test('uses a separate picture selector per connection and restores the chosen mo
     coordinates: [[37, 55], [37, 55.01]], durationSeconds: 1200, distanceMeters: 1200,
   });
   try {
-    const view = render(<TripPlannerDraft />);
+    const view = render(<MemoryRouter><TripPlannerDraft /></MemoryRouter>);
     const first = () => within(screen.getByRole('group', { name: 'First → Second' }));
     expect(first().getByRole('button', { name: t('Car') })).toHaveAttribute('aria-pressed', 'true');
     await act(async () => fireEvent.click(first().getByRole('button', { name: t('On foot') })));
@@ -256,7 +257,7 @@ test('uses a separate picture selector per connection and restores the chosen mo
       .getByRole('button', { name: t('Car') })).toHaveAttribute('aria-pressed', 'true');
     expect(JSON.parse(localStorage.getItem(key)!).days[2].incomingMode).toBe('WALK');
     view.unmount();
-    await act(async () => { render(<TripPlannerDraft />); });
+    await act(async () => { render(<MemoryRouter><TripPlannerDraft /></MemoryRouter>); });
     expect(first().getByRole('button', { name: t('On foot') })).toHaveAttribute('aria-pressed', 'true');
   } finally {
     request.mockRestore();

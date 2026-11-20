@@ -137,6 +137,7 @@ test('receives the finished walk from the built Journey application', async ({ p
 });
 
 test('plans from address suggestions and selects transport between the chosen cities', async ({ page }) => {
+  test.setTimeout(90_000);
   test.skip(process.env.VITE_ENABLE_TRIP_PLANNER !== 'true', 'Requires the trip planner flag');
   await page.addInitScript(() => localStorage.setItem('codoc:language', 'en'));
   await page.route('**/api/journeys/routes/addresses?**', request => {
@@ -145,6 +146,18 @@ test('plans from address suggestions and selects transport between the chosen ci
       ? [{ label: 'Moscow', latitude: 55.75, longitude: 37.62 }]
       : [{ label: 'Tver', latitude: 56.86, longitude: 35.91 }] });
   });
+  await page.route('**/api/journeys/routes/places/trains/places?**', route => {
+    const city = new URL(route.request().url()).searchParams.get('q');
+    return route.fulfill({ json: [{ title: city, code: city === 'moscow' ? 'c213' : 'c14', region: '' }] });
+  });
+  await page.route('**/api/journeys/routes/places/trains', route => {
+    expect(route.request().postDataJSON()).toMatchObject({ from: 'c213', to: 'c14', date: '2027-01-01' });
+    return route.fulfill({ json: { available: true, stale: false, trains: [
+      { number: '124', title: 'Direct service', from: 'Moscow', to: 'Tver',
+        departure: '2027-01-01T11:30:00+03:00', arrival: '2027-01-01T13:10:00+03:00' },
+    ] } });
+  });
+  await page.route('**/api/auth/refresh', route => route.fulfill({ status: 401, json: {} }));
   await page.goto('/start/tours');
   const planner = page.getByRole('region', { name: 'Travel planner' });
   await expect(planner).toBeVisible();
@@ -160,18 +173,30 @@ test('plans from address suggestions and selects transport between the chosen ci
   await planner.getByLabel('End date').fill('2027-01-01');
   const connection = planner.getByRole('group', { name: 'Moscow → Tver' });
   await expect(connection.getByRole('button', { name: 'Car' })).toHaveAttribute('aria-pressed', 'true');
+  await connection.getByRole('button', { name: 'Train' }).click();
+  const timetable = planner.locator('.trip-connection-timetable');
+  await timetable.locator('summary').click();
+  await expect(timetable.getByText('124 Direct service')).toBeVisible();
+  await expect(timetable.getByText('1 hr 40 min')).toBeVisible();
   await connection.getByRole('button', { name: 'Flight' }).click();
   await expect(connection.getByRole('button', { name: 'Flight' })).toHaveAttribute('aria-pressed', 'true');
   await expect(planner.getByText(/Estimated flight time/)).toBeVisible();
-  const [download] = await Promise.all([
-    page.waitForEvent('download'), planner.getByRole('button', { name: 'Export Word' }).click(),
-  ]);
-  expect(download.suggestedFilename()).toBe('trip-2026-12-31.docx');
-  expect(await download.failure()).toBeNull();
+  await expect(planner.getByRole('button', { name: 'Export Word' })).toHaveCount(0);
+  await expect(planner.getByRole('button', { name: 'Measure distance' })).toHaveCount(0);
+  await expect(planner.getByRole('button', { name: 'Create a trip template' })).toBeVisible();
   await planner.getByRole('button', { name: 'Enter transfer manually' }).click();
   const types = planner.getByRole('group', { name: 'Transport type' });
   await types.getByRole('button', { name: 'Car' }).click();
   await expect(types.getByRole('button', { name: 'Car' })).toHaveAttribute('aria-pressed', 'true');
   await expect(planner.getByRole('group', { name: 'Departure' }).getByLabel('City')).toHaveValue('Moscow');
   await expect(planner.getByRole('group', { name: 'Arrival' }).getByLabel('City')).toHaveValue('Tver');
+  await planner.getByRole('button', { name: 'Create a trip template' }).click();
+  await expect(page).toHaveURL(/\/app\/templates\/[^/]+\/edit/);
+  await expect(page.locator('.template-editor-canvas')).toBeVisible();
+  await page.locator('.toolbar-more > summary').click();
+  const [download] = await Promise.all([
+    page.waitForEvent('download'), page.getByRole('button', { name: 'Export Word' }).click(),
+  ]);
+  expect(download.suggestedFilename()).toBe('document.docx');
+  expect(await download.failure()).toBeNull();
 });

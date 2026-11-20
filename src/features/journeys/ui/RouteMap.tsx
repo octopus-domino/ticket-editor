@@ -19,6 +19,13 @@ import { routePointCaption } from './routePointCaption';
 setWorkerUrl(workerUrl);
 setWorkerCount(2);
 setMaxParallelImageRequests(4);
+function osmRasterStyle() {
+  return { version: 8 as const, sources: { osm: { type: 'raster' as const, tileSize: 256,
+    tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], maxzoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>',
+  } }, layers: [{ id: 'osm-basemap', type: 'raster' as const, source: 'osm' }] };
+}
+
 export interface RouteMapHandle {
   capture: () => Promise<string>;
   center: () => { longitude: number; latitude: number };
@@ -33,6 +40,7 @@ export function RouteMap({
   pickedPoint,
   focusStopId,
   cityMap = false,
+  rasterBasemap = false,
   fit = true,
   onStopMove,
   onStopSelect,
@@ -47,6 +55,7 @@ export function RouteMap({
   pickedPoint?: { longitude: number; latitude: number } | null;
   focusStopId?: string;
   cityMap?: boolean;
+  rasterBasemap?: boolean;
   fit?: boolean | 'initial';
   onStopMove?: (id: string, point: { longitude: number; latitude: number }) => void;
   onStopSelect?: (id: string) => void;
@@ -83,12 +92,15 @@ export function RouteMap({
     try {
       map = new Map({
         container: container.current,
-        style: 'https://tiles.openfreemap.org/styles/liberty',
-        center: [37.62, 55.75],
-        zoom: 9,
-        canvasContextAttributes: { preserveDrawingBuffer: true },
+        style: rasterBasemap ? osmRasterStyle() : 'https://tiles.openfreemap.org/styles/liberty',
+        center: rasterBasemap && stopsRef.current[0]
+          ? [stopsRef.current[0].longitude, stopsRef.current[0].latitude] : [37.62, 55.75],
+        zoom: rasterBasemap ? 15 : 9,
+        canvasContextAttributes: { preserveDrawingBuffer: !rasterBasemap },
         maxTileCacheSize: 128,
-        pixelRatio: Math.min(window.devicePixelRatio || 1, 2),
+        pixelRatio: rasterBasemap ? 1 : Math.min(window.devicePixelRatio || 1, 2),
+        dragRotate: !rasterBasemap,
+        pitchWithRotate: !rasterBasemap,
         attributionControl: { compact: true },
       });
     } catch {
@@ -96,16 +108,13 @@ export function RouteMap({
       return;
     }
     mapRef.current = map;
-    let raster = false, tileErrors = 0;
+    let raster = rasterBasemap, tileErrors = 0;
     const fallback = () => {
       if (raster) return;
       raster = true;
       setReady(false);
       // A public raster fallback, without prefetching or offline bulk downloads.
-      map.setStyle({ version: 8, sources: { osm: { type: 'raster', tileSize: 256,
-        tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], maxzoom: 19,
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>',
-      } }, layers: [{ id: 'osm-basemap', type: 'raster', source: 'osm' }] });
+      map.setStyle(osmRasterStyle());
     };
     map.on('style.load', () => { setReady(true); setStyleGeneration(value => value + 1); });
     map.on('error', () => {
@@ -244,7 +253,7 @@ export function RouteMap({
       mapRef.current = null;
       map.remove();
     };
-  }, []);
+  }, [rasterBasemap]);
   const stopsRef = useRef(stops);
   stopsRef.current = stops;
   useEffect(() => {
@@ -261,33 +270,35 @@ export function RouteMap({
       if (map.getLayer(id)) map.removeLayer(id);
     }
     if (map.getSource('journey-route')) map.removeSource('journey-route');
-    map.addSource('journey-route', {
-      type: 'geojson',
-      data: {
-        type: 'FeatureCollection',
-        features: legs
-          .filter((leg) => leg.coordinates.length >= 2)
-          .map((leg) => ({
-            type: 'Feature',
-            properties: { mode: leg.mode, ...(leg.id ? { legId: leg.id } : {}) },
-            geometry: { type: 'MultiLineString', coordinates: mapRouteLines(leg.coordinates) },
-          })),
-      },
-    });
-    map.addLayer({
-      id: 'route-road',
-      type: 'line',
-      source: 'journey-route',
-      filter: ['!', ['in', ['get', 'mode'], ['literal', ['flight', 'transfer']]]],
-      paint: { 'line-color': '#225fcb', 'line-width': 5, 'line-opacity': 0.9 },
-    });
-    map.addLayer({
-      id: 'route-flight',
-      type: 'line',
-      source: 'journey-route',
-      filter: ['in', ['get', 'mode'], ['literal', ['flight', 'transfer']]],
-      paint: { 'line-color': '#af5347', 'line-width': 4, 'line-dasharray': [2, 2] },
-    });
+    if (legs.length) {
+      map.addSource('journey-route', {
+        type: 'geojson',
+        data: {
+          type: 'FeatureCollection',
+          features: legs
+            .filter((leg) => leg.coordinates.length >= 2)
+            .map((leg) => ({
+              type: 'Feature',
+              properties: { mode: leg.mode, ...(leg.id ? { legId: leg.id } : {}) },
+              geometry: { type: 'MultiLineString', coordinates: mapRouteLines(leg.coordinates) },
+            })),
+        },
+      });
+      map.addLayer({
+        id: 'route-road',
+        type: 'line',
+        source: 'journey-route',
+        filter: ['!', ['in', ['get', 'mode'], ['literal', ['flight', 'transfer']]]],
+        paint: { 'line-color': '#225fcb', 'line-width': 5, 'line-opacity': 0.9 },
+      });
+      map.addLayer({
+        id: 'route-flight',
+        type: 'line',
+        source: 'journey-route',
+        filter: ['in', ['get', 'mode'], ['literal', ['flight', 'transfer']]],
+        paint: { 'line-color': '#af5347', 'line-width': 4, 'line-dasharray': [2, 2] },
+      });
+    }
     const markers = stops.map((stop, index) => {
       const element = document.createElement(canSelectStops ? 'button' : 'span');
       if (element instanceof HTMLButtonElement) {

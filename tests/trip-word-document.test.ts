@@ -2,14 +2,14 @@ import { wordDocument } from '../src/shared/files/wordDocument';
 import { strFromU8, unzipSync } from 'fflate';
 import { expect, test } from 'vitest';
 import { tripPayload } from '../src/features/journeys/api/tripDraft';
-import { tripWordDocument } from '../src/features/journeys/domain/tripWordDocument';
+import { tripDocumentContent } from '../src/features/journeys/domain/tripDocumentContent';
 
 test('builds a Word package with editable Cyrillic, route data and an escaped document link', async () => {
   const trip = tripPayload({ id: 'docx', version: 2, startDate: '2027-01-01', endDate: '2027-01-02',
     days: { 1: { city: 'Москва', stops: [] }, 2: { city: 'Тверь', stops: [] } },
     documents: [{ id: '1', title: 'Билет & багаж', url: 'https://example.org/?a=1&b=2' }] }, 'Поездка',
     [{ from: { id: '1' }, to: { id: '2' }, mode: 'CAR', result: { seconds: 3600 } }]);
-  const blob = tripWordDocument(trip);
+  const blob = wordDocument(tripDocumentContent(trip));
   const files = unzipSync(new Uint8Array(await blob.arrayBuffer()));
   const xml = strFromU8(files['word/document.xml']);
   expect(xml).toContain('Поездка');

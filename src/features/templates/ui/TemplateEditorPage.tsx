@@ -106,6 +106,7 @@ function TemplateEditorSession({ templateId }: { templateId: string }) {
             bindings: template.bindings,
           }}
           onSave={save}
+          templateMode
           saveContext={activeSchemaId}
         />
       </div>

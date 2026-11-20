@@ -14,7 +14,7 @@ import { PowerPointActions } from './PowerPointActions';
 import { ImageImportActions } from './ImageImportActions';
 import { useFileIO } from '../hooks/editor/useFileIO';
 
-export const Toolbar: React.FC = () => {
+export const Toolbar: React.FC<{ templateMode?: boolean }> = ({ templateMode }) => {
   const docStore = useDocumentStore();
   const slides = useStore(docStore, (s) => s.slides);
   const activeId = useStore(docStore, (s) => s.activeId);
@@ -110,11 +110,11 @@ export const Toolbar: React.FC = () => {
       <details className="toolbar-more">
         <summary className="toolbar-btn">{__tr("Details")}</summary>
         <div className="toolbar-more-panel">
-          <button type="button" className="toolbar-btn" disabled={exportingWord || !slides.length}
+          {templateMode && <button type="button" className="toolbar-btn" disabled={exportingWord || !slides.length}
             onClick={async () => {
               setExportingWord(true);
               try { await fileIO.exportWord(); } finally { setExportingWord(false); }
-            }}>{__tr('Export Word')}</button>
+            }}>{__tr('Export Word')}</button>}
           {isFeatureEnabled('FEATURE_EMAIL') && (
             <>
               <button

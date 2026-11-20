@@ -168,6 +168,8 @@ Hotel name|Название отеля|酒店名称|Nazwa hotelu|Nome dell’hot
 Check-in date|Дата заезда|入住日期|Data zameldowania|Data di arrivo|Fecha de entrada|Incheckdatum|Date d’arrivée|Anreisedatum
 Check-out date|Дата выезда|退房日期|Data wymeldowania|Data di partenza|Fecha de salida|Uitcheckdatum|Date de départ|Abreisedatum
 Accommodation not selected|Проживание не выбрано|尚未选择住宿|Nie wybrano zakwaterowania|Alloggio non selezionato|Alojamiento sin seleccionar|Geen verblijf geselecteerd|Hébergement non sélectionné|Keine Unterkunft ausgewählt
+Create a trip template|Создать шаблон поездки|创建行程模板|Utwórz szablon podróży|Crea un modello di viaggio|Crear una plantilla de viaje|Een reissjabloon maken|Créer un modèle de voyage|Reisevorlage erstellen
+Could not create a trip template.|Не удалось создать шаблон поездки.|无法创建行程模板。|Nie udało się utworzyć szablonu podróży.|Impossibile creare un modello di viaggio.|No se pudo crear una plantilla de viaje.|Het reissjabloon kon niet worden gemaakt.|Impossible de créer un modèle de voyage.|Die Reisevorlage konnte nicht erstellt werden.
 Export Word|Экспорт в Word|导出 Word|Eksportuj do Worda|Esporta in Word|Exportar a Word|Exporteren naar Word|Exporter vers Word|Nach Word exportieren
 Could not export Word.|Не удалось экспортировать в Word.|无法导出 Word。|Nie udało się wyeksportować do Worda.|Impossibile esportare in Word.|No se pudo exportar a Word.|Exporteren naar Word is mislukt.|Impossible d’exporter vers Word.|Der Word-Export ist fehlgeschlagen.
 On foot|Пешком|步行|Pieszo|A piedi|A pie|Te voet|À pied|Zu Fuß

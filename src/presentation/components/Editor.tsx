@@ -66,6 +66,7 @@ import type { EditorInitialDoc } from '@/shared/types/document';
 
 export interface EditorProps {
   documentId?: string;
+  templateMode?: boolean;
   initialDoc?: EditorInitialDoc;
   onSave?: (state: EditorInitialDoc) => Promise<void>;
   saveContext?: string | null;
@@ -108,12 +109,13 @@ function applyTextStylePatch(el: CanvasElement, patch: TextStylePatch): Partial<
 }
 
 interface EditorLayoutProps {
+  templateMode?: boolean;
   documentId: string;
   onSave?: (state: EditorInitialDoc) => Promise<void>;
   saveContext?: string | null;
 }
 
-const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave, documentId, saveContext }) => {
+const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave, documentId, saveContext, templateMode }) => {
   const canvasMode = useCanvasMode();
   const [toolsOpen, setToolsOpen] = useState(false);
   const docStore = useDocumentStore();
@@ -408,7 +410,7 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave, documentId, saveCon
           )}
         </div>
       )}
-      <Toolbar />
+      <Toolbar templateMode={templateMode} />
       <MobileEditorControls />
       <div className="editor-layout">
           <CanvasDock onTools={() => { if (window.innerWidth <= COMPACT_EDITOR_MAX_WIDTH) toggleMobilePanel('tools'); else setToolsOpen(value => !value); }} onGroup={groupSelected} onMenu={() => modalsStore.setContextMenu({ x: Math.min(window.innerWidth - 250, 80), y: 140, elementId: selectedIds[0] ?? null })} />
@@ -623,7 +625,7 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({ onSave, documentId, saveCon
   );
 };
 
-export const Editor: React.FC<EditorProps> = ({ documentId, initialDoc, onSave, saveContext }) => {
+export const Editor: React.FC<EditorProps> = ({ documentId, initialDoc, onSave, saveContext, templateMode }) => {
   const stores = useMemo(
     () => {
       const initial: InitialDocument | undefined = initialDoc
@@ -659,6 +661,7 @@ export const Editor: React.FC<EditorProps> = ({ documentId, initialDoc, onSave, 
         documentId={documentId ?? 'local'}
         onSave={onSave}
         saveContext={saveContext}
+        templateMode={templateMode}
       />
     </EditorProvider>
   );

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getLocale, t } from '@/shared/i18n';
 import { journeyRequest } from '../api/journeys';
 import type { CityPoint, TripLodging } from '../api/tripDraft';
@@ -9,6 +9,7 @@ type Hotel = Pick<TripLodging, 'name' | 'latitude' | 'longitude' | 'cost'> & {
   id: string; address?: string; stars?: number; rating?: number; photoUrl?: string; freeCancellation?: boolean; sourceUrl?: string;
 };
 type Result = { available: boolean; provider?: TripLodging['provider']; hotels: Hotel[]; catalogOnly?: boolean };
+const noLegs: [] = [];
 const ignoreMapHandle = () => undefined;
 
 export function TripHotelSearch({ city, cityPoint, checkIn: initialCheckIn, checkOut: initialCheckOut, radiusMeters, initiallyOpen, onSelect }: {
@@ -38,17 +39,20 @@ export function TripHotelSearch({ city, cityPoint, checkIn: initialCheckIn, chec
     request.current = undefined;
   }, []);
   const distanceLimit = radiusMeters ?? (maxKm === undefined ? undefined : maxKm * 1000);
-  const visible = result?.hotels.filter(hotel => (!starFilter || (hotel.stars ?? 0) >= starFilter)
+  const visible = useMemo(() => result?.hotels.filter(hotel => (!starFilter || (hotel.stars ?? 0) >= starFilter)
     && (result.catalogOnly || !freeCancellation || hotel.freeCancellation)
     && (result.catalogOnly || maxRoubles === undefined || (hotel.cost?.currency === 'RUB' && hotel.cost.amount <= maxRoubles))
     && (!cityPoint || distanceLimit === undefined || (hotel.latitude != null && hotel.longitude != null
-      && geographicDistance(cityPoint, { latitude: hotel.latitude, longitude: hotel.longitude }) <= distanceLimit)));
-  const pins = (visible ?? []).flatMap(hotel => Number.isFinite(hotel.latitude) && Number.isFinite(hotel.longitude)
-    ? [{ id: hotel.id, label: hotel.name, longitude: hotel.longitude!, latitude: hotel.latitude!, zone: 'UTC', stayMinutes: 0 }] : []);
+      && geographicDistance(cityPoint, { latitude: hotel.latitude, longitude: hotel.longitude }) <= distanceLimit))),
+  [cityPoint, result, starFilter, freeCancellation, maxRoubles, distanceLimit]);
 
-  const mapStops = cityPoint && radiusMeters !== undefined
-    ? [...pins, { ...cityPoint, id: '__day_point__', label: city, zone: 'UTC', stayMinutes: 0 }]
-    : pins;
+  const mapStops = useMemo(() => {
+    const pins = (visible ?? []).flatMap(hotel => Number.isFinite(hotel.latitude) && Number.isFinite(hotel.longitude)
+      ? [{ id: hotel.id, label: hotel.name, longitude: hotel.longitude!, latitude: hotel.latitude!, zone: 'UTC', stayMinutes: 0 }] : []);
+    return cityPoint && radiusMeters !== undefined
+      ? [{ ...cityPoint, id: '__day_point__', label: city, zone: 'UTC', stayMinutes: 0 }, ...pins]
+      : pins;
+  }, [city, cityPoint, radiusMeters, visible]);
 
   const validQuery = city.trim().length >= 2 && Boolean(checkIn && checkIn < checkOut) &&
     Number.isInteger(guests) && guests >= 1 && guests <= 12;
@@ -122,7 +126,7 @@ export function TripHotelSearch({ city, cityPoint, checkIn: initialCheckIn, chec
         <button type="button" aria-pressed={mapOpen} onClick={() => setMapOpen(!mapOpen)}>
           {t('Hotels on the map')}
         </button>
-        {mapOpen && <RouteMap cityMap stops={mapStops} legs={[]} onReady={ignoreMapHandle}
+        {mapOpen && <RouteMap cityMap rasterBasemap stops={mapStops} legs={noLegs} onReady={ignoreMapHandle}
           fit={!mapMoved} onUserMove={refreshAfterMove} focusStopId={active} onStopSelect={id => {
             if (id === '__day_point__') return;
             setActive(id);

@@ -1,11 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
+import type { CityPoint } from '../api/tripDraft';
 import { t } from '@/shared/i18n';
 import { decodePrivateWalkLink, readPrivateWalk } from '../domain/privateWalk';
 import './private-walk-picker.css';
 
 export type WalkCandidate = ReturnType<typeof readPrivateWalk>;
 
-export function TripWalkImport({ onPreview }: { onPreview: (walk: WalkCandidate) => void }) {
+export function TripWalkImport({ onPreview, point, address }: {
+  onPreview: (walk: WalkCandidate) => void;
+  point?: CityPoint;
+  address?: string;
+}) {
   const [channel, setChannel] = useState('');
   const [error, setError] = useState(false);
   const frame = useRef<HTMLIFrameElement>(null);
@@ -35,7 +40,12 @@ export function TripWalkImport({ onPreview }: { onPreview: (walk: WalkCandidate)
     };
   }, [channel]);
 
-  const url = '/private-journey/?' + new URLSearchParams({ embed: 'codoc', channel });
+  const params = new URLSearchParams({ embed: 'codoc', channel });
+  if (point) {
+    params.set('points', `${point.latitude.toFixed(6)},${point.longitude.toFixed(6)}`);
+    if (address?.trim()) params.set('anchorLabel', address.trim().slice(0, 240));
+  }
+  const url = '/private-journey/?' + params;
   const sharedLink = new URLSearchParams(location.search).get('walk');
   function previewLink(encoded: string) {
     setError(false);

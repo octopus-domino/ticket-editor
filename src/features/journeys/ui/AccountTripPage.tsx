@@ -5,7 +5,8 @@ import { downloadFile } from '@/shared/files/download';
 import { fetchTripExport, openAccountTrip, tripExportFiles, type AccountTrip, type TripExport } from '../api/tripDraft';
 import { RouteMap } from './RouteMap';
 import { TripCityMap } from './TripCityMap';
-import { travelDuration, tripWordDocument } from '../domain/tripWordDocument';
+import { TripTemplateAction } from './TripTemplateAction';
+import { travelDuration } from '../domain/tripDocumentContent';
 import type { PlannedLeg } from '../domain/route';
 import { TripSummaryBar } from './TripSummaryBar';
 import { readTripShare, readTripShareFile, type SharedTrip } from '../domain/sharedTrip';
@@ -41,7 +42,7 @@ export default function AccountTripPage() {
   const { id } = useParams();
   const [loaded, setLoaded] = useState<{ id: string; trip: AccountTrip | null }>();
   const [exporting, setExporting] = useState(false);
-  const [exportError, setExportError] = useState<TripExport | 'word'>();
+  const [exportError, setExportError] = useState<TripExport>();
   useEffect(() => {
     if (!id) return;
     const request = new AbortController();
@@ -71,18 +72,11 @@ export default function AccountTripPage() {
     </button>
     <button type="button" disabled={exporting} onClick={() => void exportTrip(trip.id, 'pdf')}>{t('Download PDF')}</button>
     <button type="button" disabled={exporting} onClick={() => void exportTrip(trip.id, 'json')}>{t('Export JSON')}</button>
-    <button type="button" disabled={exporting} onClick={() => {
-      setExportError(undefined);
-      try {
-        downloadFile(tripWordDocument(trip), `trip-${trip.startDate}.docx`);
-      } catch {
-        setExportError('word');
-      }
-    }}>{t('Export Word')}</button>
+    <TripTemplateAction getTrip={() => trip} />
     {'legacyRouteId' in trip.meta && Boolean(trip.meta.legacyRouteId) &&
       <button type="button" disabled={exporting} onClick={() => void exportTrip(trip.id, 'legacy')}>{t('Export original route')}</button>}
     {exportError && <p role="alert">{exportError === 'calendar' ? t('Could not export the calendar.')
-      : exportError === 'pdf' ? t('Could not export PDF.') : exportError === 'word' ? t('Could not export Word.') : t('Could not export trip JSON.')}</p>}
+      : exportError === 'pdf' ? t('Could not export PDF.') : t('Could not export trip JSON.')}</p>}
     {trip.budget?.limit && <p>{t('Trip budget')} · {trip.budget.limit.amount} {trip.budget.limit.currency}</p>}
     {trip.documents.length > 0 && <section>
       <h2>{t('Documents')}</h2>

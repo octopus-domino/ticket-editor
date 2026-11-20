@@ -4,7 +4,7 @@ import { requestRoad, requestRoadVia } from '../api/routePlanner';
 import { Link } from 'react-router-dom';
 import { getLocale, t } from '@/shared/i18n';
 import { downloadFile } from '@/shared/files/download';
-import { tripWordDocument } from '../domain/tripWordDocument';
+import { TripTemplateAction } from './TripTemplateAction';
 import type { PlannedLeg } from '../domain/route';
 import { sharedTripJson, shareTripUrl } from '../domain/sharedTrip';
 import { saveTripToAccount, pointTransportModes, transferModes, tripPayload, type PointTransport, type CityPoint, type LocalTripDraft, type TripDayDraft } from '../api/tripDraft';
@@ -17,7 +17,6 @@ import { TripSummaryBar } from './TripSummaryBar';
 import { useTripConnections } from './useTripConnections';
 import { TripDetailsEditor } from './TripDetailsEditor';
 import { TripTransferEditor } from './TripTransferEditor';
-import { TripDistanceTool } from './TripDistanceTool';
 import { TripCityMap } from './TripCityMap';
 import { RouteAddressInput } from './RouteAddressInput';
 import './route.css';
@@ -121,7 +120,6 @@ export default function TripPlannerDraft() {
   const [placingCities, setPlacingCities] = useState(true);
   const cityInput = useRef<HTMLInputElement>(null);
   const startDateInput = useRef<HTMLInputElement>(null);
-  const [measuring, setMeasuring] = useState(false);
   const [focusedDay, setFocusedDay] = useState<number>();
   const [showingCities, setShowingCities] = useState(true);
   const [editingTransfer, setEditingTransfer] = useState(false);
@@ -416,15 +414,11 @@ export default function TripPlannerDraft() {
           {day.city?.trim() && <button className="journey-primary" type="button" onClick={() => findHotels(dayNumber)}>
             {t('Find hotels')}
           </button>}
-          <button type="button" aria-expanded={measuring} onClick={() => setMeasuring(!measuring)}>
-            {t('Measure distance')}
-          </button>
-          {measuring && <TripDistanceTool />}
           {Boolean(day.ideas?.length) && <ul aria-label={t('Trip ideas')}>{day.ideas?.map(idea => <li key={idea.id}>
             {idea.label}{' '}<button type="button" onClick={() =>
               editDay({ ideas: day.ideas?.filter(item => item.id !== idea.id) }, true)}>{t('Remove')}</button>
           </li>)}</ul>}
-          <TripWalkImport key={dayNumber} onPreview={setPreview} />
+          <TripWalkImport key={dayNumber} point={day.cityPoint} address={day.city} onPreview={setPreview} />
           {hasDayPlan && Number.isFinite(dayDate.getTime()) && (
             <>
               <TripTrainSearch key={dayDate.getTime()} date={dayDate.toISOString().split('T')[0]}
@@ -487,14 +481,11 @@ export default function TripPlannerDraft() {
           const json = JSON.stringify(tripPayload(draft, title, connections), null, 2);
           downloadFile(new Blob([json], { type: 'application/json' }), `trip-${draft.startDate}.json`);
         }}>{t('Export JSON')}</button>
-        <button type="button" onClick={() => {
-          if (!validDates()) return;
-          try {
-            downloadFile(tripWordDocument(tripPayload(draft, title, connections)), `trip-${draft.startDate}.docx`);
-          } catch {
-            setStatus(t('Could not export Word.'));
-          }
-        }}>{t('Export Word')}</button>
+        <TripTemplateAction getTrip={() => {
+          if (!validDates()) return undefined;
+          persist(draft);
+          return tripPayload(draft, title, connections);
+        }} />
         <button type="button" disabled={sharing} onClick={() => void createShare()}>{t('Share')}</button>
         {share?.draft === draft && <input aria-label={t('Trip link')} readOnly value={share.url}
           onFocus={event => event.currentTarget.select()} />}

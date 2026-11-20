@@ -1,5 +1,5 @@
-﻿import { getLocale, t } from '@/shared/i18n';
-import { wordDocument, type WordParagraph } from '@/shared/files/wordDocument';
+import { getLocale, t } from '@/shared/i18n';
+import type { WordParagraph } from '@/shared/files/wordDocument';
 import type { AccountTrip } from '../api/tripDraft';
 
 const transports = { CAR: 'Car', TRAIN: 'Train', PLANE: 'Flight', WALK: 'On foot', BUS: 'Bus', FERRY: 'Ferry' };
@@ -11,7 +11,7 @@ export function travelDuration(seconds: number) {
   return [hours ? unit(hours, 'hour') : '', !hours || minutes % 60 ? unit(minutes % 60, 'minute') : ''].filter(Boolean).join(' ');
 }
 
-export function tripWordDocument(trip: AccountTrip) {
+export function tripDocumentContent(trip: AccountTrip) {
   const paragraphs: WordParagraph[] = [{ text: trip.title, heading: 1 }, { text: `${trip.startDate} — ${trip.endDate}` }];
   const cities = new Map(trip.cities.map(city => [city.id, city.name]));
   const accommodations = new Map(trip.accommodations.map(hotel => [hotel.id, hotel]));
@@ -38,5 +38,5 @@ export function tripWordDocument(trip: AccountTrip) {
     paragraphs.push({ text: t('Documents'), heading: 2 });
     for (const document of trip.documents) paragraphs.push({ text: document.title, link: document.url });
   }
-  return wordDocument(paragraphs);
+  return paragraphs;
 }

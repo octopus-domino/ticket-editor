@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { searchRailPlaces, searchRailSchedule } from '../api/tripRail';
 import { requestRoad } from '../api/routePlanner';
-import type { CityPoint, LocalTripDraft, PointTransport } from '../api/tripDraft';
+import type { CityPoint, LocalTripDraft, PointTransport, TripTrain } from '../api/tripDraft';
 import { flightCoordinates, geographicDistance } from '../domain/route';
 import type { RouteMapLeg } from './RouteMap';
 
 type Point = CityPoint & { id: string; name: string };
 type Segment = { from: Point; to: Point; mode: PointTransport; date?: string };
-type Estimate = { seconds: number; coordinates?: [number, number][] };
+type Estimate = { seconds: number; coordinates?: [number, number][]; trains?: (TripTrain & { seconds: number })[] };
 async function railCity(name: string, signal: AbortSignal) {
   for (const part of name.split(',').slice(0, 4)) {
     const query = part.trim().toLowerCase().replace(/^г\.\s*/, '');
@@ -29,9 +29,11 @@ async function estimate({ from, to, mode, date }: Segment, signal: AbortSignal):
     const [origin, destination] = await Promise.all([railCity(from.name, signal), railCity(to.name, signal)]);
     if (!origin || !destination || origin === destination) return null;
     const schedule = await searchRailSchedule(origin, destination, date, signal);
-    const durations = schedule.trains.map(train => (Date.parse(train.arrival) - Date.parse(train.departure)) / 1000)
-      .filter(seconds => Number.isFinite(seconds) && seconds > 0);
-    return durations.length ? { seconds: Math.min(...durations) } : null;
+    const trains = schedule.trains.map(train => ({ ...train,
+      seconds: (Date.parse(train.arrival) - Date.parse(train.departure)) / 1000 }))
+      .filter(train => Number.isFinite(train.seconds) && train.seconds > 0)
+      .sort((a, b) => Date.parse(a.departure) - Date.parse(b.departure));
+    return trains.length ? { seconds: Math.min(...trains.map(train => train.seconds)), trains } : null;
   }
   if (distance === 0) return { seconds: 0 };
   const road = await requestRoad({ latitude: from.latitude, longitude: from.longitude },

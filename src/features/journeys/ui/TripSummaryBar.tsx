@@ -1,7 +1,7 @@
 import { Fragment } from 'react';
 import { t } from '@/shared/i18n';
 import { pointTransportModes, type PointTransport, type TripLodging } from '../api/tripDraft';
-import { travelDuration } from '../domain/tripWordDocument';
+import { travelDuration } from '../domain/tripDocumentContent';
 import type { TripConnection } from './useTripConnections';
 
 const transportButtons = { CAR: ['🚗', 'Car'], TRAIN: ['🚆', 'Train'], PLANE: ['✈️', 'Flight'], WALK: ['🚶', 'On foot'] } as const;
@@ -37,6 +37,21 @@ export function TripSummaryBar({ rows }: { rows: TripSummaryRow[] }) {
             ? <>{connection.mode === 'PLANE' && `${t('Estimated flight time')}: `}{travelDuration(connection.result.seconds)}</>
             : connection.mode === 'TRAIN' && !connection.date ? t('Select trip dates for trains')
               : connection.result === null ? t('Travel time unavailable') : t('Calculating route…')}</small>
+          {connection.mode === 'TRAIN' && <details className="trip-connection-timetable">
+            <summary title={t('Train timetable')} aria-label={t('Train timetable')}><span aria-hidden="true">🗓</span></summary>
+            <div className="trip-connection-timetable-panel">
+              {connection.date && <time dateTime={connection.date}>{connection.date}</time>}
+              {connection.result?.trains ? <ul>
+                {connection.result.trains.map((train, index) => <li key={`${train.number}-${train.departure}-${index}`}>
+                  <strong>{train.number} {train.title}</strong>
+                  <span>{train.from} <time dateTime={train.departure}>{train.departure.slice(11, 16)}</time>
+                    {' → '}{train.to} <time dateTime={train.arrival}>{train.arrival.slice(11, 16)}</time></span>
+                  <small>{travelDuration(train.seconds)}</small>
+                </li>)}
+              </ul> : <p>{!connection.date ? t('Select trip dates for trains')
+                : connection.result === null ? t('Train timetable unavailable.') : t('Calculating route…')}</p>}
+            </div>
+          </details>}
         </li>}
         <li>
           {onSelect ? <button type="button" onClick={onSelect}>{place}</button> : <strong>{place}</strong>}

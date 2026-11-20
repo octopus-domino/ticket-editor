@@ -1,14 +1,13 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { Temporal } from '@js-temporal/polyfill';
 import { t } from '@/shared/i18n';
-import type { CityPoint, TripLodging } from '../api/tripDraft';
+import type { TripLodging } from '../api/tripDraft';
 import { RouteMap } from './RouteMap';
-import { TripHotelSearch } from './TripHotelSearch';
 
 const ignoreMapHandle = () => undefined;
 
-export function TripLodgingEditor({ date, city, cityPoint, lodging, focus, onFocusHandled, onSave }: {
-  date: string; city?: string; cityPoint?: CityPoint; lodging?: TripLodging; focus?: boolean; onFocusHandled?: () => void;
+export function TripLodgingEditor({ date, lodging, onSave }: {
+  date: string; lodging?: TripLodging;
   onSave(lodging: TripLodging | undefined): void;
 }) {
   const [values, setValues] = useState<TripLodging>(() => lodging ?? {
@@ -16,30 +15,17 @@ export function TripLodgingEditor({ date, city, cityPoint, lodging, focus, onFoc
   });
   const [picking, setPicking] = useState(false);
   const [currency, setCurrency] = useState(lodging?.cost?.currency ?? 'RUB');
-  const details = useRef<HTMLDetailsElement>(null);
-  const name = useRef<HTMLInputElement>(null);
-  useEffect(() => {
-    if (!focus || !details.current) return;
-    details.current.open = true;
-    if (!city?.trim()) {
-      name.current?.focus();
-      onFocusHandled?.();
-    }
-  }, [city, focus, onFocusHandled]);
   const point = values.latitude != null && values.longitude != null
     ? { latitude: values.latitude, longitude: values.longitude } : undefined;
   function change(field: 'name' | 'address' | 'checkIn' | 'checkOut', value: string) {
     setValues(old => ({ ...old, [field]: value }));
   }
-  return <details ref={details}>
+  return <details>
     <summary>{t('Trip lodging')}</summary>
-    <label>{t('Hotel name')} <input ref={name} maxLength={160} value={values.name} onChange={event => change('name', event.target.value)} /></label>
+    <label>{t('Hotel name')} <input maxLength={160} value={values.name} onChange={event => change('name', event.target.value)} /></label>
     <label>{t('Address')} <input maxLength={300} value={values.address} onChange={event => change('address', event.target.value)} /></label>
     <label>{t('Check-in date')} <input type="date" value={values.checkIn} onChange={event => change('checkIn', event.target.value)} /></label>
     <label>{t('Check-out date')} <input type="date" value={values.checkOut} onChange={event => change('checkOut', event.target.value)} /></label>
-    {city?.trim() && <TripHotelSearch key={JSON.stringify([city, values.checkIn, values.checkOut])} city={city} cityPoint={cityPoint}
-      checkIn={values.checkIn} checkOut={values.checkOut} focus={focus}
-      onFocusHandled={onFocusHandled} onSelect={onSave} />}
     <label>{t('Lodging cost')} <input type="number" min="0" step="0.01" value={values.cost?.amount ?? ''} onChange={event => {
       const amount = event.target.valueAsNumber;
       setValues(old => ({ ...old, cost: Number.isFinite(amount) && amount >= 0 ? { amount, currency } : undefined }));

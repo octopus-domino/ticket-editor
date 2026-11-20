@@ -170,6 +170,31 @@ export function useFileIO() {
     });
   }, [getActiveSlide]);
 
+  const exportWord = useCallback(async () => {
+    const { slides } = docStore.getState();
+    if (!slides.length) return;
+    try {
+      const [{ serializeSlideToSvg }, { svgToPng }, { wordDocument }, { downloadFile }] = await Promise.all([
+        import('@/lib/svg/serialize'), import('@/lib/svg/toPng'),
+        import('@/shared/files/wordDocument'), import('@/shared/files/download'),
+      ]);
+      const images = [];
+      for (const slide of await prepareQrForExport(slides, '')) {
+        if (slide.backgroundPreset) {
+          slide.backgroundImage = await loadBackground(slide.backgroundPreset);
+          slide.backgroundPreset = undefined;
+        }
+        const scale = Math.min(1, 4096 / Math.max(slide.width, slide.height));
+        const png = await svgToPng(serializeSlideToSvg(slide), slide.width * scale, slide.height * scale);
+        images.push({ bytes: new Uint8Array(await png.arrayBuffer()), width: slide.width, height: slide.height,
+          title: slide.name || `Page ${images.length + 1}` });
+      }
+      downloadFile(wordDocument([], images), 'document.docx');
+    } catch {
+      toast.error(__tr('Could not export Word.'));
+    }
+  }, [docStore]);
+
   const exportSvgServer = useCallback(async () => {
     const active = getActiveSlide();
     if (!active) return;
@@ -285,6 +310,7 @@ export function useFileIO() {
     exportJson,
     importJson,
     exportSvgLocal,
+    exportWord,
     exportSvgServer,
     exportPdfaServer,
     exportPdfServer,

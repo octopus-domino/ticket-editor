@@ -29,6 +29,7 @@ export function RouteMap({
   legs,
   onReady,
   onPick,
+  onUserMove,
   pickedPoint,
   focusStopId,
   cityMap = false,
@@ -42,10 +43,11 @@ export function RouteMap({
   legs: RouteMapLeg[];
   onReady: (handle: RouteMapHandle | null) => void;
   onPick?: (point: { longitude: number; latitude: number }) => void;
+  onUserMove?: () => void;
   pickedPoint?: { longitude: number; latitude: number } | null;
   focusStopId?: string;
   cityMap?: boolean;
-  fit?: boolean;
+  fit?: boolean | 'initial';
   onStopMove?: (id: string, point: { longitude: number; latitude: number }) => void;
   onStopSelect?: (id: string) => void;
   onLegSelect?: (id: string) => void;
@@ -53,6 +55,7 @@ export function RouteMap({
 }) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<Map | null>(null);
+  const initialFitDone = useRef(false);
   const fitted = useRef<{ stops: RouteStop[]; legs: RouteMapLeg[] } | null>(null);
   const [ready, setReady] = useState(false);
   const [styleGeneration, setStyleGeneration] = useState(0);
@@ -60,6 +63,8 @@ export function RouteMap({
   const onReadyRef = useRef(onReady);
   onReadyRef.current = onReady;
   // Event subscriptions stay stable while the chosen stop changes.
+  const onUserMoveRef = useRef(onUserMove);
+  onUserMoveRef.current = onUserMove;
   const onPickRef = useRef(onPick);
   onPickRef.current = onPick;
   const onStopMoveRef = useRef(onStopMove);
@@ -107,6 +112,7 @@ export function RouteMap({
       if (++tileErrors >= 3 && !raster) fallback();
       else if (raster) setError(t('The map is taking too long to load. Check your connection.'));
     });
+    map.on('moveend', event => { if (event.originalEvent) onUserMoveRef.current?.(); });
     map.on('click', event => {
       if (onLegSelectRef.current) {
         const layers = ['route-road', 'route-flight'].filter(id => map.getLayer(id));
@@ -307,7 +313,9 @@ export function RouteMap({
       });
       return marker;
     });
-    if (fit && (stops.length || legs.some(leg => leg.coordinates.length)) &&
+    const shouldFit = fit === true || (fit === 'initial' && !initialFitDone.current);
+    if (fit === 'initial') initialFitDone.current = true;
+    if (shouldFit && (stops.length || legs.some(leg => leg.coordinates.length)) &&
         (fitted.current?.stops !== stops || fitted.current?.legs !== legs)) {
       fitted.current = { stops, legs };
       const coordinates: [number, number][] = [

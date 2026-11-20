@@ -67,9 +67,9 @@ export function routeMapBounds(
 }
 
 /** Spherical interpolation avoids a misleading straight line on long-haul flights. */
-export function flightCoordinates(a: RouteStop, b: RouteStop): [number, number][] {
+export function flightCoordinates(a: Pick<RouteStop, 'latitude' | 'longitude'>, b: Pick<RouteStop, 'latitude' | 'longitude'>): [number, number][] {
   const rad = Math.PI / 180;
-  const vector = (point: RouteStop) => [
+  const vector = (point: Pick<RouteStop, 'latitude' | 'longitude'>) => [
     Math.cos(point.latitude * rad) * Math.cos(point.longitude * rad),
     Math.cos(point.latitude * rad) * Math.sin(point.longitude * rad),
     Math.sin(point.latitude * rad),

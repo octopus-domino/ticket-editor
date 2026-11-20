@@ -122,6 +122,8 @@ test('receives the finished walk from the built Journey application', async ({ p
   await planner.getByLabel('End date').fill('2027-01-01');
   await planner.getByRole('button', { name: 'Next day' }).click();
   await planner.getByRole('button', { name: 'Plan walk in Journey' }).click();
+  await expect.poll(async () => (await page.locator('dialog.private-walk-overlay iframe').boundingBox())?.height ?? 0)
+    .toBeGreaterThan((page.viewportSize()?.height ?? 600) * .65);
   const frame = page.frameLocator('iframe[src^="/private-journey/"]');
   await expect(frame.getByRole('textbox', { name: 'Название прогулки' })).toHaveValue(draft.title);
   const routePanel = frame.getByRole('button', { name: /📍 Маршрут/ });
@@ -156,6 +158,16 @@ test('plans from address suggestions and selects transport between the chosen ci
   await planner.getByRole('listbox').getByRole('button', { name: 'Tver' }).click();
   await planner.getByLabel('Start date').fill('2026-12-31');
   await planner.getByLabel('End date').fill('2027-01-01');
+  const connection = planner.getByRole('group', { name: 'Moscow → Tver' });
+  await expect(connection.getByRole('button', { name: 'Car' })).toHaveAttribute('aria-pressed', 'true');
+  await connection.getByRole('button', { name: 'Flight' }).click();
+  await expect(connection.getByRole('button', { name: 'Flight' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(planner.getByText(/Estimated flight time/)).toBeVisible();
+  const [download] = await Promise.all([
+    page.waitForEvent('download'), planner.getByRole('button', { name: 'Export Word' }).click(),
+  ]);
+  expect(download.suggestedFilename()).toBe('trip-2026-12-31.docx');
+  expect(await download.failure()).toBeNull();
   await planner.getByRole('button', { name: 'Enter transfer manually' }).click();
   const types = planner.getByRole('group', { name: 'Transport type' });
   await types.getByRole('button', { name: 'Car' }).click();

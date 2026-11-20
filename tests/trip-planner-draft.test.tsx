@@ -52,7 +52,7 @@ test('builds and saves an intercity road transfer from map markers', async () =>
         geometry: [{ longitude: 37.6, latitude: 55.7 }, { longitude: 35.9, latitude: 56.8 }] },
     });
     expect(screen.getByRole('button', { name: t('Trip map') })).toHaveAttribute('aria-expanded', 'true');
-    fireEvent.click(screen.getByRole('button', { name: 'Route line' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Route line' }).at(-1)!);
     expect(within(screen.getByRole('region', { name: t('Transfer details') }))
       .getByRole('link', { name: t('Booking link') })).toHaveAttribute('href', 'https://example.org/booking');
     request.mockResolvedValueOnce({ coordinates: [[37.7, 55.8], [35.9, 56.8]],
@@ -203,15 +203,16 @@ test('keeps plans per day and preserves an older draft on day one', () => {
 test('opens the existing hotel search from the day summary', () => {
   localStorage.setItem('codoc/trip-planner/draft/v2', JSON.stringify({
     id: 'trip-hotel', version: 2, startDate: '2026-12-31', endDate: '2027-01-01',
-    days: { 2: { city: 'Tver', stops: [] } },
+    days: { 2: { city: 'Tver', cityPoint: { latitude: 56.86, longitude: 35.91 }, stops: [] } },
   }));
   render(<TripPlannerDraft />);
   const overview = screen.getByRole('region', { name: t('Trip overview') });
   fireEvent.click(within(overview).getByRole('button', { name: t('Find hotels') }));
-  expect(screen.getByLabelText(t('City'))).toHaveValue('Tver');
+  expect(screen.getByRole('heading', {name:'Tver'})).toBeVisible();
   const search = screen.getByLabelText(t('Guests')).closest('details')!;
   expect(search.open).toBe(true);
-  expect(search.parentElement?.closest('details')?.open).toBe(true);
+  expect(screen.queryByRole('button', { name: t('Trip map') })).toBeNull();
+  expect(screen.getByText(t('Hotels within 1 km of this point'))).toBeVisible();
 });
 
 test('adds cities with address suggestions before choosing dates', async () => {
@@ -231,5 +232,33 @@ test('adds cities with address suggestions before choosing dates', async () => {
     expect(screen.getByLabelText(t('Start date'))).toHaveValue('');
   } finally {
     suggest.mockRestore();
+  }
+});
+
+test('uses a separate picture selector per connection and restores the chosen mode', async () => {
+  const key = 'codoc/trip-planner/draft/v2';
+  localStorage.setItem(key, JSON.stringify({ id: 'modes', version: 2, startDate: '', endDate: '', days: {
+    1: { city: 'First', cityPoint: { latitude: 55, longitude: 37 }, stops: [] },
+    2: { city: 'Second', cityPoint: { latitude: 55.01, longitude: 37 }, stops: [] },
+    3: { city: 'Third', cityPoint: { latitude: 55.02, longitude: 37 }, stops: [] },
+  } }));
+  const request = vi.spyOn(routes, 'requestRoad').mockResolvedValue({
+    coordinates: [[37, 55], [37, 55.01]], durationSeconds: 1200, distanceMeters: 1200,
+  });
+  try {
+    const view = render(<TripPlannerDraft />);
+    const first = () => within(screen.getByRole('group', { name: 'First → Second' }));
+    expect(first().getByRole('button', { name: t('Car') })).toHaveAttribute('aria-pressed', 'true');
+    await act(async () => fireEvent.click(first().getByRole('button', { name: t('On foot') })));
+    expect(request).toHaveBeenCalledWith({ latitude: 55, longitude: 37 }, { latitude: 55.01, longitude: 37 },
+      'foot', expect.any(AbortSignal));
+    expect(within(screen.getByRole('group', { name: 'Second → Third' }))
+      .getByRole('button', { name: t('Car') })).toHaveAttribute('aria-pressed', 'true');
+    expect(JSON.parse(localStorage.getItem(key)!).days[2].incomingMode).toBe('WALK');
+    view.unmount();
+    await act(async () => { render(<TripPlannerDraft />); });
+    expect(first().getByRole('button', { name: t('On foot') })).toHaveAttribute('aria-pressed', 'true');
+  } finally {
+    request.mockRestore();
   }
 });

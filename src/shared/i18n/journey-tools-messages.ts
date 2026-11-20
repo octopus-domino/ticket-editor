@@ -168,6 +168,13 @@ Hotel name|Название отеля|酒店名称|Nazwa hotelu|Nome dell’hot
 Check-in date|Дата заезда|入住日期|Data zameldowania|Data di arrivo|Fecha de entrada|Incheckdatum|Date d’arrivée|Anreisedatum
 Check-out date|Дата выезда|退房日期|Data wymeldowania|Data di partenza|Fecha de salida|Uitcheckdatum|Date de départ|Abreisedatum
 Accommodation not selected|Проживание не выбрано|尚未选择住宿|Nie wybrano zakwaterowania|Alloggio non selezionato|Alojamiento sin seleccionar|Geen verblijf geselecteerd|Hébergement non sélectionné|Keine Unterkunft ausgewählt
+Export Word|Экспорт в Word|导出 Word|Eksportuj do Worda|Esporta in Word|Exportar a Word|Exporteren naar Word|Exporter vers Word|Nach Word exportieren
+Could not export Word.|Не удалось экспортировать в Word.|无法导出 Word。|Nie udało się wyeksportować do Worda.|Impossibile esportare in Word.|No se pudo exportar a Word.|Exporteren naar Word is mislukt.|Impossible d’exporter vers Word.|Der Word-Export ist fehlgeschlagen.
+On foot|Пешком|步行|Pieszo|A piedi|A pie|Te voet|À pied|Zu Fuß
+Estimated flight time|Оценка времени полёта|预计飞行时间|Szacowany czas lotu|Tempo di volo stimato|Tiempo de vuelo estimado|Geschatte vliegtijd|Durée de vol estimée|Geschätzte Flugzeit
+Select trip dates for trains|Укажите даты поездки для поиска поездов|请选择行程日期以查询列车|Wybierz daty podróży, aby wyszukać pociągi|Scegli le date del viaggio per cercare i treni|Elige las fechas del viaje para buscar trenes|Kies reisdata om treinen te zoeken|Choisissez les dates du voyage pour rechercher des trains|Reisedaten für die Zugsuche auswählen
+Travel time unavailable|Время в пути недоступно|暂无行程时间|Czas przejazdu niedostępny|Tempo di viaggio non disponibile|Duración del trayecto no disponible|Reistijd niet beschikbaar|Durée du trajet indisponible|Reisezeit nicht verfügbar
+Calculating route…|Считаем маршрут…|正在计算路线…|Obliczanie trasy…|Calcolo del percorso…|Calculando ruta…|Route wordt berekend…|Calcul de l’itinéraire…|Route wird berechnet…
 Train timetable|Расписание поездов|列车时刻表|Rozkład pociągów|Orari dei treni|Horarios de trenes|Treindienstregeling|Horaires des trains|Zugfahrplan
 Departure city or station|Город или станция отправления|出发城市或车站|Miasto lub stacja odjazdu|Città o stazione di partenza|Ciudad o estación de salida|Vertrekstad of vertrekstation|Ville ou gare de départ|Abfahrtsort oder -bahnhof
 Arrival city or station|Город или станция прибытия|到达城市或车站|Miasto lub stacja przyjazdu|Città o stazione di arrivo|Ciudad o estación de llegada|Aankomststad of aankomststation|Ville ou gare d’arrivée|Ankunftsort oder -bahnhof
@@ -227,6 +234,7 @@ Car|Автомобиль|汽车|Samochód|Auto|Coche|Auto|Voiture|Auto
 Ferry|Паром|渡轮|Prom|Traghetto|Ferry|Veerboot|Ferry|Fähre
 Departure|Отправление|出发|Odjazd|Partenza|Salida|Vertrek|Départ|Abfahrt
 Arrival|Прибытие|到达|Przyjazd|Arrivo|Llegada|Aankomst|Arrivée|Ankunft
+Hotels within 1 km of this point|Отели в радиусе 1 км от точки|此地点 1 公里内的酒店|Hotele w promieniu 1 km od tego punktu|Hotel entro 1 km da questo punto|Hoteles a menos de 1 km de este punto|Hotels binnen 1 km van dit punt|Hôtels à moins de 1 km de ce point|Hotels im Umkreis von 1 km um diesen Punkt
 Hotels on the map|Отели на карте|地图上的酒店|Hotele na mapie|Hotel sulla mappa|Hoteles en el mapa|Hotels op de kaart|Hôtels sur la carte|Hotels auf der Karte
 City list|Список городов|城市列表|Lista miast|Elenco delle città|Lista de ciudades|Stedenlijst|Liste de villes|Städteliste
 Add city|Добавить город|添加城市|Dodaj miasto|Aggiungi città|Añadir ciudad|Stad toevoegen|Ajouter une ville|Stadt hinzufügen

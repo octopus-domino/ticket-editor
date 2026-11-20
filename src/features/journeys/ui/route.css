@@ -297,3 +297,46 @@
   border-color: var(--journey-accent, #275b4d);
   background: #edf4f0;
 }
+.trip-summary > ol:has(.trip-summary-connection) {
+  display: flex;
+  align-items: stretch;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+}
+.trip-summary > ol:has(.trip-summary-connection) > li {
+  flex: 1 0 10rem;
+}
+.trip-summary > ol > .trip-summary-connection {
+  flex: 0 0 auto;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0;
+  border: 0;
+  text-align: center;
+}
+.trip-summary-connection > div {
+  display: flex;
+  gap: 0.2rem;
+}
+.trip-summary-connection button {
+  min-width: 2.25rem;
+  min-height: 2.25rem;
+  padding: 0.25rem;
+  font-size: 1rem;
+}
+.trip-summary-connection button[aria-pressed='true'] {
+  background: #dcebe3;
+  border-color: #39795f;
+  box-shadow: inset 0 0 0 1px #39795f;
+}
+.trip-summary-connection small {
+  max-width: 11rem;
+}
+@media (max-width: 640px) {
+  .trip-summary > ol:has(.trip-summary-connection) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -27,7 +27,7 @@ const sharedTrip = z.object({
     durationSeconds: z.number().nonnegative().nullish(),
     cost: money.nullish(),
     transport: z.enum(['PLANE', 'TRAIN', 'BUS', 'CAR', 'FERRY', 'WALK']).optional(),
-    id: text, fromCityId: text, toCityId: text, departureAt: text, arrivalAt: text, note: text,
+    id: text, fromCityId: text, toCityId: text, departureAt: text.nullish(), arrivalAt: text.nullish(), note: text,
   })).max(366),
 });
 

@@ -8,8 +8,8 @@ const ignoreMapHandle = () => undefined;
 
 const transportLabels = { PLANE: 'Flight', TRAIN: 'Train', BUS: 'Bus', CAR: 'Car', FERRY: 'Ferry' } as const;
 
-export function TripCityMap({ cities, legs, focusStopId, accommodations = [], onChangeLodging, onPick }: Pick<SharedTrip, 'cities'> & {
-  legs: TripWireLeg[]; focusStopId?: string; accommodations?: SharedTrip['accommodations'];
+export function TripCityMap({ cities, legs, plannedLines = [], focusStopId, accommodations = [], onChangeLodging, onPick }: Pick<SharedTrip, 'cities'> & {
+  legs: TripWireLeg[]; plannedLines?: RouteMapLeg[]; focusStopId?: string; accommodations?: SharedTrip['accommodations'];
   onChangeLodging?: (id: string) => void;
   onPick?: (point: CityPoint) => void;
 }) {
@@ -38,12 +38,12 @@ export function TripCityMap({ cities, legs, focusStopId, accommodations = [], on
   });
   if (!destinations.length && !transfers.length && !hotels.length && !onPick) return null;
   return <figure>
-    <RouteMap stops={[...destinations, ...hotels]} legs={transfers} onReady={ignoreMapHandle} focusStopId={focusStopId} fit={!onPick} onPick={onPick}
+    <RouteMap stops={[...destinations, ...hotels]} legs={[...plannedLines, ...transfers]} onReady={ignoreMapHandle} focusStopId={focusStopId} fit={onPick ? 'initial' : true} onPick={onPick}
       onLegSelect={id => { setLodgingId(undefined); setSelectedId(id); }}
       onStopSelect={hotels.length ? id => {
         if (id.startsWith('hotel:')) { setSelectedId(undefined); setLodgingId(id.slice(6)); }
       } : undefined} cityMap />
-    {transfers.some(transfer => transfer.mode === 'transfer') &&
+    {[...transfers, ...plannedLines].some(transfer => transfer.mode === 'transfer') &&
       <figcaption>{t('Dashed lines show connections between cities.')}</figcaption>}
     {transfers.length > 0 && <ul>{transfers.map(line => {
       const leg = legs.find(item => item.id === line.id)!;
@@ -53,8 +53,8 @@ export function TripCityMap({ cities, legs, focusStopId, accommodations = [], on
     {selected && <section aria-label={t('Transfer details')}>
       <h3>{cityName(selected.fromCityId)} → {cityName(selected.toCityId)}</h3>
       <p>{selected.transport && selected.transport !== 'WALK' ? t(transportLabels[selected.transport]) : selected.note}</p>
-      <p>{t('Departure')} · <time dateTime={selected.departureAt}>{selected.departureAt?.replace('T', ' ')}</time></p>
-      <p>{t('Arrival')} · <time dateTime={selected.arrivalAt}>{selected.arrivalAt?.replace('T', ' ')}</time></p>
+      {selected.departureAt && <p>{t('Departure')} · <time dateTime={selected.departureAt}>{selected.departureAt.replace('T', ' ')}</time></p>}
+      {selected.arrivalAt && <p>{t('Arrival')} · <time dateTime={selected.arrivalAt}>{selected.arrivalAt.replace('T', ' ')}</time></p>}
       {selected.cost && <p>{t('Transfer cost')} · {new Intl.NumberFormat(getLocale(), {
         style: 'currency', currency: selected.cost.currency,
       }).format(selected.cost.amount)}</p>}

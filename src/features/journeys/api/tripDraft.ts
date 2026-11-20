@@ -6,7 +6,11 @@ import type { SharedTrip } from '../domain/sharedTrip';
 
 export type TripWireLeg = SharedTrip['legs'][number] & { bookingUrl?: string };
 
+export const pointTransportModes = ['CAR', 'TRAIN', 'PLANE', 'WALK'] as const;
+export type PointTransport = typeof pointTransportModes[number];
+
 export interface TripDayDraft {
+  incomingMode?: PointTransport;
   stops: RouteStop[];
   city?: string;
   cityPoint?: CityPoint;
@@ -73,7 +77,14 @@ export interface LocalTripDraft {
 export interface TripBudget { amount: number; currency: string }
 export interface TripDocument { id: string; title: string; url: string }
 
-export function tripPayload(draft: LocalTripDraft, title: string) {
+export interface PlannedConnection {
+  from: { id: string };
+  to: { id: string };
+  mode: PointTransport;
+  result?: { seconds: number; coordinates?: [number, number][] } | null;
+}
+
+export function tripPayload(draft: LocalTripDraft, title: string, connections: PlannedConnection[] = []) {
   const firstDay = Temporal.PlainDate.from(draft.startDate);
   const cities = new Map<string, { id: string; name: string } & Partial<CityPoint>>();
   const accommodations: (TripLodging & { id: string; cityId: string })[] = [];
@@ -122,6 +133,15 @@ export function tripPayload(draft: LocalTripDraft, title: string) {
     return [{ id: `train-${number}`, fromCityId: cityFor(fromCity || from).id, toCityId: cityFor(toCity || to).id,
       transport: 'TRAIN', departureAt: departure, arrivalAt: arrival, note: `${trainNumber} ${title}`.trim() }];
   });
+  for (const { from, to, mode, result } of connections) {
+    const origin = days[Object.keys(draft.days).indexOf(from.id)]?.cityId;
+    const destination = days[Object.keys(draft.days).indexOf(to.id)]?.cityId;
+    if (!origin || !destination || origin === destination ||
+      legs.some(leg => leg.fromCityId === origin && leg.toCityId === destination && leg.transport === mode)) continue;
+    legs.push({ id: `planned-${from.id}-${to.id}`, fromCityId: origin, toCityId: destination,
+      transport: mode, note: mode, durationSeconds: result?.seconds,
+      geometry: result?.coordinates?.map(([longitude, latitude]) => ({ longitude, latitude })) });
+  }
   return {
     id: draft.id, version: draft.version, title, startDate: draft.startDate, endDate: draft.endDate,
     baseCurrency: 'RUB', travelers: [], cities: [...cities.values()], days, legs,
@@ -134,10 +154,10 @@ export function tripPayload(draft: LocalTripDraft, title: string) {
   };
 }
 
-export async function saveTripToAccount(draft: LocalTripDraft, title: string) {
+export async function saveTripToAccount(draft: LocalTripDraft, title: string, connections?: PlannedConnection[]) {
   const response = await authFetch(`/api/trips/${encodeURIComponent(draft.id)}`, {
     method: 'PUT', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(tripPayload(draft, title)),
+    body: JSON.stringify(tripPayload(draft, title, connections)),
   });
   if (!response.ok) throw new Error(String(response.status));
 }

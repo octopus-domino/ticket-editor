@@ -42,6 +42,7 @@ export const Toolbar: React.FC = () => {
     };
   }, []);
 
+  const [exportingWord, setExportingWord] = useState(false);
   const handleExportJson = fileIO.exportJson;
   const handleExportSvg = fileIO.exportSvgLocal;
 
@@ -109,6 +110,11 @@ export const Toolbar: React.FC = () => {
       <details className="toolbar-more">
         <summary className="toolbar-btn">{__tr("Details")}</summary>
         <div className="toolbar-more-panel">
+          <button type="button" className="toolbar-btn" disabled={exportingWord || !slides.length}
+            onClick={async () => {
+              setExportingWord(true);
+              try { await fileIO.exportWord(); } finally { setExportingWord(false); }
+            }}>{__tr('Export Word')}</button>
           {isFeatureEnabled('FEATURE_EMAIL') && (
             <>
               <button

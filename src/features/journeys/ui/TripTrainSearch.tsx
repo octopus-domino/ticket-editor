@@ -1,14 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { t } from '@/shared/i18n';
-import { journeyRequest } from '../api/journeys';
+import { searchRailPlaces, searchRailSchedule } from '../api/tripRail';
 import type { TripTrain } from '../api/tripDraft';
 
-interface Schedule {
-  available: boolean;
-  stale: boolean;
-  trains: TripTrain[];
-}
-interface RailPlace { code: string; title: string; region: string }
+type RailPlace = Awaited<ReturnType<typeof searchRailPlaces>>[number];
+type Schedule = Awaited<ReturnType<typeof searchRailSchedule>>;
 
 const code = /^[cs][0-9]{1,12}$/;
 
@@ -21,8 +17,7 @@ function RailInput({ label, input, place, onChange }: {
     if (code.test(query) || query.length < 2) return;
     const request = new AbortController();
     const timeout = window.setTimeout(() => {
-      void journeyRequest<RailPlace[]>(`/api/journeys/routes/places/trains/places?q=${encodeURIComponent(query)}`,
-        { signal: request.signal }).then(
+      void searchRailPlaces(query, request.signal).then(
         items => { if (!request.signal.aborted) setResults({ query, items }); },
         () => { if (!request.signal.aborted) setResults({ query, items: [] }); },
       );
@@ -72,9 +67,7 @@ export function TripTrainSearch({ date, selected, onSelect }: {
     setLoading(true);
     setResult(undefined);
     try {
-      const schedule = await journeyRequest<Schedule>('/api/journeys/routes/places/trains', {
-        method: 'POST', signal: controller.signal, body: JSON.stringify({ from: origin, to: destination, date }),
-      });
+      const schedule = await searchRailSchedule(origin, destination, date, controller.signal);
       if (!controller.signal.aborted) setResult(schedule);
     } catch {
       if (!controller.signal.aborted) setResult({ available: false, stale: false, trains: [] });

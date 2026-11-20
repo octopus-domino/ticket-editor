@@ -9,7 +9,7 @@ export type TripWireLeg = SharedTrip['legs'][number] & { bookingUrl?: string };
 export const pointTransportModes = ['CAR', 'TRAIN', 'PLANE', 'WALK'] as const;
 export type PointTransport = typeof pointTransportModes[number];
 
-export interface TripDayDraft {
+export interface TripVisit {
   incomingMode?: PointTransport;
   stops: RouteStop[];
   city?: string;
@@ -20,6 +20,17 @@ export interface TripDayDraft {
   train?: TripTrain;
   transfer?: TripTransfer;
   ideas?: TripIdea[];
+}
+
+export interface TripDayDraft extends TripVisit {
+  visits?: (TripVisit & { id: string })[];
+}
+
+export function tripLocations(days: LocalTripDraft['days']) {
+  return Object.entries(days).flatMap(([key, day]) => [
+    { id: key, number: Number(key), visit: day },
+    ...(day.visits ?? []).map(visit => ({ id: visit.id, number: Number(key), visit })),
+  ]);
 }
 
 export interface TripIdea extends CityPoint { id: string; label: string }
@@ -87,6 +98,8 @@ export interface PlannedConnection {
 export function tripPayload(draft: LocalTripDraft, title: string, connections: PlannedConnection[] = []) {
   const firstDay = Temporal.PlainDate.from(draft.startDate);
   const cities = new Map<string, { id: string; name: string } & Partial<CityPoint>>();
+  const cityIds = new Map<string, string>();
+  const locations = tripLocations(draft.days);
   const accommodations: (TripLodging & { id: string; cityId: string })[] = [];
   function cityFor(rawName: string, point?: CityPoint, day?: string) {
     const name = rawName.trim();
@@ -97,30 +110,41 @@ export function tripPayload(draft: LocalTripDraft, title: string, connections: P
     return city;
   }
   const days = Object.entries(draft.days).map(([number, day]) => {
+    const visits = [{ id: number, visit: day }, ...(day.visits ?? []).map(visit => ({ id: visit.id, visit }))];
     const city = cityFor(day.city?.trim() || day.train?.fromCity || day.train?.from || day.transfer?.from || '', day.cityPoint, number);
-    const legs = day.importedWalk?.legs ?? day.route ?? [];
-    const accommodationId = day.lodging ? `lodging-${number}` : undefined;
-    if (day.lodging && accommodationId) {
-      accommodations.push({ provider: 'MANUAL', ...day.lodging, id: accommodationId, cityId: city.id });
-    }
+    cityIds.set(number, city.id);
+    const walkSections = visits.flatMap(({ visit }) => (visit.importedWalk?.legs ?? visit.route ?? []).map((leg, index) => ({
+      fromSegmentId: visit.stops[index].id, toSegmentId: visit.stops[index + 1].id,
+      geometry: leg.coordinates.map(([longitude, latitude]) => ({ longitude, latitude })),
+      distanceMeters: leg.distanceMeters ?? 0, durationSeconds: leg.durationSeconds,
+    })));
+    const segments = visits.flatMap(({ id, visit }) => {
+      const destination = id === number ? city : cityFor(visit.city ?? '', visit.cityPoint, id);
+      cityIds.set(id, destination.id);
+      if (visit.lodging) accommodations.push({ provider: 'MANUAL', ...visit.lodging, id: `lodging-${id}`, cityId: destination.id });
+      return [
+        ...(id !== number && visit.city ? [{
+          id: `visit-${id}`, title: visit.city, latitude: visit.cityPoint?.latitude, longitude: visit.cityPoint?.longitude,
+          category: 'TRANSPORT', note: visit.importedWalk?.title, photoRefs: [], idea: false,
+        }] : []),
+        ...visit.stops.map(stop => ({
+          id: stop.id, title: stop.label, latitude: stop.latitude, longitude: stop.longitude,
+          category: 'WALK', note: stop.description, photoRefs: [], idea: false,
+        })),
+        ...(visit.ideas ?? []).map(idea => ({
+          id: `idea-${idea.id}`, title: idea.label, latitude: idea.latitude, longitude: idea.longitude,
+          category: 'OTHER', note: undefined, photoRefs: [], idea: true,
+        })),
+      ];
+    });
+    const lastLodging = [...visits].reverse().find(({ visit }) => visit.lodging);
     return {
       date: firstDay.add({ days: Number(number) - 1 }).toString(), cityId: city.id,
-      note: day.importedWalk?.title, accommodationId,
-      segments: [...day.stops.map(stop => ({
-        id: stop.id, title: stop.label, latitude: stop.latitude, longitude: stop.longitude,
-        category: 'WALK', note: stop.description, photoRefs: [], idea: false,
-      })), ...(day.ideas ?? []).map(idea => ({
-        id: `idea-${idea.id}`, title: idea.label, latitude: idea.latitude, longitude: idea.longitude,
-        category: 'OTHER', note: undefined, photoRefs: [], idea: true,
-      }))],
-      walkingSections: legs.map((leg, index) => ({
-        fromSegmentId: day.stops[index].id, toSegmentId: day.stops[index + 1].id,
-        geometry: leg.coordinates.map(([longitude, latitude]) => ({ longitude, latitude })),
-        distanceMeters: leg.distanceMeters ?? 0, durationSeconds: leg.durationSeconds,
-      })),
+      note: day.importedWalk?.title, accommodationId: lastLodging && `lodging-${lastLodging.id}`,
+      segments, walkingSections: walkSections,
     };
   });
-  const legs = Object.entries(draft.days).flatMap<TripWireLeg>(([number, day]) => {
+  const legs = locations.flatMap<TripWireLeg>(({ id: number, visit: day }) => {
     if (day.transfer) {
       const { from, to, transport, departure, arrival, road, cost, bookingUrl } = day.transfer;
       return [{ id: `transfer-${number}`, fromCityId: cityFor(from).id, toCityId: cityFor(to).id,
@@ -134,8 +158,8 @@ export function tripPayload(draft: LocalTripDraft, title: string, connections: P
       transport: 'TRAIN', departureAt: departure, arrivalAt: arrival, note: `${trainNumber} ${title}`.trim() }];
   });
   for (const { from, to, mode, result } of connections) {
-    const origin = days[Object.keys(draft.days).indexOf(from.id)]?.cityId;
-    const destination = days[Object.keys(draft.days).indexOf(to.id)]?.cityId;
+    const origin = cityIds.get(from.id);
+    const destination = cityIds.get(to.id);
     if (!origin || !destination || origin === destination ||
       legs.some(leg => leg.fromCityId === origin && leg.toCityId === destination && leg.transport === mode)) continue;
     legs.push({ id: `planned-${from.id}-${to.id}`, fromCityId: origin, toCityId: destination,
@@ -148,7 +172,7 @@ export function tripPayload(draft: LocalTripDraft, title: string, connections: P
     accommodations, documents: draft.documents ?? [],
     budget: draft.budget ? { limit: draft.budget } : undefined,
     meta: {
-      mode: 'TRIP', source: Object.values(draft.days).some(day => day.importedWalk) ? 'PRIVATE_JOURNEY' : 'MANUAL',
+      mode: 'TRIP', source: locations.some(({ visit }) => visit.importedWalk) ? 'PRIVATE_JOURNEY' : 'MANUAL',
       legacyFields: {},
     },
   };

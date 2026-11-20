@@ -157,6 +157,10 @@ test('plans from address suggestions and selects transport between the chosen ci
         departure: '2027-01-01T11:30:00+03:00', arrival: '2027-01-01T13:10:00+03:00' },
     ] } });
   });
+  await page.route('**/api/journeys/routes/places/hotels', route => route.fulfill({
+    json: { available: true, provider: 'OSTROVOK_MCP', catalogOnly: true,
+      hotels: [{ id: 'station', name: 'Hotel near station', latitude: 56.862, longitude: 35.91 }] },
+  }));
   await page.route('**/api/auth/refresh', route => route.fulfill({ status: 401, json: {} }));
   await page.goto('/start/tours');
   const planner = page.getByRole('region', { name: 'Travel planner' });
@@ -173,13 +177,13 @@ test('plans from address suggestions and selects transport between the chosen ci
   await planner.getByRole('listbox').getByRole('button', { name: 'Tver' }).click();
   await planner.getByRole('button', { name: 'Trip map', exact: true }).click();
   const map = planner.locator('.trip-planner-overview .route-map');
-  await expect(map.locator('.maplibregl-marker')).toHaveCount(2);
+  await expect(map.locator('.leaflet-marker-icon')).toHaveCount(2);
   await expect(map.locator('.maplibregl-ctrl-compass')).toHaveCount(0);
   await planner.getByLabel('Start date').fill('2026-12-31');
   await planner.getByLabel('End date').fill('2027-01-01');
   const connection = planner.getByRole('group', { name: 'Moscow → Tver' });
   await expect(connection.getByRole('button', { name: 'Car' })).toHaveAttribute('aria-pressed', 'true');
-  const pin = await map.locator('.maplibregl-marker').first().elementHandle();
+  const pin = await map.locator('.leaflet-marker-icon').first().elementHandle();
   await connection.getByRole('button', { name: 'Train' }).click();
   const timetable = planner.locator('.trip-connection-timetable');
   await timetable.locator('summary').click();
@@ -198,6 +202,17 @@ test('plans from address suggestions and selects transport between the chosen ci
   await expect(types.getByRole('button', { name: 'Car' })).toHaveAttribute('aria-pressed', 'true');
   await expect(planner.getByRole('group', { name: 'Departure' }).getByLabel('City')).toHaveValue('Moscow');
   await expect(planner.getByRole('group', { name: 'Arrival' }).getByLabel('City')).toHaveValue('Tver');
+  const mapElement = await map.elementHandle();
+  await planner.locator('.trip-planner-day').getByRole('button', { name: 'Find hotels', exact: true }).click();
+  const hotel = planner.locator('.trip-hotel-list > li').first();
+  await expect(hotel).toContainText('Hotel near station');
+  await expect(planner.locator('.route-map')).toHaveCount(1);
+  await expect(map.locator('.leaflet-marker-icon')).toHaveCount(2);
+  expect(await mapElement?.evaluate(node => node.isConnected)).toBe(true);
+  await map.getByRole('button', { name: 'Hotel near station' }).click();
+  await expect(hotel).toHaveAttribute('data-active', 'true');
+  await planner.getByRole('button', { name: 'Back', exact: true }).click();
+  expect(await mapElement?.evaluate(node => node.isConnected)).toBe(true);
   await planner.getByRole('button', { name: 'Create a trip template' }).click();
   await expect(page).toHaveURL(/\/app\/templates\/[^/]+\/edit/);
   await expect(page.locator('.template-editor-canvas')).toBeVisible();

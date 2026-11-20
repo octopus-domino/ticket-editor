@@ -212,7 +212,8 @@ test('opens the existing hotel search from the day summary', () => {
   expect(screen.getByRole('heading', {name:'Tver'})).toBeVisible();
   const search = screen.getByLabelText(t('Guests')).closest('details')!;
   expect(search.open).toBe(true);
-  expect(screen.queryByRole('button', { name: t('Trip map') })).toBeNull();
+  expect(screen.getByRole('region', { name: t('Trip overview') })).toBeInTheDocument();
+  expect(screen.queryByRole('group', { name: t('Trip day') })).not.toBeInTheDocument();
   expect(screen.getByText(t('Hotels within 1 km of this point'))).toBeVisible();
 });
 
@@ -262,4 +263,28 @@ test('uses a separate picture selector per connection and restores the chosen mo
   } finally {
     request.mockRestore();
   }
+});
+
+test('keeps several cities in one day, repeats the city on another day and derives the end date', () => {
+  render(<MemoryRouter><TripPlannerDraft /></MemoryRouter>);
+  const city = () => screen.getByLabelText(t('City'));
+  const add = (name: string) => {
+    fireEvent.change(city(), { target: { value: name } });
+    fireEvent.click(screen.getByRole('button', { name: t('Add city') }));
+  };
+  add('Tver');
+  add('Kostroma');
+  fireEvent.click(screen.getByRole('button', { name: t('Next day') }));
+  add('Kostroma');
+  fireEvent.click(screen.getByRole('button', { name: t('Next day') }));
+  fireEvent.change(screen.getByLabelText(t('Start date')), { target: { value: '2027-01-05' } });
+  expect(screen.getByLabelText(t('End date'))).toHaveValue('2027-01-07');
+  const days = screen.getByRole('region', { name: t('Trip overview') }).querySelectorAll('.trip-day-timeline-item');
+  expect(days).toHaveLength(3);
+  expect(within(days[0] as HTMLElement).getByRole('button', { name: 'Tver' })).toBeInTheDocument();
+  expect(within(days[0] as HTMLElement).getByRole('button', { name: 'Kostroma' })).toBeInTheDocument();
+  expect(within(days[1] as HTMLElement).getByRole('button', { name: 'Kostroma' })).toBeInTheDocument();
+  expect(days[2].querySelector('time')).toHaveAttribute('datetime', '2027-01-07');
+  fireEvent.click(within(days[0] as HTMLElement).getByRole('button', { name: t('Move day later') }));
+  expect(within(days[1] as HTMLElement).getByRole('button', { name: 'Tver' })).toBeInTheDocument();
 });

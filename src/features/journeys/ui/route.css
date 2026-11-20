@@ -369,3 +369,54 @@
 }
 .trip-connection-timetable-panel ul { list-style: none; margin: 0; padding: 0; }
 .trip-connection-timetable-panel li { display: grid; padding: .5rem 0; border-top: 1px solid #e3ebe6; }
+
+.trip-leaflet-map { z-index: 0; isolation: isolate; background: #e8eee7; }
+.trip-leaflet-map .route-map-marker { display: grid; place-items: center; }
+.trip-leaflet-map[data-picking='true'] { cursor: crosshair; }
+.trip-leaflet-marker[role='button'] { cursor: pointer; }
+.trip-day-timeline { border-inline-start: 2px solid #d9e6dc; margin-inline-start: .45rem; padding-inline-start: 1rem; }
+.trip-day-timeline-item { position: relative; padding: .4rem 0 1rem; }
+.trip-day-timeline-item::before {
+  content: ''; position: absolute; inset-inline-start: -1.38rem; top: 1.2rem;
+  width: .68rem; height: .68rem; border-radius: 50%; background: #fff;
+  border: 2px solid #53866d; box-sizing: border-box;
+}
+.trip-day-timeline-item[data-selected='true']::before { background: #317559; }
+.trip-day-timeline-item > header { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+.trip-day-timeline-item > header > button {
+  display: flex; flex-wrap: wrap; align-items: baseline; justify-content: flex-start; gap: .45rem .7rem;
+  text-align: start; background: transparent; border-color: transparent; font-weight: 750; padding-inline-start: 0;
+}
+.trip-day-timeline-item > header time { font-weight: 500; font-size: .82rem; color: #4d6659; }
+.trip-day-timeline-item > header > div { display: flex; gap: .2rem; }
+.trip-day-timeline-item > ol {
+  display: flex; flex-wrap: wrap; gap: .45rem; list-style: none; padding: 0; margin: .35rem 0 0;
+}
+.trip-day-timeline-item > ol > li:not(.trip-summary-connection) {
+  flex: 1 1 10rem; min-width: 0; padding: .65rem; border-radius: .7rem; background: #f7faf7; border: 1px solid #dbe7dd;
+}
+.trip-day-timeline-item > ol > li > button:first-child { text-align: start; font-weight: 650; }
+.trip-day-timeline-item .trip-summary-connection { display: grid; justify-items: center; align-content: center; gap: .3rem; }
+.trip-inline-hotels { border: 1px solid #dbe6de; border-radius: 1rem; padding: .85rem; margin-block: .5rem 1rem; background: #fff; }
+.trip-inline-hotels > header { display: flex; justify-content: space-between; align-items: center; gap: .5rem; }
+.trip-inline-hotels > header h3 { margin: 0; overflow-wrap: anywhere; }
+.trip-hotel-search-controls { display: flex; flex-wrap: wrap; gap: .5rem; align-items: end; margin-block: .7rem; }
+.trip-hotel-search-controls label { display: grid; gap: .25rem; font-size: .82rem; }
+.trip-hotel-search-controls input[type='number'] { width: 5rem; }
+.trip-hotel-results-grid { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); align-items: start; gap: .75rem; }
+.trip-hotel-results .trip-hotel-list { max-height: 24rem; overflow: auto; overscroll-behavior: contain; }
+.trip-hotel-map .route-map { height: clamp(260px, 45vh, 460px); }
+.trip-hotel-results .trip-hotel-list > li { background: #f8fbf8; }
+@media (max-width: 780px) {
+  .trip-hotel-results-grid { grid-template-columns: minmax(0, 1fr); }
+  .trip-day-timeline-item > ol { flex-direction: column; }
+  .trip-day-timeline-item > ol > li:not(.trip-summary-connection) { flex: auto; }
+}
+.trip-planner-grid[data-hotel-search='true'] { grid-template-columns: minmax(0, 1fr); }
+.trip-planner-grid[data-hotel-search='true'] .trip-map-and-hotel {
+  display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(16rem, .8fr); align-items: start; gap: .85rem;
+}
+.trip-inline-hotels .trip-hotel-results-grid { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 780px) {
+  .trip-planner-grid[data-hotel-search='true'] .trip-map-and-hotel { grid-template-columns: minmax(0, 1fr); }
+}

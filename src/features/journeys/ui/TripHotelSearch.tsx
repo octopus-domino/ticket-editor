@@ -12,9 +12,12 @@ type Result = { available: boolean; provider?: TripLodging['provider']; hotels: 
 const noLegs: [] = [];
 const ignoreMapHandle = () => undefined;
 
-export function TripHotelSearch({ city, cityPoint, checkIn: initialCheckIn, checkOut: initialCheckOut, radiusMeters, initiallyOpen, onSelect }: {
+export type TripHotelMapState = Pick<import('./RouteMap').RouteMapProps, 'stops' | 'fit' | 'focusStopId' | 'onStopSelect' | 'onUserMove'>;
+
+export function TripHotelSearch({ city, cityPoint, checkIn: initialCheckIn, checkOut: initialCheckOut, radiusMeters, initiallyOpen, onSelect, onMapState }: {
   city: string; cityPoint?: CityPoint; checkIn: string; checkOut: string; radiusMeters?: number; initiallyOpen?: boolean;
   onSelect: (lodging: TripLodging) => void;
+  onMapState?: (next: TripHotelMapState) => void;
 }) {
   const [checkIn, setCheckIn] = useState(initialCheckIn);
   const [checkOut, setCheckOut] = useState(initialCheckOut);
@@ -99,15 +102,25 @@ export function TripHotelSearch({ city, cityPoint, checkIn: initialCheckIn, chec
     setResult(undefined);
   }
 
-  function refreshAfterMove() {
+  const refreshAfterMove = useCallback(() => {
     setMapMoved(true);
     if (!result) return;
     clearTimeout(refreshTimer.current);
     refreshTimer.current = setTimeout(() => void search(true), Math.max(450, 8000 - (Date.now() - lastRequest.current)));
-  }
+  }, [result, search]);
+  const selectMarker = useCallback((id: string) => {
+    if (id === '__day_point__') return;
+    setActive(id);
+    cards.current.get(id)?.scrollIntoView?.({ block: 'nearest' });
+  }, []);
+  useEffect(() => {
+    onMapState?.({ stops: mapStops, focusStopId: active, fit: !mapMoved,
+      onUserMove: refreshAfterMove, onStopSelect: selectMarker });
+  }, [active, mapMoved, mapStops, onMapState, refreshAfterMove, selectMarker]);
 
-  return <details open={initiallyOpen}>
+  return <details open={initiallyOpen} className="trip-hotel-search">
     <summary>{t('Find hotels')}</summary>
+    <div className="trip-hotel-search-controls">
     {initiallyOpen && <>
       <label>{t('Check-in date')} <input type="date" value={checkIn} onChange={event => { resetResults(); setCheckIn(event.target.value); }} /></label>
       <label>{t('Check-out date')} <input type="date" value={checkOut} onChange={event => { resetResults(); setCheckOut(event.target.value); }} /></label>
@@ -117,23 +130,21 @@ export function TripHotelSearch({ city, cityPoint, checkIn: initialCheckIn, chec
       setGuests(event.target.valueAsNumber || 0);
     }} /></label>
     <button type="button" disabled={!validQuery || busy} onClick={() => void search()}>{t('Search')}</button>
+    </div>
     {radiusMeters === 1000 && <p>{t('Hotels within 1 km of this point')}</p>}
     {busy && <p role="status">{t('Loading…')}</p>}
     {result && !result.available && <p role="status">{t('Hotel search is unavailable.')}</p>}
     {result?.provider === 'RUSSIAN_TOURISM' && <p>{t('Registry results show hotel details without current prices or availability.')}</p>}
     {result?.provider === 'OSTROVOK_MCP' && result.catalogOnly && <p>{t('Prices and availability are checked on Ostrovok.')}</p>}
-    {mapStops.length > 0 && <div className="trip-hotel-map">
+    <div className="trip-hotel-results-grid">
+    {!onMapState && mapStops.length > 0 && <div className="trip-hotel-map">
         <button type="button" aria-pressed={mapOpen} onClick={() => setMapOpen(!mapOpen)}>
           {t('Hotels on the map')}
         </button>
         {mapOpen && <RouteMap cityMap rasterBasemap stops={mapStops} legs={noLegs} onReady={ignoreMapHandle}
-          fit={!mapMoved} onUserMove={refreshAfterMove} focusStopId={active} onStopSelect={id => {
-            if (id === '__day_point__') return;
-            setActive(id);
-            cards.current.get(id)?.scrollIntoView?.({ block: 'nearest' });
-          }} />}
+          fit={!mapMoved} onUserMove={refreshAfterMove} focusStopId={active} onStopSelect={selectMarker} />}
       </div>}
-    {result?.available && <>
+    {result?.available && <div className="trip-hotel-results">
       <label>{t('Minimum hotel stars')} <input type="number" min={0} max={5} value={starFilter}
         onChange={event => setStarFilter(event.target.valueAsNumber || 0)} /></label>
       {!result.catalogOnly && <label>{t('Maximum cost in RUB')} <input type="number" min={0} value={maxRoubles ?? ''}
@@ -158,6 +169,7 @@ export function TripHotelSearch({ city, cityPoint, checkIn: initialCheckIn, chec
           latitude: hotel.latitude ?? undefined, longitude: hotel.longitude ?? undefined, checkIn, checkOut,
           cost: hotel.cost ?? undefined, provider: result.provider ?? undefined })}>{t('Add hotel to trip')}</button>
       </li>)}</ul>
-    </>}
+    </div>}
+    </div>
   </details>;
 }

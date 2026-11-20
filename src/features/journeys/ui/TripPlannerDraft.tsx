@@ -7,12 +7,12 @@ import { downloadFile } from '@/shared/files/download';
 import { TripTemplateAction } from './TripTemplateAction';
 import type { PlannedLeg } from '../domain/route';
 import { sharedTripJson, shareTripUrl } from '../domain/sharedTrip';
-import { saveTripToAccount, pointTransportModes, transferModes, tripPayload, type PointTransport, type CityPoint, type LocalTripDraft, type TripDayDraft } from '../api/tripDraft';
+import { saveTripToAccount, pointTransportModes, transferModes, tripLocations, tripPayload, type PointTransport, type CityPoint, type LocalTripDraft, type TripDayDraft, type TripVisit } from '../api/tripDraft';
 import { RouteMap } from './RouteMap';
 import { TripWalkImport, type WalkCandidate } from './TripWalkImport';
 import { TripTrainSearch } from './TripTrainSearch';
 import { TripLodgingEditor } from './TripLodgingEditor';
-import { TripHotelSearch } from './TripHotelSearch';
+import { TripHotelSearch, type TripHotelMapState } from './TripHotelSearch';
 import { TripSummaryBar } from './TripSummaryBar';
 import { useTripConnections } from './useTripConnections';
 import { TripDetailsEditor } from './TripDetailsEditor';
@@ -45,7 +45,7 @@ function validLegs(legs: PlannedLeg[] | undefined, stopCount: number) {
       Number.isFinite(point[0]) && Number.isFinite(point[1])));
 }
 
-function readDay(day: TripDay | null): TripDay | null {
+function readVisit(day: TripVisit | null): TripVisit | null {
   if (!day || !Array.isArray(day.stops) || !day.stops.every((stop) =>
     typeof stop?.id === 'string' && typeof stop.label === 'string' &&
     Number.isFinite(stop.longitude) && Number.isFinite(stop.latitude))) return null;
@@ -79,6 +79,16 @@ function readDay(day: TripDay | null): TripDay | null {
       && [transfer.from, transfer.to, transfer.departure, transfer.arrival].every(value => typeof value === 'string')
       && Date.parse(transfer.departure) < Date.parse(transfer.arrival)
       ? { ...transfer, road: transfer.transport === 'CAR' && validRoad ? road : undefined } : undefined };
+}
+
+function readDay(day: TripDay | null): TripDay | null {
+  const start = readVisit(day);
+  if (!start) return null;
+  const visits = Array.isArray(day?.visits) ? day.visits.flatMap(item => {
+    const value = readVisit(item);
+    return value && typeof item.id === 'string' && /^[a-z][a-z0-9-]{1,42}$/.test(item.id) ? [{ ...value, id: item.id }] : [];
+  }) : undefined;
+  return { ...start, visits: visits?.length ? visits : undefined };
 }
 
 function readDraft(): Draft {
@@ -116,6 +126,7 @@ export default function TripPlannerDraft() {
   const [share, setShare] = useState<{ draft: Draft; url: string }>();
   const [fileShare, setFileShare] = useState<Draft>();
   const [selectedDay, setSelectedDay] = useState(1);
+  const [selectedVisit, setSelectedVisit] = useState<string>();
   const [choosingCity, setChoosingCity] = useState(false);
   const [placingCities, setPlacingCities] = useState(true);
   const cityInput = useRef<HTMLInputElement>(null);
@@ -123,18 +134,23 @@ export default function TripPlannerDraft() {
   const [focusedDay, setFocusedDay] = useState<number>();
   const [showingCities, setShowingCities] = useState(true);
   const [editingTransfer, setEditingTransfer] = useState(false);
+  const [hotelMap, setHotelMap] = useState<TripHotelMapState>();
   const [hotelSearchDay, setHotelSearchDay] = useState<number>();
   const duration = Math.max(0, (Date.parse(draft.endDate) - Date.parse(draft.startDate)) / dayMilliseconds + 1) || 0;
   const lastPlannedDay = Math.max(1, ...Object.keys(draft.days).map(Number));
   const lastDay = Math.max(duration, lastPlannedDay);
   const dayNumber = Math.min(selectedDay, lastDay);
-  const day = draft.days[dayNumber] ?? emptyDay;
+  const dayDraft = draft.days[dayNumber] ?? emptyDay;
+  const extra = dayDraft.visits?.find(visit => visit.id === selectedVisit);
+  const day = extra ?? dayDraft;
+  const activeLocation = extra?.id ?? String(dayNumber);
+  const locations = useMemo(() => tripLocations(draft.days), [draft.days]);
   const title = draft.title?.trim() || t('Travel planner');
-  const hasCityPins = Object.values(draft.days).some(details => details.cityPoint || details.transfer?.road?.geometry.length
-    || (details.lodging?.latitude != null && details.lodging.longitude != null));
-  const cityPins = useMemo(() => Object.entries(draft.days).flatMap(([number, details]) => details.cityPoint ? [{
-    ...details.cityPoint, id: number, name: details.city?.trim() || `${t('City')} ${number}`,
-  }] : []), [draft.days]);
+  const hasCityPins = locations.some(({ visit }) => visit.cityPoint || visit.transfer?.road?.geometry.length
+    || (visit.lodging?.latitude != null && visit.lodging.longitude != null));
+  const cityPins = useMemo(() => locations.flatMap(({ id, number, visit }) => visit.cityPoint ? [{
+    ...visit.cityPoint, id, number, mode: visit.incomingMode, name: visit.city?.trim() || `${t('City')} ${number}`,
+  }] : []), [locations]);
   const { connections, lines } = useTripConnections(cityPins, draft);
   const cityMap = useMemo(() => showingCities && hasCityPins && duration >= 2 && lastPlannedDay <= duration
     ? tripPayload(draft, title) : undefined, [draft, duration, hasCityPins, lastPlannedDay, showingCities, title]);
@@ -164,8 +180,9 @@ export default function TripPlannerDraft() {
   }
 
   async function moveCity(cityPoint: CityPoint) {
+    if (extra) { editDay({ cityPoint }, true); return; }
     const name = day.city?.trim().toLowerCase();
-    const days = { ...draft.days, [dayNumber]: { ...day, cityPoint } };
+    const days = { ...draft.days, [dayNumber]: { ...dayDraft, cityPoint } };
     const affected = Object.entries(days).flatMap(([number, details]) => {
       const transfer = details.transfer;
       const from = transfer?.from.trim().toLowerCase(), to = transfer?.to.trim().toLowerCase();
@@ -207,18 +224,42 @@ export default function TripPlannerDraft() {
     }
   }
 
-  function editDay(changes: Partial<TripDay>, saveImmediately = false) {
+  function editDay(changes: Partial<TripVisit>, saveImmediately = false) {
     const next = { ...day, ...changes };
     const days = { ...draft.days };
-    if (next.stops.length || next.ideas?.length || next.city?.trim() || next.cityPoint || next.lodging || next.train || next.transfer) days[dayNumber] = next;
+    if (extra) days[dayNumber] = { ...dayDraft, visits: dayDraft.visits?.map(visit =>
+      visit.id === extra.id ? { ...visit, ...changes } : visit) };
+    else if (next.stops.length || next.ideas?.length || next.city?.trim() || next.cityPoint ||
+      next.lodging || next.train || next.transfer || dayDraft.visits?.length) days[dayNumber] = { ...dayDraft, ...changes };
     else delete days[dayNumber];
     edit({ days });
     if (saveImmediately) persist({ ...draft, days });
   }
 
-  function chooseTransport(number: string, incomingMode: PointTransport) {
-    const target = Number(number);
-    const days = { ...draft.days, [target]: { ...draft.days[target], incomingMode } };
+  function addVisit(city?: string, cityPoint?: CityPoint) {
+    if (!dayDraft.city && !dayDraft.cityPoint) {
+      editDay({ city, cityPoint }, true);
+      return;
+    }
+    if (city && day.city?.trim().toLowerCase() === city.trim().toLowerCase()) {
+      if (cityPoint) void moveCity(cityPoint);
+      return;
+    }
+    const id = `visit-${crypto.randomUUID()}`;
+    const visits = [...(dayDraft.visits ?? []), { id, city, cityPoint, stops: [] }];
+    const days = { ...draft.days, [dayNumber]: { ...dayDraft, visits } };
+    edit({ days });
+    persist({ ...draft, days });
+    selectDay(dayNumber, id);
+  }
+
+  function chooseTransport(id: string, incomingMode: PointTransport) {
+    const target = locations.find(location => location.id === id);
+    if (!target) return;
+    const current = draft.days[target.number];
+    const next = id === String(target.number) ? { ...current, incomingMode }
+      : { ...current, visits: current.visits?.map(visit => visit.id === id ? { ...visit, incomingMode } : visit) };
+    const days = { ...draft.days, [target.number]: next };
     edit({ days });
     persist({ ...draft, days });
   }
@@ -253,7 +294,8 @@ export default function TripPlannerDraft() {
     persist(next);
   }
 
-  function selectDay(next: number) {
+  function selectDay(next: number, visitId?: string) {
+    setSelectedVisit(visitId);
     setChoosingCity(false);
     setEditingTransfer(false);
     setHotelSearchDay(undefined);
@@ -262,10 +304,13 @@ export default function TripPlannerDraft() {
     setSelectedDay(next);
   }
 
-  function findHotels(number: number) {
-    if (number !== dayNumber) selectDay(number);
+  function findHotels(number: number, visitId?: string) {
+    if (number !== dayNumber || visitId !== selectedVisit) selectDay(number, visitId);
+    setShowingCities(true);
+    setHotelMap(undefined);
     setHotelSearchDay(number);
-    if (!draft.days[number]?.cityPoint) setChoosingCity(true);
+    const visit = visitId ? draft.days[number]?.visits?.find(item => item.id === visitId) : draft.days[number];
+    if (!visit?.cityPoint) setChoosingCity(true);
     if (!draft.startDate) startDateInput.current?.focus();
   }
 
@@ -279,7 +324,7 @@ export default function TripPlannerDraft() {
       return false;
     }
     const start = Date.parse(draft.startDate);
-    const shiftedTransfer = Object.entries(draft.days).some(([number, details]) => {
+    const shiftedTransfer = locations.some(({ number, visit: details }) => {
       const departure = (details.train ?? details.transfer)?.departure;
       return departure && departure.slice(0, 10) !== new Date(start + (Number(number) - 1) * dayMilliseconds)
         .toISOString().slice(0, 10);
@@ -325,27 +370,42 @@ export default function TripPlannerDraft() {
       setSharing(false);
     }
   }
-  if (hotelSearchDay === dayNumber && day.city?.trim() && day.cityPoint && Number.isFinite(dayDate.getTime())) {
-    const checkIn = day.lodging?.checkIn ?? dayDate.toISOString().slice(0, 10);
-    const checkOut = day.lodging?.checkOut ?? new Date(dayDate.getTime() + dayMilliseconds).toISOString().slice(0, 10);
-    return <section className="trip-planner" aria-label={t('Travel planner')}>
-      <div className="trip-map-actions">
-        <button type="button" onClick={() => setHotelSearchDay(undefined)}>{t('Back')}</button>
-        <h2>{day.city}</h2>
-      </div>
-      <TripHotelSearch key={dayNumber} city={day.city} cityPoint={day.cityPoint}
-        checkIn={checkIn} checkOut={checkOut} radiusMeters={1000} initiallyOpen
-        onSelect={lodging => { editDay({ lodging }, true); setHotelSearchDay(undefined); }} />
-    </section>;
+  const hotelSearch = hotelSearchDay === dayNumber && day.city?.trim() && day.cityPoint && Number.isFinite(dayDate.getTime())
+    ? { city: day.city, point: day.cityPoint, checkIn: day.lodging?.checkIn ?? dayDate.toISOString().slice(0, 10),
+      checkOut: day.lodging?.checkOut ?? new Date(dayDate.getTime() + dayMilliseconds).toISOString().slice(0, 10) }
+    : undefined;
+
+  function setStartDate(startDate: string) {
+    const count = Math.max(2, lastDay);
+    const endDate = startDate ? Temporal.PlainDate.from(startDate).add({ days: count - 1 }).toString() : '';
+    edit({ startDate, endDate });
+    persist({ ...draft, startDate, endDate });
   }
+
+  function reorderDay(from: number, to: number) {
+    const days = { ...draft.days };
+    const before = days[from], after = days[to];
+    days[from] = after ?? emptyDay;
+    days[to] = before ?? emptyDay;
+    edit({ days });
+    persist({ ...draft, days });
+    selectDay(to);
+  }
+
   return (
     <section className="trip-planner" aria-label={t('Travel planner')}>
       <header className="trip-planner-header">
         <h2>{t('Travel planner')}</h2>
       </header>
-      <div className="trip-planner-grid">
+      <div className="trip-planner-dates">
+        <label>{t('Trip name')} <input maxLength={180} value={draft.title ?? ''}
+          onChange={event => edit({ title: event.target.value })} /></label>
+        <label>{t('Start date')} <input ref={startDateInput} type="date" value={draft.startDate} onChange={event => setStartDate(event.target.value)} /></label>
+        <label>{t('End date')} <input type="date" value={draft.endDate} onChange={event => { edit({ endDate: event.target.value }); persist({ ...draft, endDate: event.target.value }); }} /></label>
+      </div>
+      <div className="trip-planner-grid" data-hotel-search={Boolean(hotelSearch)}>
         <div className="trip-planner-overview">
-          <div className="trip-map-actions">
+          {!hotelSearch && <div className="trip-map-actions">
             <button type="button" aria-expanded={showingCities}
               onClick={() => { setFocusedDay(undefined); setShowingCities(true); }}>{t('Trip map')}</button>
             <button type="button" aria-pressed={!showingCities} onClick={() => {
@@ -358,27 +418,54 @@ export default function TripPlannerDraft() {
               setPlacingCities(!placingCities);
               setChoosingCity(false);
             }}>{t('Add cities on the map')}</button>}
+          </div>}
+          <div className="trip-map-and-hotel">
+            {showingCities && !choosingCity && <TripCityMap cities={cityMap?.cities ?? cityPins}
+              legs={cityMap?.legs ?? []} plannedLines={lines} accommodations={cityMap?.accommodations}
+              hotelMap={hotelSearch ? hotelMap ?? { stops: [{ ...hotelSearch.point, id: '__day_point__',
+                label: hotelSearch.city, zone: 'UTC', stayMinutes: 0 }] } : undefined}
+              onPick={placingCities ? point => addVisit(undefined, point) : undefined}
+              focusStopId={placingCities || focusedDay !== dayNumber ? undefined
+                : cityMap?.cities.find(item => item.latitude === day.cityPoint?.latitude
+                  && item.longitude === day.cityPoint?.longitude)?.id ?? activeLocation}
+              onChangeLodging={id => {
+                const location = locations.find(item => id === `lodging-${item.id}`);
+                if (location) findHotels(location.number, location.id === String(location.number) ? undefined : location.id);
+              }} />}
+            {hotelSearch && <section className="trip-inline-hotels" aria-label={t('Find hotels')}>
+              <header>
+                <h3>{hotelSearch.city}</h3>
+                <button type="button" onClick={() => setHotelSearchDay(undefined)}>{t('Back')}</button>
+              </header>
+              <TripHotelSearch key={activeLocation} city={hotelSearch.city} cityPoint={hotelSearch.point}
+                checkIn={hotelSearch.checkIn} checkOut={hotelSearch.checkOut} radiusMeters={1000} initiallyOpen onMapState={setHotelMap}
+                onSelect={lodging => { editDay({ lodging }, true); setHotelSearchDay(undefined); }} />
+            </section>}
           </div>
-          {showingCities && !choosingCity && <TripCityMap cities={cityMap?.cities ?? cityPins}
-            legs={cityMap?.legs ?? []} plannedLines={lines} accommodations={cityMap?.accommodations}
-            onPick={placingCities ? point => void moveCity(point) : undefined}
-            focusStopId={placingCities || focusedDay !== dayNumber ? undefined
-              : cityMap?.days.find(item => dayDate.toISOString().startsWith(item.date))?.cityId ?? String(dayNumber)}
-            onChangeLodging={id => {
-              const number = Number(id.replace('lodging-', ''));
-              findHotels(number);
-            }} />}
-          <TripSummaryBar rows={Object.entries(draft.days).map(([number, details]) => ({
-            id: number, connection: connectionsByDay.get(number), onChooseTransport: mode => chooseTransport(number, mode),
-            place: details.city?.trim() || `${t('Trip day')} ${number}`, lodging: details.lodging,
-            onSelect: () => {
-              selectDay(Number(number));
-              if (details.cityPoint) { setPlacingCities(false); setFocusedDay(Number(number)); }
-            },
-            onFindHotel: Number(number) !== dayNumber && details.city?.trim() ? () => findHotels(Number(number)) : undefined,
-          }))} />
+          <TripSummaryBar days={Array.from({ length: Math.min(lastDay, 366) }, (_, index) => {
+            const number = index + 1;
+            const timestamp = Date.parse(draft.startDate) + index * dayMilliseconds;
+            const date = Number.isFinite(timestamp) ? new Date(timestamp).toISOString().slice(0, 10) : undefined;
+            return { number, date, selected: number === dayNumber,
+              onSelect: () => selectDay(number),
+              onMoveEarlier: number > 1 ? () => reorderDay(number, number - 1) : undefined,
+              onMoveLater: number < lastDay ? () => reorderDay(number, number + 1) : undefined,
+              rows: locations.filter(item => item.number === number && (item.visit.city || item.visit.cityPoint)).map(({ id, visit }) => {
+                const visitId = id === String(number) ? undefined : id;
+                return {
+                  id, place: visit.city?.trim() || t('City'), lodging: visit.lodging,
+                  connection: connectionsByDay.get(id), onChooseTransport: mode => chooseTransport(id, mode),
+                  onSelect: () => {
+                    selectDay(number, visitId);
+                    if (visit.cityPoint) { setPlacingCities(false); setFocusedDay(number); }
+                  },
+                  onFindHotel: visit.city?.trim() && id !== activeLocation ? () => findHotels(number, visitId) : undefined,
+                };
+              }),
+            };
+          })} />
         </div>
-        <div className="trip-planner-day">
+        {!hotelSearch && <div className="trip-planner-day">
           <fieldset>
             <legend>{t('Trip day')}</legend>
             <button type="button" disabled={dayNumber <= 1} onClick={() => selectDay(dayNumber - 1)}>{t('Previous day')}</button>
@@ -391,12 +478,11 @@ export default function TripPlannerDraft() {
               )}{' '}
             </span>
             <button type="button" onClick={nextDay}>{t('Next day')}</button>
-            <RouteAddressInput key={dayNumber} inputRef={cityInput} label={t('City')} confirmLabel={t('Add city')} value={day.city ?? ''}
-              onConfirmText={city => editDay({ city, cityPoint: city.trim() === day.city?.trim() ? day.cityPoint : undefined }, true)}
+            <RouteAddressInput key={activeLocation} inputRef={cityInput} label={t('City')} confirmLabel={t('Add city')} value={day.city ?? ''}
+              onConfirmText={city => addVisit(city)}
               onSelect={({ label, latitude, longitude }) => {
                 setPlacingCities(false);
-                if (label.trim().toLowerCase() === day.city?.trim().toLowerCase()) void moveCity({ latitude, longitude });
-                else editDay({ city: label, cityPoint: { latitude, longitude } }, true);
+                addVisit(label, { latitude, longitude });
               }} />
             <button type="button" aria-pressed={choosingCity} onClick={() => setChoosingCity(!choosingCity)}>
               {choosingCity ? t('Cancel') : t('Choose on map')}
@@ -412,14 +498,14 @@ export default function TripPlannerDraft() {
               {t('Remove map pin')}
             </button>}
           </fieldset>
-          {day.city?.trim() && <button className="journey-primary" type="button" onClick={() => findHotels(dayNumber)}>
+          {day.city?.trim() && <button className="journey-primary" type="button" onClick={() => findHotels(dayNumber, extra?.id)}>
             {t('Find hotels')}
           </button>}
           {Boolean(day.ideas?.length) && <ul aria-label={t('Trip ideas')}>{day.ideas?.map(idea => <li key={idea.id}>
             {idea.label}{' '}<button type="button" onClick={() =>
               editDay({ ideas: day.ideas?.filter(item => item.id !== idea.id) }, true)}>{t('Remove')}</button>
           </li>)}</ul>}
-          <TripWalkImport key={dayNumber} point={day.cityPoint} address={day.city} onPreview={setPreview} />
+          <TripWalkImport key={activeLocation} point={day.cityPoint} address={day.city} onPreview={setPreview} />
           {hasDayPlan && Number.isFinite(dayDate.getTime()) && (
             <>
               <TripTrainSearch key={dayDate.getTime()} date={dayDate.toISOString().split('T')[0]}
@@ -431,7 +517,7 @@ export default function TripPlannerDraft() {
                 {editingTransfer ? t('Cancel') : t('Enter transfer manually')}
               </button>
               {editingTransfer && <TripTransferEditor key={`transfer-${dayDate.getTime()}`} date={dayDate.toISOString().split('T')[0]}
-                city={draft.days[dayNumber - 1]?.city || day.city} destination={draft.days[dayNumber - 1]?.city ? day.city : undefined} pins={Object.values(draft.days).flatMap(details => details.city && details.cityPoint
+                city={draft.days[dayNumber - 1]?.city || day.city} destination={draft.days[dayNumber - 1]?.city ? day.city : undefined} pins={locations.flatMap(({ visit: details }) => details.city && details.cityPoint
                   ? [{ name: details.city, point: details.cityPoint }] : [])}
                 onSave={transfer => { editDay({ transfer, train: undefined }, true); setEditingTransfer(false); }} />}
               <TripLodgingEditor key={`${dayDate.getTime()}-${JSON.stringify(day.lodging)}`}
@@ -461,17 +547,11 @@ export default function TripPlannerDraft() {
               stops: [], importedWalk: undefined, route: undefined,
             }, true)}>{t('Remove walk from day')}</button>
           </>}
-        </div>
-      </div>
-      <div className="trip-planner-dates">
-        <label>{t('Trip name')} <input maxLength={180} value={draft.title ?? ''}
-          onChange={event => edit({ title: event.target.value })} /></label>
-        <label>{t('Start date')} <input ref={startDateInput} type="date" value={draft.startDate} onChange={(event) => edit({ startDate: event.target.value })} /></label>
-        <label>{t('End date')} <input type="date" value={draft.endDate} onChange={(event) => edit({ endDate: event.target.value })} /></label>
+        </div>}
       </div>
       <div className="trip-planner-details">
         <TripDetailsEditor budget={draft.budget} documents={draft.documents ?? []}
-          costs={Object.values(draft.days).flatMap(details =>
+          costs={locations.flatMap(({ visit: details }) =>
             [details.transfer?.cost, details.lodging?.cost].filter(cost => cost !== undefined))}
           onChange={edit} />
       </div>

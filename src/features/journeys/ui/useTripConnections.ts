@@ -5,7 +5,7 @@ import type { CityPoint, LocalTripDraft, PointTransport, TripTrain } from '../ap
 import { flightCoordinates, geographicDistance } from '../domain/route';
 import type { RouteMapLeg } from './RouteMap';
 
-type Point = CityPoint & { id: string; name: string };
+type Point = CityPoint & { id: string; name: string; number: number; mode?: PointTransport };
 type Segment = { from: Point; to: Point; mode: PointTransport; date?: string };
 type Estimate = { seconds: number; coordinates?: [number, number][]; trains?: (TripTrain & { seconds: number })[] };
 async function railCity(name: string, signal: AbortSignal) {
@@ -50,8 +50,8 @@ function segmentKey(segment: Segment) {
 export function useTripConnections(points: Point[], draft: LocalTripDraft) {
   const firstDate = Date.parse(draft.startDate);
   const segments: Segment[] = points.slice(1).map((to, index) => {
-    const mode = draft.days[Number(to.id)]?.incomingMode ?? 'CAR';
-    const date = new Date(firstDate + (Number(to.id) - 1) * 86_400_000);
+    const mode = to.mode ?? 'CAR';
+    const date = new Date(firstDate + (to.number - 1) * 86_400_000);
     return { from: points[index], to, mode,
       date: mode === 'TRAIN' && Number.isFinite(date.getTime()) ? date.toISOString().slice(0, 10) : undefined };
   });

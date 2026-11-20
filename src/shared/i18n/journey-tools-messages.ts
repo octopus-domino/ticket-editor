@@ -257,6 +257,8 @@ Could not open the trip file.|Не удалось открыть файл пое
 Could not save the trip to your account.|Не удалось сохранить поездку в аккаунт.|无法将行程保存到账户。|Nie udało się zapisać podróży na koncie.|Impossibile salvare il viaggio nell’account.|No se pudo guardar el viaje en la cuenta.|De reis kon niet in het account worden opgeslagen.|Impossible d’enregistrer le voyage dans le compte.|Die Reise konnte nicht im Konto gespeichert werden.
 Remove walk from day|Убрать прогулку из дня|从当天移除步行路线|Usuń spacer z dnia|Rimuovi la passeggiata dal giorno|Quitar paseo del día|Wandeling uit dag verwijderen|Retirer la promenade du jour|Spaziergang aus dem Tag entfernen
 Replace day stops|Заменить точки дня|替换当天的站点|Zastąp przystanki dnia|Sostituisci le tappe del giorno|Reemplazar paradas del día|Dagstops vervangen|Remplacer les étapes du jour|Tagesstopps ersetzen
+Move day earlier|Переместить день раньше|提前此日|Przesuń dzień wcześniej|Sposta il giorno prima|Mover el día antes|Dag eerder plaatsen|Avancer le jour|Tag vorziehen
+Move day later|Переместить день позже|推迟此日|Przesuń dzień później|Sposta il giorno dopo|Mover el día después|Dag later plaatsen|Reculer le jour|Tag nach hinten verschieben
 Trip day|День путешествия|行程日期|Dzień podróży|Giorno di viaggio|Día del viaje|Reisdag|Jour du voyage|Reisetag
 Previous day|Предыдущий день|前一天|Poprzedni dzień|Giorno precedente|Día anterior|Vorige dag|Jour précédent|Vorheriger Tag
 Next day|Следующий день|后一天|Następny dzień|Giorno successivo|Día siguiente|Volgende dag|Jour suivant|Nächster Tag

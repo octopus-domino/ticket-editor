@@ -348,3 +348,17 @@
 @media (max-width: 720px) {
   .workspace-entry-grid { grid-template-columns: 1fr; }
 }
+.workspace-header {
+  height: 54px;
+  padding-inline: clamp(12px, 1.5vw, 22px);
+  gap: clamp(8px, 1.15vw, 16px);
+}
+.workspace-header .logo, .workspace-header .workspace-profile-link { display: inline-flex; align-items: center; }
+.workspace-header .workspace-profile { gap: 8px; white-space: nowrap; }
+.workspace-header .workspace-profile-link { gap: 6px; min-inline-size: 0; }
+.workspace-header .flow-btn, .workspace-header .workspace-login-btn { min-block-size: 34px; }
+.workspace-header .workspace-login-btn { display: inline-flex; align-items: center; justify-content: center; }
+.workspace-header .workspace-profile :is(select, button) { box-sizing: border-box; }
+@media (max-width: 1080px) {
+  .workspace-header .workspace-username { display: none; }
+}

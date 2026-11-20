@@ -1,5 +1,5 @@
 import { Fragment } from 'react';
-import { t } from '@/shared/i18n';
+import { getLocale, t } from '@/shared/i18n';
 import { pointTransportModes, type PointTransport, type TripLodging } from '../api/tripDraft';
 import { travelDuration } from '../domain/tripDocumentContent';
 import type { TripConnection } from './useTripConnections';
@@ -16,11 +16,19 @@ export interface TripSummaryRow {
   onFindHotel?: () => void;
 }
 
-export function TripSummaryBar({ rows }: { rows: TripSummaryRow[] }) {
-  if (!rows.length) return null;
-  return <section className="trip-summary" aria-label={t('Trip overview')}>
-    <h2>{t('Trip overview')}</h2>
-    <ol>{rows.map(({ id, place, lodging, connection, onChooseTransport, onSelect, onFindHotel }) => {
+interface TripSummaryDay {
+  number: number;
+  date?: string;
+  selected: boolean;
+  rows: TripSummaryRow[];
+  onSelect: () => void;
+  onMoveEarlier?: () => void;
+  onMoveLater?: () => void;
+}
+
+export function TripSummaryBar({ rows = [], days }: { rows?: TripSummaryRow[]; days?: TripSummaryDay[] }) {
+  if (!rows.length && !days?.length) return null;
+  const cards = (items: TripSummaryRow[]) => <ol>{items.map(({ id, place, lodging, connection, onChooseTransport, onSelect, onFindHotel }) => {
       const nights = lodging && (Date.parse(lodging.checkOut) - Date.parse(lodging.checkIn)) / 86_400_000;
       return <Fragment key={id}>
         {connection && <li className="trip-summary-connection">
@@ -65,6 +73,26 @@ export function TripSummaryBar({ rows }: { rows: TripSummaryRow[] }) {
           </div>}
         </li>
       </Fragment>;
-    })}</ol>
+    })}</ol>;
+  return <section className="trip-summary" aria-label={t('Trip overview')}>
+    <h2>{t('Trip overview')}</h2>
+    {days ? <div className="trip-day-timeline">{days.map(day => <section key={day.number} className="trip-day-timeline-item"
+      data-selected={day.selected}>
+      <header>
+        <button type="button" aria-current={day.selected ? 'date' : undefined} onClick={day.onSelect}>
+          <span>{t('Trip day')} {day.number}</span>
+          {day.date && <time dateTime={day.date}>{new Intl.DateTimeFormat(getLocale(), {
+            weekday: 'short', month: 'long', day: 'numeric', timeZone: 'UTC',
+          }).format(new Date(day.date))}</time>}
+        </button>
+        <div>
+          <button type="button" aria-label={t('Move day earlier')} title={t('Move day earlier')}
+            disabled={!day.onMoveEarlier} onClick={day.onMoveEarlier}>↑</button>
+          <button type="button" aria-label={t('Move day later')} title={t('Move day later')}
+            disabled={!day.onMoveLater} onClick={day.onMoveLater}>↓</button>
+        </div>
+      </header>
+      {day.rows.length > 0 && cards(day.rows)}
+    </section>)}</div> : cards(rows)}
   </section>;
 }

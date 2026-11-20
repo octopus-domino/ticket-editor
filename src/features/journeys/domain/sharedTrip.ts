@@ -11,7 +11,7 @@ const sharedTrip = z.object({
   days: z.array(z.object({
     date, cityId: text, note: text.optional(), accommodationId: text.optional(),
     segments: z.array(z.object({
-      id: text, title: text, latitude: point.shape.latitude, longitude: point.shape.longitude,
+      id: text, title: text, latitude: point.shape.latitude.nullish(), longitude: point.shape.longitude.nullish(),
       note: text.optional(), idea: z.boolean().optional(),
     })).max(500),
     walkingSections: z.array(z.object({

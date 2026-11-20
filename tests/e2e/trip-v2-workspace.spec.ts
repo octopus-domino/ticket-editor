@@ -1,5 +1,12 @@
 import { expect, test } from '@playwright/test';
 
+test.beforeEach(async ({ page }) => {
+  await page.route('https://tile.openstreetmap.org/**', route => route.fulfill({
+    contentType: 'image/png',
+    body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jR98AAAAASUVORK5CYII=', 'base64'),
+  }));
+});
+
 for (const width of [360, 768, 1440]) {
   test(`v2 workspace is usable by keyboard at ${width}px`, async ({ page }) => {
     test.skip(process.env.VITE_ENABLE_TRIP_PLANNER_V2 !== 'true', 'Requires opt-in v2 build');
@@ -8,7 +15,7 @@ for (const width of [360, 768, 1440]) {
     await page.addInitScript(() => localStorage.setItem('codoc:language', 'en'));
     await page.route('**/api/auth/refresh', route => route.fulfill({ status: 401, json: {} }));
     await page.route('**/api/journeys/routes/addresses?**', route => route.fulfill({ json: [] }));
-    await page.goto('/start/tours');
+    await page.goto('/start/tours', { waitUntil: 'domcontentloaded' });
     const planner = page.getByRole('region', { name: 'Travel planner' });
     await expect(planner).toHaveAttribute('data-planner-v2', 'true');
     await planner.getByLabel('Start date').fill('2026-12-01');
@@ -26,7 +33,7 @@ for (const width of [360, 768, 1440]) {
     await expect(stops.first()).toContainText('Park');
     const widthResult = await page.evaluate(() => document.documentElement.scrollWidth);
     expect(widthResult).toBeLessThanOrEqual(width + 2);
-    await page.reload();
+    await page.reload({ waitUntil: 'domcontentloaded' });
     await program.getByText('Plan the day', { exact: true }).click();
     await expect(stops.first()).toContainText('Park');
     await stops.first().getByRole('combobox', { name: 'Move to day' }).selectOption('2');
@@ -34,7 +41,7 @@ for (const width of [360, 768, 1440]) {
     await planner.getByRole('button', { name: 'Next day' }).click();
     await program.getByText('Plan the day', { exact: true }).click();
     await expect(stops.first()).toContainText('Park');
-    await page.goto('/start/tours?planner=classic');
+    await page.goto('/start/tours?planner=classic', { waitUntil: 'domcontentloaded' });
     await expect(planner).toHaveAttribute('data-planner-v2', 'false');
     await expect(program).toHaveCount(0);
   });
@@ -64,7 +71,7 @@ test('shows a road-based optimization preview before apply and undo', async ({ p
     return route.fulfill({ json: { durationSeconds: seconds, distanceMeters: seconds,
       coordinates: [[start.longitude, start.latitude], [end.longitude, end.latitude]] } });
   });
-  await page.goto('/start/tours');
+  await page.goto('/start/tours', { waitUntil: 'domcontentloaded' });
   const planner = page.getByRole('region', { name: 'Travel planner' });
   await planner.getByLabel('Start date').fill('2026-12-01');
   const program = planner.locator('.trip-day-program');
@@ -82,4 +89,29 @@ test('shows a road-based optimization preview before apply and undo', async ({ p
   expect(await order()).toEqual(['Alpha', 'Charlie', 'Bravo', 'Delta']);
   await planner.getByRole('button', { name: 'Undo', exact: true }).click();
   expect(await order()).toEqual(cities);
+});
+
+test('recovers an offline draft and saves the revised trip when online', async ({ page, context }) => {
+  test.skip(process.env.VITE_ENABLE_TRIP_PLANNER_V2 !== 'true', 'Requires opt-in v2 build');
+  test.setTimeout(75_000);
+  await page.addInitScript(() => localStorage.setItem('codoc:language', 'en'));
+  await page.route('**/api/auth/refresh', route => route.fulfill({ status: 401, json: {} }));
+  await page.route('**/api/trips/*', route => {
+    if (route.request().method() !== 'PUT') return route.fallback();
+    return route.fulfill({ json: route.request().postDataJSON() });
+  });
+  await page.goto('/start/tours', { waitUntil: 'domcontentloaded' });
+  const planner = page.getByRole('region', { name: 'Travel planner' });
+  await planner.getByLabel('Start date').fill('2026-12-01');
+  await planner.getByLabel('End date').fill('2026-12-02');
+  await context.setOffline(true);
+  await planner.getByLabel('Trip name').fill('Offline winter trip');
+  await expect(planner.getByText('Trip saved on this device.', { exact: true })).toBeVisible();
+  await context.setOffline(false);
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await expect(planner.getByLabel('Trip name')).toHaveValue('Offline winter trip');
+  const accountPut = page.waitForRequest(request => request.method() === 'PUT' && request.url().includes('/api/trips/'));
+  await planner.getByRole('button', { name: 'Save trip to account' }).click();
+  expect((await accountPut).postDataJSON()).toMatchObject({ title: 'Offline winter trip' });
+  await expect(planner.getByRole('link', { name: 'Open account trip' })).toBeVisible();
 });

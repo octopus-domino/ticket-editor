@@ -193,7 +193,7 @@ test('plans from address suggestions and selects transport between the chosen ci
   await planner.getByRole('button', { name: 'Create a trip template' }).click();
   await expect(page).toHaveURL(/\/app\/templates\/[^/]+\/edit/);
   await expect(page.locator('.template-editor-canvas')).toBeVisible();
-  await page.locator('.toolbar-more > summary').click();
+  await expect(page.locator('.toolbar-actions').getByRole('button', { name: 'Export Word' })).toBeInViewport();
   const [download] = await Promise.all([
     page.waitForEvent('download'), page.getByRole('button', { name: 'Export Word' }).click(),
   ]);

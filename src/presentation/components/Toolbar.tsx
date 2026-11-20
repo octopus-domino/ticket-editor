@@ -96,6 +96,11 @@ export const Toolbar: React.FC<{ templateMode?: boolean }> = ({ templateMode }) 
     <header className="toolbar" style={{ position: 'relative' }}>
       <h1>{__tr("Редактор шаблонов")}</h1>
       <div className="toolbar-actions">
+        {templateMode && <button type="button" className="toolbar-btn" disabled={exportingWord || !slides.length}
+          onClick={async () => {
+            setExportingWord(true);
+            try { await fileIO.exportWord(); } finally { setExportingWord(false); }
+          }}>{__tr('Export Word')}</button>}
         <PowerPointActions/>
         <ImageImportActions />
         <button className="toolbar-btn" onClick={() => docStore.undo()} disabled={!canUndo}>
@@ -110,11 +115,6 @@ export const Toolbar: React.FC<{ templateMode?: boolean }> = ({ templateMode }) 
       <details className="toolbar-more">
         <summary className="toolbar-btn">{__tr("Details")}</summary>
         <div className="toolbar-more-panel">
-          {templateMode && <button type="button" className="toolbar-btn" disabled={exportingWord || !slides.length}
-            onClick={async () => {
-              setExportingWord(true);
-              try { await fileIO.exportWord(); } finally { setExportingWord(false); }
-            }}>{__tr('Export Word')}</button>}
           {isFeatureEnabled('FEATURE_EMAIL') && (
             <>
               <button

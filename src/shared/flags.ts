@@ -6,6 +6,9 @@
    ============================================================ */
 
 export const FLAGS = {
+  /** Enables the staged trip planner rollout. Remove after the legacy transition. */
+  ENABLE_TRIP_PLANNER: import.meta.env.VITE_ENABLE_TRIP_PLANNER === 'true',
+
   /** F-DG-01..11: диаграмма draw.io. */
   FEATURE_DIAGRAM:
     import.meta.env.VITE_FEATURE_DIAGRAM !== 'false',

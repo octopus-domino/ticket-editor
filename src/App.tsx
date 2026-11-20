@@ -11,10 +11,13 @@ import { RegisterPage } from './auth/RegisterPage';
 import { OAuth2RedirectPage } from './auth/OAuth2RedirectPage';
 import { ProtectedRoute } from './auth/ProtectedRoute';
 import { RouteMetadata } from './marketing/RouteMetadata';
+import { FLAGS } from './shared/flags';
 import { defaultJourney } from './features/journeys/domain/definitions';
 import { JOURNEY_PAGES } from './marketing/journeyPages';
 import { JourneyMarketingPage } from './marketing/JourneyMarketingPage';
 const JourneyApp = lazy(() => import('./features/journeys/JourneyApp'));
+const AccountTripPage = lazy(() => import('./features/journeys/ui/AccountTripPage'));
+const SharedTripPage = lazy(() => import('./features/journeys/ui/AccountTripPage').then(module => ({ default: module.SharedTripPage })));
 const PublicationsPage = lazy(() => import('./features/journeys/ui/PublicationsPage'));
 const WorkflowBuilder = lazy(() => import('./features/workflows/WorkflowBuilder'));
 const WorkflowRunner = lazy(() => import('./features/workflows/WorkflowRunner'));
@@ -83,6 +86,8 @@ const App: React.FC = () => {
             {/* Публичные страницы */}
             <Route path="/" element={window.location.hostname.endsWith('.codoc.site') && !['www','app','api','drawio','go'].includes(window.location.hostname.split('.')[0]) ? <JourneyApp mode={defaultJourney(window.location.hostname)?'wizard':'custom'} /> : <LandingPage />} />
             <Route path="/start/:kind" element={<JourneyApp />} />
+            {FLAGS.ENABLE_TRIP_PLANNER && <Route path="/trip/:id" element={<ProtectedRoute><AccountTripPage /></ProtectedRoute>} />}
+            {FLAGS.ENABLE_TRIP_PLANNER && <Route path="/trip/view" element={<SharedTripPage />} />}
             {JOURNEY_PAGES.map(page => <Route key={page.path} path={page.path} element={<JourneyMarketingPage/>} />)}
             <Route path="/s/:slug" element={<JourneyApp mode="custom" />} />
             <Route path="/sites/new" element={<JourneyApp mode="builder" />} />

@@ -71,7 +71,7 @@ export function analyticsPath(path: string): string {
 }
 
 export function trackPage(path: string): void {
-  if (path.startsWith('/manage/') || path.startsWith('/issues/') || path.startsWith('/sites/new')) return;
+  if (path.startsWith('/manage/') || path.startsWith('/issues/') || path.startsWith('/sites/new') || path.startsWith('/trip/')) return;
   const safePath = analyticsPath(path);
   if (!initialize() || safePath === previousPath) return;
   window.ym?.(counterId!, 'hit', `${window.location.origin}${safePath}`, {

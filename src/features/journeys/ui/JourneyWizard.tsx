@@ -21,15 +21,29 @@ import { JourneyConstructorButton } from './JourneyConstructorButton';
 import { JourneyPrintSize } from './JourneyPrintSize';
 import { JourneyBackgroundPicker } from './JourneyBackgroundPicker';
 import { AlbumPanel } from './AlbumPanel';
+import { FLAGS } from '@/shared/flags';
 const RouteEditor = lazy(() =>
   import('./RouteEditor').then((module) => ({ default: module.RouteEditor })),
 );
 const PoetryWizard = lazy(() => import('./PoetryWizard'));
 const AlbumWizard = lazy(() => import('./AlbumWizard'));
+const TripPlannerDraft = lazy(() => import('./TripPlannerDraft'));
 interface WizardProps { definition: JourneyDefinition; custom?: boolean; previewOnly?: boolean }
 export function JourneyWizard(props: WizardProps) {
   if(props.definition.kind === 'ALBUM') return <Suspense fallback={<p>{t('Loading…')}</p>}><AlbumWizard {...props}/></Suspense>;
   return props.definition.kind === 'POETRY' ? <Suspense fallback={<p>{t('Loading…')}</p>}><PoetryWizard {...props} /></Suspense> : <BasicJourneyWizard {...props} />;
+}
+
+function TripPlannerEntry() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
+        {t('Travel planner')}
+      </button>
+      {open && <Suspense fallback={<p>{t('Loading…')}</p>}><TripPlannerDraft /></Suspense>}
+    </>
+  );
 }
 
 function BasicJourneyWizard({
@@ -276,6 +290,7 @@ function BasicJourneyWizard({
                       onChange={(positions) => setData((value) => ({ ...value, positions }))}
                     />
                   )}
+                  {definition.kind === 'TOUR' && !custom && !previewOnly && FLAGS.ENABLE_TRIP_PLANNER && <TripPlannerEntry />}
                   {definition.kind === 'TOUR' && (
                     <Suspense fallback={<p>{t('Loading map…')}</p>}>
                       <RouteEditor

@@ -172,3 +172,18 @@
 .route-pick-controls output { font-variant-numeric: tabular-nums; font-size: 13px; }
 .route-walk-print { display: block; width: 100%; height: auto; border-radius: 12px; }
 .route-photo-credits { padding: 0; list-style: none; font-size: 13px; overflow-wrap: anywhere; }
+.trip-summary > ol {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+  gap: 0.75rem;
+  list-style: none;
+  padding: 0;
+}
+
+.trip-summary > ol > li {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  padding: 0.75rem;
+  border: 1px solid #ccd9d4;
+  border-radius: 0.75rem;
+}

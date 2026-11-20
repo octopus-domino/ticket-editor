@@ -17,8 +17,15 @@ const walkSchema = z.object({
   })).min(1).max(199) }),
 });
 
-/** Adapter: validates the walk application's transfer before creating a printable child snapshot. */
-export function importPrivateWalk(value: unknown, origin: RouteStop, startLocal: string) {
+/** Decodes the base64url payload used by walk share links before schema validation. */
+export function decodePrivateWalkLink(encoded: string): unknown {
+  const base64 = encoded.replace(/-/g, '+').replace(/_/g, '/');
+  const bytes = Uint8Array.from(atob(base64), (character) => character.charCodeAt(0));
+  return JSON.parse(new TextDecoder().decode(bytes));
+}
+
+/** Validates and copies points and geometry from the standalone walk application. */
+export function readPrivateWalk(value: unknown, zone: string) {
   const walk = walkSchema.parse(value);
   if (walk.route.legs.length !== walk.points.length - 1 || walk.route.legs.some((leg, index) => leg.fromIndex !== index || leg.toIndex !== index + 1))
     throw new Error('Incomplete private walk');
@@ -27,7 +34,7 @@ export function importPrivateWalk(value: unknown, origin: RouteStop, startLocal:
 
   const stops: RouteStop[] = walk.points.map((point, index) => ({
     id: crypto.randomUUID(), label: point.name?.trim() || `${index + 1}`,
-    latitude: point.lat, longitude: point.lng, zone: origin.zone, stayMinutes: 0,
+    latitude: point.lat, longitude: point.lng, zone, stayMinutes: 0,
     description: [point.description, point.sourceUrl].filter(Boolean).join('\n').slice(0, 500),
     ...(index === 0 ? { meta: { walk_title: walk.title } } : {}),
   }));
@@ -35,6 +42,12 @@ export function importPrivateWalk(value: unknown, origin: RouteStop, startLocal:
     mode: 'foot', durationSeconds: leg.durationSeconds, distanceMeters: leg.distanceMeters,
     coordinates: leg.geometry.map(([lat, lng]) => [lng, lat]),
   }));
+  return { title: walk.title, stops, legs };
+}
+
+/** Adapter for the existing printable child snapshot. */
+export function importPrivateWalk(value: unknown, origin: RouteStop, startLocal: string) {
+  const { stops, legs } = readPrivateWalk(value, origin.zone);
   const timeline = walkingTimeline(stops, legs, startLocal);
   return { stops, legs, startLocal, timeline };
 }

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { t } from '@/shared/i18n';
 import type { RouteStop } from '../domain/routeTimeline';
-import { importPrivateWalk } from '../domain/privateWalk';
+import { decodePrivateWalkLink, importPrivateWalk } from '../domain/privateWalk';
 import { RouteWalk, type RouteWalkHandle } from './RouteWalk';
 import type { RouteAddress } from './RouteAddressInput';
 import { RouteHotels } from './RouteHotels';
@@ -74,9 +74,7 @@ export function RoutePlacePanel({ stop, onAdd, onWalkChange, onWalkBusy, visitDa
     <RouteWalk ref={walk} value={stop.walkId} onChange={onWalkChange} />
     {sharedLink && <button type="button" className="journey-secondary" disabled={busy} onClick={() => {
       try {
-        const encoded = sharedLink.replace(/-/g, '+').replace(/_/g, '/');
-        const bytes = Uint8Array.from(atob(encoded), char => char.charCodeAt(0));
-        void saveTransfer(JSON.parse(new TextDecoder().decode(bytes)));
+        void saveTransfer(decodePrivateWalkLink(sharedLink));
       } catch {
         setError(t('Could not prepare the image.'));
       }

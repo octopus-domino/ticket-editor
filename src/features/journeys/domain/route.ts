@@ -12,6 +12,14 @@ export interface RouteSnapshot {
   photos?: RoutePhoto[];
   pointNumbering?: 'interior';
 }
+
+export function geographicDistance(a: { latitude: number; longitude: number }, b: { latitude: number; longitude: number }) {
+  const radians = Math.PI / 180;
+  const h = Math.sin((b.latitude - a.latitude) * radians / 2) ** 2
+    + Math.cos(a.latitude * radians) * Math.cos(b.latitude * radians)
+    * Math.sin((b.longitude - a.longitude) * radians / 2) ** 2;
+  return 12_742_000 * Math.asin(Math.sqrt(Math.min(1, h)));
+}
 export function routePointMarker(index: number, count: number): string {
   return index === 0 ? 'A' : index === count - 1 ? 'B' : String(index);
 }

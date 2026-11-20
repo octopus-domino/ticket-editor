@@ -1,0 +1,76 @@
+import { useState } from 'react';
+import { getLocale, t } from '@/shared/i18n';
+import type { TripWireLeg } from '../api/tripDraft';
+import type { SharedTrip } from '../domain/sharedTrip';
+import { RouteMap, type RouteMapLeg } from './RouteMap';
+
+const ignoreMapHandle = () => undefined;
+
+const transportLabels = { PLANE: 'Flight', TRAIN: 'Train', BUS: 'Bus', CAR: 'Car', FERRY: 'Ferry' } as const;
+
+export function TripCityMap({ cities, legs, focusStopId, accommodations = [], onChangeLodging }: Pick<SharedTrip, 'cities'> & {
+  legs: TripWireLeg[]; focusStopId?: string; accommodations?: SharedTrip['accommodations'];
+  onChangeLodging?: (id: string) => void;
+}) {
+  const [selectedId, setSelectedId] = useState<string>();
+  const [lodgingId, setLodgingId] = useState<string>();
+  const lodging = accommodations.find(item => item.id === lodgingId);
+  const selected = legs.find(leg => leg.id === selectedId);
+  const cityName = (id: string) => cities.find(city => city.id === id)?.name || t('City');
+  const destinations = cities.flatMap(city => city.latitude == null || city.longitude == null ? [] : [{
+    id: city.id, label: city.name || t('City'), latitude: city.latitude, longitude: city.longitude, zone: 'UTC', stayMinutes: 0,
+  }]);
+  const pins = new Map(destinations.map(point => [point.id, point]));
+  const hotels = accommodations.flatMap(item => item.latitude == null || item.longitude == null ? [] : [{
+    id: `hotel:${item.id}`, label: item.name, latitude: item.latitude, longitude: item.longitude, zone: 'UTC', stayMinutes: 0,
+  }]);
+  const transfers = legs.flatMap((leg): RouteMapLeg[] => {
+    if (leg.geometry && leg.geometry.length >= 2) return [{ id: leg.id,
+      mode: leg.transport === 'PLANE' ? 'flight' : leg.transport === 'WALK' ? 'foot' : 'car',
+      durationSeconds: leg.durationSeconds ?? 0,
+      coordinates: leg.geometry.map(({ longitude, latitude }) => [longitude, latitude]) }];
+    const from = pins.get(leg.fromCityId);
+    const to = pins.get(leg.toCityId);
+    return from && to ? [{ id: leg.id, mode: 'transfer', coordinates: [
+      [from.longitude, from.latitude], [to.longitude, to.latitude],
+    ] }] : [];
+  });
+  if (!destinations.length && !transfers.length && !hotels.length) return null;
+  return <figure>
+    <RouteMap stops={[...destinations, ...hotels]} legs={transfers} onReady={ignoreMapHandle} focusStopId={focusStopId}
+      onLegSelect={id => { setLodgingId(undefined); setSelectedId(id); }}
+      onStopSelect={hotels.length ? id => {
+        if (id.startsWith('hotel:')) { setSelectedId(undefined); setLodgingId(id.slice(6)); }
+      } : undefined} cityMap />
+    {transfers.some(transfer => transfer.mode === 'transfer') &&
+      <figcaption>{t('Dashed lines show connections between cities.')}</figcaption>}
+    {transfers.length > 0 && <ul>{transfers.map(line => {
+      const leg = legs.find(item => item.id === line.id)!;
+      return <li key={leg.id}><button type="button" aria-pressed={leg.id === selectedId}
+        onClick={() => setSelectedId(leg.id)}>{cityName(leg.fromCityId)} → {cityName(leg.toCityId)}</button></li>;
+    })}</ul>}
+    {selected && <section aria-label={t('Transfer details')}>
+      <h3>{cityName(selected.fromCityId)} → {cityName(selected.toCityId)}</h3>
+      <p>{selected.transport && selected.transport !== 'WALK' ? t(transportLabels[selected.transport]) : selected.note}</p>
+      <p>{t('Departure')} · <time dateTime={selected.departureAt}>{selected.departureAt?.replace('T', ' ')}</time></p>
+      <p>{t('Arrival')} · <time dateTime={selected.arrivalAt}>{selected.arrivalAt?.replace('T', ' ')}</time></p>
+      {selected.cost && <p>{t('Transfer cost')} · {new Intl.NumberFormat(getLocale(), {
+        style: 'currency', currency: selected.cost.currency,
+      }).format(selected.cost.amount)}</p>}
+      {selected.bookingUrl && /^https?:\/\//i.test(selected.bookingUrl) &&
+        <a href={selected.bookingUrl} target="_blank" rel="noreferrer">{t('Booking link')}</a>}{' '}
+      <a href="https://rasp.yandex.ru/" target="_blank" rel="noreferrer">{t('Find tickets')}</a>{' '}
+      <button type="button" onClick={() => setSelectedId(undefined)}>{t('Close')}</button>
+    </section>}
+    {lodging && <section aria-label={t('Trip lodging')}>
+      <h3>{lodging.name}</h3>
+      {lodging.address && <p>{lodging.address}</p>}
+      <p><time dateTime={lodging.checkIn}>{lodging.checkIn}</time> → <time dateTime={lodging.checkOut}>{lodging.checkOut}</time></p>
+      {lodging.cost && <p>{t('Lodging cost')} · {new Intl.NumberFormat(getLocale(), {
+        style: 'currency', currency: lodging.cost.currency,
+      }).format(lodging.cost.amount)}</p>}
+      {onChangeLodging && <button type="button" onClick={() => onChangeLodging(lodging.id)}>{t('Edit lodging')}</button>}
+      <button type="button" onClick={() => setLodgingId(undefined)}>{t('Close')}</button>
+    </section>}
+  </figure>;
+}

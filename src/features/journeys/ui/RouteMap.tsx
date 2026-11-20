@@ -23,24 +23,37 @@ export interface RouteMapHandle {
   capture: () => Promise<string>;
   center: () => { longitude: number; latitude: number };
 }
+export type RouteMapLeg = (PlannedLeg | { mode: 'transfer'; coordinates: [number, number][] }) & { id?: string };
 export function RouteMap({
   stops,
   legs,
   onReady,
   onPick,
   pickedPoint,
+  focusStopId,
+  cityMap = false,
+  fit = true,
+  onStopMove,
+  onStopSelect,
+  onLegSelect,
   photos = [],
 }: {
   stops: RouteStop[];
-  legs: PlannedLeg[];
+  legs: RouteMapLeg[];
   onReady: (handle: RouteMapHandle | null) => void;
   onPick?: (point: { longitude: number; latitude: number }) => void;
   pickedPoint?: { longitude: number; latitude: number } | null;
+  focusStopId?: string;
+  cityMap?: boolean;
+  fit?: boolean;
+  onStopMove?: (id: string, point: { longitude: number; latitude: number }) => void;
+  onStopSelect?: (id: string) => void;
+  onLegSelect?: (id: string) => void;
   photos?: RoutePhoto[];
 }) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<Map | null>(null);
-  const fitted = useRef<{ stops: RouteStop[]; legs: PlannedLeg[] } | null>(null);
+  const fitted = useRef<{ stops: RouteStop[]; legs: RouteMapLeg[] } | null>(null);
   const [ready, setReady] = useState(false);
   const [styleGeneration, setStyleGeneration] = useState(0);
   const [error, setError] = useState('');
@@ -49,6 +62,14 @@ export function RouteMap({
   // Event subscriptions stay stable while the chosen stop changes.
   const onPickRef = useRef(onPick);
   onPickRef.current = onPick;
+  const onStopMoveRef = useRef(onStopMove);
+  onStopMoveRef.current = onStopMove;
+  const onStopSelectRef = useRef(onStopSelect);
+  onStopSelectRef.current = onStopSelect;
+  const canSelectStops = Boolean(onStopSelect);
+  const onLegSelectRef = useRef(onLegSelect);
+  onLegSelectRef.current = onLegSelect;
+  const canMoveStops = Boolean(onStopMove);
   const photosRef = useRef(photos); photosRef.current = photos;
   const legsRef = useRef(legs); legsRef.current = legs;
   useEffect(() => {
@@ -87,6 +108,13 @@ export function RouteMap({
       else if (raster) setError(t('The map is taking too long to load. Check your connection.'));
     });
     map.on('click', event => {
+      if (onLegSelectRef.current) {
+        const layers = ['route-road', 'route-flight'].filter(id => map.getLayer(id));
+        const { x, y } = event.point;
+        const found = layers.length ? map.queryRenderedFeatures([[x - 8, y - 8], [x + 8, y + 8]], { layers }) : [];
+        const id = found.find(feature => typeof feature.properties?.legId === 'string')?.properties?.legId;
+        if (typeof id === 'string') { onLegSelectRef.current(id); return; }
+      }
       const longitude = ((event.lngLat.lng + 180) % 360 + 360) % 360 - 180;
       if (Math.abs(event.lngLat.lat) <= 85)
         onPickRef.current?.({ longitude, latitude: event.lngLat.lat });
@@ -235,7 +263,7 @@ export function RouteMap({
           .filter((leg) => leg.coordinates.length >= 2)
           .map((leg) => ({
             type: 'Feature',
-            properties: { mode: leg.mode },
+            properties: { mode: leg.mode, ...(leg.id ? { legId: leg.id } : {}) },
             geometry: { type: 'MultiLineString', coordinates: mapRouteLines(leg.coordinates) },
           })),
       },
@@ -244,26 +272,43 @@ export function RouteMap({
       id: 'route-road',
       type: 'line',
       source: 'journey-route',
-      filter: ['!=', ['get', 'mode'], 'flight'],
+      filter: ['!', ['in', ['get', 'mode'], ['literal', ['flight', 'transfer']]]],
       paint: { 'line-color': '#225fcb', 'line-width': 5, 'line-opacity': 0.9 },
     });
     map.addLayer({
       id: 'route-flight',
       type: 'line',
       source: 'journey-route',
-      filter: ['==', ['get', 'mode'], 'flight'],
+      filter: ['in', ['get', 'mode'], ['literal', ['flight', 'transfer']]],
       paint: { 'line-color': '#af5347', 'line-width': 4, 'line-dasharray': [2, 2] },
     });
     const markers = stops.map((stop, index) => {
-      const element = document.createElement('span');
+      const element = document.createElement(canSelectStops ? 'button' : 'span');
+      if (element instanceof HTMLButtonElement) {
+        element.type = 'button';
+        element.setAttribute('aria-label', stop.label);
+        element.onclick = event => {
+          event.stopPropagation();
+          onStopSelectRef.current?.(stop.id);
+        };
+      }
       element.className = 'route-map-marker';
       element.textContent = routePointMarker(index, stops.length);
-      element.title = `${routePointCaption(index, stops.length)} · ${stop.label}`;
-      return new Marker({ element, anchor: 'center' })
+      element.title = cityMap ? stop.label : `${routePointCaption(index, stops.length)} · ${stop.label}`;
+      const marker = new Marker({ element, anchor: 'center', draggable: canMoveStops })
         .setLngLat([stop.longitude, stop.latitude])
         .addTo(map);
+      if (canMoveStops) marker.on('dragend', () => {
+        const { lng, lat } = marker.getLngLat();
+        if (Math.abs(lat) <= 85) {
+          const longitude = ((lng + 180) % 360 + 360) % 360 - 180;
+          onStopMoveRef.current?.(stop.id, { longitude, latitude: lat });
+        } else marker.setLngLat([stop.longitude, stop.latitude]);
+      });
+      return marker;
     });
-    if (stops.length && (fitted.current?.stops !== stops || fitted.current?.legs !== legs)) {
+    if (fit && (stops.length || legs.some(leg => leg.coordinates.length)) &&
+        (fitted.current?.stops !== stops || fitted.current?.legs !== legs)) {
       fitted.current = { stops, legs };
       const coordinates: [number, number][] = [
         ...stops.map((stop): [number, number] => [stop.longitude, stop.latitude]),
@@ -275,11 +320,19 @@ export function RouteMap({
     return () => {
       markers.forEach((marker) => marker.remove());
     };
-  }, [stops, legs, ready, styleGeneration]);
+  }, [stops, legs, ready, styleGeneration, cityMap, canMoveStops, canSelectStops, fit]);
+  useEffect(() => {
+    const map = mapRef.current;
+    const stop = stopsRef.current.find(item => item.id === focusStopId);
+    if (ready && map && stop) map.easeTo({
+      center: [stop.longitude, stop.latitude], zoom: Math.max(9, map.getZoom()),
+    });
+  }, [focusStopId, ready]);
   return (
     <div>
-      <div ref={container} className="route-map" data-picking={Boolean(onPick)} aria-label={t('Route map')} />
-      <small>A · {t('Route start')} — B · {t('Route end')}</small>
+      <div ref={container} className="route-map" data-picking={Boolean(onPick)}
+        aria-label={cityMap ? t('Trip map') : t('Route map')} />
+      {!cityMap && <small>A · {t('Route start')} — B · {t('Route end')}</small>}
       {error && <p role="alert">{error}</p>}
     </div>
   );

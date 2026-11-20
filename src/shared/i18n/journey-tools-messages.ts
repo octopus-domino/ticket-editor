@@ -5,6 +5,27 @@ Price tags, menus and proposals from your data. Prepare PDF documents with QR li
 Create certificates from a participant list. Download PDFs, verify publication by QR and collect course feedback.|Создавайте сертификаты из списка участников. Скачивайте PDF, проверяйте публикацию по QR и собирайте отзывы о курсе.|从学员名单生成证书。下载PDF、通过QR核验发布记录并收集课程反馈。|Twórz certyfikaty z listy uczestników. Pobieraj PDF, sprawdzaj publikację przez QR i zbieraj opinie o kursie.|Crea certificati da un elenco di partecipanti. Scarica PDF, verifica la pubblicazione tramite QR e raccogli le opinioni sul corso.|Crea certificados desde una lista de participantes. Descarga PDF, verifica la publicación mediante QR y recoge opiniones del curso.|Maak certificaten uit een deelnemerslijst. Download PDF’s, controleer de publicatie via QR en verzamel cursusfeedback.|Créez des certificats à partir d’une liste de participants. Téléchargez les PDF, vérifiez leur publication par QR et recueillez les avis sur le cours.|Erstellen Sie Zertifikate aus einer Teilnehmerliste. Laden Sie PDFs herunter, prüfen Sie die Veröffentlichung per QR und sammeln Sie Kursfeedback.
 About this place|Об этом месте|关于此地|O tym miejscu|Informazioni sul luogo|Sobre este lugar|Over deze plek|À propos de ce lieu|Über diesen Ort
 Create walk from selected places|Создать прогулку по выбранным местам|用所选地点创建步行路线|Utwórz spacer z wybranych miejsc|Crea passeggiata con i luoghi scelti|Crear paseo con los lugares elegidos|Wandeling met gekozen plekken maken|Créer une promenade avec les lieux choisis|Spaziergang aus gewählten Orten erstellen
+Plan the day|Спланировать день|规划一天|Zaplanuj dzień|Pianifica la giornata|Planificar el día|Plan de dag|Planifier la journée|Tag planen
+Add place|Добавить место|添加地点|Dodaj miejsce|Aggiungi luogo|Añadir lugar|Plaats toevoegen|Ajouter un lieu|Ort hinzufügen
+Check the day|Проверить план дня|检查日程|Sprawdź plan dnia|Verifica la giornata|Comprobar el día|Controleer de dag|Vérifier la journée|Tagesplan prüfen
+Improve the order|Улучшить порядок|优化顺序|Popraw kolejność|Migliora l’ordine|Mejorar el orden|Volgorde verbeteren|Améliorer l’ordre|Reihenfolge verbessern
+Visit minutes|Длительность осмотра, мин|参观分钟|Czas wizyty, min|Visita, min|Visita, min|Bezoekduur, min|Visite, min|Besuchsdauer, Min.
+Fixed visit time|Фиксированное время|固定时间|Stała godzina|Orario fisso|Hora fija|Vaste tijd|Heure fixe|Feste Uhrzeit
+Keep position|Закрепить позицию|锁定位置|Zablokuj pozycję|Blocca posizione|Fijar posición|Positie vastzetten|Bloquer la position|Position fixieren
+Return to start|Вернуться к началу|返回起点|Wróć do początku|Torna alla partenza|Volver al inicio|Terug naar start|Retour au départ|Zum Start zurück
+Visit outside opening hours|Визит вне часов работы|超出开放时间|Wizyta poza godzinami|Visita fuori orario|Visita fuera de horario|Bezoek buiten openingstijden|Visite hors horaires|Besuch außerhalb der Öffnungszeiten
+Day goes over the time limit|План дня не укладывается во время|日程超时|Plan przekracza limit|Piano oltre il limite|El plan supera el límite|Dagplan duurt te lang|La journée dépasse la limite|Tagesplan überschreitet das Zeitlimit
+Cannot reach the fixed time|Не успеть к заданному времени|无法按时到达|Nie można zdążyć|Impossibile arrivare in tempo|No se llega a la hora fijada|Vaste tijd is niet haalbaar|Heure fixe inaccessible|Feste Uhrzeit ist nicht erreichbar
+Opening hours unknown|Часы работы неизвестны|开放时间未知|Godziny nieznane|Orari sconosciuti|Horario desconocido|Openingstijden onbekend|Horaires inconnus|Öffnungszeiten unbekannt
+No map position|Без точки на карте|无地图位置|Brak punktu na mapie|Senza posizione sulla mappa|Sin ubicación en el mapa|Geen locatie op de kaart|Sans position sur la carte|Keine Position auf der Karte
+Ambiguous local time|Неоднозначное местное время|本地时间有歧义|Niejednoznaczny czas lokalny|Ora locale ambigua|Hora local ambigua|Dubbelzinnige lokale tijd|Heure locale ambiguë|Mehrdeutige Ortszeit
+Balanced route|Сбалансированный маршрут|均衡路线|Trasa zrównoważona|Percorso equilibrato|Ruta equilibrada|Evenwichtige route|Itinéraire équilibré|Ausgewogene Route
+Shortest route|Самый короткий маршрут|最短路线|Najkrótsza trasa|Percorso più breve|Ruta más corta|Kortste route|Itinéraire le plus court|Kürzeste Route
+More time at stops|Больше времени на местах|更多停留时间|Więcej czasu na postojach|Più tempo alle tappe|Más tiempo en paradas|Meer tijd bij haltes|Plus de temps aux étapes|Mehr Zeit an Stopps
+Fast pace|Быстрый темп|快节奏|Szybkie tempo|Ritmo veloce|Ritmo rápido|Snel tempo|Rythme rapide|Schnelles Tempo
+Include breaks|Учесть перерывы|包括休息|Uwzględnij przerwy|Includi pause|Incluir descansos|Pauzes opnemen|Inclure les pauses|Pausen einplanen
+No verified improvement found.|Улучшение по проверенным дорогам не найдено.|未找到经核实的改进。|Nie znaleziono zweryfikowanej poprawy.|Nessun miglioramento verificato.|No se encontró una mejora verificada.|Geen geverifieerde verbetering gevonden.|Aucune amélioration vérifiée trouvée.|Keine überprüfte Verbesserung gefunden.
+Relaxed pace|Спокойный темп|轻松步调|Spokojne tempo|Ritmo tranquillo|Ritmo tranquilo|Rustig tempo|Rythme tranquille|Entspanntes Tempo
 Private itineraries|Приватные маршруты|私人行程|Prywatne trasy|Itinerari privati|Rutas privadas|Privéroutes|Itinéraires privés|Private Routen
 Course reviews|Отзывы о курсе|课程评价|Opinie o kursie|Recensioni del corso|Opiniones del curso|Cursusbeoordelingen|Avis sur le cours|Kursbewertungen
 Rate this course|Оцените курс|评价此课程|Oceń kurs|Valuta questo corso|Valora este curso|Beoordeel deze cursus|Évaluez ce cours|Diesen Kurs bewerten

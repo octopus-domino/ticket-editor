@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { getLocale, t } from '@/shared/i18n';
 import type { CityPoint, TripWireLeg } from '../api/tripDraft';
 import type { SharedTrip } from '../domain/sharedTrip';
+import type { DayMapPlan } from './DayPlanningPanel';
 import type { TripHotelMapState } from './TripHotelSearch';
 import { RouteMap, type RouteMapLeg } from './RouteMap';
 
@@ -11,7 +12,7 @@ const emptyLines: RouteMapLeg[] = [];
 
 const transportLabels = { PLANE: 'Flight', TRAIN: 'Train', BUS: 'Bus', CAR: 'Car', FERRY: 'Ferry' } as const;
 
-export function TripCityMap({ cities, legs, plannedLines = emptyLines, focusStopId, accommodations = emptyAccommodations, onChangeLodging, onPick, hotelMap, onSelectCity, onMapCenter, pickedPoint }: Pick<SharedTrip, 'cities'> & {
+export function TripCityMap({ cities, legs, plannedLines = emptyLines, focusStopId, accommodations = emptyAccommodations, onChangeLodging, onPick, hotelMap, onSelectCity, onMapCenter, pickedPoint, dayMap }: Pick<SharedTrip, 'cities'> & {
   legs: TripWireLeg[]; plannedLines?: RouteMapLeg[]; focusStopId?: string; accommodations?: SharedTrip['accommodations'];
   onChangeLodging?: (id: string) => void;
   onPick?: (point: CityPoint) => void;
@@ -19,6 +20,7 @@ export function TripCityMap({ cities, legs, plannedLines = emptyLines, focusStop
   onSelectCity?: (id: string) => void;
   onMapCenter?: (center: CityPoint) => void;
   pickedPoint?: CityPoint;
+  dayMap?: DayMapPlan;
 }) {
   const [selectedId, setSelectedId] = useState<string>();
   const [lodgingId, setLodgingId] = useState<string>();
@@ -46,11 +48,11 @@ export function TripCityMap({ cities, legs, plannedLines = emptyLines, focusStop
     });
   }, [destinations, legs]);
   const mapLegs = useMemo(() => [...plannedLines, ...transfers], [plannedLines, transfers]);
-  if (!destinations.length && !transfers.length && !hotels.length && !onPick && !hotelMap && !onSelectCity) return null;
+  if (!destinations.length && !transfers.length && !hotels.length && !onPick && !hotelMap && !dayMap && !onSelectCity) return null;
   return <figure>
     <RouteMap rasterBasemap cityMap onReady={ignoreMapHandle} {...(hotelMap ? {
       ...hotelMap, legs: emptyLines,
-    } : {
+    } : dayMap ?? {
       stops: [...destinations, ...hotels], legs: mapLegs, focusStopId, fit: onPick ? 'initial' : true,
       onPick, pickedPoint, onUserMove: onMapCenter, onLegSelect: id => { setLodgingId(undefined); setSelectedId(id); },
       onStopSelect: hotels.length || onSelectCity ? id => {
@@ -58,14 +60,14 @@ export function TripCityMap({ cities, legs, plannedLines = emptyLines, focusStop
         else onSelectCity?.(id);
       } : undefined,
     })} />
-    {!hotelMap && mapLegs.some(transfer => transfer.mode === 'transfer') &&
+    {!hotelMap && !dayMap && mapLegs.some(transfer => transfer.mode === 'transfer') &&
       <figcaption>{t('Dashed lines show connections between cities.')}</figcaption>}
-    {!hotelMap && transfers.length > 0 && <ul>{transfers.map(line => {
+    {!hotelMap && !dayMap && transfers.length > 0 && <ul>{transfers.map(line => {
       const leg = legs.find(item => item.id === line.id)!;
       return <li key={leg.id}><button type="button" aria-pressed={leg.id === selectedId}
         onClick={() => setSelectedId(leg.id)}>{cityName(leg.fromCityId)} → {cityName(leg.toCityId)}</button></li>;
     })}</ul>}
-    {!hotelMap && selected && <section aria-label={t('Transfer details')}>
+    {!hotelMap && !dayMap && selected && <section aria-label={t('Transfer details')}>
       <h3>{cityName(selected.fromCityId)} → {cityName(selected.toCityId)}</h3>
       <p>{selected.transport && selected.transport !== 'WALK' ? t(transportLabels[selected.transport]) : selected.note}</p>
       {selected.departureAt && <p>{t('Departure')} · <time dateTime={selected.departureAt}>{selected.departureAt.replace('T', ' ')}</time></p>}
@@ -78,7 +80,7 @@ export function TripCityMap({ cities, legs, plannedLines = emptyLines, focusStop
       <a href="https://rasp.yandex.ru/" target="_blank" rel="noreferrer">{t('Find tickets')}</a>{' '}
       <button type="button" onClick={() => setSelectedId(undefined)}>{t('Close')}</button>
     </section>}
-    {!hotelMap && lodging && <section aria-label={t('Trip lodging')}>
+    {!hotelMap && !dayMap && lodging && <section aria-label={t('Trip lodging')}>
       <h3>{lodging.name}</h3>
       {lodging.address && <p>{lodging.address}</p>}
       <p><time dateTime={lodging.checkIn}>{lodging.checkIn}</time> → <time dateTime={lodging.checkOut}>{lodging.checkOut}</time></p>

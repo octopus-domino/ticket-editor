@@ -484,3 +484,9 @@
   .trip-planner-grid[data-mobile-tab='map'] > :not(.trip-planner-overview),
   .trip-planner-grid[data-mobile-tab='summary'] > :not(.trip-planner-summary) { display: none; }
 }
+.trip-day-program { border: 1px solid #dce6de; background: #fff; border-radius: 14px; padding: .85rem; }
+.trip-day-program > summary { cursor: pointer; color: #235a45; font-weight: 700; }
+.trip-day-program-hours { display: flex; flex-wrap: wrap; gap: .6rem; margin-block: .5rem; }
+.trip-day-program > ol { padding-inline-start: 1.4rem; }
+.trip-day-program li { padding: .45rem 0; border-bottom: 1px solid #e6ece7; }
+.trip-day-program li small { display: block; color: #4d6659; }

@@ -1,3 +1,4 @@
+import timezone from 'tz-lookup';
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { Temporal } from '@js-temporal/polyfill';
 import { requestRoad, requestRoadVia } from '../api/routePlanner';
@@ -13,6 +14,7 @@ import { TripWalkImport, type WalkCandidate } from './TripWalkImport';
 import { TripTrainSearch } from './TripTrainSearch';
 import { TripLodgingEditor } from './TripLodgingEditor';
 import { TripHotelSearch, type TripHotelMapState } from './TripHotelSearch';
+import { DayPlanningPanel, type DayMapPlan } from './DayPlanningPanel';
 import { TripSummaryBar } from './TripSummaryBar';
 import { useTripConnections } from './useTripConnections';
 import { TripDetailsEditor } from './TripDetailsEditor';
@@ -43,6 +45,7 @@ export default function TripPlannerDraft() {
   const [share, setShare] = useState<{ draft: Draft; url: string }>();
   const [fileShare, setFileShare] = useState<Draft>();
   const [mobileTab, setMobileTab] = useState<'plan' | 'map' | 'summary'>('plan');
+  const [dayMap, setDayMap] = useState<DayMapPlan>();
   const [selectedDay, setSelectedDay] = useState(1);
   const [selectedDayId, setSelectedDayId] = useState<string>();
   const [selectedVisit, setSelectedVisit] = useState<string>();
@@ -173,7 +176,7 @@ export default function TripPlannerDraft() {
     if (extra) days[dayNumber] = { ...dayDraft, visits: dayDraft.visits?.map(visit =>
       visit.id === extra.id ? { ...visit, ...changes } : visit) };
     else if (next.stops.length || next.ideas?.length || next.city?.trim() || next.cityPoint ||
-      next.lodging || next.train || next.transfer || dayDraft.visits?.length) days[dayNumber] = { ...dayDraft, dayId: dayDraft.dayId ?? crypto.randomUUID(), ...changes };
+      next.lodging || next.train || next.transfer || next.planningStops?.length || dayDraft.visits?.length) days[dayNumber] = { ...dayDraft, dayId: dayDraft.dayId ?? crypto.randomUUID(), ...changes };
     else delete days[dayNumber];
     edit({ days });
     if (saveImmediately) persist({ ...draft, days });
@@ -225,6 +228,7 @@ export default function TripPlannerDraft() {
     const next = past[past.length - 1];
     setPreview(null);
     setAccountSaved(false);
+    setDayMap(undefined);
     dispatch({ type: 'undo' });
     persist(next);
   }
@@ -235,6 +239,7 @@ export default function TripPlannerDraft() {
     const next = future[0];
     setPreview(null);
     setAccountSaved(false);
+    setDayMap(undefined);
     dispatch({ type: 'redo' });
     persist(next);
   }
@@ -242,6 +247,7 @@ export default function TripPlannerDraft() {
   function selectDay(next: number, visitId?: string) {
     mapCenter.current = undefined;
     setPendingMapPoint(undefined);
+    setDayMap(undefined);
     setSelectedVisit(visitId);
     setChoosingCity(false);
     setEditingTransfer(false);
@@ -364,9 +370,9 @@ export default function TripPlannerDraft() {
     <section className="trip-planner" aria-label={t('Travel planner')}>
       <header className="trip-planner-header">
         <h2>{t('Travel planner')}</h2>
-        <small aria-live="polite">{saving ? t('Saving?') : accountSaved ? t('Trip saved to account.')
-          : localSave === 'pending' ? t('Saving?') : localSave === 'saved' ? t('Trip saved on this device.')
-            : localSave === 'failed' ? t('Could not save the trip on this device.') : ''}</small>
+        {!status && (saving || localSave !== 'idle') && <small role="status">{saving ? t('Saving…') : accountSaved ? t('Trip saved to account.')
+          : localSave === 'pending' ? t('Saving…') : localSave === 'saved' ? t('Trip saved on this device.')
+            : t('Could not save the trip on this device.')}</small>}
       </header>
       <div className="trip-planner-dates">
         <label>{t('Trip name')} <input maxLength={180} value={draft.title ?? ''}
@@ -375,7 +381,7 @@ export default function TripPlannerDraft() {
         <label>{t('End date')} <input type="date" value={draft.endDate} onChange={event => { edit({ endDate: event.target.value }); persist({ ...draft, endDate: event.target.value }); }} /></label>
       </div>
       <nav className="trip-workspace-tabs" aria-label={t('Travel planner')}>
-        {([['plan', 'City list'], ['map', 'Trip map'], ['summary', 'Trip overview']] as const).map(([id, label]) =>
+        {([['plan', 'City list'], ['map', 'Map'], ['summary', 'Trip overview']] as const).map(([id, label]) =>
           <button key={id} type="button" aria-pressed={mobileTab === id} onClick={() => {
             setMobileTab(id);
             if (id === 'map') setShowingCities(true);
@@ -385,7 +391,7 @@ export default function TripPlannerDraft() {
         <div className="trip-planner-overview">
           {!hotelSearch && <div className="trip-map-actions">
             <button type="button" aria-expanded={showingCities}
-              onClick={() => { setFocusedDay(undefined); setShowingCities(true); }}>{t('Trip map')}</button>
+              onClick={() => { setDayMap(undefined); setFocusedDay(undefined); setShowingCities(true); }}>{t('Trip map')}</button>
             <button type="button" aria-pressed={!showingCities} onClick={() => {
               setShowingCities(false);
               setChoosingCity(false);
@@ -402,6 +408,7 @@ export default function TripPlannerDraft() {
               legs={cityMap?.legs ?? []} plannedLines={lines} accommodations={cityMap?.accommodations}
               hotelMap={hotelSearch ? hotelMap ?? { stops: [{ ...hotelSearch.point, id: '__day_point__',
                 label: hotelSearch.city, zone: 'UTC', stayMinutes: 0 }] } : undefined}
+              dayMap={dayMap}
               onPick={placingCities ? setPendingMapPoint : undefined}
               pickedPoint={pendingMapPoint}
               focusStopId={placingCities || focusedDay !== dayNumber ? undefined
@@ -501,6 +508,14 @@ export default function TripPlannerDraft() {
           {day.city?.trim() && <button className="journey-primary" type="button" onClick={findHotelsFromMap}>
             {t('Find hotels')}
           </button>}
+          <DayPlanningPanel key={activeLocation} stops={day.planningStops} preferences={day.dayPreferences}
+            date={Number.isFinite(dayDate.getTime()) ? dayDate.toISOString().slice(0, 10) : undefined}
+            zone={day.cityPoint ? timezone(day.cityPoint.latitude, day.cityPoint.longitude) : Intl.DateTimeFormat().resolvedOptions().timeZone}
+            onMap={plan => {
+              setDayMap(plan);
+              if (plan) { setShowingCities(true); setChoosingCity(false); }
+            }}
+            onChange={(planningStops, dayPreferences) => editDay({ planningStops, dayPreferences })} />
           {Boolean(day.ideas?.length) && <ul aria-label={t('Trip ideas')}>{day.ideas?.map(idea => <li key={idea.id}>
             {idea.label}{' '}<button type="button" onClick={() =>
               editDay({ ideas: day.ideas?.filter(item => item.id !== idea.id) }, true)}>{t('Remove')}</button>

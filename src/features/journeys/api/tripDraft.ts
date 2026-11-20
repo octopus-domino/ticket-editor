@@ -1,3 +1,4 @@
+import type { DayPlanPreferences, PlanningStop } from '../domain/planner/plannerTypes';
 import { authFetch } from '@/shared/api/client';
 import { Temporal } from '@js-temporal/polyfill';
 import type { PlannedLeg } from '../domain/route';
@@ -10,6 +11,8 @@ export const pointTransportModes = ['CAR', 'TRAIN', 'PLANE', 'WALK'] as const;
 export type PointTransport = typeof pointTransportModes[number];
 
 export interface TripVisit {
+  planningStops?: PlanningStop[];
+  dayPreferences?: DayPlanPreferences;
   incomingMode?: PointTransport;
   stops: RouteStop[];
   city?: string;
@@ -131,6 +134,10 @@ export function tripPayload(draft: LocalTripDraft, title: string, connections: P
         ...visit.stops.map(stop => ({
           id: stop.id, title: stop.label, latitude: stop.latitude, longitude: stop.longitude,
           category: 'WALK', note: stop.description, photoRefs: [], idea: false,
+        })),
+        ...(visit.planningStops ?? []).map(stop => ({
+          id: stop.id, title: stop.title, latitude: stop.latitude, longitude: stop.longitude,
+          category: 'OTHER', note: stop.notes, photoRefs: [], idea: false,
         })),
         ...(visit.ideas ?? []).map(idea => ({
           id: `idea-${idea.id}`, title: idea.label, latitude: idea.latitude, longitude: idea.longitude,

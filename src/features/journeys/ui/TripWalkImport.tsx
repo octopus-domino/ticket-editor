@@ -63,7 +63,7 @@ export function TripWalkImport({ onPreview, point, address }: {
     {channel && <dialog ref={dialog} className="private-walk-overlay" aria-label={t('Private itineraries')}
       onCancel={(event) => { event.preventDefault(); setChannel(''); }}>
       <header>
-        <strong>{t('Private itineraries')}</strong>
+        <strong>{address?.trim() || t('Private itineraries')}</strong>
         <button type="button" onClick={() => setChannel('')} aria-label={t('Close')}>×</button>
       </header>
       <iframe ref={frame} src={url} title={t('Private itineraries')} allow="geolocation; clipboard-write" />

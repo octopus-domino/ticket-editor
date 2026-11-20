@@ -420,3 +420,36 @@
 @media (max-width: 780px) {
   .trip-planner-grid[data-hotel-search='true'] .trip-map-and-hotel { grid-template-columns: minmax(0, 1fr); }
 }
+/* Same clean tile backdrop as Journey, with one pixel of desktop seam coverage. */
+.trip-leaflet-map { background: #e7ebe4; }
+@media (hover: hover), (pointer: fine) {
+  .trip-leaflet-map .leaflet-tile-pane .leaflet-tile { scale: 1.00390625; }
+}
+.trip-leaflet-map .route-map-marker--hotel {
+  border-radius: 8px; background: #26674e; min-height: 28px; padding: 0; color: white;
+}
+.trip-leaflet-map .route-map-marker--origin {
+  background: #f6f8f5; border-color: #28654e; color: #28654e; box-shadow: none;
+}
+.trip-saved { max-width: 1040px; margin-inline: auto; }
+.trip-saved-heading { margin-block: 1rem; padding-block: 1rem; border-bottom: 1px solid #dbe7dd; }
+.trip-saved-heading > p { color: #4d6659; margin: 0; }
+.trip-saved-heading h1 { margin: .35rem 0 .85rem; font-size: clamp(1.65rem, 4vw, 2.5rem); }
+.trip-saved-actions { display: flex; flex-wrap: wrap; gap: .45rem; }
+.trip-saved figure { margin: 0 0 1.5rem; }
+.trip-saved .route-map { max-height: 480px; }
+.trip-saved-day h2 { margin: .3rem 0; }
+.trip-saved-day > ol { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); }
+.trip-saved-day > details { margin-block: .65rem; }
+.trip-saved-day > details > summary { cursor: pointer; color: #26674e; }
+.trip-planner .trip-planner-dates,
+.trip-planner .trip-planner-day > fieldset {
+  background: #fff; border: 1px solid #dce6de; border-radius: 14px; padding: .9rem;
+}
+.trip-planner .trip-map-actions { gap: .4rem; margin-bottom: .65rem; }
+.trip-planner .trip-map-actions button:is([aria-pressed='true'], [aria-expanded='true']) {
+  background: #26674e; color: white; border-color: #26674e;
+}
+.trip-planner .trip-planner-day > fieldset legend { font-weight: 700; color: #203c32; }
+.trip-planner .trip-planner-day .journey-primary { background: #26674e; border-color: #26674e; }
+.trip-saved-transfers { margin-block: .6rem 1.2rem; }

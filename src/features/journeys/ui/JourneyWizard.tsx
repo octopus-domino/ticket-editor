@@ -109,7 +109,6 @@ function BasicJourneyWizard({
   };
   const [mediaBusy, setMediaBusy] = useState(false);
   const canPlanTrip = definition.kind === 'TOUR' && !custom && !previewOnly && FLAGS.ENABLE_TRIP_PLANNER;
-  const [tripPlannerOpen, setTripPlannerOpen] = useState(canPlanTrip);
   const [routeBusy, setRouteBusy] = useState(false);
   const routeEditor = useRef<RouteEditorHandle>(null);
   const [error, setError] = useState('');
@@ -152,15 +151,7 @@ function BasicJourneyWizard({
       className={`journey-main ${definition.kind === 'PROPOSAL' ? 'journey-main-proposal' : ''} ${definition.kind === 'TOUR' ? 'journey-main--travel' : ''}`}
       data-step={step}
     >
-      {canPlanTrip && <nav className="trip-mode-switch">
-        <button type="button" aria-pressed={tripPlannerOpen} onClick={() => setTripPlannerOpen(true)}>
-          {t('Travel planner')}
-        </button>
-        <button type="button" aria-pressed={!tripPlannerOpen} onClick={() => setTripPlannerOpen(false)}>
-          {t('Document')}
-        </button>
-      </nav>}
-      {canPlanTrip && tripPlannerOpen
+      {canPlanTrip
         ? <Suspense fallback={<p>{t('Loading…')}</p>}><TripPlannerDraft /></Suspense>
         : <div>
       <div className="journey-intro">

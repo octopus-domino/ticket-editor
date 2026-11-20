@@ -11,11 +11,13 @@ const emptyLines: RouteMapLeg[] = [];
 
 const transportLabels = { PLANE: 'Flight', TRAIN: 'Train', BUS: 'Bus', CAR: 'Car', FERRY: 'Ferry' } as const;
 
-export function TripCityMap({ cities, legs, plannedLines = emptyLines, focusStopId, accommodations = emptyAccommodations, onChangeLodging, onPick, hotelMap }: Pick<SharedTrip, 'cities'> & {
+export function TripCityMap({ cities, legs, plannedLines = emptyLines, focusStopId, accommodations = emptyAccommodations, onChangeLodging, onPick, hotelMap, onSelectCity, onMapCenter }: Pick<SharedTrip, 'cities'> & {
   legs: TripWireLeg[]; plannedLines?: RouteMapLeg[]; focusStopId?: string; accommodations?: SharedTrip['accommodations'];
   onChangeLodging?: (id: string) => void;
   onPick?: (point: CityPoint) => void;
   hotelMap?: TripHotelMapState;
+  onSelectCity?: (id: string) => void;
+  onMapCenter?: (center: CityPoint) => void;
 }) {
   const [selectedId, setSelectedId] = useState<string>();
   const [lodgingId, setLodgingId] = useState<string>();
@@ -49,9 +51,10 @@ export function TripCityMap({ cities, legs, plannedLines = emptyLines, focusStop
       ...hotelMap, legs: emptyLines,
     } : {
       stops: [...destinations, ...hotels], legs: mapLegs, focusStopId, fit: onPick ? 'initial' : true,
-      onPick, onLegSelect: id => { setLodgingId(undefined); setSelectedId(id); },
-      onStopSelect: hotels.length ? id => {
+      onPick, onUserMove: onMapCenter, onLegSelect: id => { setLodgingId(undefined); setSelectedId(id); },
+      onStopSelect: hotels.length || onSelectCity ? id => {
         if (id.startsWith('hotel:')) { setSelectedId(undefined); setLodgingId(id.slice(6)); }
+        else onSelectCity?.(id);
       } : undefined,
     })} />
     {!hotelMap && mapLegs.some(transfer => transfer.mode === 'transfer') &&

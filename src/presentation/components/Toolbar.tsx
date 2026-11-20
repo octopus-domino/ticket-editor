@@ -12,6 +12,7 @@ import { materializeSlide } from '@/features/generation/ui/materializeSlide';
 import { modelStore } from '@/features/data-models/state/ModelStore';
 import { PowerPointActions } from './PowerPointActions';
 import { ImageImportActions } from './ImageImportActions';
+import { toast } from './toast';
 import { useFileIO } from '../hooks/editor/useFileIO';
 
 export const Toolbar: React.FC<{ templateMode?: boolean }> = ({ templateMode }) => {
@@ -42,6 +43,7 @@ export const Toolbar: React.FC<{ templateMode?: boolean }> = ({ templateMode }) 
     };
   }, []);
 
+  const [exportingPdf, setExportingPdf] = useState(false);
   const [exportingWord, setExportingWord] = useState(false);
   const handleExportJson = fileIO.exportJson;
   const handleExportSvg = fileIO.exportSvgLocal;
@@ -101,6 +103,13 @@ export const Toolbar: React.FC<{ templateMode?: boolean }> = ({ templateMode }) 
             setExportingWord(true);
             try { await fileIO.exportWord(); } finally { setExportingWord(false); }
           }}>{__tr('Export Word')}</button>}
+        {templateMode && <button type="button" className="toolbar-btn" disabled={exportingPdf || !slides.length}
+          onClick={async () => {
+            setExportingPdf(true);
+            try { await fileIO.exportPdfServer(); }
+            catch { toast.error(__tr('Could not export PDF.')); }
+            finally { setExportingPdf(false); }
+          }}>{__tr('Download PDF')}</button>}
         <PowerPointActions/>
         <ImageImportActions />
         <button className="toolbar-btn" onClick={() => docStore.undo()} disabled={!canUndo}>

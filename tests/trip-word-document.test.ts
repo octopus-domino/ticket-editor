@@ -1,3 +1,4 @@
+import { tripTemplateSlides } from '../src/features/journeys/domain/tripTemplateSlides';
 import { wordDocument } from '../src/shared/files/wordDocument';
 import { strFromU8, unzipSync } from 'fflate';
 import { expect, test } from 'vitest';
@@ -32,4 +33,17 @@ test('embeds each editor slide as its own Word page', async () => {
   expect(xml).toContain('<w:pageBreakBefore/>');
   expect(xml).toContain('r:embed="image2"');
   expect(new DOMParser().parseFromString(xml, 'application/xml').querySelector('parsererror')).toBeNull();
+});
+
+test('places each attached walk on its own constructor sheet', () => {
+  const leg = { mode: 'foot' as const, durationSeconds: 540, distanceMeters: 780,
+    coordinates: [[37, 55], [37.01, 55.01]] as [number, number][] };
+  const stop = (id: string) => ({ id, label: id, zone: 'UTC', stayMinutes: 0, latitude: 55, longitude: 37 });
+  const trip = tripPayload({ id: 'walk-sheets', version: 2, startDate: '2027-01-01', endDate: '2027-01-02',
+    days: { 1: { city: 'Tver', stops: [stop('First'), stop('Second')], importedWalk: { title: 'Riverside', legs: [leg] },
+      visits: [{ id: 'visit-kostroma', city: 'Kostroma', stops: [stop('Third'), stop('Fourth')],
+        importedWalk: { title: 'Old town', legs: [leg] } }] } } }, 'Weekend');
+  const slides = tripTemplateSlides(trip);
+  expect(slides.map(slide => slide.name).slice(-2)).toEqual(['Riverside', 'Old town']);
+  expect(slides[slides.length - 1]?.elements).toEqual(expect.arrayContaining([expect.objectContaining({ text: '2. Fourth' })]));
 });

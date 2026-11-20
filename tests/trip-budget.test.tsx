@@ -8,7 +8,7 @@ vi.mock('../src/features/journeys/api/journeys', () => ({ journeyRequest: vi.fn(
 
 test('loads dated rates without transmitting the trip budget or expenses', async () => {
   const request = vi.mocked(journeyRequest).mockResolvedValue({ date: '2026-11-20', rates: { EUR: 100, RUB: 1 } });
-  render(<TripDetailsEditor budget={{ currency: 'EUR', amount: 150 }} documents={[]}
+  render(<TripDetailsEditor budget={{ currency: 'EUR', amount: 150 }}
     costs={[{ currency: 'EUR', amount: 80 }, { currency: 'RUB', amount: 2000 }]} onChange={vi.fn()} />);
   expect(request).not.toHaveBeenCalled();
   fireEvent.click(screen.getByText(t('Trip budget'), { selector: 'summary' }));

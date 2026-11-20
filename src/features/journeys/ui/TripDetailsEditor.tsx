@@ -5,14 +5,11 @@ import { journeyRequest } from '../api/journeys';
 
 type Rates = { date: string; rates: Record<string, number> };
 
-export function TripDetailsEditor({ budget, documents, costs = [], onChange }: {
+export function TripDetailsEditor({ budget, costs = [], onChange }: {
   budget: LocalTripDraft['budget'];
-  documents: NonNullable<LocalTripDraft['documents']>;
   costs?: TripBudget[];
-  onChange: (changes: Pick<LocalTripDraft, 'budget'> | Pick<LocalTripDraft, 'documents'>) => void;
+  onChange: (changes: Pick<LocalTripDraft, 'budget'>) => void;
 }) {
-  const [title, setTitle] = useState('');
-  const [url, setUrl] = useState('');
   const amount = budget?.amount;
   const [currency, setCurrency] = useState(budget?.currency ?? 'RUB');
   useEffect(() => { if (budget?.currency) setCurrency(budget.currency); }, [budget?.currency]);
@@ -50,7 +47,6 @@ export function TripDetailsEditor({ budget, documents, costs = [], onChange }: {
       }
     }
   }
-  const validUrl = URL.canParse(url.trim()) && /^https?:\/\//i.test(url.trim());
   return <>
     <details>
       <summary>{t('Trip budget')}</summary>
@@ -69,22 +65,6 @@ export function TripDetailsEditor({ budget, documents, costs = [], onChange }: {
       {budget?.currency !== 'RUB' && limit !== undefined && <p>{t('Trip budget')} · {formatRoubles(limit)}</p>}
       {costs.length > 0 && expenses !== undefined && <p>{t('Planned expenses')} · {formatRoubles(expenses)}</p>}
       {failed && <p role="alert">{t('Exchange rates are unavailable.')}</p>}
-    </details>
-    <details>
-      <summary>{t('Documents')}</summary>
-      <ul>{documents.map(document => <li key={document.id}>
-        {document.title}{' '}
-        <button type="button" onClick={() => onChange({
-          documents: documents.filter(item => item.id !== document.id),
-        })}>{t('Remove')}</button>
-      </li>)}</ul>
-      <label>{t('Name')} <input value={title} maxLength={180} onChange={event => setTitle(event.target.value)} /></label>
-      <label>URL <input type="url" value={url} maxLength={2048} onChange={event => setUrl(event.target.value)} /></label>
-      <button type="button" disabled={!title.trim() || !validUrl} onClick={() => {
-        onChange({ documents: [...documents, { id: crypto.randomUUID(), title: title.trim(), url: url.trim() }] });
-        setTitle('');
-        setUrl('');
-      }}>{t('Add')}</button>
     </details>
   </>;
 }

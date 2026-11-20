@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 import { getLocale, t } from '@/shared/i18n';
 import { downloadFile } from '@/shared/files/download';
 import { TripTemplateAction } from './TripTemplateAction';
-import type { PlannedLeg } from '../domain/route';
+import { geographicDistance, type PlannedLeg } from '../domain/route';
 import { sharedTripJson, shareTripUrl } from '../domain/sharedTrip';
 import { saveTripToAccount, pointTransportModes, transferModes, tripLocations, tripPayload, type PointTransport, type CityPoint, type LocalTripDraft, type TripDayDraft, type TripVisit } from '../api/tripDraft';
 import { RouteMap } from './RouteMap';
@@ -134,6 +134,7 @@ export default function TripPlannerDraft() {
   const [focusedDay, setFocusedDay] = useState<number>();
   const [showingCities, setShowingCities] = useState(true);
   const [editingTransfer, setEditingTransfer] = useState(false);
+  const mapCenter = useRef<CityPoint>();
   const [hotelMap, setHotelMap] = useState<TripHotelMapState>();
   const [hotelSearchDay, setHotelSearchDay] = useState<number>();
   const duration = Math.max(0, (Date.parse(draft.endDate) - Date.parse(draft.startDate)) / dayMilliseconds + 1) || 0;
@@ -295,6 +296,7 @@ export default function TripPlannerDraft() {
   }
 
   function selectDay(next: number, visitId?: string) {
+    mapCenter.current = undefined;
     setSelectedVisit(visitId);
     setChoosingCity(false);
     setEditingTransfer(false);
@@ -302,6 +304,17 @@ export default function TripPlannerDraft() {
     setStatus('');
     setPreview(null);
     setSelectedDay(next);
+  }
+
+  function findHotelsFromMap() {
+    const center = mapCenter.current;
+    const closest = center && showingCities && locations
+      .filter(item => item.visit.city && item.visit.cityPoint)
+      .map(item => ({ ...item, distance: geographicDistance(center, item.visit.cityPoint!) }))
+      .filter(item => item.distance <= 25000)
+      .sort((a, b) => a.distance - b.distance || Number(b.id === activeLocation) - Number(a.id === activeLocation))[0];
+    if (closest) findHotels(closest.number, closest.id === String(closest.number) ? undefined : closest.id);
+    else findHotels(dayNumber, extra?.id);
   }
 
   function findHotels(number: number, visitId?: string) {
@@ -428,6 +441,18 @@ export default function TripPlannerDraft() {
               focusStopId={placingCities || focusedDay !== dayNumber ? undefined
                 : cityMap?.cities.find(item => item.latitude === day.cityPoint?.latitude
                   && item.longitude === day.cityPoint?.longitude)?.id ?? activeLocation}
+              onMapCenter={center => { mapCenter.current = center; }}
+              onSelectCity={cityId => {
+                const selected = cityMap?.cities.find(item => item.id === cityId);
+                const matching = locations.filter(item => item.id === cityId || (selected && item.visit.cityPoint
+                  && item.visit.cityPoint.latitude === selected.latitude && item.visit.cityPoint.longitude === selected.longitude));
+                const location = matching.find(item => item.id === activeLocation)
+                  ?? matching.find(item => item.number === dayNumber) ?? matching[0];
+                if (!location) return;
+                selectDay(location.number, location.id === String(location.number) ? undefined : location.id);
+                setPlacingCities(false);
+                setFocusedDay(location.number);
+              }}
               onChangeLodging={id => {
                 const location = locations.find(item => id === `lodging-${item.id}`);
                 if (location) findHotels(location.number, location.id === String(location.number) ? undefined : location.id);
@@ -498,7 +523,7 @@ export default function TripPlannerDraft() {
               {t('Remove map pin')}
             </button>}
           </fieldset>
-          {day.city?.trim() && <button className="journey-primary" type="button" onClick={() => findHotels(dayNumber, extra?.id)}>
+          {day.city?.trim() && <button className="journey-primary" type="button" onClick={findHotelsFromMap}>
             {t('Find hotels')}
           </button>}
           {Boolean(day.ideas?.length) && <ul aria-label={t('Trip ideas')}>{day.ideas?.map(idea => <li key={idea.id}>
@@ -550,7 +575,7 @@ export default function TripPlannerDraft() {
         </div>}
       </div>
       <div className="trip-planner-details">
-        <TripDetailsEditor budget={draft.budget} documents={draft.documents ?? []}
+        <TripDetailsEditor budget={draft.budget}
           costs={locations.flatMap(({ visit: details }) =>
             [details.transfer?.cost, details.lodging?.cost].filter(cost => cost !== undefined))}
           onChange={edit} />

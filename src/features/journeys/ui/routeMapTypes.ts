@@ -11,7 +11,7 @@ export interface RouteMapProps {
   legs: RouteMapLeg[];
   onReady: (handle: RouteMapHandle | null) => void;
   onPick?: (point: { longitude: number; latitude: number }) => void;
-  onUserMove?: () => void;
+  onUserMove?: (point: { longitude: number; latitude: number }) => void;
   pickedPoint?: { longitude: number; latitude: number } | null;
   focusStopId?: string;
   cityMap?: boolean;

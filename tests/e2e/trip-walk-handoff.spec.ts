@@ -37,8 +37,6 @@ test('returns a ready Journey walk to its trip day and restores it after reload'
       ? [{ code: 'c2', title: 'Petersburg', region: 'Russia' }] : [{ code: 'c213', title: 'Moscow', region: 'Russia' }],
   }));
   await page.goto('/start/tours');
-  const open = page.getByRole('button', { name: 'Travel planner', exact: true });
-  await open.click();
   await expect(page.locator('.journey-form-panel')).toHaveCount(0);
   const planner = page.getByRole('region', { name: 'Travel planner' });
   await planner.getByLabel('Trip name').fill('Winter trip');
@@ -66,7 +64,6 @@ test('returns a ready Journey walk to its trip day and restores it after reload'
   expect(accountWrites[0].days[0].date).toBe('2027-01-01');
   expect(accountWrites[0].days[0].walkingSections).toHaveLength(1);
   await page.reload();
-  await open.click();
   await expect(planner.getByText('Pier', { exact: true })).toHaveCount(0);
   await planner.getByRole('button', { name: 'Next day' }).click();
   await expect(planner.getByText('Pier', { exact: true })).toBeVisible();
@@ -116,7 +113,6 @@ test('receives the finished walk from the built Journey application', async ({ p
     json: { version: 8, sources: {}, layers: [{ id: 'base', type: 'background' }] },
   }));
   await page.goto('/start/tours');
-  await page.getByRole('button', { name: 'Travel planner', exact: true }).click();
   const planner = page.getByRole('region', { name: 'Travel planner' });
   await planner.getByLabel('Start date').fill('2026-12-31');
   await planner.getByLabel('End date').fill('2027-01-01');

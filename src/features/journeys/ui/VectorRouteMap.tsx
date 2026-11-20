@@ -105,7 +105,12 @@ export default function VectorRouteMap({
       if (++tileErrors >= 3 && !raster) fallback();
       else if (raster) setError(t('The map is taking too long to load. Check your connection.'));
     });
-    map.on('moveend', event => { if (event.originalEvent) onUserMoveRef.current?.(); });
+    map.on('moveend', event => {
+      if (event.originalEvent) {
+        const center = map.getCenter().wrap();
+        onUserMoveRef.current?.({ longitude: center.lng, latitude: center.lat });
+      }
+    });
     map.on('click', event => {
       if (onLegSelectRef.current) {
         const layers = ['route-road', 'route-flight'].filter(id => map.getLayer(id));

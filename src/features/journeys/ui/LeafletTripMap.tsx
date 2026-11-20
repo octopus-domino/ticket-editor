@@ -25,6 +25,7 @@ export function LeafletTripMap({
     const start = latest.current.stops[0];
     const instance = L.map(element, { preferCanvas: true, scrollWheelZoom: true, maxZoom: 19 })
       .setView(start ? [start.latitude, start.longitude] : [55.75, 37.62], start ? 15 : 6);
+    instance.attributionControl.setPrefix(false);
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19, updateWhenIdle: true, keepBuffer: 2,
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
@@ -33,9 +34,13 @@ export function LeafletTripMap({
     pinLayer.current = L.layerGroup().addTo(instance);
     lineLayer.current = L.layerGroup().addTo(instance);
     instance.on('click', event => latest.current.onPick?.({ latitude: event.latlng.lat, longitude: event.latlng.wrap().lng }));
-    instance.on('dragend', () => latest.current.onUserMove?.());
+    const notifyMove = () => {
+      const center = instance.getCenter().wrap();
+      latest.current.onUserMove?.({ longitude: center.lng, latitude: center.lat });
+    };
+    instance.on('dragend', notifyMove);
     // Zoom can be initiated by fitting or by the user. Only input gestures refresh the hotel search.
-    const wheel = () => latest.current.onUserMove?.();
+    const wheel = notifyMove;
     element.addEventListener('wheel', wheel, { passive: true });
     const resize = new ResizeObserver(() => instance.invalidateSize({ pan: false, debounceMoveend: true }));
     resize.observe(element);
@@ -53,12 +58,13 @@ export function LeafletTripMap({
     if (!layer) return;
     layer.clearLayers();
     const pins = JSON.parse(markerKey) as { id: string; label: string; latitude: number; longitude: number }[];
+    const hotelMode = pins.some(pin => pin.id === '__day_point__');
     pins.forEach(({ id, label, latitude, longitude }, index) => {
       const origin = id === '__day_point__';
       const clickable = selectable && !origin;
       const node = document.createElement(clickable ? 'button' : 'span');
-      node.className = `route-map-marker${origin ? ' route-map-marker--origin' : ''}`;
-      node.textContent = routePointMarker(index, pins.length);
+      node.className = `route-map-marker${origin ? ' route-map-marker--origin' : hotelMode ? ' route-map-marker--hotel' : ''}`;
+      node.textContent = origin ? '•' : hotelMode ? 'H' : routePointMarker(index, pins.length);
       if (node instanceof HTMLButtonElement) {
         node.type = 'button';
         node.setAttribute('aria-label', label);

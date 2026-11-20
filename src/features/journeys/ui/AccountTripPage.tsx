@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
-import { t } from '@/shared/i18n';
+import { getLocale, t } from '@/shared/i18n';
 import { downloadFile } from '@/shared/files/download';
 import { fetchTripExport, openAccountTrip, tripExportFiles, type AccountTrip, type TripExport } from '../api/tripDraft';
 import { RouteMap } from './RouteMap';
@@ -8,14 +8,16 @@ import { TripCityMap } from './TripCityMap';
 import { TripTemplateAction } from './TripTemplateAction';
 import { travelDuration } from '../domain/tripDocumentContent';
 import type { PlannedLeg } from '../domain/route';
-import { TripSummaryBar } from './TripSummaryBar';
 import { readTripShare, readTripShareFile, type SharedTrip } from '../domain/sharedTrip';
 import './route.css';
 
 const ignoreMapHandle = () => undefined;
 
-function TripDay({ day, city, id }: { day: SharedTrip['days'][number]; city: string | undefined; id: string }) {
-  const stops = day.segments.flatMap(segment => segment.idea || segment.latitude == null || segment.longitude == null ? [] : [{
+function TripDay({ day, city, id, lodging }: {
+  day: SharedTrip['days'][number]; city: string | undefined; id: string; lodging?: SharedTrip['accommodations'][number];
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const stops = day.segments.flatMap(segment => segment.id.startsWith('visit-') || segment.idea || segment.latitude == null || segment.longitude == null ? [] : [{
     id: segment.id, label: segment.title, latitude: segment.latitude, longitude: segment.longitude,
     zone: 'UTC', stayMinutes: 0,
   }]);
@@ -23,10 +25,19 @@ function TripDay({ day, city, id }: { day: SharedTrip['days'][number]; city: str
     mode: 'foot', distanceMeters: section.distanceMeters, durationSeconds: section.durationSeconds,
     coordinates: section.geometry.map(({ longitude, latitude }) => [longitude, latitude]),
   }));
-  return <section id={id}>
-    <h2>{[day.date, city].filter(Boolean).join(' · ')}</h2>
+  return <section id={id} className="trip-day-timeline-item trip-saved-day">
+    <header><div>
+      <time dateTime={day.date}>{new Intl.DateTimeFormat(getLocale(), {
+        dateStyle: 'full', timeZone: 'UTC',
+      }).format(new Date(day.date))}</time>
+      <h2>{city || t('Trip day')}</h2>
+    </div></header>
+    {lodging && <p><strong>{lodging.name}</strong>{lodging.address && ` · ${lodging.address}`}</p>}
     {day.note && <p>{day.note}</p>}
-    {stops.length > 0 && <RouteMap stops={stops} legs={legs} onReady={ignoreMapHandle} />}
+    {legs.length > 0 && <details onToggle={event => setExpanded(event.currentTarget.open)}>
+      <summary>{t('Private itineraries')} · {travelDuration(legs.reduce((sum, leg) => sum + leg.durationSeconds, 0))}</summary>
+      {expanded && <RouteMap rasterBasemap stops={stops} legs={legs} onReady={ignoreMapHandle} />}
+    </details>}
     <ol>{day.segments.filter(segment => !segment.idea).map(segment => <li key={segment.id}>
       <strong>{segment.title}</strong>
       {segment.note && <p>{segment.note}</p>}
@@ -67,24 +78,18 @@ export default function AccountTripPage() {
     }
   }
   return <TripView trip={trip}>
+    <div className="trip-saved-actions">
     <button type="button" disabled={exporting} onClick={() => void exportTrip(trip.id, 'calendar')}>
       {t('Export calendar')}
     </button>
-    <button type="button" disabled={exporting} onClick={() => void exportTrip(trip.id, 'pdf')}>{t('Download PDF')}</button>
     <button type="button" disabled={exporting} onClick={() => void exportTrip(trip.id, 'json')}>{t('Export JSON')}</button>
     <TripTemplateAction getTrip={() => trip} />
     {'legacyRouteId' in trip.meta && Boolean(trip.meta.legacyRouteId) &&
       <button type="button" disabled={exporting} onClick={() => void exportTrip(trip.id, 'legacy')}>{t('Export original route')}</button>}
+    </div>
     {exportError && <p role="alert">{exportError === 'calendar' ? t('Could not export the calendar.')
       : exportError === 'pdf' ? t('Could not export PDF.') : t('Could not export trip JSON.')}</p>}
     {trip.budget?.limit && <p>{t('Trip budget')} · {trip.budget.limit.amount} {trip.budget.limit.currency}</p>}
-    {trip.documents.length > 0 && <section>
-      <h2>{t('Documents')}</h2>
-      <ul>{trip.documents.map(document => <li key={document.id}>
-        {/^https?:\/\//i.test(document.url)
-          ? <a href={document.url} rel="noreferrer" target="_blank">{document.title}</a> : document.title}
-      </li>)}</ul>
-    </section>}
   </TripView>;
 }
 
@@ -117,25 +122,27 @@ export function SharedTripPage() {
 function TripView({ trip, children }: { trip: SharedTrip; children?: React.ReactNode }) {
   const [focusStopId, setFocusStopId] = useState<string>();
   const cities = new Map(trip.cities.map(city => [city.id, city.name]));
-  const accommodations = new Map(trip.accommodations.map(lodging => [lodging.id, lodging]));
-  return <main className="journey-main journey-main--travel">
-    <h1>{trip.title}</h1>
-    {children}
-    <TripCityMap cities={trip.cities} legs={trip.legs} accommodations={trip.accommodations} focusStopId={focusStopId} />
-    <TripSummaryBar rows={trip.days.map((day, index) => ({
-      id: String(index), place: cities.get(day.cityId) || day.date || `${t('Trip day')} ${index + 1}`,
-      lodging: day.accommodationId ? accommodations.get(day.accommodationId) : undefined,
-      onSelect: () => {
-        setFocusStopId(day.cityId);
-        document.getElementById(`trip-day-${index}`)?.scrollIntoView({ block: 'start' });
-      },
-    }))} />
-    {trip.legs.length > 0 && <ol>{trip.legs.map(leg => <li key={leg.id}>
-      <strong>{leg.note}</strong>{' '}
-      {cities.get(leg.fromCityId)} <time dateTime={leg.departureAt ?? undefined}>{leg.departureAt}</time>
-      {' → '}{cities.get(leg.toCityId)} <time dateTime={leg.arrivalAt ?? undefined}>{leg.arrivalAt}</time>
-      {leg.durationSeconds != null && <> · {leg.transport === 'PLANE' && !leg.departureAt && `${t('Estimated flight time')}: `}{travelDuration(leg.durationSeconds)}</>}
-    </li>)}</ol>}
-    {trip.days.map((day, index) => <TripDay key={index} id={`trip-day-${index}`} day={day} city={cities.get(day.cityId)} />)}
+  const lodgings = new Map(trip.accommodations.map(lodging => [lodging.id, lodging]));
+  return <main className="journey-main journey-main--travel trip-saved">
+    <header className="trip-saved-heading">
+      <p><time dateTime={trip.days[0]?.date}>{trip.days[0]?.date}</time>
+        {trip.days.length > 1 && <> – <time dateTime={trip.days.at(-1)?.date}>{trip.days.at(-1)?.date}</time></>}</p>
+      <h1>{trip.title}</h1>
+      {children}
+    </header>
+    <TripCityMap cities={trip.cities} legs={trip.legs} accommodations={trip.accommodations}
+      focusStopId={focusStopId} onSelectCity={setFocusStopId} />
+    {trip.legs.length > 0 && <details className="trip-saved-transfers">
+      <summary>{t('Transfer details')}</summary>
+      <ul>{trip.legs.map(leg => <li key={leg.id}>
+        {cities.get(leg.fromCityId)} → {cities.get(leg.toCityId)}
+        {leg.durationSeconds != null && ` · ${travelDuration(leg.durationSeconds)}`}
+        {leg.departureAt && <time dateTime={leg.departureAt}> · {leg.departureAt.replace('T', ' ')}</time>}
+      </li>)}</ul>
+    </details>}
+    <div className="trip-day-timeline">
+      {trip.days.map((day, index) => <TripDay key={index} id={`trip-day-${index}`} day={day} city={cities.get(day.cityId)}
+        lodging={day.accommodationId ? lodgings.get(day.accommodationId) : undefined} />)}
+    </div>
   </main>;
 }

@@ -26,7 +26,7 @@ export function getByPath(obj: unknown, path: string): unknown {
   }, source);
   const value = read(record, segments);
   if (value !== undefined) return value;
-  const boundaries = [...path.matchAll(/[.\[]/g)];
+  const boundaries = [...path.matchAll(/[.[]/g)];
   for (let index = boundaries.length - 1; index >= 0; index--) {
     const offset = boundaries[index].index;
     const prefix = path.slice(0, offset);

@@ -117,6 +117,13 @@ test('planner opens a selected day beside the same map and supports mobile plann
   await expect(workspace.getByRole('heading', { name: 'Tver' })).toBeVisible();
   await workspace.locator('button[data-trip-day="overview"]').click();
   await expect(workspace.locator('.trip-summary[data-compact]')).toBeVisible();
+  const dayWidths = await workspace.locator('.trip-summary .trip-day-timeline-item').evaluateAll(
+    days => days.map(day => day.getBoundingClientRect().width),
+  );
+  expect(Math.max(...dayWidths)).toBeLessThanOrEqual(160);
+  expect(new Set(dayWidths).size).toBe(1);
+  const dayTab = await workspace.locator('button[data-trip-day="2"]').boundingBox();
+  expect(dayTab?.width).toBeLessThanOrEqual(128);
   await expect(workspace.locator('.trip-planner-overview')).toBeHidden();
   await workspace.locator('.trip-summary').getByRole('button', { name: 'Tver', exact: true }).click();
   await expect(map.locator('[data-focused]')).toHaveCount(1);

@@ -35,7 +35,11 @@
 .trip-exp-navigation { display: flex; align-items: center; gap: 10px; padding-block: 16px; }
 .trip-exp-navigation nav { display: flex; gap: 8px; overflow-x: auto; padding: 4px; margin: -4px; flex: 1; }
 .trip-exp .trip-exp-navigation button { flex: 0 0 auto; text-align: start; }
+.trip-exp .trip-exp-navigation button[data-trip-day]:not([data-trip-day="overview"]) {
+  inline-size: 8rem; padding-inline: 8px;
+}
 .trip-exp-navigation button :is(span, time) { display: block; }
+.trip-exp-navigation button[data-trip-day] span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .trip-exp-navigation button time { color: var(--trip-muted); font-size: .8rem; }
 .trip-exp .trip-exp-navigation button[aria-current] {
   color: var(--trip-accent); border-color: var(--trip-accent); background: var(--trip-subtle); font-weight: 650;
@@ -123,15 +127,17 @@
 .trip-exp .trip-summary[data-compact] { margin: 0; padding: 0; border: 0; max-width: none; background: transparent; }
 .trip-exp .trip-summary[data-compact] .trip-day-timeline {
   border: 0; margin: 0; padding: 0; display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 13rem), 1fr)); gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(0, min(100%, 10rem))); gap: 8px;
 }
 .trip-exp .trip-summary[data-compact] .trip-day-timeline-item {
-  padding: 12px; margin: 0; min-width: 0; border: 1px solid var(--trip-border); border-radius: 12px;
+  padding: 8px; margin: 0; min-width: 0; border: 1px solid var(--trip-border); border-radius: 12px;
 }
+.trip-exp .trip-summary[data-compact] .trip-day-timeline-item > header { flex-wrap: wrap; gap: 4px; }
+.trip-exp .trip-summary[data-compact] .trip-day-timeline-item > header > button { display: grid; gap: 2px; }
 .trip-exp .trip-summary[data-compact] .trip-day-timeline-item::before { display: none; }
 .trip-exp .trip-summary[data-compact] .trip-day-timeline-item > ol { margin-block-start: 8px; }
 .trip-exp .trip-summary[data-compact] .trip-summary-stay-row {
-  display: grid; align-content: start; gap: 8px; min-height: 8rem; overflow-wrap: anywhere;
+  display: grid; align-content: start; gap: 4px; min-height: 0; padding: 8px; overflow-wrap: anywhere;
   border: 1px solid var(--point-border, #42836c); border-radius: 10px;
 }
 .trip-exp .trip-summary[data-compact] .trip-day-timeline-item:nth-child(4n + 2) { --point-border: #997237; }

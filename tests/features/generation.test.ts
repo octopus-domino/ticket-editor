@@ -5,7 +5,8 @@ import type {
   GenerationJobStatus,
   GenerationRequest,
 } from '@/features/generation/api/GenerationClient';
-import { newQr, newText } from '@/lib/factories';
+import { newQr, newTable, newText } from '@/lib/factories';
+import { resolveBindings } from '@/features/bindings/domain/BindingResolver';
 import { createSlide } from '@/domain/slide/operations';
 import { materializeSlide } from '@/lib/materialize';
 import { DocumentSchema } from '@/shared/schemas/document';
@@ -44,6 +45,23 @@ describe('generation contracts', () => {
     const result = importElements(original, 0)!;
     expect(result[0].id).not.toBe(original.id);
     expect(() => importElements([original], 2000)).toThrow();
+  });
+  it('fills every table column with independent scalar and nested array bindings', () => {
+    const slide = createSlide(1);
+    const table = { ...newTable(), data: [
+      ['{{name}}', '{{layout.items[0].count}}', '{{layout.items[0].price}}'],
+    ] };
+    slide.elements = [table];
+    const bindings = resolveBindings([slide]).map(binding => ({
+      ...binding, schemaPath: binding.placeholder === '{{name}}' ? 'customer' : 'invoice.lines',
+    }));
+    expect(bindings.map(binding => binding.expectedType)).toEqual(['string', 'array']);
+    expect(materializeSlide(slide, {
+      customer: 'Anna', invoice: { lines: [{ count: 0, price: 42 }] },
+    }, bindings).elements[0]).toMatchObject({ data: [['Anna', '0', '42']] });
+    expect(materializeSlide(slide, {
+      customer: 'Anna', 'invoice.lines': [{ count: 0, price: 42 }],
+    }, bindings).elements[0]).toMatchObject({ data: [['Anna', '0', '42']] });
   });
   it('uses async for 101 items and stops polling after completion', async () => {
     vi.useFakeTimers();

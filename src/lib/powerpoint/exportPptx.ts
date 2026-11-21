@@ -1,6 +1,8 @@
 import type { CanvasElement, Slide, TextElement } from '@/shared/types';
 import { serializeSlideToSvg } from '@/lib/svg/serialize';
 import { svgToPng } from '@/lib/svg/toPng';
+import { embedImagesInSlide } from '@/lib/embedImages';
+import { backgroundUrl } from '@/shared/backgrounds/catalog';
 import {
   A,
   namespaces,
@@ -99,7 +101,11 @@ export async function exportPptx(slides: readonly Slide[]): Promise<PptxExport> 
     relationship('props', 'presProps', 'presProps.xml'),
   ];
   let media = 0;
-  for (const [index, slide] of slides.entries()) {
+  for (const [index, original] of slides.entries()) {
+    const background = backgroundUrl(original.backgroundPreset) ?? original.backgroundImage;
+    const backgroundImage = background && typeof window !== 'undefined'
+      ? new URL(background, window.location.href).href : background;
+    const slide = await embedImagesInSlide({ ...original, backgroundPreset: undefined, backgroundImage });
     const n = index + 1;
     const rels = [relationship('layout', 'slideLayout', '../slideLayouts/slideLayout1.xml')];
     const objects: string[] = [];
@@ -108,6 +114,20 @@ export async function exportPptx(slides: readonly Slide[]): Promise<PptxExport> 
     const dx = (width - slide.width * scale) / 2;
     const dy = (height - slide.height * scale) / 2;
     if (scale !== 1) warnings.add('Slides with different sizes were fitted to the first slide.');
+    if (background) {
+      try {
+        if (!slide.backgroundImage?.startsWith('data:image/')) throw new Error('Background unavailable');
+        const png = await svgToPng(serializeSlideToSvg({ ...slide, elements: [] }), slide.width, slide.height);
+        const filename = `image${++media}.png`;
+        files[`ppt/media/${filename}`] = new Uint8Array(await png.arrayBuffer());
+        rels.push(relationship('background', 'image', `../media/${filename}`));
+        objects.push(
+          `<p:pic><p:nvPicPr><p:cNvPr id="${id++}" name="Background"/><p:cNvPicPr/><p:nvPr/></p:nvPicPr><p:blipFill><a:blip r:embed="background"/><a:stretch><a:fillRect/></a:stretch></p:blipFill><p:spPr><a:xfrm><a:off x="${emu(dx)}" y="${emu(dy)}"/><a:ext cx="${emu(slide.width * scale)}" cy="${emu(slide.height * scale)}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr></p:pic>`,
+        );
+      } catch {
+        warnings.add('Some images could not be included in the PowerPoint file.');
+      }
+    }
     for (const el of slide.elements) {
       if (el.type === 'group') continue;
       const currentId = id++;
@@ -172,16 +192,17 @@ export async function exportPptx(slides: readonly Slide[]): Promise<PptxExport> 
         const h = emu(el.height * scale);
         const fill = color(el.headerBg);
         const border = color(el.borderColor, 'CBD5E1');
-        const rows = el.data
-          .map(
-            (row, ri) =>
-              `<a:tr h="${Math.round(h / el.rows)}">${row
-                .map((cell) =>
+        const rows = Array.from(
+            { length: el.rows },
+            (_, ri) =>
+              `<a:tr h="${Math.round(h / el.rows)}">${Array.from(
+                { length: el.cols },
+                (_, col) =>
                   [
                     `<a:tc>`,
                     `<a:txBody>`,
                     `<a:bodyPr/>`,
-                    `<a:lstStyle/>${paragraphs(cell, el.fontSize * scale, '#20283e', 'Arial', ri === 0 ? 'bold' : '')}</a:txBody>`,
+                    `<a:lstStyle/>${paragraphs(el.data[ri]?.[col] ?? '', el.fontSize * scale, '#20283e', 'Arial', ri === 0 ? 'bold' : '')}</a:txBody>`,
                     `<a:tcPr marL="${emu(8 * scale)}" marR="${emu(8 * scale)}" marT="${emu(6 * scale)}" marB="${emu(6 * scale)}">${['L', 'R', 'T', 'B'].map((side) => `<a:ln${side} w="6350"><a:solidFill><a:srgbClr val="${border}"/></a:solidFill></a:ln${side}>`).join('')}<a:solidFill>`,
                     `<a:srgbClr val="${ri === 0 ? fill : 'FFFFFF'}"/>`,
                     `</a:solidFill>`,
@@ -231,10 +252,18 @@ export async function exportPptx(slides: readonly Slide[]): Promise<PptxExport> 
           width: Math.max(1, el.width),
           height: Math.max(1, el.height),
           background: 'transparent',
+          backgroundImage: undefined,
           elements: [{ ...el, x: 0, y: 0, rotation: 0 } as CanvasElement],
         };
-        const blob = await svgToPng(serializeSlideToSvg(single), single.width, single.height);
-        image = new Uint8Array(await blob.arrayBuffer());
+        try {
+          if (el.type === 'image' && /^https?:\/\//i.test(el.src)) throw new Error('Image unavailable');
+          const scale = Math.min(1, 4096 / Math.max(single.width, single.height));
+          const blob = await svgToPng(serializeSlideToSvg(single), single.width * scale, single.height * scale);
+          image = new Uint8Array(await blob.arrayBuffer());
+        } catch {
+          warnings.add('Some images could not be included in the PowerPoint file.');
+          continue;
+        }
       }
       const filename = `image${++media}.${extension}`;
       const rid = `image${currentId}`;

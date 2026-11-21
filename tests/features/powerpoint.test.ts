@@ -38,6 +38,26 @@ const slide: Slide = {
 };
 beforeAll(() => vi.stubGlobal('crypto', webcrypto));
 describe('PowerPoint interchange', () => {
+  it('writes a background picture and keeps sparse tables rectangular', async () => {
+    const rasterizer = await import('@/lib/svg/toPng');
+    const rasterize = vi.spyOn(rasterizer, 'svgToPng').mockResolvedValue({
+      arrayBuffer: async () => new Uint8Array([137, 80, 78, 71]).buffer,
+    } as Blob);
+    try {
+      const table = { ...newTable(), rows: 2, cols: 3, data: [['A'], ['B', 'C']] };
+      const exported = await exportPptx([{
+        ...slide, backgroundImage: 'data:image/png;base64,iVBORw==', elements: [table],
+      }]);
+      const files = unpack(exported.bytes);
+      const xml = new TextDecoder().decode(files['ppt/slides/slide1.xml']);
+      expect(xml).toContain('r:embed="background"');
+      expect(files['ppt/media/image1.png']).toBeDefined();
+      expect(xml.match(/<a:tc>/g)).toHaveLength(6);
+      expect(rasterize).toHaveBeenCalledWith(expect.stringContaining('data:image/png;base64,iVBORw=='), 960, 540);
+    } finally {
+      rasterize.mockRestore();
+    }
+  });
   it('imports theme-colored diagonal connectors and resolves theme fonts', async () => {
     const exported = await exportPptx([{ ...slide, elements: [newLine(50, 60), newSimpleText(30, 40)] }]);
     const files = unpack(exported.bytes);

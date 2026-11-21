@@ -31,6 +31,7 @@ export function TripHotelSearch({ city, cityPoint, checkIn: initialCheckIn, chec
   const [freeCancellation, setFreeCancellation] = useState(false);
   const [maxRoubles, setMaxRoubles] = useState<number>();
   const [maxKm, setMaxKm] = useState<number>();
+  const [wholeCity, setWholeCity] = useState(false);
   const [busy, setBusy] = useState(false);
   const request = useRef<AbortController>();
   const refreshTimer = useRef<ReturnType<typeof setTimeout>>();
@@ -41,7 +42,8 @@ export function TripHotelSearch({ city, cityPoint, checkIn: initialCheckIn, chec
     request.current?.abort();
     request.current = undefined;
   }, []);
-  const distanceLimit = radiusMeters ?? (maxKm === undefined ? undefined : maxKm * 1000);
+  const distanceLimit = !wholeCity && radiusMeters !== undefined ? radiusMeters
+    : maxKm === undefined ? undefined : maxKm * 1000;
   const visible = useMemo(() => result?.hotels.filter(hotel => (!starFilter || (hotel.stars ?? 0) >= starFilter)
     && (result.catalogOnly || !freeCancellation || hotel.freeCancellation)
     && (result.catalogOnly || maxRoubles === undefined || (hotel.cost?.currency === 'RUB' && hotel.cost.amount <= maxRoubles))
@@ -119,7 +121,7 @@ export function TripHotelSearch({ city, cityPoint, checkIn: initialCheckIn, chec
   }, [active, mapMoved, mapStops, onMapState, refreshAfterMove, selectMarker]);
 
   return <details open={initiallyOpen} className="trip-hotel-search">
-    <summary>{t('Find hotels')}</summary>
+    <summary>{initiallyOpen ? t('Filters') : t('Find hotels')}</summary>
     <div className="trip-hotel-search-controls">
     {initiallyOpen && <>
       <label>{t('Check-in date')} <input type="date" value={checkIn} onChange={event => { resetResults(); setCheckIn(event.target.value); }} /></label>
@@ -131,7 +133,12 @@ export function TripHotelSearch({ city, cityPoint, checkIn: initialCheckIn, chec
     }} /></label>
     <button type="button" disabled={!validQuery || busy} onClick={() => void search()}>{t('Search')}</button>
     </div>
-    {radiusMeters === 1000 && <p>{t('Hotels within 1 km of this point')}</p>}
+    {radiusMeters === 1000 && <div className="trip-hotel-scope">
+      {!wholeCity && <p>{t('Hotels within 1 km of this point')}</p>}
+      <button type="button" aria-pressed={wholeCity} onClick={() => { setWholeCity(!wholeCity); setActive(undefined); }}>
+        {t('Search the whole city')}
+      </button>
+    </div>}
     {busy && <p role="status">{t('Loading…')}</p>}
     {result && !result.available && <p role="status">{t('Hotel search is unavailable.')}</p>}
     {result?.provider === 'RUSSIAN_TOURISM' && <p>{t('Registry results show hotel details without current prices or availability.')}</p>}
@@ -156,7 +163,7 @@ export function TripHotelSearch({ city, cityPoint, checkIn: initialCheckIn, chec
       {!visible?.length && <p role="status">{t('No matching hotels.')}</p>}
       <ul className="trip-hotel-list">{visible?.map(hotel => <li key={hotel.id} data-active={active === hotel.id}
         ref={node => { if (node) cards.current.set(hotel.id, node); else cards.current.delete(hotel.id); }}>
-        <button type="button" aria-pressed={active === hotel.id} onClick={() => { setActive(hotel.id); if (hotel.latitude != null && hotel.longitude != null) setMapOpen(true); }}>{hotel.name}</button>
+        <button type="button" className="trip-hotel-name" aria-pressed={active === hotel.id} onClick={() => { setActive(hotel.id); if (hotel.latitude != null && hotel.longitude != null) setMapOpen(true); }}>{hotel.name}</button>
         {hotel.photoUrl && /^https:\/\//i.test(hotel.photoUrl) && <img src={hotel.photoUrl} alt="" loading="lazy" width={120} />}
         {hotel.address && <p>{hotel.address}</p>}
         {(hotel.stars != null || hotel.rating != null) && <p>{hotel.stars != null && `${hotel.stars} ★ `}{hotel.rating}</p>}

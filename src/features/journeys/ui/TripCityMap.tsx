@@ -11,8 +11,9 @@ const emptyLines: RouteMapLeg[] = [];
 
 const transportLabels = { PLANE: 'Flight', TRAIN: 'Train', BUS: 'Bus', CAR: 'Car', FERRY: 'Ferry' } as const;
 
-export function TripCityMap({ cities, legs, plannedLines = emptyLines, focusStopId, accommodations = emptyAccommodations, onChangeLodging, onPick, hotelMap, onSelectCity, onMapCenter }: Pick<SharedTrip, 'cities'> & {
+export function TripCityMap({ cities, legs, plannedLines = emptyLines, focusStopId, accommodations = emptyAccommodations, onChangeLodging, onPick, hotelMap, onSelectCity, onMapCenter, showTransferList = true }: Pick<SharedTrip, 'cities'> & {
   legs: TripWireLeg[]; plannedLines?: RouteMapLeg[]; focusStopId?: string; accommodations?: SharedTrip['accommodations'];
+  showTransferList?: boolean;
   onChangeLodging?: (id: string) => void;
   onPick?: (point: CityPoint) => void;
   hotelMap?: TripHotelMapState;
@@ -59,7 +60,7 @@ export function TripCityMap({ cities, legs, plannedLines = emptyLines, focusStop
     })} />
     {!hotelMap && mapLegs.some(transfer => transfer.mode === 'transfer') &&
       <figcaption>{t('Dashed lines show connections between cities.')}</figcaption>}
-    {!hotelMap && transfers.length > 0 && <ul>{transfers.map(line => {
+    {showTransferList && !hotelMap && transfers.length > 0 && <ul>{transfers.map(line => {
       const leg = legs.find(item => item.id === line.id)!;
       return <li key={leg.id}><button type="button" aria-pressed={leg.id === selectedId}
         onClick={() => setSelectedId(leg.id)}>{cityName(leg.fromCityId)} → {cityName(leg.toCityId)}</button></li>;

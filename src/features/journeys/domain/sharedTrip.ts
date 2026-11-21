@@ -6,6 +6,8 @@ const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const money = z.object({ amount: z.number().nonnegative(), currency: z.string().regex(/^[A-Z]{3}$/) });
 const sharedTrip = z.object({
   title: text,
+  startDate: date.optional(),
+  endDate: date.optional(),
   cities: z.array(z.object({ id: text, name: text, latitude: point.shape.latitude.nullish(),
     longitude: point.shape.longitude.nullish() })).max(100),
   days: z.array(z.object({

@@ -130,7 +130,6 @@ export default function TripPlannerDraft() {
   const [choosingCity, setChoosingCity] = useState(false);
   const [placingCities, setPlacingCities] = useState(true);
   const cityInput = useRef<HTMLInputElement>(null);
-  const startDateInput = useRef<HTMLInputElement>(null);
   const [focusedDay, setFocusedDay] = useState<number>();
   const [showingCities, setShowingCities] = useState(true);
   const [editingTransfer, setEditingTransfer] = useState(false);
@@ -322,9 +321,8 @@ export default function TripPlannerDraft() {
     setShowingCities(true);
     setHotelMap(undefined);
     setHotelSearchDay(number);
-    const visit = visitId ? draft.days[number]?.visits?.find(item => item.id === visitId) : draft.days[number];
-    if (!visit?.cityPoint) setChoosingCity(true);
-    if (!draft.startDate) startDateInput.current?.focus();
+    setChoosingCity(false);
+    setPlacingCities(false);
   }
 
   function validDates() {
@@ -383,9 +381,10 @@ export default function TripPlannerDraft() {
       setSharing(false);
     }
   }
-  const hotelSearch = hotelSearchDay === dayNumber && day.city?.trim() && day.cityPoint && Number.isFinite(dayDate.getTime())
-    ? { city: day.city, point: day.cityPoint, checkIn: day.lodging?.checkIn ?? dayDate.toISOString().slice(0, 10),
-      checkOut: day.lodging?.checkOut ?? new Date(dayDate.getTime() + dayMilliseconds).toISOString().slice(0, 10) }
+  const hotelSearchDate = Number.isFinite(dayDate.getTime()) ? dayDate : new Date();
+  const hotelSearch = hotelSearchDay === dayNumber && day.city?.trim()
+    ? { city: day.city, point: day.cityPoint, checkIn: day.lodging?.checkIn ?? hotelSearchDate.toISOString().slice(0, 10),
+      checkOut: day.lodging?.checkOut ?? new Date(hotelSearchDate.getTime() + dayMilliseconds).toISOString().slice(0, 10) }
     : undefined;
 
   function setStartDate(startDate: string) {
@@ -413,7 +412,7 @@ export default function TripPlannerDraft() {
       <div className="trip-planner-dates">
         <label>{t('Trip name')} <input maxLength={180} value={draft.title ?? ''}
           onChange={event => edit({ title: event.target.value })} /></label>
-        <label>{t('Start date')} <input ref={startDateInput} type="date" value={draft.startDate} onChange={event => setStartDate(event.target.value)} /></label>
+        <label>{t('Start date')} <input type="date" value={draft.startDate} onChange={event => setStartDate(event.target.value)} /></label>
         <label>{t('End date')} <input type="date" value={draft.endDate} onChange={event => { edit({ endDate: event.target.value }); persist({ ...draft, endDate: event.target.value }); }} /></label>
       </div>
       <div className="trip-planner-grid" data-hotel-search={Boolean(hotelSearch)}>
@@ -435,8 +434,8 @@ export default function TripPlannerDraft() {
           <div className="trip-map-and-hotel">
             {showingCities && !choosingCity && <TripCityMap cities={cityMap?.cities ?? cityPins}
               legs={cityMap?.legs ?? []} plannedLines={lines} accommodations={cityMap?.accommodations}
-              hotelMap={hotelSearch ? hotelMap ?? { stops: [{ ...hotelSearch.point, id: '__day_point__',
-                label: hotelSearch.city, zone: 'UTC', stayMinutes: 0 }] } : undefined}
+              hotelMap={hotelSearch ? hotelMap ?? { stops: hotelSearch.point ? [{ ...hotelSearch.point, id: '__day_point__',
+                label: hotelSearch.city, zone: 'UTC', stayMinutes: 0 }] : [] } : undefined}
               onPick={placingCities ? point => addVisit(undefined, point) : undefined}
               focusStopId={placingCities || focusedDay !== dayNumber ? undefined
                 : cityMap?.cities.find(item => item.latitude === day.cityPoint?.latitude
@@ -463,7 +462,7 @@ export default function TripPlannerDraft() {
                 <button type="button" onClick={() => setHotelSearchDay(undefined)}>{t('Back')}</button>
               </header>
               <TripHotelSearch key={activeLocation} city={hotelSearch.city} cityPoint={hotelSearch.point}
-                checkIn={hotelSearch.checkIn} checkOut={hotelSearch.checkOut} radiusMeters={1000} initiallyOpen onMapState={setHotelMap}
+                checkIn={hotelSearch.checkIn} checkOut={hotelSearch.checkOut} radiusMeters={hotelSearch.point ? 1000 : undefined} initiallyOpen onMapState={setHotelMap}
                 onSelect={lodging => { editDay({ lodging }, true); setHotelSearchDay(undefined); }} />
             </section>}
           </div>

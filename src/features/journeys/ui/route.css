@@ -454,7 +454,7 @@
 .trip-planner .trip-planner-day .journey-primary { background: #26674e; border-color: #26674e; }
 .trip-saved-transfers { margin-block: .6rem 1.2rem; }
 
-.trip-saved { max-width: 1160px; padding-inline: clamp(1rem, 3vw, 2rem); }
+.journey-main.trip-saved { max-width: 1160px; padding-inline: clamp(1rem, 3vw, 2rem); }
 .trip-saved-heading {
   display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 1rem;
   padding: 1.1rem 0; margin: 0 0 1.3rem;
@@ -462,6 +462,12 @@
 .trip-saved-heading > div > p { margin: 0; color: #4d6659; }
 .trip-saved-heading h1 { margin: .25rem 0 0; overflow-wrap: anywhere; }
 .trip-saved-actions { align-items: center; }
+.trip-saved-actions > button, .trip-saved-export-options > button {
+  min-height: 44px; padding: .58rem .9rem; border: 1px solid #26674e; border-radius: .65rem;
+  background: #fff; color: #235a45; font: inherit; font-weight: 650; cursor: pointer;
+}
+.trip-saved-actions > button { color: #fff; background: #26674e; }
+.trip-saved-actions button:disabled { opacity: .55; }
 .trip-saved-actions summary, .trip-saved-transfers summary { cursor: pointer; padding: .55rem .7rem; }
 .trip-saved-export-options { display: flex; flex-wrap: wrap; gap: .4rem; padding: .4rem; }
 .trip-saved-layout { display: grid; grid-template-columns: minmax(15rem, 2fr) minmax(0, 3fr); gap: clamp(1rem, 3vw, 2rem); }
@@ -472,11 +478,17 @@
 .trip-saved-map nav a {
   min-height: 44px; display: flex; align-items: baseline; flex-wrap: wrap; column-gap: .55rem;
   padding: .6rem .75rem; border: 1px solid #dbe7dd; border-radius: .65rem; background: #fff; color: #235a45;
+  text-decoration: none; font-weight: 650;
 }
+.trip-saved-map nav a:hover { border-color: #327556; }
+.trip-saved :is(a, button, summary):focus-visible { outline: 2px solid #327556; outline-offset: 2px; }
 .trip-saved-map nav time { color: #4d6659; font-size: .85rem; }
 .trip-saved-itinerary { min-width: 0; }
 .trip-saved-itinerary .trip-day-timeline { margin-block: 0; }
-.trip-saved-day { scroll-margin-top: 5rem; }
+.trip-saved-day {
+  scroll-margin-top: 5rem; margin-bottom: .8rem; padding: .8rem 1rem;
+  background: #fff; border: 1px solid #dbe7dd; border-radius: .8rem;
+}
 .trip-saved-day:target { border-color: #327556; }
 .trip-saved-day > header > div { display: block; }
 .trip-saved-day > ol { display: grid; grid-template-columns: minmax(0, 1fr); }

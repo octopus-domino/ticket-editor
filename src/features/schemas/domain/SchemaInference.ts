@@ -38,7 +38,6 @@ export function inferFieldsFromSlides(slides: unknown[]): FieldDef[] {
   }
 
   return Array.from(seen.entries())
-    .sort(([a], [b]) => a.localeCompare(b))
     .map(([path, type]) => ({ path, type, required: true, label: path }));
 }
 

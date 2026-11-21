@@ -3,7 +3,7 @@ import type { Slide } from '@/shared/types';
 import type { Binding } from './Binding';
 
 const PH_RE = /\{\{\s*([\w.[\]]+)\s*\}\}/g;
-const ARRAY_PH_RE = /\{\{\s*([\w.]+)\[\d+\]/g;
+const ARRAY_PATH_RE = /^([\w.]+)\[\d+\]/;
 
 /**
  * Обходит слайды и собирает все точки вставки.
@@ -12,7 +12,7 @@ const ARRAY_PH_RE = /\{\{\s*([\w.]+)\[\d+\]/g;
  *  - ShapeElement.text             — каждое {{...}}
  *  - FooterElement.text / .html    — каждое {{...}}
  *  - ImageElement.src              — каждое {{...}}
- *  - TableElement.data[i][j]       — по базе массива из {{base[N].field}}
+ *  - TableElement.data[i][j]       — отдельное поле или база массива из {{base[N].field}}
  */
 export function resolveBindings(
   slides: readonly Slide[],
@@ -82,19 +82,16 @@ export function resolveBindings(
       if (el.type === 'table') {
         // Одна связь на каждый уникальный базовый путь массива.
         // Пример ячейки: {{catalog.items[0].name}} → база "catalog.items".
-        const bases = new Set<string>();
         for (const row of el.data ?? []) {
           for (const cell of row ?? []) {
-            if (typeof cell !== 'string' || !cell) continue;
-            ARRAY_PH_RE.lastIndex = 0;
-            let m: RegExpExecArray | null;
-            while ((m = ARRAY_PH_RE.exec(cell)) !== null) {
-              bases.add(m[1]);
+            if (typeof cell !== 'string') continue;
+            for (const match of cell.matchAll(PH_RE)) {
+              const base = ARRAY_PATH_RE.exec(match[1])?.[1];
+              const label = __tr('Таблица ({0})', base ?? match[1]);
+              if (base) add(el.id, label, base, base, 'auto');
+              else add(el.id, label, match[0], match[1], 'auto');
             }
           }
-        }
-        for (const base of bases) {
-          add(el.id, __tr("Таблица ({0})", base), base, base, 'auto');
         }
         continue;
       }
@@ -112,7 +109,7 @@ export function resolveBindings(
     const expectedType =
       element?.type === 'image'
         ? 'image'
-        : element?.type === 'table'
+        : element?.type === 'table' && !binding.placeholder.startsWith('{{')
           ? 'array'
           : element?.type === 'placeholder'
             ? element.fieldType

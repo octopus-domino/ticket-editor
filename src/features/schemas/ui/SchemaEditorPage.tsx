@@ -63,31 +63,24 @@ const TYPES: FieldType[] = ['string', 'number', 'date', 'boolean', 'image', 'obj
 function unflattenFields(flat: readonly FieldDef[]): DraftField[] {
   const byFullPath = new Map<string, DraftField>();
   const result: DraftField[] = [];
-  const sorted = [...flat].sort((a, b) => a.path.localeCompare(b.path));
-
-  for (const f of sorted) {
+  for (const f of flat) {
+    byFullPath.set(f.path, { ...f, key: crypto.randomUUID(), children: [] });
+  }
+  for (const f of flat) {
     const parts = f.path.split('.');
     const parentPath = parts.slice(0, -1).join('.');
     const ownName = parts[parts.length - 1];
     const parent = parentPath ? byFullPath.get(parentPath) : undefined;
     const canNest = !!parent && (parent.type === 'array' || parent.type === 'object');
 
-    const draft: DraftField = {
-      key: crypto.randomUUID(),
-      path: canNest ? ownName : f.path,
-      type: f.type,
-      required: f.required,
-      label: f.label,
-      defaultValue: f.defaultValue,
-      children: [],
-    };
+    const source = byFullPath.get(f.path)!;
+    const draft = canNest ? { ...source, path: ownName } : source;
 
     if (canNest && parent) {
       (parent.children ??= []).push(draft);
     } else {
       result.push(draft);
     }
-    byFullPath.set(f.path, draft);
   }
   return result;
 }

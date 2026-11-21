@@ -177,8 +177,7 @@ export const BindingMatrix: React.FC = () => {
             {bindings.map((b) => {
               const key = `${b.elementId}|${b.placeholder}`;
               const element = elementsById.get(b.elementId);
-              const isTable = element?.type === 'table';
-              const allowed = isTable ? arrayPaths : known;
+              const allowed = element?.type === 'table' && b.expectedType === 'array' ? arrayPaths : known;
               const isMissing = !allowed.some((f) => f.path === b.schemaPath);
               return (
                 <tr key={key}>

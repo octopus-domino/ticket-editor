@@ -9,17 +9,26 @@ export function materializeElement(
   values: Record<string, unknown>,
   bindings: readonly DocumentBinding[] = [],
 ): CanvasElement {
-  values = { ...values };
+  const aliases = new Map<string, string>();
   for (const binding of bindings) {
     if (binding.elementId !== element.id || binding.status === 'ignored') continue;
     const path = binding.placeholder.replace(/^\{\{|\}\}$/g, '').trim();
-    const value = getByPath(values, binding.schemaPath);
-    values[path] = value;
+    if (path) aliases.set(path, binding.schemaPath);
+  }
+  function read(path: string): unknown {
+    let source = path;
+    let length = 0;
+    for (const [alias, schemaPath] of aliases) {
+      if (alias.length <= length || (path !== alias && !path.startsWith(alias + '.') && !path.startsWith(alias + '['))) continue;
+      source = schemaPath + path.slice(alias.length);
+      length = alias.length;
+    }
+    return getByPath(values, source);
   }
   const copy = structuredClone(element);
   const replace = (text: string | undefined, html = false) =>
     (text ?? '').replace(/\{\{\s*([\w.[\]]+)\s*\}\}/g, (_token, path: string) => {
-      const value = getByPath(values, path);
+      const value = read(path);
       const textValue = value == null ? '' : String(value);
       return html ? escapeXml(textValue) : textValue;
     });
@@ -35,7 +44,7 @@ export function materializeElement(
   }
   if (copy.type === 'image') copy.src = replace(copy.src);
   if (copy.type === 'placeholder') {
-    const value = getByPath(values, copy.fieldPath);
+    const value = read(copy.fieldPath);
     copy.sample = value == null ? '' : String(value);
   }
   if (copy.type === 'table') copy.data = copy.data.map((row) => row.map((cell) => replace(cell)));

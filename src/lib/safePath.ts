@@ -17,12 +17,24 @@ export function parsePath(path: string): (string | number)[] {
 }
 export function getByPath(obj: unknown, path: string): unknown {
   const segments = parsePath(path);
-  if (obj && typeof obj === 'object' && Object.hasOwn(obj, path))
-    return (obj as Record<string, unknown>)[path];
-  return segments.reduce<unknown>((value, key) => {
+  if (!obj || typeof obj !== 'object') return undefined;
+  const record = obj as Record<string, unknown>;
+  if (Object.hasOwn(record, path)) return record[path];
+  const read = (source: unknown, keys: (string | number)[]) => keys.reduce<unknown>((value, key) => {
     if (!value || typeof value !== 'object' || !Object.hasOwn(value, key)) return undefined;
     return (value as Record<string | number, unknown>)[key];
-  }, obj);
+  }, source);
+  const value = read(record, segments);
+  if (value !== undefined) return value;
+  const boundaries = [...path.matchAll(/[.[]/g)];
+  for (let index = boundaries.length - 1; index >= 0; index--) {
+    const offset = boundaries[index].index;
+    const prefix = path.slice(0, offset);
+    if (Object.hasOwn(record, prefix)) {
+      return read(record[prefix], segments.slice(parsePath(prefix).length));
+    }
+  }
+  return undefined;
 }
 /** Copy only ancestors, preserving sibling values and structural sharing. */
 export function setByPath(

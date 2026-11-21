@@ -107,6 +107,8 @@
 .trip-exp-day-title h2 { font-size: 1.3rem; margin: 0; }
 .trip-exp-day-title time { color: var(--trip-muted); }
 .trip-exp-day-services > summary { cursor: pointer; font-weight: 650; padding-block: 8px; }
+.trip-exp-city-entry[data-first-stop] { display: grid; justify-items: start; gap: 8px; }
+.trip-exp-city-entry[data-first-stop] > .route-address { width: 100%; }
 .trip-exp .trip-day-program { order: -1; background: var(--trip-subtle); }
 .trip-exp .trip-planner-day > .trip-exp-itinerary { order: -2; margin-block: 4px; }
 .trip-exp .trip-exp-day-title { order: -3; }

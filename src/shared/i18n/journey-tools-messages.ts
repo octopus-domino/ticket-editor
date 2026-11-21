@@ -217,6 +217,7 @@ No direct trains found.|Прямые поезда не найдены.|未找到
 Plan walk in Journey|Спланировать прогулку в Journey|在 Journey 中规划步行路线|Zaplanuj spacer w Journey|Pianifica la passeggiata in Journey|Planificar paseo en Journey|Plan de wandeling in Journey|Planifier la promenade dans Journey|Spaziergang in Journey planen
 Save trip to account|Сохранить поездку в аккаунт|将行程保存到账户|Zapisz podróż na koncie|Salva il viaggio nell’account|Guardar viaje en la cuenta|Reis opslaan in account|Enregistrer le voyage dans le compte|Reise im Konto speichern
 New trip|Новая поездка|新行程|Nowa podróż|Nuovo viaggio|Nuevo viaje|Nieuwe reis|Nouveau voyage|Neue Reise
+Where does your trip start?|Откуда вы выезжаете?|您的行程从哪里开始？|Skąd wyruszasz?|Da dove parti?|¿Desde dónde sales?|Waar vertrek je?|D’où partez-vous ?|Wo startest du?
 Recent trip drafts|Черновики поездок|行程草稿|Szkice podróży|Bozze di viaggio|Borradores de viajes|Reisconcepten|Brouillons de voyage|Reiseentwürfe
 Load more hotels|Показать ещё отели|加载更多酒店|Pokaż więcej hoteli|Mostra altri hotel|Mostrar más hoteles|Meer hotels tonen|Afficher plus d’hôtels|Weitere Hotels anzeigen
 Could not load more hotels.|Не удалось загрузить следующую страницу отелей.|无法加载更多酒店。|Nie udało się wczytać więcej hoteli.|Impossibile caricare altri hotel.|No se pudieron cargar más hoteles.|Meer hotels laden is mislukt.|Impossible de charger plus d’hôtels.|Weitere Hotels konnten nicht geladen werden.

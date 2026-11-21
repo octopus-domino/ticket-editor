@@ -80,6 +80,9 @@ test('keeps a walk on the receiving city and retains the draft when starting a n
 
   await workspace.getByRole('button', { name: 'New trip' }).click();
   await expect(workspace.getByRole('heading', { name: 'Travel planner' })).toBeVisible();
+  await expect(workspace.getByRole('heading', { name: 'Where does your trip start?' })).toBeVisible();
+  await expect(workspace.getByRole('button', { name: /Plan walk in Journey/ })).toHaveCount(0);
+  await expect(workspace.getByRole('button', { name: 'Save trip to account' })).toHaveCount(0);
   await page.reload();
   await workspace.getByText('Recent trip drafts', { exact: true }).click();
   await workspace.getByRole('button', { name: draft.title }).click();
@@ -159,6 +162,19 @@ test('planner opens a selected day beside the same map and supports mobile plann
   await expect(workspace.locator('.leaflet-tile-loaded').first()).toBeVisible({ timeout: 25_000 });
   await expect(workspace.locator('.leaflet-tile:not(.leaflet-tile-loaded)')).toHaveCount(0, { timeout: 25_000 });
   await page.screenshot({ path: testInfo.outputPath('planner-empty-desktop.png'), animations: 'disabled', fullPage: true });
+  await page.route('**/api/journeys/routes/addresses?**', route => route.fulfill({
+    json: [{ label: 'Saint Petersburg', latitude: 59.94, longitude: 30.34 }],
+  }));
+  await workspace.getByRole('combobox', { name: 'City' }).fill('Saint Petersburg');
+  await workspace.getByRole('button', { name: 'Saint Petersburg', exact: true }).click();
+  await expect(workspace.getByRole('heading', { name: 'Saint Petersburg' })).toBeVisible();
+  await expect(workspace.getByRole('button', { name: /Plan walk in Journey/ })).toBeVisible();
+  await workspace.getByRole('button', { name: 'Add cities on the map' }).click();
+  await workspace.locator('.route-map').click({ position: { x: 200, y: 150 } });
+  await workspace.locator('.trip-map-and-hotel').getByRole('button', { name: 'Add city', exact: true }).click();
+  const points = await page.evaluate(() => JSON.parse(localStorage.getItem('codoc/trip-planner/draft/v2')!).days[1]);
+  expect(points.city).toBe('Saint Petersburg');
+  expect(points.visits).toHaveLength(1);
   const plannerDraft: LocalTripDraft = { ...draft, days: { ...draft.days, 2: { ...draft.days[2],
     visits: [{ id: 'second-tver-stop', city: 'Volga embankment',
       stops: [{ id: 'volga-start', label: 'Volga start', latitude: 56.86, longitude: 35.91, zone: 'Europe/Moscow', stayMinutes: 0 },

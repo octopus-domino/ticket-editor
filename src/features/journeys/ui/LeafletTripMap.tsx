@@ -42,7 +42,7 @@ export function LeafletTripMap({
     // Zoom can be initiated by fitting or by the user. Only input gestures refresh the hotel search.
     const wheel = notifyMove;
     element.addEventListener('wheel', wheel, { passive: true });
-    const resize = new ResizeObserver(() => instance.invalidateSize({ pan: false, debounceMoveend: true }));
+    const resize = new ResizeObserver(() => instance.invalidateSize({ animate: false, debounceMoveend: true }));
     resize.observe(element);
     return () => {
       element.removeEventListener('wheel', wheel);
@@ -64,6 +64,7 @@ export function LeafletTripMap({
       const clickable = selectable && !origin;
       const node = document.createElement(clickable ? 'button' : 'span');
       node.className = `route-map-marker${origin ? ' route-map-marker--origin' : hotelMode ? ' route-map-marker--hotel' : ''}`;
+      node.dataset.stopId = id;
       node.textContent = origin ? '•' : hotelMode ? 'H' : routePointMarker(index, pins.length);
       if (node instanceof HTMLButtonElement) {
         node.type = 'button';
@@ -127,9 +128,12 @@ export function LeafletTripMap({
   }, [fit, legs, stops]);
 
   useEffect(() => {
+    container.current?.querySelectorAll<HTMLElement>('[data-stop-id]').forEach(marker => {
+      marker.toggleAttribute('data-focused', marker.dataset.stopId === focusStopId);
+    });
     const point = latest.current.stops.find(stop => stop.id === focusStopId);
     if (point) map.current?.panTo([point.latitude, point.longitude], { animate: false });
-  }, [focusStopId]);
+  }, [focusStopId, markerKey, moving, selectable]);
 
   return <div ref={container} className="route-map trip-leaflet-map" data-picking={Boolean(onPick)}
     aria-label={cityMap ? t('Trip map') : t('Route map')} />;

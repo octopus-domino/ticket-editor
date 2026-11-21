@@ -1,0 +1,76 @@
+.trip-exp {
+  --trip-ink: #1f2f2b;
+  --trip-muted: #52665f;
+  --trip-surface: #fff;
+  --trip-subtle: #f2f5f1;
+  --trip-border: #d7e2d9;
+  --trip-accent: #17654f;
+  min-height: 100vh;
+  background: #f8f7f3;
+  color: var(--trip-ink);
+  padding: clamp(16px, 3vw, 40px);
+  font-size: 16px;
+  line-height: 1.5;
+}
+.trip-exp > * { max-width: 1480px; margin-inline: auto; min-width: 0; }
+.trip-exp :is(button, a, summary):focus-visible { outline: 2px solid var(--trip-accent); outline-offset: 3px; }
+.trip-exp-header { display: flex; justify-content: space-between; align-items: end; gap: 16px; flex-wrap: wrap; }
+.trip-exp-header h1 { margin: 4px 0; font-size: clamp(28px, 3.5vw, 38px); line-height: 1.15; overflow-wrap: anywhere; }
+.trip-exp-header p { margin: 0; color: var(--trip-muted); }
+.trip-exp-back { display: inline-block; font-size: .875rem; margin-bottom: 8px; color: var(--trip-accent); }
+.trip-exp-dates { font-size: .875rem; color: var(--trip-muted); }
+.trip-exp-actions, .trip-exp-control-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.trip-exp :is(.trip-exp-actions, .trip-exp-control-row, .trip-exp-navigation) :is(button, summary) {
+  min-height: 44px; padding: 8px 13px; border: 1px solid var(--trip-border); border-radius: 10px;
+  background: var(--trip-surface); color: var(--trip-ink); font: inherit; cursor: pointer;
+}
+.trip-exp .trip-exp-actions > button:first-child { background: var(--trip-accent); color: white; border-color: var(--trip-accent); }
+.trip-exp-actions details { position: relative; }
+.trip-exp-action-menu {
+  position: absolute; z-index: 1001; inset-inline-end: 0; top: calc(100% + 6px); min-width: 180px;
+  display: grid; gap: 4px; padding: 8px; background: var(--trip-surface); border: 1px solid var(--trip-border); border-radius: 12px;
+}
+.trip-exp-navigation { display: flex; align-items: center; gap: 10px; padding-block: 16px; }
+.trip-exp-navigation nav { display: flex; gap: 8px; overflow-x: auto; padding: 4px; margin: -4px; flex: 1; }
+.trip-exp .trip-exp-navigation button { flex: 0 0 auto; text-align: start; }
+.trip-exp-navigation button :is(span, time) { display: block; }
+.trip-exp-navigation button time { color: var(--trip-muted); font-size: .8rem; }
+.trip-exp .trip-exp-navigation button[aria-current] {
+  color: var(--trip-accent); border-color: var(--trip-accent); background: var(--trip-subtle); font-weight: 650;
+}
+.trip-exp-workspace { display: grid; grid-template-columns: minmax(18rem, 2fr) minmax(0, 3fr); gap: clamp(12px, 2vw, 24px); }
+.trip-exp-panel {
+  min-width: 0; background: var(--trip-surface); border: 1px solid var(--trip-border);
+  border-radius: 16px; padding: clamp(14px, 2vw, 24px);
+}
+.trip-exp-panel h2 { margin: 0 0 8px; font-size: 1.3rem; }
+.trip-exp-panel p { margin-block: .4rem .8rem; }
+.trip-exp-workspace > .trip-exp-panel { align-self: start; }
+.trip-exp-map .route-map-marker[data-focused] { outline: 3px solid var(--trip-accent); outline-offset: 2px; }
+.trip-exp-map { align-self: start; padding: 12px; }
+.trip-exp-map figure { margin: 0; }
+.trip-exp-map .route-map { height: clamp(300px, 47vh, 520px); }
+.trip-exp-map figcaption { color: var(--trip-muted); font-size: .85rem; margin: 8px 4px 0; }
+.trip-exp-control-row { margin-block-end: 10px; }
+.trip-exp-itinerary { list-style: none; padding: 0 0 0 16px; margin: 12px 0 0; }
+.trip-exp-itinerary > li { position: relative; padding: 5px 0 5px 12px; border-inline-start: 1px solid var(--trip-border); }
+.trip-exp-itinerary > li::before {
+  content: ''; position: absolute; inset: 24px auto auto -4px; width: 7px; height: 7px;
+  border: 1px solid var(--trip-accent); border-radius: 50%; background: var(--trip-surface);
+}
+.trip-exp-stay { padding: 12px; border-radius: 10px; background: var(--trip-subtle); }
+.trip-exp-itinerary button {
+  min-height: 44px; max-width: 100%; text-align: start; padding: 5px 8px; border: 0; border-radius: 6px;
+  color: var(--trip-ink); background: transparent; font: inherit; font-weight: 650; cursor: pointer;
+}
+.trip-exp-itinerary button[aria-pressed="true"] { background: var(--trip-subtle); color: var(--trip-accent); }
+.trip-exp-itinerary li p { margin: 0 8px 6px; color: var(--trip-muted); }
+.trip-exp-related { display: flex; gap: 12px; flex-wrap: wrap; margin-block-start: 16px; }
+.trip-exp-related > details { flex: 1 1 15rem; }
+.trip-exp-related summary { cursor: pointer; font-weight: 650; }
+.trip-exp-message { padding: 24px; }
+@media (max-width: 767px) {
+  .trip-exp-workspace { grid-template-columns: minmax(0, 1fr); }
+  .trip-exp-map .route-map { height: min(62vw, 360px); min-height: 210px; }
+  .trip-exp .trip-exp-navigation { padding-block: 12px; }
+}

@@ -1,60 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
-import { getLocale, t } from '@/shared/i18n';
+import { t } from '@/shared/i18n';
 import { downloadFile } from '@/shared/files/download';
 import { fetchTripExport, openAccountTrip, tripExportFiles, type AccountTrip, type TripExport } from '../api/tripDraft';
-import { RouteMap } from './RouteMap';
-import { TripCityMap } from './TripCityMap';
 import { TripTemplateAction } from './TripTemplateAction';
-import { travelDuration } from '../domain/tripDocumentContent';
-import type { PlannedLeg } from '../domain/route';
-import { readTripShare, readTripShareFile, type SharedTrip } from '../domain/sharedTrip';
+import { readTripShare, readTripShareFile, sharedTripJson, shareTripUrl, type SharedTrip } from '../domain/sharedTrip';
+import { TripView } from './trip-experience/TripView';
 import './route.css';
-
-const ignoreMapHandle = () => undefined;
-
-function displayTripDate(value: string, dateStyle: 'medium' | 'full' = 'medium') {
-  return new Intl.DateTimeFormat(getLocale(), { dateStyle, timeZone: 'UTC' }).format(new Date(value));
-}
-
-function TripDay({ day, city, id, lodging }: {
-  day: SharedTrip['days'][number]; city: string | undefined; id: string; lodging?: SharedTrip['accommodations'][number];
-}) {
-  const [expanded, setExpanded] = useState(false);
-  const stops = day.segments.flatMap(segment => segment.id.startsWith('visit-') || segment.idea || segment.latitude == null || segment.longitude == null ? [] : [{
-    id: segment.id, label: segment.title, latitude: segment.latitude, longitude: segment.longitude,
-    zone: 'UTC', stayMinutes: 0,
-  }]);
-  const legs = (day.walkingSections ?? []).map((section): PlannedLeg => ({
-    mode: 'foot', distanceMeters: section.distanceMeters, durationSeconds: section.durationSeconds,
-    coordinates: section.geometry.map(({ longitude, latitude }) => [longitude, latitude]),
-  }));
-  return <section id={id} className="trip-day-timeline-item trip-saved-day">
-    <header><div>
-      <time dateTime={day.date}>{displayTripDate(day.date, 'full')}</time>
-      <h2>{city || t('Trip day')}</h2>
-    </div></header>
-    {lodging && <p className="trip-saved-lodging"><strong>{lodging.name}</strong>{lodging.address && ` · ${lodging.address}`}</p>}
-    {day.note && <p>{day.note}</p>}
-    {legs.length > 0 && <details onToggle={event => setExpanded(event.currentTarget.open)}>
-      <summary>{t('Private itineraries')} · {travelDuration(legs.reduce((sum, leg) => sum + leg.durationSeconds, 0))}</summary>
-      {expanded && <RouteMap rasterBasemap stops={stops} legs={legs} onReady={ignoreMapHandle} />}
-    </details>}
-    <ol>{day.segments.filter(segment => !segment.idea && !(segment.id.startsWith('visit-') && segment.title === city))
-      .map(segment => <li key={segment.id}>
-      <strong>{segment.title}</strong>
-      {segment.note && <p>{segment.note}</p>}
-    </li>)}</ol>
-    {day.segments.some(segment => segment.idea) && <section aria-label={t('Trip ideas')}>
-      <h3>{t('Trip ideas')}</h3>
-      <ul>{day.segments.filter(segment => segment.idea).map(segment => <li key={segment.id}>{segment.title}</li>)}</ul>
-    </section>}
-  </section>;
-}
 
 export default function AccountTripPage() {
   const { id } = useParams();
   const [loaded, setLoaded] = useState<{ id: string; trip: AccountTrip | null }>();
+  const [reload, setReload] = useState(0);
+  const [shareLink, setShareLink] = useState<string>();
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<TripExport>();
   useEffect(() => {
@@ -65,10 +23,19 @@ export default function AccountTripPage() {
       () => { if (!request.signal.aborted) setLoaded({ id, trip: null }); },
     );
     return () => request.abort();
-  }, [id]);
-  if (!loaded || loaded.id !== id) return <p role="status">{t('Loading…')}</p>;
+  }, [id, reload]);
+  if (!loaded || loaded.id !== id) return <p className="trip-exp-message" role="status">{t('Loading…')}</p>;
   const { trip } = loaded;
-  if (!trip) return <p role="alert">{t('Could not open the account trip.')}</p>;
+  if (!trip) return <div className="trip-exp-message" role="alert">
+    <p>{t('Could not open the account trip.')}</p>
+    <button type="button" onClick={() => { setLoaded(undefined); setReload(value => value + 1); }}>{t('Retry')}</button>
+  </div>;
+  const accountTrip = trip;
+  async function share() {
+    const url = await shareTripUrl(accountTrip, window.location.origin);
+    if (url) setShareLink(url);
+    else downloadFile(new Blob([sharedTripJson(accountTrip)], { type: 'application/json' }), 'trip.json');
+  }
   async function exportTrip(tripId: string, kind: TripExport) {
     setExporting(true);
     setExportError(undefined);
@@ -80,27 +47,25 @@ export default function AccountTripPage() {
       setExporting(false);
     }
   }
-  return <TripView trip={trip}>
-    <div className="trip-saved-actions">
-      <TripTemplateAction getTrip={() => trip} />
-      <details>
-        <summary>{t('Export')}</summary>
-        <div className="trip-saved-export-options">
-          <button type="button" disabled={exporting} onClick={() => void exportTrip(trip.id, 'calendar')}>
-            {t('Export calendar')}
-          </button>
-          <button type="button" disabled={exporting} onClick={() => void exportTrip(trip.id, 'json')}>{t('Export JSON')}</button>
-          {'legacyRouteId' in trip.meta && Boolean(trip.meta.legacyRouteId) &&
-            <button type="button" disabled={exporting} onClick={() => void exportTrip(trip.id, 'legacy')}>
-              {t('Export original route')}
-            </button>}
-        </div>
-      </details>
-    </div>
+  return <TripView trip={trip} mode="owner" actions={<>
+    <button type="button" onClick={() => void share()}>{t('Share')}</button>
+    <details>
+      <summary>{t('Export')}</summary>
+      <div className="trip-exp-action-menu">
+        <TripTemplateAction getTrip={() => trip} />
+        <button type="button" disabled={exporting} onClick={() => void exportTrip(trip.id, 'calendar')}>{t('Export calendar')}</button>
+        <button type="button" disabled={exporting} onClick={() => void exportTrip(trip.id, 'json')}>{t('Export JSON')}</button>
+        {trip.meta && 'legacyRouteId' in trip.meta && Boolean(trip.meta.legacyRouteId) && <button type="button" disabled={exporting} onClick={() => void exportTrip(trip.id, 'legacy')}>
+          {t('Export original route')}
+        </button>}
+      </div>
+    </details>
+    {shareLink && <label>{t('Trip link')} <input readOnly value={shareLink} onFocus={event => event.target.select()} /></label>}
     {exportError && <p role="alert">{exportError === 'calendar' ? t('Could not export the calendar.')
-      : exportError === 'pdf' ? t('Could not export PDF.') : t('Could not export trip JSON.')}</p>}
-    {trip.budget?.limit && <p>{t('Trip budget')} · {trip.budget.limit.amount} {trip.budget.limit.currency}</p>}
-  </TripView>;
+      : t('Could not export trip JSON.')}</p>}
+  </>} details={trip.budget?.limit && <details className="trip-exp-panel">
+    <summary>{t('Trip budget')}</summary><p>{trip.budget.limit.amount} {trip.budget.limit.currency}</p>
+  </details>} />;
 }
 
 export function SharedTripPage() {
@@ -117,7 +82,7 @@ export function SharedTripPage() {
     );
     return () => { current = false; };
   }, [data]);
-  if (!data) return openedFile ? <TripView trip={openedFile} /> : <main className="journey-main">
+  if (!data) return openedFile ? <TripView trip={openedFile} mode="shared" source={t('Open trip file')} /> : <main className="journey-main">
     <label>{t('Open trip file')} <input type="file" accept=".json,application/json" onChange={event => {
       const file = event.currentTarget.files?.[0];
       if (file) void readTripShareFile(file).then(setOpenedFile, () => setOpenedFile(null));
@@ -126,52 +91,5 @@ export function SharedTripPage() {
   </main>;
   if (!loaded || loaded.data !== data) return <p role="status">{t('Loading…')}</p>;
   if (!loaded.trip) return <p role="alert">{t('Could not open the trip link.')}</p>;
-  return <TripView trip={loaded.trip} />;
-}
-
-function TripView({ trip, children }: { trip: SharedTrip; children?: React.ReactNode }) {
-  const [focusStopId, setFocusStopId] = useState<string>();
-  const cities = new Map(trip.cities.map(city => [city.id, city.name]));
-  const lodgings = new Map(trip.accommodations.map(lodging => [lodging.id, lodging]));
-  const firstDate = trip.startDate || trip.days[0]?.date;
-  const lastDate = trip.endDate || trip.days.at(-1)?.date;
-  return <main className="journey-main journey-main--travel trip-saved">
-    <header className="trip-saved-heading">
-      <div>
-        {firstDate && <p><time dateTime={firstDate}>{displayTripDate(firstDate)}</time>
-          {lastDate && lastDate !== firstDate && <>{' \u2013 '}<time dateTime={lastDate}>{displayTripDate(lastDate)}</time></>}</p>}
-        <h1>{trip.title}</h1>
-      </div>
-      <div>{children}</div>
-    </header>
-    <div className="trip-saved-layout">
-      <aside className="trip-saved-map">
-        <TripCityMap cities={trip.cities} legs={trip.legs} accommodations={trip.accommodations}
-          focusStopId={focusStopId} onSelectCity={setFocusStopId} showTransferList={false} />
-        {trip.days.length > 1 && <nav aria-label={t('Trip overview')}>
-          <ul>{trip.days.map((day, index) => <li key={index}>
-            <a href={`#trip-day-${index}`} onClick={() => setFocusStopId(day.cityId)}>
-              <time dateTime={day.date}>{displayTripDate(day.date)}</time>
-              {cities.get(day.cityId) || t('Trip day')}
-            </a>
-          </li>)}</ul>
-        </nav>}
-      </aside>
-      <div className="trip-saved-itinerary">
-        {trip.legs.length > 0 && <details className="trip-saved-transfers" open>
-          <summary>{t('Transfer details')}</summary>
-          <ul>{trip.legs.map(leg => <li key={leg.id}>
-            {leg.note && <strong>{leg.note}</strong>}{' '}
-            {cities.get(leg.fromCityId)} → {cities.get(leg.toCityId)}
-            {leg.durationSeconds != null && ` · ${travelDuration(leg.durationSeconds)}`}
-            {leg.departureAt && <time dateTime={leg.departureAt}> · {leg.departureAt.slice(11, 16)}</time>}
-          </li>)}</ul>
-        </details>}
-        <div className="trip-day-timeline">
-          {trip.days.map((day, index) => <TripDay key={index} id={`trip-day-${index}`} day={day} city={cities.get(day.cityId)}
-            lodging={day.accommodationId ? lodgings.get(day.accommodationId) : undefined} />)}
-        </div>
-      </div>
-    </div>
-  </main>;
+  return <TripView trip={loaded.trip} mode="shared" />;
 }

@@ -41,7 +41,7 @@ test('round-trips a trip with two cities, train, hotel and a Journey walk after 
     json: new URL(route.request().url()).searchParams.get('q') === 'Petersburg'
       ? [{ code: 'c2', title: 'Petersburg', region: 'Russia' }] : [{ code: 'c213', title: 'Moscow', region: 'Russia' }],
   }));
-  await page.goto('/start/tours');
+  await page.goto('/start/tours?planner=v2');
   await expect(page.locator('.journey-form-panel')).toHaveCount(0);
   const planner = page.getByRole('region', { name: 'Travel planner' });
   await planner.getByLabel('Trip name').fill('Winter trip');
@@ -88,9 +88,10 @@ test('round-trips a trip with two cities, train, hotel and a Journey walk after 
   }));
   await link.click();
   await expect(page.getByRole('heading', { name: 'Winter trip' })).toBeVisible();
+  await page.locator('button[data-trip-day="2"]').click();
   await expect(page.getByText('Station hotel', { exact: true })).toBeVisible();
   await expect(page.getByText('Pier', { exact: true })).toBeVisible();
-  await page.goto('/start/tours');
+  await page.goto('/start/tours?planner=v2');
   await page.reload();
   await expect(planner.getByText('Pier', { exact: true })).toHaveCount(0);
   await planner.getByRole('button', { name: 'Next day' }).click();
@@ -100,7 +101,9 @@ test('round-trips a trip with two cities, train, hotel and a Journey walk after 
   await expect(share).toHaveValue(/\/trip\/view\?data=/);
   await page.goto(await share.inputValue());
   await expect(page.getByRole('heading', { name: 'Winter trip' })).toBeVisible();
+  await page.locator('button[data-trip-day="2"]').click();
   await expect(page.getByText('Pier', { exact: true })).toBeVisible();
+  await page.getByText('Transfer details', { exact: true }).click();
   await expect(page.getByText('002 Express', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Save trip to account' })).toHaveCount(0);
   expect(accountWrites).toHaveLength(1);
@@ -140,7 +143,7 @@ test('receives the finished walk from the built Journey application', async ({ p
   await page.route('https://tiles.openfreemap.org/**', request => request.fulfill({
     json: { version: 8, sources: {}, layers: [{ id: 'base', type: 'background' }] },
   }));
-  await page.goto('/start/tours');
+  await page.goto('/start/tours?planner=v2');
   const planner = page.getByRole('region', { name: 'Travel planner' });
   await planner.getByLabel('Start date').fill('2026-12-31');
   await planner.getByLabel('End date').fill('2027-01-01');
@@ -189,7 +192,7 @@ test('plans from address suggestions and selects transport between the chosen ci
       ] },
   }));
   await page.route('**/api/auth/refresh', route => route.fulfill({ status: 401, json: {} }));
-  await page.goto('/start/tours');
+  await page.goto('/start/tours?planner=v2');
   const planner = page.getByRole('region', { name: 'Travel planner' });
   await expect(planner).toBeVisible();
   await expect(page.locator('.journey-form-panel')).toHaveCount(0);

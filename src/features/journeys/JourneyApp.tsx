@@ -1,6 +1,6 @@
 import { t } from '@/shared/i18n';
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { defaultJourney, JOURNEYS } from './domain/definitions';
 import type { JourneyDefinition } from './domain/definitions';
 import { journeyApi, workspaceUrl } from './api/journeys';
@@ -14,6 +14,7 @@ import WorkflowRunner from '../workflows/WorkflowRunner';
 import { localizeInvalidField, clearFieldValidation } from './ui/formValidation';
 import { BackgroundSurface } from '@/shared/backgrounds/BackgroundSurface';
 import { ReadySolutionsMenu } from '../../marketing/ReadySolutionsMenu';
+import { FLAGS } from '@/shared/flags';
 
 function ConfiguredJourney() {
   const params = useParams();
@@ -57,14 +58,20 @@ export default function JourneyApp({
   mode?: 'wizard' | 'public' | 'manage' | 'builder' | 'custom' | 'batch';
 }) {
   const { kind } = useParams();
+  const [params] = useSearchParams();
   const selected = kind ?? defaultJourney(window.location.hostname) ?? 'invite';
+  const travelWorkspace = mode === 'wizard' && selected === 'tours' && FLAGS.ENABLE_TRIP_PLANNER &&
+    FLAGS.ENABLE_TRIP_PLANNER_V2 && !['classic', 'v2'].includes(params.get('planner') ?? '') && params.get('legacy') !== '1';
   return (
     <div
       className="journey-app"
       onInvalidCapture={localizeInvalidField}
       onInputCapture={clearFieldValidation}
     >
-      <header className="journey-header">
+      {travelWorkspace ? <header className="trip-exp-site-header">
+        <Link to={workspaceUrl('/')} className="journey-logo">CoDoc</Link>
+        <LanguageSwitcher />
+      </header> : <header className="journey-header">
         <LanguageSwitcher />
         <Link to={workspaceUrl('/')} className="journey-logo">
           CoDoc<span> {t('/ для вашего события')}</span>
@@ -84,7 +91,7 @@ export default function JourneyApp({
             </>
           )}
         </nav>
-      </header>
+      </header>}
       {mode === 'batch' ? (
         <JourneyBatch />
       ) : mode === 'public' ? (
@@ -100,11 +107,11 @@ export default function JourneyApp({
       ) : (
         <main>{t('Сценарий не найден.')}</main>
       )}
-      <footer className="journey-footer">
+      {!travelWorkspace && <footer className="journey-footer">
         <Link to="/">CoDoc</Link>
         <span>{t('Создавайте поводы. Мы позаботимся о деталях.')}</span>
         <Link to="/app">{t('Открыть редактор ↗')}</Link>
-      </footer>
+      </footer>}
     </div>
   );
 }

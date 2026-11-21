@@ -41,10 +41,11 @@ export function TripExperienceShell({ mode, title, dateSpan, subtitle, actions, 
   mode: 'owner' | 'shared' | 'planner'; title: string; dateSpan?: ReactNode; subtitle?: ReactNode;
   actions?: ReactNode; navigation?: ReactNode; children: ReactNode;
 }) {
-  return <main className="trip-exp" data-mode={mode}>
+  const Tag = mode === 'planner' ? 'section' : 'main';
+  return <Tag className="trip-exp" data-mode={mode}>
     <header className="trip-exp-header">
       <div>
-        {mode !== 'shared' && <Link className="trip-exp-back" to="/start/tours">{t('Travel planner')}</Link>}
+        {mode === 'owner' && <Link className="trip-exp-back" to="/start/tours">{t('Travel planner')}</Link>}
         {dateSpan && <div className="trip-exp-dates">{dateSpan}</div>}
         <h1>{title}</h1>
         {subtitle && <p>{subtitle}</p>}
@@ -53,5 +54,5 @@ export function TripExperienceShell({ mode, title, dateSpan, subtitle, actions, 
     </header>
     {navigation}
     {children}
-  </main>;
+  </Tag>;
 }

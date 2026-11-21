@@ -24,6 +24,7 @@ import { TripCityMap } from './TripCityMap';
 import { RouteAddressInput } from './RouteAddressInput';
 import { readDraft, tripDraftStorageKey } from '../domain/planner/draftMigration';
 import { plannerReducer } from '../domain/planner/plannerReducer';
+import { TripDayNavigator, TripExperienceShell, tripDateLabel } from './trip-experience/TripExperienceShell';
 import './route.css';
 
 const DayPlanningPanel = lazy(() => import('./DayPlanningPanel').then(module => ({ default: module.DayPlanningPanel })));
@@ -36,7 +37,7 @@ type Draft = LocalTripDraft;
 const emptyDay: TripDay = { stops: [] };
 const dayMilliseconds = 86_400_000;
 
-export default function TripPlannerDraft({ v2 = true }: { v2?: boolean }) {
+export default function TripPlannerDraft({ v2 = true, experience = false }: { v2?: boolean; experience?: boolean }) {
   const [{ draft, past, future }, dispatch] = useReducer(plannerReducer, undefined, () => ({
     draft: readDraft(), past: [], future: [],
   }));
@@ -236,8 +237,7 @@ export default function TripPlannerDraft({ v2 = true }: { v2?: boolean }) {
     } } });
   }
 
-  function nextDay() {
-    const target = dayNumber + 1;
+  function nextDay(target = dayNumber + 1) {
     if (target > lastDay) {
       const days = { ...draft.days, [target]: { ...emptyDay, dayId: crypto.randomUUID() } };
       const endDate = duration > 0 ? Temporal.PlainDate.from(draft.startDate).add({ days: target - 1 }).toString()
@@ -400,20 +400,54 @@ export default function TripPlannerDraft({ v2 = true }: { v2?: boolean }) {
     setSelectedDayId(before?.dayId);
   }
 
-  return (
-    <section className="trip-planner" data-planner-v2={v2} aria-label={t('Travel planner')}>
-      <header className="trip-planner-header">
-        <h2>{t('Travel planner')}</h2>
-        {!status && (saving || localSave !== 'idle') && <small role="status">{saving ? t('Saving…') : accountSaved ? t('Trip saved to account.')
-          : localSave === 'pending' ? t('Saving…') : localSave === 'saved' ? t('Trip saved on this device.')
-            : t('Could not save the trip on this device.')}</small>}
-      </header>
-      <div className="trip-planner-dates">
+  const metadata = <div className="trip-planner-dates">
         <label>{t('Trip name')} <input maxLength={180} value={draft.title ?? ''}
           onChange={event => edit({ title: event.target.value })} /></label>
         <label>{t('Start date')} <input type="date" value={draft.startDate} onChange={event => setStartDate(event.target.value)} /></label>
         <label>{t('End date')} <input type="date" value={draft.endDate} onChange={event => requestDates({ startDate: draft.startDate, endDate: event.target.value })} /></label>
+      </div>;
+  const controls = <>      <div className="trip-planner-details">
+        <TripDetailsEditor budget={draft.budget}
+          costs={locations.flatMap(({ visit: details }) =>
+            [details.transfer?.cost, details.lodging?.cost].filter(cost => cost !== undefined))}
+          onChange={edit} />
       </div>
+      <footer className="trip-planner-actions">
+        <button type="button" onClick={() => { if (validDates()) persist(draft); }}>{t('Save')}</button>
+        <button type="button" onClick={() => {
+          if (!validDates()) return;
+          const json = JSON.stringify(tripPayload(draft, title, connections), null, 2);
+          downloadFile(new Blob([json], { type: 'application/json' }), `trip-${draft.startDate}.json`);
+        }}>{t('Export JSON')}</button>
+        <TripTemplateAction getTrip={() => {
+          if (!validDates()) return undefined;
+          persist(draft);
+          return tripPayload(draft, title, connections);
+        }} />
+        {!experience && <button type="button" disabled={sharing} onClick={() => void createShare()}>{t('Share')}</button>}
+        {share?.draft === draft && <input aria-label={t('Trip link')} readOnly value={share.url}
+          onFocus={event => event.currentTarget.select()} />}
+        {fileShare === draft && <button type="button" onClick={() => {
+          try {
+            const json = sharedTripJson(tripPayload(draft, title, connections));
+            downloadFile(new Blob([json], { type: 'application/json' }), `shared-trip-${draft.startDate}.json`);
+          } catch {
+            setStatus(t('Could not create the trip link.'));
+          }
+        }}>{t('Download share file')}</button>}
+        <button type="button" disabled={saving} onClick={() => void saveAccount()}>{t('Save trip to account')}</button>
+        {accountSaved && <Link to={`/trip/${draft.id}`}>{t('Open account trip')}</Link>}
+      </footer>
+</>;
+  const content = (
+    <section className="trip-planner" data-planner-v2={v2} aria-label={t('Travel planner')}>
+      <header className="trip-planner-header">
+        {!experience && <h2>{t('Travel planner')}</h2>}
+        {!status && (saving || localSave !== 'idle') && <small role="status">{saving ? t('Saving…') : accountSaved ? t('Trip saved to account.')
+          : localSave === 'pending' ? t('Saving…') : localSave === 'saved' ? t('Trip saved on this device.')
+            : t('Could not save the trip on this device.')}</small>}
+      </header>
+      {!experience && metadata}
       {pendingDates && <section className="trip-date-review" role="alert">
         <p>{t('Review lodging and transport before changing dates.')}</p>
         <ul>{locations.filter(({ visit }) => visit.lodging || visit.train || visit.transfer).map(({ id, visit }) =>
@@ -422,13 +456,14 @@ export default function TripPlannerDraft({ v2 = true }: { v2?: boolean }) {
         <button type="button" onClick={() => setPendingDates(undefined)}>{t('Cancel')}</button>
       </section>}
       {v2 && <nav className="trip-workspace-tabs" aria-label={t('Travel planner')}>
-        {([['plan', 'City list'], ['map', 'Map'], ['summary', 'Trip overview']] as const).map(([id, label]) =>
+        {([['plan', experience ? 'Plan' : 'City list'], ['map', 'Map'], ['summary', 'Trip overview']] as const)
+          .filter(([id]) => !experience || id !== 'summary').map(([id, label]) =>
           <button key={id} type="button" aria-pressed={mobileTab === id} onClick={() => {
             setMobileTab(id);
             if (id === 'map') setShowingCities(true);
           }}>{t(label)}</button>)}
       </nav>}
-      <div className="trip-planner-grid" data-hotel-search={Boolean(hotelSearch)} data-mobile-tab={mobileTab}>
+      <div className="trip-planner-grid" data-hotel-search={Boolean(hotelSearch)} data-mobile-tab={mobileTab} data-trip-experience={experience}>
         <div className="trip-planner-overview">
           {!hotelSearch && <div className="trip-map-actions">
             <button type="button" aria-expanded={showingCities}
@@ -445,12 +480,20 @@ export default function TripPlannerDraft({ v2 = true }: { v2?: boolean }) {
             }}>{t('Add cities on the map')}</button>}
           </div>}
           <div className="trip-map-and-hotel">
-            {showingCities && !choosingCity && <TripCityMap cities={cityMap?.cities ?? cityPins}
+            {(experience || (showingCities && !choosingCity)) && <TripCityMap cities={cityMap?.cities ?? cityPins}
               legs={cityMap?.legs ?? []} plannedLines={lines} accommodations={cityMap?.accommodations}
               hotelMap={hotelSearch ? hotelMap ?? { stops: hotelSearch.point ? [{ ...hotelSearch.point, id: '__day_point__',
                 label: hotelSearch.city, zone: 'UTC', stayMinutes: 0 }] : [] } : undefined}
-              dayMap={dayMap}
-              onPick={placingCities ? setPendingMapPoint : undefined}
+              dayMap={experience && choosingCity ? {
+                stops: day.cityPoint ? [{ ...day.cityPoint, id: 'move-city', label: day.city || t('City'), zone: 'UTC', stayMinutes: 0 }] : [],
+                legs: noLegs,
+                onStopMove: day.cityPoint ? (_id, point) => void moveCity(point) : undefined,
+              } : dayMap ?? (experience && (preview || day.stops.length) ? {
+                stops: preview?.stops ?? day.stops,
+                legs: preview?.legs ?? day.importedWalk?.legs ?? day.route ?? noLegs,
+              } : undefined)}
+              onPick={experience && choosingCity ? point => { void moveCity(point); setChoosingCity(false); }
+                : placingCities ? setPendingMapPoint : undefined}
               pickedPoint={pendingMapPoint}
               focusStopId={placingCities || focusedDay !== dayNumber ? undefined
                 : cityMap?.cities.find(item => item.latitude === day.cityPoint?.latitude
@@ -515,28 +558,39 @@ export default function TripPlannerDraft({ v2 = true }: { v2?: boolean }) {
           })} />
         </aside>
         {!hotelSearch && <div className="trip-planner-day">
+          {experience && <div className="trip-exp-day-title">
+            <h2>{day.city || t('Trip day')}</h2>
+            {tripDayDate(draft.startDate, dayNumber) && <time dateTime={tripDayDate(draft.startDate, dayNumber)}>
+              {tripDateLabel(tripDayDate(draft.startDate, dayNumber)!, 'full')}
+            </time>}
+          </div>}
           <fieldset>
             <legend>{t('Trip day')}</legend>
-            <button type="button" disabled={dayNumber <= 1} onClick={() => selectDay(dayNumber - 1)}>{t('Previous day')}</button>
-            <span aria-live="polite">
+            <button type="button" className={experience ? 'trip-exp-legacy-day-nav' : undefined} disabled={dayNumber <= 1} onClick={() => selectDay(dayNumber - 1)}>{t('Previous day')}</button>
+            {!experience && <span aria-live="polite">
               {' '}{dayNumber} / {lastDay}
               {Number.isFinite(dayDate.getTime()) && (
                 <> · <time dateTime={dayDate.toISOString().split('T')[0]}>
                   {dayDate.toLocaleDateString(getLocale(), { timeZone: 'UTC', dateStyle: 'medium' })}
                 </time></>
               )}{' '}
-            </span>
-            <button type="button" onClick={nextDay}>{t('Next day')}</button>
+            </span>}
+            <button type="button" className={experience ? 'trip-exp-legacy-day-nav' : undefined} onClick={() => nextDay()}>{t('Next day')}</button>
+            <details open={!experience || !day.city} className="trip-exp-city-entry">
+              <summary>{t('Add city')}</summary>
             <RouteAddressInput key={activeLocation} inputRef={cityInput} label={t('City')} confirmLabel={t('Add city')} value={day.city ?? ''}
               onConfirmText={city => addVisit(city)}
               onSelect={({ label, latitude, longitude }) => {
                 setPlacingCities(false);
                 addVisit(label, { latitude, longitude });
               }} />
-            <button type="button" aria-pressed={choosingCity} onClick={() => setChoosingCity(!choosingCity)}>
+            <button type="button" aria-pressed={choosingCity} onClick={() => {
+              setChoosingCity(!choosingCity);
+              if (experience) setMobileTab('map');
+            }}>
               {choosingCity ? t('Cancel') : t('Choose on map')}
             </button>
-            {choosingCity && <RouteMap rasterBasemap
+            {!experience && choosingCity && <RouteMap rasterBasemap
               stops={day.cityPoint ? [{ ...day.cityPoint, id: `city-${dayNumber}`,
                 label: day.city?.trim() || t('City'), zone: 'UTC', stayMinutes: 0 }] : []}
               legs={noLegs} onReady={ignoreMapHandle} cityMap
@@ -546,11 +600,12 @@ export default function TripPlannerDraft({ v2 = true }: { v2?: boolean }) {
             {day.cityPoint && <button type="button" onClick={() => editDay({ cityPoint: undefined }, true)}>
               {t('Remove map pin')}
             </button>}
+            </details>
           </fieldset>
-          {day.city?.trim() && <button className="journey-primary" type="button" onClick={findHotelsFromMap}>
+          {day.city?.trim() && <button className={experience ? 'trip-exp-hotel-action' : 'journey-primary'} type="button" onClick={findHotelsFromMap}>
             {t('Find hotels')}
           </button>}
-          {v2 && <Suspense fallback={<p aria-busy="true">{t('Loading…')}</p>}><DayPlanningPanel key={`program-${activeLocation}`} stops={day.planningStops} preferences={day.dayPreferences}
+          {v2 && <Suspense fallback={<p aria-busy="true">{t('Loading…')}</p>}><DayPlanningPanel key={`program-${activeLocation}`} stops={day.planningStops} preferences={day.dayPreferences} experience={experience}
             targetDays={Array.from({ length: Math.min(lastDay, 366) }, (_, index) => index + 1)
               .filter(number => number !== dayNumber && (draft.days[number]?.planningStops?.length ?? 0) < 12)}
             onMoveToDay={moveProgramStop}
@@ -567,7 +622,8 @@ export default function TripPlannerDraft({ v2 = true }: { v2?: boolean }) {
           </li>)}</ul>}
           <TripWalkImport key={activeLocation} point={day.cityPoint} address={day.city} onPreview={setPreview} />
           {hasDayPlan && Number.isFinite(dayDate.getTime()) && (
-            <>
+            <details className="trip-exp-day-services" open={!experience}>
+              <summary>{t('Transfer details')} · {t('Trip lodging')}</summary>
               <TripTrainSearch key={dayDate.getTime()} date={dayDate.toISOString().split('T')[0]}
                 selected={day.train} onSelect={train => editDay({ train, transfer: train ? undefined : day.transfer }, true)} />
               {day.transfer && <p>{day.transfer.from} {' → '} {day.transfer.to}{' '}
@@ -583,7 +639,7 @@ export default function TripPlannerDraft({ v2 = true }: { v2?: boolean }) {
               <TripLodgingEditor key={`${dayDate.getTime()}-${JSON.stringify(day.lodging)}`}
                 date={dayDate.toISOString().split('T')[0]} lodging={day.lodging}
                 onSave={lodging => editDay({ lodging }, true)} />
-            </>
+            </details>
           )}
           {!preview && day.importedWalk && <p>{day.importedWalk.title}</p>}
           {preview && <div>
@@ -594,54 +650,49 @@ export default function TripPlannerDraft({ v2 = true }: { v2?: boolean }) {
             }}>{day.stops.length ? t('Replace day stops') : t('Use this walk')}</button>
             <button type="button" onClick={() => setPreview(null)}>{t('Cancel')}</button>
           </div>}
-          <button type="button" onClick={undo} disabled={!past.length}>{t('Undo')}</button>
-          <button type="button" onClick={redo} disabled={!future.length}>{t('Redo')}</button>
-          {(preview || day.stops.length > 0) && <RouteMap rasterBasemap
+          {!experience && <>
+            <button type="button" onClick={undo} disabled={!past.length}>{t('Undo')}</button>
+            <button type="button" onClick={redo} disabled={!future.length}>{t('Redo')}</button>
+          </>}
+          {!experience && (preview || day.stops.length > 0) && <RouteMap rasterBasemap
             stops={preview?.stops ?? day.stops}
             legs={preview?.legs ?? day.importedWalk?.legs ?? day.route ?? noLegs}
             onReady={ignoreMapHandle}
           />}
           {!preview && day.stops.length > 0 && <>
-            <ol>{day.stops.map(stop => <li key={stop.id}>{stop.label}</li>)}</ol>
+            <ol className={experience ? 'trip-exp-itinerary' : undefined}>{day.stops.map(stop => <li key={stop.id}>{stop.label}</li>)}</ol>
             <button type="button" onClick={() => editDay({
               stops: [], importedWalk: undefined, route: undefined,
             }, true)}>{t('Remove walk from day')}</button>
           </>}
         </div>}
       </div>
-      <div className="trip-planner-details">
-        <TripDetailsEditor budget={draft.budget}
-          costs={locations.flatMap(({ visit: details }) =>
-            [details.transfer?.cost, details.lodging?.cost].filter(cost => cost !== undefined))}
-          onChange={edit} />
-      </div>
-      <footer className="trip-planner-actions">
-        <button type="button" onClick={() => { if (validDates()) persist(draft); }}>{t('Save')}</button>
-        <button type="button" onClick={() => {
-          if (!validDates()) return;
-          const json = JSON.stringify(tripPayload(draft, title, connections), null, 2);
-          downloadFile(new Blob([json], { type: 'application/json' }), `trip-${draft.startDate}.json`);
-        }}>{t('Export JSON')}</button>
-        <TripTemplateAction getTrip={() => {
-          if (!validDates()) return undefined;
-          persist(draft);
-          return tripPayload(draft, title, connections);
-        }} />
-        <button type="button" disabled={sharing} onClick={() => void createShare()}>{t('Share')}</button>
-        {share?.draft === draft && <input aria-label={t('Trip link')} readOnly value={share.url}
-          onFocus={event => event.currentTarget.select()} />}
-        {fileShare === draft && <button type="button" onClick={() => {
-          try {
-            const json = sharedTripJson(tripPayload(draft, title, connections));
-            downloadFile(new Blob([json], { type: 'application/json' }), `shared-trip-${draft.startDate}.json`);
-          } catch {
-            setStatus(t('Could not create the trip link.'));
-          }
-        }}>{t('Download share file')}</button>}
-        <button type="button" disabled={saving} onClick={() => void saveAccount()}>{t('Save trip to account')}</button>
-        {accountSaved && <Link to={`/trip/${draft.id}`}>{t('Open account trip')}</Link>}
-      </footer>
+      {experience ? <details className="trip-exp-panel trip-exp-planner-tools">
+        <summary>{t('Details')}</summary>
+        <div className="trip-exp-control-row">
+          <button type="button" onClick={undo} disabled={!past.length}>{t('Undo')}</button>
+          <button type="button" onClick={redo} disabled={!future.length}>{t('Redo')}</button>
+        </div>
+        {controls}
+      </details> : controls}
       {status && <p role="status">{status}</p>}
     </section>
   );
+  if (!experience) return content;
+  const choices = Array.from({ length: Math.min(lastDay, 366) }, (_, index) => ({
+    id: String(index + 1), date: tripDayDate(draft.startDate, index + 1), title: draft.days[index + 1]?.city,
+  }));
+  return <TripExperienceShell mode="planner" title={draft.title?.trim() || t('Travel planner')}
+    dateSpan={draft.startDate && [draft.startDate, draft.endDate].filter(Boolean).map(value => tripDateLabel(value)).join(' \u2013 ')}
+    navigation={<TripDayNavigator days={choices} selected={mobileTab === 'summary' ? 'overview' : String(dayNumber)}
+      onSelect={id => {
+        if (id === 'overview') { setMobileTab('summary'); setDayMap(undefined); }
+        else { selectDay(Number(id)); setMobileTab('plan'); setFocusedDay(Number(id)); }
+      }} action={<button type="button" onClick={() => { nextDay(lastDay + 1); setMobileTab('plan'); }}>{t('Add day')}</button>} />}
+    actions={<>
+      <button type="button" disabled={sharing} onClick={() => void createShare()}>{t('Share')}</button>
+      <details><summary>{t('Trip dates and name')}</summary><div className="trip-exp-action-menu">{metadata}</div></details>
+    </>}>
+    {content}
+  </TripExperienceShell>;
 }

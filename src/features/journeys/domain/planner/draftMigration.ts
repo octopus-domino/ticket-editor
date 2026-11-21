@@ -83,4 +83,3 @@ export function readDraft(): Draft {
   }
   return { id: crypto.randomUUID(), version: 2, startDate: '', endDate: '', days: {} };
 }
-

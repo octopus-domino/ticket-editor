@@ -15,7 +15,7 @@ for (const width of [360, 768, 1440]) {
     await page.addInitScript(() => localStorage.setItem('codoc:language', 'en'));
     await page.route('**/api/auth/refresh', route => route.fulfill({ status: 401, json: {} }));
     await page.route('**/api/journeys/routes/addresses?**', route => route.fulfill({ json: [] }));
-    await page.goto('/start/tours', { waitUntil: 'domcontentloaded' });
+    await page.goto('/start/tours?planner=v2', { waitUntil: 'domcontentloaded' });
     const planner = page.getByRole('region', { name: 'Travel planner' });
     await expect(planner).toHaveAttribute('data-planner-v2', 'true');
     await planner.getByLabel('Start date').fill('2026-12-01');
@@ -71,7 +71,7 @@ test('shows a road-based optimization preview before apply and undo', async ({ p
     return route.fulfill({ json: { durationSeconds: seconds, distanceMeters: seconds,
       coordinates: [[start.longitude, start.latitude], [end.longitude, end.latitude]] } });
   });
-  await page.goto('/start/tours', { waitUntil: 'domcontentloaded' });
+  await page.goto('/start/tours?planner=v2', { waitUntil: 'domcontentloaded' });
   const planner = page.getByRole('region', { name: 'Travel planner' });
   await planner.getByLabel('Start date').fill('2026-12-01');
   const program = planner.locator('.trip-day-program');
@@ -100,7 +100,7 @@ test('recovers an offline draft and saves the revised trip when online', async (
     if (route.request().method() !== 'PUT') return route.fallback();
     return route.fulfill({ json: route.request().postDataJSON() });
   });
-  await page.goto('/start/tours', { waitUntil: 'domcontentloaded' });
+  await page.goto('/start/tours?planner=v2', { waitUntil: 'domcontentloaded' });
   const planner = page.getByRole('region', { name: 'Travel planner' });
   await planner.getByLabel('Start date').fill('2026-12-01');
   await planner.getByLabel('End date').fill('2026-12-02');

@@ -21,12 +21,13 @@ const modes: Record<OptimizationMode, string> = {
 
 export type DayMapPlan = { stops: RouteStop[]; legs: RouteMapLeg[] };
 
-export function DayPlanningPanel({ stops = noStops, preferences = defaultDayPreferences, date, zone, targetDays = [], onChange, onMap, onMoveToDay }: {
+export function DayPlanningPanel({ stops = noStops, preferences = defaultDayPreferences, date, zone, targetDays = [], onChange, onMap, onMoveToDay, experience }: {
   stops?: PlanningStop[]; preferences?: DayPlanPreferences; date?: string; zone: string;
   onChange: (stops: PlanningStop[], preferences: DayPlanPreferences) => void;
   onMap: (plan?: DayMapPlan) => void;
   targetDays?: number[];
   onMoveToDay?: (stopId: string, day: number) => void;
+  experience?: boolean;
 }) {
   const [entry, setEntry] = useState(0);
   const [mode, setMode] = useState<OptimizationMode>('balanced');
@@ -99,7 +100,7 @@ export function DayPlanningPanel({ stops = noStops, preferences = defaultDayPref
   }).format(value);
   const result = proposal?.before;
   return <details className="trip-day-program">
-    <summary>{t('Plan the day')}</summary>
+    <summary>{experience ? (stops.length ? t('Plan the day') : `+ ${t('Add place')}`) : t('Plan the day')}</summary>
     {stops.length < 12 && <RouteAddressInput key={entry} value="" confirmLabel={t('Add place')}
       onSelect={address => add(address.label, address)} onConfirmText={add} />}
     <div className="trip-day-program-hours">

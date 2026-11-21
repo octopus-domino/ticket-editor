@@ -111,6 +111,8 @@ function BasicJourneyWizard({
   const [params] = useSearchParams();
   const canPlanTrip = definition.kind === 'TOUR' && !custom && !previewOnly &&
     FLAGS.ENABLE_TRIP_PLANNER && params.get('legacy') !== '1';
+  const tripPlannerV2 = canPlanTrip && FLAGS.ENABLE_TRIP_PLANNER_V2 && params.get('planner') !== 'classic';
+  const travelWorkspace = tripPlannerV2 && params.get('planner') !== 'v2';
   const [routeBusy, setRouteBusy] = useState(false);
   const routeEditor = useRef<RouteEditorHandle>(null);
   const [error, setError] = useState('');
@@ -152,9 +154,10 @@ function BasicJourneyWizard({
     <main
       className={`journey-main ${definition.kind === 'PROPOSAL' ? 'journey-main-proposal' : ''} ${definition.kind === 'TOUR' ? 'journey-main--travel' : ''}`}
       data-step={step}
+      data-travel-workspace={travelWorkspace || undefined}
     >
       {canPlanTrip
-        ? <Suspense fallback={<p>{t('Loading…')}</p>}><TripPlannerDraft v2={FLAGS.ENABLE_TRIP_PLANNER_V2 && params.get('planner') !== 'classic'} /></Suspense>
+        ? <Suspense fallback={<p>{t('Loading…')}</p>}><TripPlannerDraft v2={tripPlannerV2} experience={travelWorkspace} /></Suspense>
         : <div>
       <div className="journey-intro">
         <span className="journey-eyebrow">

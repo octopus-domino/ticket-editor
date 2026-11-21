@@ -184,7 +184,11 @@ test('planner opens a selected day beside the same map and supports mobile plann
       }] },
     }],
   } } };
-  await page.evaluate(source => localStorage.setItem('codoc/trip-planner/draft/v2', JSON.stringify(source)), plannerDraft);
+  await page.addInitScript(source => {
+    if (window.top !== window || sessionStorage.getItem('planner-fixture-loaded')) return;
+    sessionStorage.setItem('planner-fixture-loaded', 'true');
+    localStorage.setItem('codoc/trip-planner/draft/v2', JSON.stringify(source));
+  }, plannerDraft);
   await page.reload({ waitUntil: 'domcontentloaded' });
   await expect(workspace.getByRole('heading', { name: draft.title })).toBeVisible();
   await expect(workspace.getByRole('button', { name: /Plan walk in Journey/ })).toBeVisible();

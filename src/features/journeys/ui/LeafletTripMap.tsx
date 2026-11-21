@@ -24,7 +24,9 @@ export function LeafletTripMap({
     if (!container.current) return;
     const element = container.current;
     const start = latest.current.stops[0];
-    const instance = L.map(element, { preferCanvas: true, scrollWheelZoom: true, maxZoom: 19 })
+    const animate = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const instance = L.map(element, { preferCanvas: true, scrollWheelZoom: true, maxZoom: 19,
+      zoomAnimation: animate, fadeAnimation: animate, markerZoomAnimation: animate })
       .setView(start ? [start.latitude, start.longitude] : [55.75, 37.62], start ? 15 : 6);
     instance.attributionControl.setPrefix(false);
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {

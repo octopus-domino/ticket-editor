@@ -6,6 +6,7 @@ import { fetchTripExport, openAccountTrip, tripExportFiles, updateAccountTrip, t
 import { TripTemplateAction } from './TripTemplateAction';
 import { readTripShare, readTripShareFile, sharedTripJson, shareTripUrl, type SharedTrip } from '../domain/sharedTrip';
 import { TripView } from './trip-experience/TripView';
+import { TripExperienceLoading } from './trip-experience/TripExperienceShell';
 import './route.css';
 
 type PlaceEdits = { trip: AccountTrip; past: AccountTrip[]; future: AccountTrip[] };
@@ -29,7 +30,7 @@ export default function AccountTripPage() {
     );
     return () => request.abort();
   }, [id, reload]);
-  if (!loaded || loaded.id !== id) return <p className="trip-exp-message" role="status">{t('Loading…')}</p>;
+  if (!loaded || loaded.id !== id) return <TripExperienceLoading />;
   const { trip } = loaded;
   if (!trip) return <div className="trip-exp-message" role="alert">
     <p>{t('Could not open the account trip.')}</p>
@@ -168,7 +169,7 @@ export function SharedTripPage() {
     }} /></label>
     {openedFile === null && <p role="alert">{t('Could not open the trip file.')}</p>}
   </main>;
-  if (!loaded || loaded.data !== data) return <p role="status">{t('Loading…')}</p>;
+  if (!loaded || loaded.data !== data) return <TripExperienceLoading />;
   if (!loaded.trip) return <p role="alert">{t('Could not open the trip link.')}</p>;
   return <TripView trip={loaded.trip} mode="shared" />;
 }

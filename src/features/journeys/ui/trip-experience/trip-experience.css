@@ -76,6 +76,7 @@
 .trip-exp-related > details { flex: 1 1 15rem; }
 .trip-exp-related summary { cursor: pointer; font-weight: 650; }
 .trip-exp-message { padding: 24px; }
+.trip-exp .trip-exp-skeleton { min-height: 14rem; background: var(--trip-subtle); }
 .trip-exp-site-header {
   display: flex; align-items: center; justify-content: space-between;
   padding: 8px clamp(16px, 3vw, 40px); border-bottom: 1px solid #d7e2d9;

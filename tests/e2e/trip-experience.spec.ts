@@ -91,6 +91,7 @@ test('planner opens a selected day beside the same map and supports mobile plann
   const workspace = page.locator('.trip-exp[data-mode="planner"]');
   await expect(workspace.getByRole('heading', { name: 'Travel planner' })).toBeVisible();
   await expect(workspace.locator('.leaflet-tile-loaded').first()).toBeVisible({ timeout: 25_000 });
+  await expect(workspace.locator('.leaflet-tile:not(.leaflet-tile-loaded)')).toHaveCount(0, { timeout: 25_000 });
   await page.screenshot({ path: testInfo.outputPath('planner-empty-desktop.png'), animations: 'disabled', fullPage: true });
   await page.evaluate(source => localStorage.setItem('codoc/trip-planner/draft/v2', JSON.stringify(source)), draft);
   await page.reload({ waitUntil: 'domcontentloaded' });
@@ -104,6 +105,10 @@ test('planner opens a selected day beside the same map and supports mobile plann
   await workspace.locator('button[data-trip-day="1"]').click();
   await expect(map.locator('.leaflet-tile-loaded').first()).toBeVisible({ timeout: 25_000 });
   await page.screenshot({ path: testInfo.outputPath('planner-desktop.png'), animations: 'disabled', fullPage: true });
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await expect(workspace.getByRole('heading', { name: 'Moscow' })).toBeInViewport();
+  await expect(map).toBeInViewport();
+  await page.screenshot({ path: testInfo.outputPath('planner-desktop-1280.png'), animations: 'disabled', fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.reload({ waitUntil: 'domcontentloaded' });
   await expect(workspace.getByRole('heading', { name: draft.title })).toBeVisible();

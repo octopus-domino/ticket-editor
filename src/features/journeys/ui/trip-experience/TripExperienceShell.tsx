@@ -12,6 +12,16 @@ export function tripDateLabel(value: string, dateStyle: 'short' | 'medium' | 'fu
 
 export type TripDayChoice = { id: string; date?: string; title?: string };
 
+export function TripExperienceLoading() {
+  return <main className="trip-exp" aria-busy="true">
+    <p role="status">{t('Loading…')}</p>
+    <div className="trip-exp-workspace" aria-hidden="true">
+      <div className="trip-exp-panel trip-exp-skeleton" />
+      <div className="trip-exp-panel trip-exp-skeleton" />
+    </div>
+  </main>;
+}
+
 export function TripDayNavigator({ days, selected, onSelect, action }: {
   days: TripDayChoice[]; selected: string;
   onSelect: (id: string) => void; action?: ReactNode;

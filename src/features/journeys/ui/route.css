@@ -507,3 +507,47 @@
 @media (max-width: 767px) {
   .trip-planner[data-planner-v2='false'] .trip-planner-grid > * { display: initial; }
 }
+
+.trip-saved { max-width: 1160px; padding-inline: clamp(1rem, 3vw, 2rem); }
+.trip-saved-heading {
+  display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 1rem;
+  padding: 1.1rem 0; margin: 0 0 1.3rem;
+}
+.trip-saved-heading > div > p { margin: 0; color: #4d6659; }
+.trip-saved-heading h1 { margin: .25rem 0 0; overflow-wrap: anywhere; }
+.trip-saved-actions { align-items: center; }
+.trip-saved-actions summary, .trip-saved-transfers summary { cursor: pointer; padding: .55rem .7rem; }
+.trip-saved-export-options { display: flex; flex-wrap: wrap; gap: .4rem; padding: .4rem; }
+.trip-saved-layout { display: grid; grid-template-columns: minmax(15rem, 2fr) minmax(0, 3fr); gap: clamp(1rem, 3vw, 2rem); }
+.trip-saved-map { min-width: 0; align-self: start; }
+.trip-saved-map .route-map { height: clamp(15rem, 32vw, 24rem); }
+.trip-saved-map figure { margin: 0 0 .85rem; }
+.trip-saved-map nav ul { list-style: none; padding: 0; margin: 0; display: grid; gap: .35rem; }
+.trip-saved-map nav a {
+  min-height: 44px; display: flex; align-items: baseline; flex-wrap: wrap; column-gap: .55rem;
+  padding: .6rem .75rem; border: 1px solid #dbe7dd; border-radius: .65rem; background: #fff; color: #235a45;
+}
+.trip-saved-map nav time { color: #4d6659; font-size: .85rem; }
+.trip-saved-itinerary { min-width: 0; }
+.trip-saved-itinerary .trip-day-timeline { margin-block: 0; }
+.trip-saved-day { scroll-margin-top: 5rem; }
+.trip-saved-day:target { border-color: #327556; }
+.trip-saved-day > header > div { display: block; }
+.trip-saved-day > ol { display: grid; grid-template-columns: minmax(0, 1fr); }
+.trip-saved-day > ol:empty { display: none; }
+.trip-saved-lodging { background: #f1f7f2; border-radius: .55rem; padding: .65rem .8rem; }
+.trip-saved-transfers { margin: 0 0 1rem; background: #f7faf7; border: 1px solid #dbe7dd; border-radius: .75rem; }
+.trip-saved-transfers ul { margin: 0; padding: 0 1rem .7rem 1.7rem; }
+@media (max-width: 760px) {
+  .trip-saved-layout { grid-template-columns: minmax(0, 1fr); }
+  .trip-saved-map .route-map { height: min(55vw, 19rem); min-height: 11rem; }
+  .trip-saved-map nav ul { display: flex; overflow-x: auto; }
+  .trip-saved-map nav li { flex: 0 0 auto; }
+}
+
+.trip-hotel-scope { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .55rem; }
+.trip-hotel-scope p { margin: 0; color: #4d6659; }
+.trip-hotel-scope button[aria-pressed="true"] { background: #e9f4ec; border-color: #327556; color: #235a45; }
+.trip-hotel-list .trip-hotel-name { color: #235a45; font-weight: 700; text-align: start; }
+.trip-hotel-list > li { background: #fff; }
+.trip-hotel-list > li[data-active="true"] { background: #f1f7f2; }

@@ -1,9 +1,9 @@
 import { expect, test } from '@playwright/test';
 import { join } from 'node:path';
 
-test('returns a ready Journey walk to its trip day and restores it after reload', async ({ page }) => {
-  test.skip(process.env.VITE_ENABLE_TRIP_PLANNER !== 'true', 'Requires the trip planner flag');
-  test.setTimeout(60_000);
+test('round-trips a trip with two cities, train, hotel and a Journey walk after a date review', async ({ page }) => {
+  test.skip(process.env.VITE_ENABLE_TRIP_PLANNER_V2 !== 'true', 'Requires the date review in trip planner V2');
+  test.setTimeout(90_000);
   await page.addInitScript(() => localStorage.setItem('codoc:language', 'en'));
   await page.route('https://tiles.openfreemap.org/**', route => route.fulfill({
     json: { version: 8, sources: {}, layers: [{ id: 'base', type: 'background' }] },
@@ -19,8 +19,10 @@ test('returns a ready Journey walk to its trip day and restores it after reload'
       },location.origin);
       </script>`,
   }));
-  const accountWrites: { id: string; days: { date: string; walkingSections: unknown[] }[] }[] = [];
+  const accountWrites: { id: string; endDate: string; days: { date: string; walkingSections: unknown[] }[];
+    accommodations: { name: string; checkIn: string; checkOut: string }[] }[] = [];
   await page.route('**/api/trips/*', route => {
+    if (route.request().method() === 'GET' && accountWrites.length) return route.fulfill({ json: accountWrites.at(-1) });
     if (route.request().method() !== 'PUT') return route.fallback();
     const body = route.request().postDataJSON() as typeof accountWrites[number];
     accountWrites.push(body);
@@ -44,7 +46,13 @@ test('returns a ready Journey walk to its trip day and restores it after reload'
   await expect(planner.getByRole('button', { name: 'Find ideas on the map' })).toHaveCount(0);
   await planner.getByLabel('Start date').fill('2026-12-31');
   await planner.getByLabel('End date').fill('2027-01-01');
+  const city = planner.getByRole('combobox', { name: 'City', exact: true });
+  await page.route('**/api/journeys/routes/addresses?*', route => route.fulfill({ json: [] }));
+  await city.fill('Petersburg');
+  await city.press('Enter');
   await planner.getByRole('button', { name: 'Next day' }).click();
+  await city.fill('Moscow');
+  await city.press('Enter');
   await planner.getByRole('button', { name: 'Plan walk in Journey' }).click();
   await page.frameLocator('iframe[src^="/private-journey/"]').getByRole('button', { name: 'Return ready walk' }).click();
   await planner.getByRole('button', { name: 'Use this walk' }).click();
@@ -56,13 +64,30 @@ test('returns a ready Journey walk to its trip day and restores it after reload'
   await planner.getByRole('button', { name: 'Moscow · Russia' }).click();
   await planner.getByRole('button', { name: /^Search/ }).click();
   await planner.getByRole('button', { name: 'Select', exact: true }).click();
+  await planner.getByText('Trip lodging', { exact: true }).click();
+  await planner.getByLabel('Hotel name').fill('Station hotel');
+  await planner.getByRole('button', { name: 'Save lodging' }).click();
+  await planner.getByLabel('End date').fill('2027-01-02');
+  const review = planner.locator('.trip-date-review');
+  await expect(review).toContainText('Station hotel');
+  await expect(review).toContainText('Express');
+  await review.getByRole('button', { name: 'Apply' }).click();
   expect(accountWrites).toHaveLength(0);
   await planner.getByRole('button', { name: 'Save trip to account' }).click();
   const link = planner.getByRole('link', { name: 'Open account trip' });
   await expect(link).toBeVisible();
   expect(accountWrites).toHaveLength(1);
-  expect(accountWrites[0].days[0].date).toBe('2027-01-01');
-  expect(accountWrites[0].days[0].walkingSections).toHaveLength(1);
+  expect(accountWrites[0].endDate).toBe('2027-01-02');
+  const arrivalDay = accountWrites[0].days.find(day => day.date === '2027-01-01');
+  expect(arrivalDay?.walkingSections).toHaveLength(1);
+  expect(accountWrites[0].accommodations).toContainEqual(expect.objectContaining({
+    name: 'Station hotel', checkIn: '2027-01-01', checkOut: '2027-01-02',
+  }));
+  await link.click();
+  await expect(page.getByRole('heading', { name: 'Winter trip' })).toBeVisible();
+  await expect(page.getByText('Station hotel', { exact: true })).toBeVisible();
+  await expect(page.getByText('Pier', { exact: true })).toBeVisible();
+  await page.goto('/start/tours');
   await page.reload();
   await expect(planner.getByText('Pier', { exact: true })).toHaveCount(0);
   await planner.getByRole('button', { name: 'Next day' }).click();
@@ -155,7 +180,10 @@ test('plans from address suggestions and selects transport between the chosen ci
   });
   await page.route('**/api/journeys/routes/places/hotels', route => route.fulfill({
     json: { available: true, provider: 'OSTROVOK_MCP', catalogOnly: true,
-      hotels: [{ id: 'station', name: 'Hotel near station', latitude: 56.862, longitude: 35.91 }] },
+      hotels: [
+        { id: 'station', name: 'Hotel near station', latitude: 56.862, longitude: 35.91 },
+        { id: 'river', name: 'Hotel near river', latitude: 56.882, longitude: 35.91 },
+      ] },
   }));
   await page.route('**/api/auth/refresh', route => route.fulfill({ status: 401, json: {} }));
   await page.goto('/start/tours');
@@ -207,6 +235,10 @@ test('plans from address suggestions and selects transport between the chosen ci
   expect(await mapElement?.evaluate(node => node.isConnected)).toBe(true);
   await map.getByRole('button', { name: 'Hotel near station' }).click();
   await expect(hotel).toHaveAttribute('data-active', 'true');
+  await expect(planner.getByRole('button', { name: 'Hotel near river', exact: true })).toHaveCount(0);
+  await planner.getByRole('button', { name: 'Search the whole city' }).click();
+  await expect(planner.locator('.trip-hotel-list').getByRole('button', { name: 'Hotel near river' })).toBeVisible();
+  await expect(planner.locator('.route-map')).toHaveCount(1);
   await planner.getByRole('button', { name: 'Back', exact: true }).click();
   expect(await mapElement?.evaluate(node => node.isConnected)).toBe(true);
   await planner.getByRole('button', { name: 'Create a trip template' }).click();

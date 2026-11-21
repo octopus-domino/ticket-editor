@@ -6,7 +6,7 @@ import { mapRouteLines, routePointMarker } from '../domain/route';
 import type { RouteMapProps } from './routeMapTypes';
 
 export function LeafletTripMap({
-  stops, legs, fit = true, cityMap, onPick, onUserMove, onStopSelect, onStopMove, onLegSelect, pickedPoint, focusStopId,
+  stops, legs, fit = true, cityMap, onPick, onUserMove, onStopSelect, onStopMove, onLegSelect, pickedPoint, focusStopId, keepRouteInView,
 }: RouteMapProps) {
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map>();
@@ -125,14 +125,16 @@ export function LeafletTripMap({
   useEffect(() => {
     const instance = map.current;
     if (!instance || !hasSize || fit === false || (fit === 'initial' && fitted.current)) return;
-    const points: L.LatLngTuple[] = stops.length ? stops.map(stop => [stop.latitude, stop.longitude])
-      : legs.flatMap(leg => leg.coordinates.map(([lng, lat]): L.LatLngTuple => [lat, lng]));
+    const points: L.LatLngTuple[] = stops.map(stop => [stop.latitude, stop.longitude]);
+    if (keepRouteInView || !points.length) {
+      for (const leg of legs) for (const [lng, lat] of leg.coordinates) points.push([lat, lng]);
+    }
     if (!points.length) return;
     const key = JSON.stringify(points);
     if (key === fitted.current) return;
     fitted.current = key;
     instance.fitBounds(points, { padding: [38, 38], maxZoom: 15, animate: false });
-  }, [fit, hasSize, legs, stops]);
+  }, [fit, hasSize, keepRouteInView, legs, stops]);
 
   useEffect(() => {
     container.current?.querySelectorAll<HTMLElement>('[data-stop-id]').forEach(marker => {
@@ -140,10 +142,10 @@ export function LeafletTripMap({
     });
     const point = latest.current.stops.find(stop => stop.id === focusStopId);
     const instance = map.current;
-    if (point && instance && hasSize) {
+    if (point && instance && hasSize && !keepRouteInView) {
       instance.setView([point.latitude, point.longitude], Math.max(13, instance.getZoom()), { animate: false });
     }
-  }, [focusStopId, hasSize, markerKey, moving, selectable]);
+  }, [focusStopId, hasSize, keepRouteInView, markerKey, moving, selectable]);
 
   return <div ref={container} className="route-map trip-leaflet-map" data-picking={Boolean(onPick)}
     aria-label={cityMap ? t('Trip map') : t('Route map')} />;

@@ -22,7 +22,7 @@ import { TripDetailsEditor } from './TripDetailsEditor';
 import { TripTransferEditor } from './TripTransferEditor';
 import { TripCityMap } from './TripCityMap';
 import { RouteAddressInput } from './RouteAddressInput';
-import { readDraft, tripDraftStorageKey } from '../domain/planner/draftMigration';
+import { emptyDraft, readDraft, tripDraftStorageKey } from '../domain/planner/draftMigration';
 import { plannerReducer } from '../domain/planner/plannerReducer';
 import { TripDayNavigator, TripExperienceShell, tripDateLabel } from './trip-experience/TripExperienceShell';
 import './route.css';
@@ -36,6 +36,15 @@ type Draft = LocalTripDraft;
 
 const emptyDay: TripDay = { stops: [] };
 const dayMilliseconds = 86_400_000;
+const recentDraftsKey = `${tripDraftStorageKey}/recent`;
+type RecentDraft = { id: string; title?: string };
+
+function readRecentDrafts(): RecentDraft[] {
+  try {
+    const entries: unknown = JSON.parse(localStorage.getItem(recentDraftsKey) ?? '[]');
+    return Array.isArray(entries) ? entries.filter(entry => entry && typeof entry.id === 'string') : [];
+  } catch { return []; }
+}
 
 export default function TripPlannerDraft({ v2 = true, experience = false }: { v2?: boolean; experience?: boolean }) {
   const [{ draft, past, future }, dispatch] = useReducer(plannerReducer, undefined, () => ({
@@ -44,6 +53,7 @@ export default function TripPlannerDraft({ v2 = true, experience = false }: { v2
   const [pendingDates, setPendingDates] = useState<Pick<Draft, 'startDate' | 'endDate'>>();
   const [status, setStatus] = useState('');
   const [saving, setSaving] = useState(false);
+  const [recentDrafts, setRecentDrafts] = useState(readRecentDrafts);
   const [accountSaved, setAccountSaved] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [share, setShare] = useState<{ draft: Draft; url: string }>();
@@ -58,7 +68,10 @@ export default function TripPlannerDraft({ v2 = true, experience = false }: { v2
   const [placingCities, setPlacingCities] = useState(false);
   const [pendingMapPoint, setPendingMapPoint] = useState<CityPoint>();
   const cityInput = useRef<HTMLInputElement>(null);
-  const [focusedDay, setFocusedDay] = useState<number>();
+  const [focusedDay, setFocusedDay] = useState<number | undefined>(() => {
+    const first = draft.days[1];
+    return experience && (first?.importedWalk || first?.visits?.some(visit => visit.importedWalk)) ? 1 : undefined;
+  });
   const [showingCities, setShowingCities] = useState(true);
   const [editingTransfer, setEditingTransfer] = useState(false);
   const mapCenter = useRef<CityPoint>();
@@ -273,7 +286,8 @@ export default function TripPlannerDraft({ v2 = true, experience = false }: { v2
 
   function selectDay(next: number, visitId?: string) {
     mapCenter.current = undefined;
-    setFocusedDay(undefined);
+    setFocusedDay(experience ? next : undefined);
+    setPlacingCities(false);
     setCityListOpen(false);
     setPendingMapPoint(undefined);
     setDayMap(undefined);
@@ -285,6 +299,48 @@ export default function TripPlannerDraft({ v2 = true, experience = false }: { v2
     setPreview(null);
     setSelectedDay(next);
     setSelectedDayId(draft.days[next]?.dayId);
+  }
+
+  function attachWalk(walk: NonNullable<WalkCandidate>) {
+    editDay({ stops: walk.stops, importedWalk: { title: walk.title, legs: walk.legs }, route: undefined }, true);
+    setPreview(null);
+    setFocusedDay(dayNumber);
+    setDayMap(undefined);
+    setCityListOpen(false);
+  }
+
+  function openDraft(next: Draft) {
+    const previous = latestDraft.current;
+    const recent = recentDrafts.filter(item => item.id !== previous.id && item.id !== next.id);
+    try {
+      if (previous.title?.trim() || previous.startDate || Object.keys(previous.days).length || previous.budget || previous.documents?.length) {
+        localStorage.setItem(`${recentDraftsKey}/${previous.id}`, JSON.stringify(previous));
+        recent.unshift({ id: previous.id, title: previous.title });
+      }
+      localStorage.setItem(recentDraftsKey, JSON.stringify(recent));
+      localStorage.setItem(tripDraftStorageKey, JSON.stringify(next));
+    } catch {
+      setLocalSave('failed');
+      return;
+    }
+    setRecentDrafts(recent);
+    pinRequest.current?.abort();
+    selectDay(1);
+    setSelectedDayId(next.days[1]?.dayId);
+    setPendingDates(undefined);
+    setAccountSaved(false);
+    setMobileTab('plan');
+    latestDraft.current = next;
+    lastSaved.current = next;
+    setLocalSave('idle');
+    dispatch({ type: 'open', draft: next });
+  }
+
+  function closeRecentDrafts(event: React.MouseEvent<HTMLButtonElement>, item: RecentDraft) {
+    const next = readDraft(`${recentDraftsKey}/${item.id}`);
+    if (next.id !== item.id) return;
+    event.currentTarget.closest('details')?.removeAttribute('open');
+    openDraft(next);
   }
 
   function findHotelsFromMap() {
@@ -438,19 +494,28 @@ export default function TripPlannerDraft({ v2 = true, experience = false }: { v2
             setStatus(t('Could not create the trip link.'));
           }
         }}>{t('Download share file')}</button>}
-        <button type="button" disabled={saving} onClick={() => void saveAccount()}>{t('Save trip to account')}</button>
-        {accountSaved && <Link to={`/trip/${draft.id}`}>{t('Open account trip')}</Link>}
+        {!experience && <button type="button" disabled={saving} onClick={() => void saveAccount()}>{t('Save trip to account')}</button>}
+        {!experience && accountSaved && <Link to={`/trip/${draft.id}`}>{t('Open account trip')}</Link>}
       </footer>
 </>;
-  const visitsOnMap = extra ? [extra] : [dayDraft, ...(dayDraft.visits ?? [])];
-  const walkStops = preview?.stops ?? visitsOnMap.flatMap(visit => visit.stops);
-  const walkLegs = preview?.legs ?? visitsOnMap.flatMap(visit => visit.importedWalk?.legs ?? visit.route ?? noLegs);
+  const { walkStops, walkLegs } = useMemo(() => {
+    const visits = extra ? [extra] : [dayDraft, ...(dayDraft.visits ?? [])];
+    return {
+      walkStops: preview?.stops ?? visits.flatMap(visit => visit.stops),
+      walkLegs: preview?.legs ?? visits.flatMap(visit => visit.importedWalk?.legs ?? visit.route ?? noLegs),
+    };
+  }, [dayDraft, extra, preview]);
   const cityFocus = focusedDay === dayNumber && day.cityPoint;
-  const walkMap = experience && (walkStops.length > 0 || walkLegs.length > 0) ? {
-    stops: cityFocus ? [...walkStops, { ...cityFocus, id: activeLocation,
-      label: day.city || t('City'), zone: 'UTC', stayMinutes: 0 }] : walkStops,
-    legs: walkLegs,
-  } : undefined;
+  const walkMap = useMemo(() => {
+    if (!experience || placingCities || (!preview && !cityFocus &&
+        (focusedDay !== dayNumber || (!walkStops.length && !walkLegs.length)))) return;
+    return {
+      stops: cityFocus ? [...walkStops, { ...cityFocus, id: activeLocation,
+        label: day.city || t('City'), zone: 'UTC', stayMinutes: 0 }] : walkStops,
+      legs: walkLegs,
+      keepRouteInView: walkStops.length > 0 || walkLegs.length > 0,
+    };
+  }, [activeLocation, cityFocus, day.city, dayNumber, experience, focusedDay, placingCities, preview, walkLegs, walkStops]);
   const content = (
     <section className="trip-planner" data-planner-v2={v2} aria-label={t('Travel planner')}>
       <header className="trip-planner-header">
@@ -526,7 +591,7 @@ export default function TripPlannerDraft({ v2 = true, experience = false }: { v2
               onPick={experience && choosingCity ? point => { void moveCity(point); setChoosingCity(false); }
                 : placingCities ? setPendingMapPoint : undefined}
               pickedPoint={pendingMapPoint}
-              focusStopId={placingCities || focusedDay !== dayNumber ? undefined
+              focusStopId={placingCities || focusedDay !== dayNumber || preview ? undefined
                 : walkMap && !dayMap ? activeLocation : cityMap?.cities.find(item => item.latitude === day.cityPoint?.latitude
                   && item.longitude === day.cityPoint?.longitude)?.id ?? activeLocation}
               onMapCenter={center => { mapCenter.current = center; }}
@@ -661,6 +726,11 @@ export default function TripPlannerDraft({ v2 = true, experience = false }: { v2
               editDay({ ideas: day.ideas?.filter(item => item.id !== idea.id) }, true)}>{t('Remove')}</button>
           </li>)}</ul>}
           <TripWalkImport key={activeLocation} point={day.cityPoint} address={day.city} onPreview={setPreview}
+            onComplete={experience ? walk => {
+              if (!walk) return;
+              if (day.stops.length) setPreview(walk);
+              else attachWalk(walk);
+            } : undefined}
             primary={experience} />
           {hasDayPlan && Number.isFinite(dayDate.getTime()) && (
             <details className="trip-exp-day-services" open={!experience}>
@@ -689,10 +759,7 @@ export default function TripPlannerDraft({ v2 = true, experience = false }: { v2
           </button>)}
           {preview && <div>
             <strong>{preview.title}</strong>
-            <button type="button" onClick={() => {
-              editDay({ stops: preview.stops, importedWalk: { title: preview.title, legs: preview.legs }, route: undefined }, true);
-              setPreview(null);
-            }}>{day.stops.length ? t('Replace day stops') : t('Use this walk')}</button>
+            <button type="button" onClick={() => attachWalk(preview)}>{day.stops.length ? t('Replace day stops') : t('Use this walk')}</button>
             <button type="button" onClick={() => setPreview(null)}>{t('Cancel')}</button>
           </div>}
           {!experience && <>
@@ -735,7 +802,14 @@ export default function TripPlannerDraft({ v2 = true, experience = false }: { v2
         else { selectDay(Number(id)); setMobileTab('plan'); }
       }} action={<button type="button" onClick={() => { nextDay(lastDay + 1); setMobileTab('plan'); }}>{t('Add day')}</button>} />}
     actions={<>
+      <button type="button" disabled={saving} onClick={() => void saveAccount()}>{t('Save trip to account')}</button>
+      {accountSaved && <Link to={`/trip/${draft.id}`}>{t('Open account trip')}</Link>}
       <button type="button" disabled={sharing} onClick={() => void createShare()}>{t('Share')}</button>
+      <button type="button" disabled={saving || sharing} onClick={() => openDraft(emptyDraft())}>{t('New trip')}</button>
+      {recentDrafts.length > 0 && <details><summary>{t('Recent trip drafts')}</summary><div className="trip-exp-action-menu">
+        {recentDrafts.map(item => <button key={item.id} type="button" disabled={saving || sharing}
+          onClick={event => closeRecentDrafts(event, item)}>{item.title?.trim() || t('Travel planner')}</button>)}
+      </div></details>}
       <details><summary>{t('Trip dates and name')}</summary><div className="trip-exp-action-menu">{metadata}</div></details>
     </>}>
     {content}

@@ -60,9 +60,13 @@ function readDay(day: TripDay | null): TripDay | null {
     visits: visits?.length ? visits : undefined };
 }
 
-export function readDraft(): Draft {
+export function emptyDraft(): Draft {
+  return { id: crypto.randomUUID(), version: 2, startDate: '', endDate: '', days: {} };
+}
+
+export function readDraft(key = tripDraftStorageKey): Draft {
   try {
-    const stored = JSON.parse(localStorage.getItem(tripDraftStorageKey) ?? 'null') as (Partial<Draft> & Partial<TripDay>) | null;
+    const stored = JSON.parse(localStorage.getItem(key) ?? 'null') as (Partial<Draft> & Partial<TripDay>) | null;
     if (stored?.version === 2 && typeof stored.startDate === 'string' && typeof stored.endDate === 'string') {
       const legacy = stored.days ? null : readDay(stored as TripDay);
       const days: Draft['days'] = legacy ? { 1: legacy } : {};
@@ -81,5 +85,5 @@ export function readDraft(): Draft {
   } catch {
     // A damaged or unavailable local store cannot prevent opening the planner.
   }
-  return { id: crypto.randomUUID(), version: 2, startDate: '', endDate: '', days: {} };
+  return emptyDraft();
 }

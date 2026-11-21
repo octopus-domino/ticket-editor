@@ -1,5 +1,5 @@
 import { scheduledSeconds, tripDayDate } from '../domain/planner/travelTimes';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { searchRailPlaces, searchRailSchedule } from '../api/tripRail';
 import { requestRoad } from '../api/routePlanner';
 import type { CityPoint, LocalTripDraft, PointTransport, TripTrain } from '../api/tripDraft';
@@ -50,6 +50,30 @@ function segmentKey(segment: Segment) {
     [mode, from.latitude, from.longitude, to.latitude, to.longitude]);
 }
 
+const routeCache = new Map<string, Estimate>();
+const pendingRoutes = new Map<string, Promise<Estimate | null>>();
+
+function cachedRoute(key: string) {
+  const result = routeCache.get(key);
+  return result?.source === 'rail' && Date.now() - Date.parse(result.checkedAt) >= 900_000 ? undefined : result;
+}
+
+function loadRoute(segment: Segment, key: string) {
+  const cached = cachedRoute(key);
+  if (cached) return Promise.resolve(cached);
+  const pending = pendingRoutes.get(key);
+  if (pending) return pending;
+  const request = estimate(segment, AbortSignal.timeout(20_000)).then(result => {
+    if (result) {
+      if (routeCache.size >= 128) routeCache.delete(routeCache.keys().next().value!);
+      routeCache.set(key, result);
+    }
+    return result;
+  }).catch(() => null).finally(() => pendingRoutes.delete(key));
+  pendingRoutes.set(key, request);
+  return request;
+}
+
 export function useTripConnections(points: Point[], draft: LocalTripDraft) {
   const segments: Segment[] = points.slice(1).flatMap((to, index) => {
     const from = points[index];
@@ -58,30 +82,22 @@ export function useTripConnections(points: Point[], draft: LocalTripDraft) {
     return [{ from, to, mode, date: mode === 'TRAIN' ? tripDayDate(draft.startDate, to.number) : undefined }];
   });
   const signature = JSON.stringify(segments);
-  const cache = useRef(new Map<string, Estimate | null>());
   const [results, setResults] = useState<Record<string, Estimate | null>>({});
   useEffect(() => {
-    const controller = new AbortController();
+    let active = true;
     const pending = JSON.parse(signature) as Segment[];
     void (async () => {
       for (const segment of pending) {
         const key = segmentKey(segment);
-        if (cache.current.has(key)) continue;
-        let result: Estimate | null;
-        try {
-          result = await estimate(segment, controller.signal);
-        } catch {
-          result = null;
-        }
-        if (controller.signal.aborted) return;
-        if (result) cache.current.set(key, result);
+        const result = await loadRoute(segment, key);
+        if (!active) return;
         setResults(previous => ({ ...previous, [key]: result }));
       }
     })();
-    return () => controller.abort();
+    return () => { active = false; };
   }, [signature]);
   const connections = useMemo(() => (JSON.parse(signature) as Segment[])
-    .map(segment => ({ ...segment, result: results[segmentKey(segment)] })), [results, signature]);
+    .map(segment => ({ ...segment, result: cachedRoute(segmentKey(segment)) ?? results[segmentKey(segment)] })), [results, signature]);
   const lines = useMemo(() => connections.map(({ from, to, mode, result }): RouteMapLeg => {
     const id = `planned-${from.id}-${to.id}`;
     if (result?.coordinates && result.coordinates.length > 1) return {

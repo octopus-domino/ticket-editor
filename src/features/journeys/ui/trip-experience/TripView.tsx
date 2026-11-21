@@ -32,6 +32,7 @@ export function TripView({ trip, mode, actions, source, details, onRenamePlace }
 
   function selectDay(id: string) {
     setFocused(undefined);
+    setMapMode(false);
     setParams(previous => {
       const next = new URLSearchParams(previous);
       next.set('day', id);

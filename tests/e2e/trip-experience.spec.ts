@@ -21,6 +21,72 @@ const draft: LocalTripDraft = {
 };
 const owner = { accessToken: 'test-token', user: { id: 'owner', name: 'Owner', email: 'owner@example.test' } };
 
+test('keeps a walk on the receiving city and retains the draft when starting a new trip', async ({ page }) => {
+  test.skip(process.env.VITE_ENABLE_TRIP_PLANNER_V2 !== 'true', 'Requires the new planner');
+  await page.addInitScript(source => {
+    if (window.top === window && !localStorage.getItem('codoc/trip-planner/draft/v2'))
+      localStorage.setItem('codoc/trip-planner/draft/v2', JSON.stringify(source));
+  }, draft);
+  await page.route('**/api/auth/refresh', route => route.fulfill({ json: owner }));
+  let roadRequests = 0;
+  await page.route('**/api/journeys/routes/road', route => {
+    roadRequests++;
+    const { start, end } = route.request().postDataJSON();
+    return route.fulfill({ json: { distanceMeters: 150_000, durationSeconds: 7200,
+      coordinates: [[start.longitude, start.latitude], [end.longitude, end.latitude]] } });
+  });
+  await page.route('**/private-journey/?*', route => route.fulfill({ contentType: 'text/html', body: '<html></html>' }));
+  await page.goto('/start/tours');
+  const workspace = page.locator('.trip-exp[data-mode="planner"]');
+  const map = workspace.locator('.route-map');
+  await workspace.locator('button[data-trip-day="2"]').click();
+  const cityPin = map.locator('[title="Tver"]');
+  await expect(cityPin).toBeInViewport();
+  const [pin, bounds] = await Promise.all([cityPin.boundingBox(), map.boundingBox()]);
+  expect(Math.abs(pin!.x + pin!.width / 2 - bounds!.x - bounds!.width / 2)).toBeLessThan(20);
+
+  await workspace.getByRole('button', { name: /Plan walk in Journey/ }).click();
+  const iframe = workspace.locator('iframe');
+  const frame = await (await iframe.elementHandle())!.contentFrame();
+  await frame!.waitForURL('**/private-journey/?*');
+  await frame!.evaluate(() => {
+    const channel = new URLSearchParams(location.search).get('channel');
+    window.parent.postMessage({ type: 'private-walk:complete', channel, walk: {
+      version: 1, title: 'Tver riverside walk',
+      points: [{ name: 'Tver pier', lat: 56.86, lng: 35.91 }, { name: 'Tver bridge', lat: 56.862, lng: 35.912 }],
+      route: { legs: [{ fromIndex: 0, toIndex: 1, distanceMeters: 300, durationSeconds: 210,
+        geometry: [[56.86, 35.91], [56.862, 35.912]] }] },
+    } }, location.origin);
+  });
+  await expect(workspace.getByText('Tver riverside walk', { exact: true })).toBeVisible();
+  await workspace.locator('button[data-trip-day="3"]').click();
+  await expect(map.locator('[title="Yaroslavl"]')).toBeInViewport();
+  await expect(map.locator('[title="Tver bridge"]')).toHaveCount(0);
+  await workspace.locator('button[data-trip-day="2"]').click();
+  await expect(map.locator('[title="Tver bridge"]')).toBeInViewport();
+  await expect.poll(() => roadRequests).toBe(4);
+  await workspace.getByRole('button', { name: 'Trip map', exact: true }).click();
+  await expect(map.locator('[title="Nizhny Novgorod"]')).toBeVisible();
+  await workspace.locator('button[data-trip-day="2"]').click();
+  await expect(map.locator('[title="Tver bridge"]')).toBeInViewport();
+  expect(roadRequests).toBe(4);
+  await page.route('**/api/trips/visual-trip', route => route.fulfill({ json: {} }));
+  const requestPromise = page.waitForRequest(request => request.url().endsWith('/api/trips/visual-trip') && request.method() === 'PUT');
+  await workspace.getByRole('button', { name: 'Save trip to account' }).click();
+  const saved = (await requestPromise).postDataJSON() as AccountTrip;
+  expect(saved.days[1].note).toBe('Tver riverside walk');
+  expect(saved.days[1].walkingSections).toHaveLength(1);
+  await expect(workspace.getByRole('link', { name: 'Open account trip' })).toBeVisible();
+
+  await workspace.getByRole('button', { name: 'New trip' }).click();
+  await expect(workspace.getByRole('heading', { name: 'Travel planner' })).toBeVisible();
+  await page.reload();
+  await workspace.getByText('Recent trip drafts', { exact: true }).click();
+  await workspace.getByRole('button', { name: draft.title }).click();
+  await workspace.locator('button[data-trip-day="2"]').click();
+  await expect(map.locator('[title="Tver bridge"]')).toBeInViewport();
+});
+
 async function tripFixture(page: Page, source = draft): Promise<AccountTrip> {
   return page.evaluate(async draftFixture => {
     const modulePath = '/src/features/journeys/api/tripDraft.ts';

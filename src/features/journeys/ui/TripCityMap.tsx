@@ -20,7 +20,7 @@ export function TripCityMap({ cities, legs, plannedLines = emptyLines, focusStop
   onSelectCity?: (id: string) => void;
   onMapCenter?: (center: CityPoint) => void;
   pickedPoint?: CityPoint;
-  dayMap?: Pick<RouteMapProps, 'stops' | 'legs' | 'onStopSelect' | 'onStopMove'>;
+  dayMap?: Pick<RouteMapProps, 'stops' | 'legs' | 'onStopSelect' | 'onStopMove' | 'keepRouteInView'>;
 }) {
   const [selectedId, setSelectedId] = useState<string>();
   const [lodgingId, setLodgingId] = useState<string>();
@@ -52,7 +52,7 @@ export function TripCityMap({ cities, legs, plannedLines = emptyLines, focusStop
   return <figure>
     <RouteMap rasterBasemap cityMap onReady={ignoreMapHandle} {...(hotelMap ? {
       ...hotelMap, legs: emptyLines,
-    } : dayMap ? { ...dayMap, focusStopId, onPick, pickedPoint } : {
+    } : dayMap ? { ...dayMap, focusStopId, onPick, pickedPoint, onUserMove: onMapCenter } : {
       stops: [...destinations, ...hotels], legs: mapLegs, focusStopId, fit: onPick ? 'initial' : true,
       onPick, pickedPoint, onUserMove: onMapCenter, onLegSelect: id => { setLodgingId(undefined); setSelectedId(id); },
       onStopSelect: hotels.length || onSelectCity ? id => {

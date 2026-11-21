@@ -6,8 +6,9 @@ import './private-walk-picker.css';
 
 export type WalkCandidate = ReturnType<typeof readPrivateWalk>;
 
-export function TripWalkImport({ onPreview, point, address, primary }: {
+export function TripWalkImport({ onPreview, onComplete = onPreview, point, address, primary }: {
   onPreview: (walk: WalkCandidate) => void;
+  onComplete?: (walk: WalkCandidate) => void;
   point?: CityPoint;
   address?: string;
   primary?: boolean;
@@ -16,8 +17,8 @@ export function TripWalkImport({ onPreview, point, address, primary }: {
   const [error, setError] = useState(false);
   const frame = useRef<HTMLIFrameElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
-  const callback = useRef(onPreview);
-  callback.current = onPreview;
+  const callback = useRef(onComplete);
+  callback.current = onComplete;
 
   useEffect(() => {
     if (!channel) return;

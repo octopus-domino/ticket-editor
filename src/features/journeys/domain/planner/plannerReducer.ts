@@ -8,6 +8,7 @@ export interface TripPlannerState {
 
 export type PlannerCommand =
   | { type: 'edit'; changes: Partial<LocalTripDraft> }
+  | { type: 'open'; draft: LocalTripDraft }
   | { type: 'undo' }
   | { type: 'redo' };
 
@@ -15,6 +16,7 @@ const historyLimit = 50;
 
 export function plannerReducer(state: TripPlannerState, command: PlannerCommand): TripPlannerState {
   switch (command.type) {
+    case 'open': return { draft: command.draft, past: [], future: [] };
     case 'edit':
       return {
         draft: { ...state.draft, ...command.changes },

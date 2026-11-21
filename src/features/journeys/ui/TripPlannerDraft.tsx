@@ -54,6 +54,7 @@ export default function TripPlannerDraft({ v2 = true, experience = false }: { v2
   const [selectedDayId, setSelectedDayId] = useState<string>();
   const [selectedVisit, setSelectedVisit] = useState<string>();
   const [choosingCity, setChoosingCity] = useState(false);
+  const [cityListOpen, setCityListOpen] = useState(false);
   const [placingCities, setPlacingCities] = useState(false);
   const [pendingMapPoint, setPendingMapPoint] = useState<CityPoint>();
   const cityInput = useRef<HTMLInputElement>(null);
@@ -466,20 +467,42 @@ export default function TripPlannerDraft({ v2 = true, experience = false }: { v2
       <div className="trip-planner-grid" data-hotel-search={Boolean(hotelSearch)} data-mobile-tab={mobileTab} data-trip-experience={experience}>
         <div className="trip-planner-overview">
           {!hotelSearch && <div className="trip-map-actions">
-            <button type="button" aria-expanded={showingCities}
-              onClick={() => { setDayMap(undefined); setFocusedDay(undefined); setShowingCities(true); }}>{t('Trip map')}</button>
-            <button type="button" aria-pressed={!showingCities} onClick={() => {
+            <button type="button" aria-expanded={showingCities && !cityListOpen}
+              onClick={() => { setCityListOpen(false); setDayMap(undefined); setFocusedDay(undefined); setShowingCities(true); }}>{t('Trip map')}</button>
+            <button type="button" aria-pressed={experience ? cityListOpen : !showingCities} onClick={() => {
+              if (experience) { setCityListOpen(true); setPlacingCities(false); return; }
               setShowingCities(false);
               setChoosingCity(false);
               cityInput.current?.focus();
             }}>{t('City list')}</button>
             {showingCities && <button type="button" aria-pressed={placingCities} onClick={() => {
+              setCityListOpen(false);
               setShowingCities(true);
               setPlacingCities(!placingCities);
               setChoosingCity(false);
             }}>{t('Add cities on the map')}</button>}
           </div>}
-          <div className="trip-map-and-hotel">
+          {experience && cityListOpen && !hotelSearch && <div className="trip-exp-city-table">
+            <table>
+              <caption>{t('City list')}</caption>
+              <thead><tr><th scope="col">{t('Trip day')}</th><th scope="col">{t('City')}</th><th scope="col">{t('Trip lodging')}</th></tr></thead>
+              <tbody>{locations.filter(({ visit }) => visit.city || visit.cityPoint).map(({ id, number, visit }) => {
+                const date = tripDayDate(draft.startDate, number);
+                return <tr key={id}>
+                  <td>{date ? <time dateTime={date}>{tripDateLabel(date)}</time> : number}</td>
+                  <td><button type="button" onClick={() => {
+                    selectDay(number, id === String(number) ? undefined : id);
+                    setCityListOpen(false);
+                    setMobileTab('plan');
+                    setFocusedDay(number);
+                  }}>{visit.city?.trim() || t('City')}</button></td>
+                  <td>{visit.lodging?.name || '—'}</td>
+                </tr>;
+              })}</tbody>
+            </table>
+            {!locations.some(({ visit }) => visit.city || visit.cityPoint) && <p>{t('No places have been added to this day.')}</p>}
+          </div>}
+          <div className="trip-map-and-hotel" hidden={experience && cityListOpen && !hotelSearch}>
             {(experience || (showingCities && !choosingCity)) && <TripCityMap cities={cityMap?.cities ?? cityPins}
               legs={cityMap?.legs ?? []} plannedLines={lines} accommodations={cityMap?.accommodations}
               hotelMap={hotelSearch ? hotelMap ?? { stops: hotelSearch.point ? [{ ...hotelSearch.point, id: '__day_point__',
@@ -533,7 +556,7 @@ export default function TripPlannerDraft({ v2 = true, experience = false }: { v2
           </div>
         </div>
         <aside className="trip-planner-summary">
-          <TripSummaryBar days={Array.from({ length: Math.min(lastDay, 366) }, (_, index) => {
+          <TripSummaryBar compact={experience} days={Array.from({ length: Math.min(lastDay, 366) }, (_, index) => {
             const number = index + 1;
             const timestamp = Date.parse(draft.startDate) + index * dayMilliseconds;
             const date = Number.isFinite(timestamp) ? new Date(timestamp).toISOString().slice(0, 10) : undefined;

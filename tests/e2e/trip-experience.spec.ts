@@ -99,6 +99,14 @@ test('planner opens a selected day beside the same map and supports mobile plann
   const map = workspace.locator('.route-map');
   await expect(map).toHaveCount(1);
   const element = await map.elementHandle();
+  await workspace.getByRole('button', { name: 'City list', exact: true }).click();
+  const cities = workspace.getByRole('table', { name: 'City list' });
+  await expect(cities.getByRole('row')).toHaveCount(6);
+  await cities.getByRole('button', { name: 'Tver', exact: true }).click();
+  await expect(workspace.getByRole('heading', { name: 'Tver' })).toBeVisible();
+  await workspace.locator('button[data-trip-day="overview"]').click();
+  await expect(workspace.locator('.trip-summary[data-compact]')).toBeVisible();
+  await expect(workspace.locator('.trip-planner-overview')).toBeHidden();
   await workspace.locator('button[data-trip-day="2"]').click();
   await workspace.locator('button[data-trip-day="3"]').click();
   expect(await element?.evaluate(node => node.isConnected)).toBe(true);

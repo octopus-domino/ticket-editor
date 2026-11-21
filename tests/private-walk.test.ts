@@ -19,4 +19,13 @@ describe('Private walk transfer', () => {
     expect(() => importPrivateWalk({ ...walk, route: { legs: [] } }, origin, '2026-11-18T09:00')).toThrow();
     expect(() => importPrivateWalk({ ...walk, points: [{ lat: 999, lng: 30 }, walk.points[1]] }, origin, '2026-11-18T09:00')).toThrow();
   });
+  it('imports legacy HTTP CityWalls references without recalculating the saved geometry', () => {
+    const result = importPrivateWalk({ ...walk, points: [
+      { ...walk.points[0], sourceUrl: 'http://www.citywalls.ru/house126.html' },
+      { ...walk.points[1], sourceUrl: 'javascript:alert(1)' },
+    ] }, origin, '2026-11-21T12:00');
+    expect(result.stops[0].description).toBe('https://www.citywalls.ru/house126.html');
+    expect(result.stops[1].description).toBe('');
+    expect(result.legs[0].coordinates).toEqual([[30.3, 59.9], [30.302, 59.905], [30.31, 59.91]]);
+  });
 });

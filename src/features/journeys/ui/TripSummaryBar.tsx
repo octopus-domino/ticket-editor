@@ -27,7 +27,7 @@ interface TripSummaryDay {
   onMoveLater?: () => void;
 }
 
-export function TripSummaryBar({ rows = [], days }: { rows?: TripSummaryRow[]; days?: TripSummaryDay[] }) {
+export function TripSummaryBar({ rows = [], days, compact = false }: { rows?: TripSummaryRow[]; days?: TripSummaryDay[]; compact?: boolean }) {
   if (!rows.length && !days?.length) return null;
   const cards = (items: TripSummaryRow[]) => <ol>{items.map(({ id, place, lodging, connection, onChooseTransport, onChooseTrain, onSelect, onFindHotel }) => {
       const nights = lodging && (Date.parse(lodging.checkOut) - Date.parse(lodging.checkIn)) / 86_400_000;
@@ -72,7 +72,7 @@ export function TripSummaryBar({ rows = [], days }: { rows?: TripSummaryRow[]; d
             </div>
           </details>}
         </li>}
-        <li>
+        <li className={compact ? 'trip-summary-stay-row' : undefined}>
           {onSelect ? <button type="button" onClick={onSelect}>{place}</button> : <strong>{place}</strong>}
           {lodging ? <>
             <div>{lodging.name}</div>
@@ -85,7 +85,7 @@ export function TripSummaryBar({ rows = [], days }: { rows?: TripSummaryRow[]; d
         </li>
       </Fragment>;
     })}</ol>;
-  return <section className="trip-summary" aria-label={t('Trip overview')}>
+  return <section className="trip-summary" data-compact={compact || undefined} aria-label={t('Trip overview')}>
     <h2>{t('Trip overview')}</h2>
     {days ? <div className="trip-day-timeline">{days.map(day => <section key={day.number} className="trip-day-timeline-item"
       data-selected={day.selected}>

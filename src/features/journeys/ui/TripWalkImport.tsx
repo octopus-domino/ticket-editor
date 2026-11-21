@@ -67,8 +67,8 @@ export function TripWalkImport({ onPreview, point, address }: {
         <button type="button" onClick={() => setChannel('')} aria-label={t('Close')}>×</button>
       </header>
       <iframe ref={frame} src={url} title={t('Private itineraries')} allow="geolocation; clipboard-write" />
-      {error && <p role="alert">{t('Could not build the walking route.')}</p>}
+      {error && <p role="alert">{t('Could not import the walking route.')}</p>}
     </dialog>}
-    {!channel && error && <p role="alert">{t('Could not build the walking route.')}</p>}
+    {!channel && error && <p role="alert">{t('Could not import the walking route.')}</p>}
   </>;
 }

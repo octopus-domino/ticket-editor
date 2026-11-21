@@ -8,7 +8,7 @@ const coordinate = z.tuple([latitude, longitude]);
 const walkSchema = z.object({
   version: z.literal(1), title: z.string().trim().min(1).max(200),
   points: z.array(z.object({ lat: latitude, lng: longitude, name: z.string().max(300).optional(),
-    description: z.string().max(500).optional(), sourceUrl: z.url().startsWith('https://').optional(),
+    description: z.string().max(500).optional(), sourceUrl: z.string().optional(),
   })).min(2).max(200),
   route: z.object({ legs: z.array(z.object({
     fromIndex: z.number().int(), toIndex: z.number().int(),
@@ -16,6 +16,18 @@ const walkSchema = z.object({
     distanceMeters: z.number().finite().nonnegative(), durationSeconds: z.number().finite().positive().max(43200),
   })).min(1).max(199) }),
 });
+
+function walkSourceUrl(value?: string): string | undefined {
+  if (!value || value.length > 2048) return;
+  const citywalls = /^https?:\/\/(?:www\.)?citywalls\.ru\/house(\d+)\.html(?:[?#].*)?$/i.exec(value);
+  if (citywalls) return `https://www.citywalls.ru/house${citywalls[1]}.html`;
+  try {
+    const url = new URL(value);
+    if (url.protocol === 'https:' && !url.username && !url.password) return url.href;
+  } catch {
+    // An unusable reference does not invalidate the recorded geometry.
+  }
+}
 
 /** Decodes the base64url payload used by walk share links before schema validation. */
 export function decodePrivateWalkLink(encoded: string): unknown {
@@ -35,7 +47,7 @@ export function readPrivateWalk(value: unknown, zone: string) {
   const stops: RouteStop[] = walk.points.map((point, index) => ({
     id: crypto.randomUUID(), label: point.name?.trim() || `${index + 1}`,
     latitude: point.lat, longitude: point.lng, zone, stayMinutes: 0,
-    description: [point.description, point.sourceUrl].filter(Boolean).join('\n').slice(0, 500),
+    description: [point.description, walkSourceUrl(point.sourceUrl)].filter(Boolean).join('\n').slice(0, 500),
     ...(index === 0 ? { meta: { walk_title: walk.title } } : {}),
   }));
   const legs: PlannedLeg[] = walk.route.legs.map(leg => ({

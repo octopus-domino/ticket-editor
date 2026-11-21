@@ -113,13 +113,30 @@
 .trip-exp .trip-planner-grid[data-hotel-search="false"] .trip-planner-summary { display: none; }
 .trip-exp .trip-planner-grid[data-mobile-tab="summary"] .trip-planner-summary { display: block; }
 .trip-exp .trip-planner-grid[data-mobile-tab="summary"] .trip-planner-day { display: none; }
+.trip-exp-city-table { overflow-x: auto; }
+.trip-exp-city-table table { width: 100%; border-collapse: collapse; text-align: start; }
+.trip-exp-city-table caption { text-align: start; font-weight: 700; padding: 8px 0; }
+.trip-exp-city-table :is(th, td) { text-align: start; padding: 8px; border-bottom: 1px solid var(--trip-border); overflow-wrap: anywhere; }
+.trip-exp-city-table th { background: var(--trip-subtle); }
+.trip-exp-city-table button { min-height: 40px; max-width: 100%; text-align: start; white-space: normal; }
+.trip-exp .trip-summary[data-compact] { margin: 0; padding: 0; border: 0; max-width: none; background: transparent; }
+.trip-exp .trip-summary[data-compact] .trip-day-timeline { border: 0; margin: 0; padding: 0; }
+.trip-exp .trip-summary[data-compact] .trip-day-timeline-item { padding: 12px 0; border-bottom: 1px solid var(--trip-border); }
+.trip-exp .trip-summary[data-compact] .trip-day-timeline-item::before { display: none; }
+.trip-exp .trip-summary[data-compact] .trip-day-timeline-item > ol { margin-block-start: 8px; }
+.trip-exp .trip-summary[data-compact] .trip-summary-stay-row {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; overflow-wrap: anywhere;
+}
+.trip-exp .trip-summary[data-compact] :is(.trip-summary-stay-row, .trip-summary-connection) button { min-height: 36px; }
+.trip-exp .trip-summary[data-compact] .trip-summary-connection { display: flex; flex-wrap: wrap; justify-content: start; gap: 6px 12px; }
 @media (min-width: 768px) {
   .trip-exp .trip-planner-grid[data-trip-experience="true"][data-hotel-search="false"] {
     grid-template-areas: "day map"; grid-template-columns: minmax(18rem, 2fr) minmax(0, 3fr);
   }
   .trip-exp .trip-planner-grid[data-trip-experience="true"][data-mobile-tab="summary"][data-hotel-search="false"] {
-    grid-template-areas: "summary map";
+    grid-template-areas: "summary"; grid-template-columns: minmax(0, 1fr);
   }
+  .trip-exp .trip-planner-grid[data-trip-experience="true"][data-mobile-tab="summary"][data-hotel-search="false"] > .trip-planner-overview { display: none; }
 }
 @media (max-width: 767px) {
   .trip-exp-workspace { grid-template-columns: minmax(0, 1fr); }

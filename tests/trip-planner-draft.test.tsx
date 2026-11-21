@@ -288,3 +288,35 @@ test('keeps several cities in one day, repeats the city on another day and deriv
   fireEvent.click(within(days[0] as HTMLElement).getByRole('button', { name: t('Move day later') }));
   expect(within(days[1] as HTMLElement).getByRole('button', { name: 'Tver' })).toBeInTheDocument();
 });
+
+test('autosaves a typed title and flushes the last edit before closing the page', async () => {
+  vi.useFakeTimers();
+  try {
+    render(<MemoryRouter><TripPlannerDraft /></MemoryRouter>);
+    fireEvent.change(screen.getByLabelText(t('Trip name')), { target: { value: 'Autosaved trip' } });
+    await act(async () => { vi.advanceTimersByTime(451); });
+    expect(JSON.parse(localStorage.getItem('codoc/trip-planner/draft/v2')!).title).toBe('Autosaved trip');
+    fireEvent.change(screen.getByLabelText(t('Trip name')), { target: { value: 'Before leaving' } });
+    fireEvent(window, new Event('pagehide'));
+    expect(JSON.parse(localStorage.getItem('codoc/trip-planner/draft/v2')!).title).toBe('Before leaving');
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+test('reviews a date change without shifting saved lodging or train times', () => {
+  const key = 'codoc/trip-planner/draft/v2';
+  const lodging = { name: 'Station hotel', address: 'Main St', checkIn: '2027-01-01', checkOut: '2027-01-02' };
+  localStorage.setItem(key, JSON.stringify({
+    id: 'review-example', version: 2, startDate: '2026-12-31', endDate: '2027-01-01',
+    days: { 2: { city: 'Tver', stops: [], lodging } },
+  }));
+  render(<MemoryRouter><TripPlannerDraft /></MemoryRouter>);
+  fireEvent.change(screen.getByLabelText(t('Start date')), { target: { value: '2027-01-02' } });
+  const review = screen.getByRole('alert');
+  expect(review).toHaveTextContent(lodging.name);
+  expect(screen.getByLabelText(t('Start date'))).toHaveValue('2026-12-31');
+  fireEvent.click(within(review).getByRole('button', { name: t('Apply') }));
+  expect(screen.getByLabelText(t('Start date'))).toHaveValue('2027-01-02');
+  expect(JSON.parse(localStorage.getItem(key)!).days[2].lodging).toEqual(lodging);
+});

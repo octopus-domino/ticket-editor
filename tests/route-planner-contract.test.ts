@@ -29,3 +29,26 @@ test('a legacy road whose endpoints still match the stops can be reused', async 
   expect(plan.legs[0].coordinates).toEqual(geometry);
   expect(journeyRequest).not.toHaveBeenCalled();
 });
+
+test('recalculates a cached road after moving an endpoint even if its geometry is still present', async () => {
+  vi.mocked(journeyRequest).mockClear();
+  vi.mocked(journeyRequest).mockResolvedValueOnce({ coordinates: geometry, durationSeconds: 600, distanceMeters: 800 });
+  const plan = await planRoute(stops, [{ mode: 'foot', coordinates: [], durationSeconds: 0 }],
+    '2026-12-01T10:00', false, () => {});
+  const moved = [{ ...stops[0], longitude: 37.63 }, stops[1]];
+  const newGeometry: [number, number][] = [[37.63, 55.75], geometry[1]];
+  vi.mocked(journeyRequest).mockResolvedValueOnce({ coordinates: newGeometry, durationSeconds: 420, distanceMeters: 700 });
+  const updated = await planRoute(moved, plan.legs, '2026-12-01T10:00', false, () => {});
+  expect(updated.legs[0]).toMatchObject({ coordinates: newGeometry, calculation: { source: 'road-api', status: 'fresh' } });
+  expect(updated.legs[0].calculation?.key).not.toBe(plan.legs[0].calculation?.key);
+});
+
+test('does not use a response that arrived after cancellation', async () => {
+  const controller = new AbortController();
+  vi.mocked(journeyRequest).mockImplementationOnce(async () => {
+    controller.abort();
+    return { coordinates: geometry, durationSeconds: 600, distanceMeters: 800 } as never;
+  });
+  await expect(planRoute(stops, [{ mode: 'foot', coordinates: [], durationSeconds: 0 }],
+    '2026-12-01T10:00', false, () => {}, controller.signal)).rejects.toMatchObject({ name: 'AbortError' });
+});

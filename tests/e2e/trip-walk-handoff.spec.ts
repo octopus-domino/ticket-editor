@@ -5,6 +5,9 @@ test('round-trips a trip with two cities, train, hotel and a Journey walk after 
   test.skip(process.env.VITE_ENABLE_TRIP_PLANNER_V2 !== 'true', 'Requires the date review in trip planner V2');
   test.setTimeout(90_000);
   await page.addInitScript(() => localStorage.setItem('codoc:language', 'en'));
+  await page.route('**/api/auth/refresh', route => route.fulfill({
+    json: { accessToken: 'test', user: { id: 'trip-owner', name: 'Trip owner', email: 'owner@example.test' } },
+  }));
   await page.route('https://tiles.openfreemap.org/**', route => route.fulfill({
     json: { version: 8, sources: {}, layers: [{ id: 'base', type: 'background' }] },
   }));

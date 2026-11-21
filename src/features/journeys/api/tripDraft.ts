@@ -1,3 +1,4 @@
+import type { DayPlanPreferences, PlanningStop } from '../domain/planner/plannerTypes';
 import { authFetch } from '@/shared/api/client';
 import { Temporal } from '@js-temporal/polyfill';
 import type { PlannedLeg } from '../domain/route';
@@ -10,6 +11,8 @@ export const pointTransportModes = ['CAR', 'TRAIN', 'PLANE', 'WALK'] as const;
 export type PointTransport = typeof pointTransportModes[number];
 
 export interface TripVisit {
+  planningStops?: PlanningStop[];
+  dayPreferences?: DayPlanPreferences;
   incomingMode?: PointTransport;
   stops: RouteStop[];
   city?: string;
@@ -23,6 +26,7 @@ export interface TripVisit {
 }
 
 export interface TripDayDraft extends TripVisit {
+  dayId?: string;
   visits?: (TripVisit & { id: string })[];
 }
 
@@ -131,6 +135,10 @@ export function tripPayload(draft: LocalTripDraft, title: string, connections: P
           id: stop.id, title: stop.label, latitude: stop.latitude, longitude: stop.longitude,
           category: 'WALK', note: stop.description, photoRefs: [], idea: false,
         })),
+        ...(visit.planningStops ?? []).map(stop => ({
+          id: stop.id, title: stop.title, latitude: stop.latitude, longitude: stop.longitude,
+          category: 'OTHER', note: stop.notes, photoRefs: [], idea: false,
+        })),
         ...(visit.ideas ?? []).map(idea => ({
           id: `idea-${idea.id}`, title: idea.label, latitude: idea.latitude, longitude: idea.longitude,
           category: 'OTHER', note: undefined, photoRefs: [], idea: true,
@@ -178,12 +186,16 @@ export function tripPayload(draft: LocalTripDraft, title: string, connections: P
   };
 }
 
+export class TripAccountSaveError extends Error {
+  constructor(readonly status: number) { super(String(status)); }
+}
+
 export async function saveTripToAccount(draft: LocalTripDraft, title: string, connections?: PlannedConnection[]) {
   const response = await authFetch(`/api/trips/${encodeURIComponent(draft.id)}`, {
     method: 'PUT', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(tripPayload(draft, title, connections)),
   });
-  if (!response.ok) throw new Error(String(response.status));
+  if (!response.ok) throw new TripAccountSaveError(response.status);
 }
 
 export type AccountTrip = ReturnType<typeof tripPayload>;

@@ -206,6 +206,14 @@ export async function openAccountTrip(id: string, signal: AbortSignal): Promise<
   return response.json() as Promise<AccountTrip>;
 }
 
+export async function updateAccountTrip(trip: AccountTrip): Promise<AccountTrip> {
+  const response = await authFetch(`/api/trips/${encodeURIComponent(trip.id)}`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(trip),
+  });
+  if (!response.ok) throw new Error(String(response.status));
+  return response.json() as Promise<AccountTrip>;
+}
+
 export const tripExportFiles = {
   calendar: { path: 'calendar', filename: 'trip.ics' },
   pdf: { path: 'pdf', filename: 'trip.pdf' },

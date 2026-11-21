@@ -6,8 +6,9 @@ import { travelDuration } from '../../domain/tripDocumentContent';
 import { TripCityMap } from '../TripCityMap';
 import { TripDayNavigator, TripExperienceShell, tripDateLabel } from './TripExperienceShell';
 
-export function TripView({ trip, mode, actions, source, details }: {
+export function TripView({ trip, mode, actions, source, details, onRenamePlace }: {
   trip: SharedTrip; mode: 'owner' | 'shared'; actions?: ReactNode; source?: string; details?: ReactNode;
+  onRenamePlace?: (day: number, id: string, title: string) => void;
 }) {
   const [params, setParams] = useSearchParams();
   const [focused, setFocused] = useState<{ dayKey: string; id: string }>();
@@ -22,7 +23,8 @@ export function TripView({ trip, mode, actions, source, details }: {
   const day = trip.days[index];
   const city = day ? cities.get(day.cityId) : undefined;
   const lodging = day?.accommodationId ? trip.accommodations.find(item => item.id === day.accommodationId) : undefined;
-  const places = day?.segments.filter(segment => !segment.idea && !segment.id.startsWith('visit-')) ?? [];
+  const places = day?.segments.filter(segment => !segment.idea &&
+    (!segment.id.startsWith('visit-') || segment.title !== city?.name)) ?? [];
   const ideas = day?.segments.filter(segment => segment.idea) ?? [];
   const uniqueCities = [...new Set(trip.cities.map(city => city.name))];
   const first = trip.startDate || trip.days[0]?.date;
@@ -56,7 +58,10 @@ export function TripView({ trip, mode, actions, source, details }: {
   const focusId = focused?.dayKey === dayKey ? focused.id : undefined;
 
   return <TripExperienceShell mode={mode} title={trip.title}
-    subtitle={uniqueCities.length > 1 ? uniqueCities.join(' → ') : source}
+    subtitle={uniqueCities.length > 1 || source ? <>
+      {uniqueCities.length > 1 && uniqueCities.join(' → ')}
+      {source && <small className="trip-exp-source">{source}</small>}
+    </> : undefined}
     dateSpan={first && <><time dateTime={first}>{tripDateLabel(first)}</time>
       {last && last !== first && <> – <time dateTime={last}>{tripDateLabel(last)}</time></>}</>}
     actions={actions} navigation={<TripDayNavigator days={days} selected={index >= 0 ? dayKey : 'overview'} onSelect={selectDay} />}>
@@ -75,6 +80,17 @@ export function TripView({ trip, mode, actions, source, details }: {
                 {place.title}
               </button>
               {focusId === place.id && place.note && <p>{place.note}</p>}
+              {mode === 'owner' && focusId === place.id && onRenamePlace && !place.id.startsWith('visit-') && <form
+                className="trip-exp-place-edit"
+                onSubmit={event => {
+                  event.preventDefault();
+                  const title = String(new FormData(event.currentTarget).get('title') ?? '').trim();
+                  if (title && title !== place.title) onRenamePlace(index, place.id, title);
+                }}>
+                <label>{t('Place name')} <input name="title" required maxLength={180} defaultValue={place.title}
+                  key={place.title} /></label>
+                <button type="submit">{t('Apply')}</button>
+              </form>}
             </li>)}
           </ol> : <p>{t('No places have been added to this day.')}</p>}
           {walking.length > 0 && <p><strong>{t('Private itineraries')}</strong>

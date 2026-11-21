@@ -91,6 +91,7 @@ export const RichTextEditor: React.FC<Props> = ({
 }) => {
   const [pop, setPop] = useState<PopKind>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
+  const colorAnchor = useRef<HTMLButtonElement | null>(null);
   const { position, onHeaderMouseDown } = useDraggableModal();
 
   const innerWidth = Math.max(40, contentWidth - padding.left - padding.right);
@@ -154,7 +155,9 @@ export const RichTextEditor: React.FC<Props> = ({
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (toolbarRef.current && !toolbarRef.current.contains(e.target as Node)) {
+      const target = e.target;
+      if (target instanceof Element && toolbarRef.current && !toolbarRef.current.contains(target)
+          && !target.closest('[data-richtext-popover]')) {
         setPop(null);
       }
     };
@@ -303,11 +306,13 @@ export const RichTextEditor: React.FC<Props> = ({
           <div className="rt-sep" />
           <div className="rt-popover-wrap">
             <button type="button" className="rt-btn" title={__tr("Цвет текста")}
-              onMouseDown={(e) => { e.preventDefault(); setPop((p) => (p === 'color' ? null : 'color')); }}>
+              aria-expanded={pop === 'color'} onMouseDown={e => e.preventDefault()}
+              onClick={e => { colorAnchor.current = e.currentTarget; setPop(p => p === 'color' ? null : 'color'); }}>
               <span className="rt-letter" style={{ borderBottomColor: currentColor }}>A</span>
             </button>
             {pop === 'color' && (
               <ColorPickerPopover
+                anchor={colorAnchor.current}
                 title={__tr("Цвет текста")}
                 colors={TEXT_COLORS.flat()}
                 onPick={(c) => { editor.chain().focus().setColor(c).run(); setPop(null); }}
@@ -317,11 +322,13 @@ export const RichTextEditor: React.FC<Props> = ({
           </div>
           <div className="rt-popover-wrap">
             <button type="button" className="rt-btn" title={__tr("Фон текста")}
-              onMouseDown={(e) => { e.preventDefault(); setPop((p) => (p === 'bg' ? null : 'bg')); }}>
+              aria-expanded={pop === 'bg'} onMouseDown={e => e.preventDefault()}
+              onClick={e => { colorAnchor.current = e.currentTarget; setPop(p => p === 'bg' ? null : 'bg'); }}>
               <span className="rt-letter rt-bg-letter" style={{ background: currentHighlight || 'transparent', borderBottomColor: currentHighlight || '#9ca3af' }}>A</span>
             </button>
             {pop === 'bg' && (
               <ColorPickerPopover
+                anchor={colorAnchor.current}
                 title={__tr("Фон текста")}
                 colors={BG_COLORS.flat()}
                 onPick={(c) => { editor.chain().focus().setHighlight({ color: c }).run(); setPop(null); }}

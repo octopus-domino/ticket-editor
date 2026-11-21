@@ -125,11 +125,12 @@ test('selected data set opens its values and a schema field can be dragged onto 
   );
   await page.goto('/app/editor/local?tab=data&schemaId=S');
   await expect(page.locator('.stage-wrap')).toBeVisible();
+  await page.locator('.canvas-dock').getByRole('button', { name: 'Properties', exact: true }).click();
   await expect(page.locator('.right-panel .mv-editor')).toBeVisible();
   const field = page.locator('.dp-field-chip').filter({ hasText: 'name' }).first();
   await expect(field).toBeVisible();
   const stage = page.locator('.stage-wrap');
-  await field.dragTo(stage, { targetPosition: { x: 120, y: 100 } });
+  await field.dragTo(stage, { force: true, targetPosition: { x: 120, y: 100 } });
   await expect
     .poll(async () =>
       page.evaluate(() => {
@@ -138,6 +139,38 @@ test('selected data set opens its values and a schema field can be dragged onto 
       }),
     )
     .toContain('{{name}}');
+});
+
+test('switching schemas keeps the canvas mounted and a four-column array on the slide', async ({ page }) => {
+  await account(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const columns = ['code', 'name', 'amount', 'status'];
+  await page.route('**/api/schemas', route => route.fulfill({ json: [
+    { id: 'S1', name: 'First schema', fields: [{ path: 'title', type: 'string' }] },
+    { id: 'S2', name: 'Order schema', fields: [{ path: 'items', type: 'array' },
+      ...columns.map(name => ({ path: `items[0].${name}`, type: 'string' }))] },
+  ] }));
+  await page.addInitScript(() => localStorage.setItem('ticket-editor:offline-doc', JSON.stringify({
+    version: '2.0', activeId: 'test-slide', data: [], slides: [{ id: 'test-slide', name: 'Order',
+      width: 400, height: 400, format: 'custom', orientation: 'portrait',
+      padding: { top: 0, left: 0, right: 0, bottom: 0 }, background: '#fff', elements: [] }],
+  })));
+  await page.goto('/app/editor/local?tab=data&schemaId=S1');
+  const stage = page.locator('.stage-wrap');
+  const stageHandle = await stage.elementHandle();
+  await page.getByRole('button', { name: '100%', exact: true }).click();
+  await page.locator('.canvas-dock').getByRole('button', { name: 'Properties', exact: true }).click();
+  await page.locator('.dp-select-model').selectOption('S2');
+  const array = page.locator('.dp-field-chip').filter({ hasText: /^items\s*→/ });
+  await expect(array).toBeVisible();
+  expect(await stageHandle?.evaluate(node => node.isConnected)).toBe(true);
+  const bounds = (await stage.boundingBox())!;
+  await array.dragTo(stage, { force: true, targetPosition: { x: bounds.width - 12, y: 80 } });
+  await expect.poll(() => page.evaluate(() => {
+    const saved = JSON.parse(localStorage.getItem('ticket-editor:offline-doc')!);
+    const table = saved.slides[0].elements.find((element: { type: string }) => element.type === 'table');
+    return table && { cols: table.cols, header: table.data[0], cells: table.data[1], right: table.x + table.width, schemaId: saved.schemaId };
+  })).toEqual({ cols: 4, header: columns, cells: columns.map(name => `{{items[0].${name}}}`), right: 400, schemaId: 'S2' });
 });
 
 for (const count of [0, 1])

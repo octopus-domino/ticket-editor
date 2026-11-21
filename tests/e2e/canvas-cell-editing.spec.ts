@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 
-async function openEditor(page: Page, rich = false) {
-  await page.addInitScript((rich) => {
+async function openEditor(page: Page, mode: boolean | 'plain' = false) {
+  await page.addInitScript((mode) => {
     localStorage.setItem('codoc:language', 'en');
     if (localStorage.getItem('ticket-editor:offline-doc')) return;
     localStorage.setItem('ticket-editor:offline-doc', JSON.stringify({ version: '2.0', activeId: 'S1', data: [], slides: [{
@@ -12,20 +12,20 @@ async function openEditor(page: Page, rich = false) {
         data: [['First', 'Second'], ['Third', 'Fourth']], fontSize: 16, borderColor: '#333', headerBg: '#eee',
       }],
     }] }));
-    if (rich) {
+    if (mode) {
       const document = JSON.parse(localStorage.getItem('ticket-editor:offline-doc')!);
       document.slides[0].elements = [{ id: 'rich', type: 'text', x: 60, y: 360, width: 440, height: 260,
-        rotation: 0, text: 'Above table', richText: true, fontSize: 16, fontFamily: 'Arial', fontStyle: 'normal',
+        rotation: 0, text: 'Above table', richText: mode === true, fontSize: 16, fontFamily: 'Arial', fontStyle: 'normal',
         textDecoration: '', fill: '#111', background: 'transparent', align: 'left', verticalAlign: 'top', lineHeight: 1.3,
         padding: { top: 10, right: 12, bottom: 8, left: 18 },
-        html: '<p>Above table</p><table data-editor-width="410"><colgroup><col width="100"><col width="310"></colgroup><tbody>'
+        html: mode === 'plain' ? undefined : '<p>Above table</p><table data-editor-width="410"><colgroup><col width="100"><col width="310"></colgroup><tbody>'
           + '<tr><th colspan="2"><p>Merged header</p></th></tr>'
           + '<tr><td><p><strong>First</strong></p></td><td><p>Second</p></td></tr>'
           + '<tr><td><p>Third</p></td><td><p>Fourth</p></td></tr></tbody></table>',
       }];
       localStorage.setItem('ticket-editor:offline-doc', JSON.stringify(document));
     }
-  }, rich);
+  }, mode);
   await page.route('**/api/**', route => {
     const path = new URL(route.request().url()).pathname;
     if (!path.startsWith('/api/')) return route.continue();
@@ -58,6 +58,46 @@ async function expectCellBounds(input: ReturnType<Page['locator']>, cell: Awaite
   const bounds = (await input.boundingBox())!;
   for (const key of ['x', 'y', 'width', 'height'] as const) expect(bounds[key]).toBeCloseTo(cell[key], 0);
 }
+
+test('text color palette stays above the canvas toolbar and applies to selected text', async ({ page }) => {
+  await page.setViewportSize({ width: 1366, height: 900 });
+  await openEditor(page, true);
+  await page.locator('.konvajs-content').dblclick({ position: { x: 90, y: 380 } });
+  const paragraph = page.locator('.rt-editor-content .ProseMirror > p').first();
+  await paragraph.click();
+  await paragraph.evaluate(node => {
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    const selection = window.getSelection()!;
+    selection.removeAllRanges();
+    selection.addRange(range);
+  });
+  await page.locator('.rt-toolbar').getByTitle('Text color', { exact: true }).click();
+  await page.locator('[data-richtext-popover]').getByRole('button', { name: '#dc2626', exact: true }).click();
+  await expect(paragraph.locator('span')).toHaveCSS('color', 'rgb(220, 38, 38)');
+  await page.keyboard.press('Escape');
+  await expect.poll(() => page.evaluate(() =>
+    JSON.parse(localStorage.getItem('ticket-editor:offline-doc')!).slides[0].elements[0].html,
+  )).toContain('220, 38, 38');
+});
+
+test('focusing the native color picker keeps plain text editing open', async ({ page }) => {
+  await page.setViewportSize({ width: 1366, height: 900 });
+  await openEditor(page, 'plain');
+  await page.locator('.konvajs-content').dblclick({ position: { x: 90, y: 380 } });
+  const editor = page.locator('.inline-editor');
+  const picker = page.locator('.text-toolbar input[type="color"]');
+  await expect(editor).toBeFocused();
+  await picker.focus();
+  await expect(picker).toBeFocused();
+  await picker.fill('#dc2626');
+  await expect(editor).toHaveCSS('color', 'rgb(220, 38, 38)');
+  await page.locator('.text-toolbar .tt-done').click();
+  await expect(editor).toHaveCount(0);
+  await expect.poll(() => page.evaluate(() =>
+    JSON.parse(localStorage.getItem('ticket-editor:offline-doc')!).slides[0].elements[0].fill,
+  )).toBe('#dc2626');
+});
 
 test('an inserted empty rich table stays visible, editable and saved after reload', async ({ page }) => {
   test.setTimeout(45000);

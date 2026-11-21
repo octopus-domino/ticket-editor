@@ -60,7 +60,20 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
     else if (e.key === 'Escape') { e.preventDefault(); onCancel(); }
   }, [isComposing, handleCommit, onCancel]);
 
-  const handleBlur = useCallback(() => setTimeout(() => handleCommit(), 100), [handleCommit]);
+  useEffect(() => {
+    if (!isOpen) return;
+    const commitOutside = (event: Event) => {
+      const target = event.target;
+      if (!(target instanceof Element) || target.closest('.inline-editor-overlay, .text-toolbar')) return;
+      handleCommit();
+    };
+    document.addEventListener('pointerdown', commitOutside, true);
+    document.addEventListener('focusin', commitOutside);
+    return () => {
+      document.removeEventListener('pointerdown', commitOutside, true);
+      document.removeEventListener('focusin', commitOutside);
+    };
+  }, [handleCommit, isOpen]);
 
   if (!isOpen) return null;
 
@@ -73,7 +86,6 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
         suppressContentEditableWarning
         onInput={handleInput}
         onKeyDown={handleKeyDown}
-        onBlur={handleBlur}
         onCompositionStart={() => setIsComposing(true)}
         onCompositionEnd={() => setIsComposing(false)}
         style={{

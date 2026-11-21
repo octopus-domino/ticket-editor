@@ -67,7 +67,11 @@ export function useCanvasDrop(params: {
         const tbl = makeArrayTable(x, y, payload);
         docStore.commit((draft) => {
           const s = draft.slides.find((xx) => xx.id === draft.activeId);
-          if (s) s.elements.push(tbl);
+          if (!s) return;
+          tbl.width = Math.min(tbl.width, s.width);
+          tbl.x = Math.min(tbl.x, Math.max(0, s.width - tbl.width));
+          tbl.y = Math.min(tbl.y, Math.max(0, s.height - tbl.height));
+          s.elements.push(tbl);
         }, 'drop-array');
         return;
       }

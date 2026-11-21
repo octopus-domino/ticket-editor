@@ -1,5 +1,6 @@
 import { t as __tr } from '@/shared/i18n';
-import React from 'react';
+import { useRef } from 'react';
+import { RichTextPopover } from './RichTextPopover';
 
 interface Props {
   title: string;
@@ -7,33 +8,40 @@ interface Props {
   onPick: (color: string) => void;
   onReset?: () => void;
   resetLabel?: string;
+  anchor: HTMLElement | null;
 }
 
-export const ColorPickerPopover: React.FC<Props> = ({
-  title, colors, onPick, onReset, resetLabel = __tr("Сбросить"),
-}) => (
-  <div className="rt-popover">
-    <div className="rt-popover-title">{title}</div>
-    <div className="rt-color-grid">
-      {colors.map((c) => (
-        <button
-          key={c}
-          type="button"
-          className="rt-color-cell"
-          style={{ background: c }}
-          title={c}
-          onMouseDown={(e) => { e.preventDefault(); onPick(c); }}
-        />
-      ))}
-    </div>
-    {onReset && (
-      <button
-        type="button"
-        className="rt-popover-action"
-        onMouseDown={(e) => { e.preventDefault(); onReset(); }}
-      >
-        {resetLabel}
-      </button>
-    )}
-  </div>
-);
+export function ColorPickerPopover({ title, colors, onPick, onReset, anchor, resetLabel = __tr("Сбросить") }: Props) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  return (
+    <RichTextPopover anchor={anchor} panelRef={panelRef}>
+      <div className="rt-popover">
+        <div className="rt-popover-title">{title}</div>
+        <div className="rt-color-grid">
+          {[...new Set(colors)].map((color) => (
+            <button
+              key={color}
+              type="button"
+              className="rt-color-cell"
+              style={{ background: color }}
+              title={color}
+              aria-label={color}
+              onMouseDown={event => event.preventDefault()}
+              onClick={() => onPick(color)}
+            />
+          ))}
+        </div>
+        {onReset && (
+          <button
+            type="button"
+            className="rt-popover-action"
+            onMouseDown={event => event.preventDefault()}
+            onClick={onReset}
+          >
+            {resetLabel}
+          </button>
+        )}
+      </div>
+    </RichTextPopover>
+  );
+}

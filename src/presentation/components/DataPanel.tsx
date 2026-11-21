@@ -19,6 +19,7 @@ import {
 } from '@/presentation/components/list';
 import { toast } from '@/presentation/components/toast';
 import { runBulk } from '@/shared/utils/bulk';
+import { startCanvasDrag } from '../hooks/canvas/toolDrag';
 
 export const DataPanel: React.FC = () => {
   const docStore = useDocumentStore();
@@ -45,7 +46,7 @@ export const DataPanel: React.FC = () => {
     setSelectedModelIds(new Set());
   }, [activeSchema?.id]);
 
-  const activeModel = models.find((m) => m.id === activeModelId);
+  const activeModel = models.find(m => m.id === activeModelId && m.schemaId === activeSchema?.id);
   useEffect(() => {
     setValuesOpen(true);
   }, [activeModelId]);
@@ -145,44 +146,34 @@ export const DataPanel: React.FC = () => {
       const v = getPath(activeModel.values, path);
       if (v !== undefined && v !== null) sample = String(v);
     }
-    e.dataTransfer.setData(
-      'application/json',
-      JSON.stringify({ kind: 'field', path, fieldType: type, sample }),
-    );
-    e.dataTransfer.effectAllowed = 'copy';
+    startCanvasDrag(e, { kind: 'field', path, fieldType: type, sample });
   };
 
   const onDragArray = (e: React.DragEvent, path: string): void => {
     if (!activeSchema) return;
-    const flat = flattenFields(activeSchema.fields);
-    const prefix = `${path}.`;
-    const arrayChildren = flat
-      .filter((f) => f.path.startsWith(prefix))
-      .map((f): { name: string; type: string } | null => {
-        const rel = f.path.slice(prefix.length);
-        if (rel.includes('.')) return null;
-        if (f.type === 'array' || f.type === 'object') return null;
-        return { name: rel, type: f.type };
-      })
-      .filter((c): c is { name: string; type: string } => c !== null);
-
-    let sampleCount = 3;
-    if (activeModel) {
-      const arr = getPath(activeModel.values, path);
-      if (Array.isArray(arr) && arr.length > 0) sampleCount = arr.length;
+    const columns = new Map<string, string>();
+    for (const field of flattenFields(activeSchema.fields)) {
+      if (field.type === 'array' || field.type === 'object' || !field.path.startsWith(path)) continue;
+      const relative = /^(?:\.(?:\d+\.)?|\[\d*\]\.)([^[\]]+)$/.exec(field.path.slice(path.length))?.[1];
+      if (relative) columns.set(relative, field.type);
+    }
+    const sample = activeModel ? getPath(activeModel.values, path) : undefined;
+    const rows = Array.isArray(sample) ? sample : [];
+    for (const row of rows) {
+      if (!row || typeof row !== 'object' || Array.isArray(row)) continue;
+      for (const [name, value] of Object.entries(row)) {
+        if (/^\w+$/.test(name) && !['__proto__', 'prototype', 'constructor'].includes(name)
+            && (value === null || typeof value !== 'object') && !columns.has(name)) columns.set(name, typeof value);
+      }
     }
 
-    e.dataTransfer.setData(
-      'application/json',
-      JSON.stringify({
-        kind: 'array',
-        path,
-        arrayName: path.split('.').pop(),
-        sampleCount,
-        arrayChildren,
-      }),
-    );
-    e.dataTransfer.effectAllowed = 'copy';
+    startCanvasDrag(e, {
+      kind: 'array',
+      path,
+      arrayName: path.split('.').pop(),
+      sampleCount: rows.length || 3,
+      arrayChildren: Array.from(columns, ([name, type]) => ({ name, type })),
+    });
   };
 
   if (loading)

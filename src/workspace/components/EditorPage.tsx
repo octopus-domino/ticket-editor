@@ -30,8 +30,11 @@ const DocumentEditorSession: React.FC<{ docId?: string }> = ({ docId }) => {
   const [error, setError] = useState<string | null>(null);
 
   const isLocal = docId === 'local';
-  const urlSchemaId = searchParams.get('schemaId');
-  const urlModelId = searchParams.get('modelId');
+  // Query parameters initialize a document session. Schema changes inside the editor keep its live canvas.
+  const [{ urlSchemaId, urlModelId }] = useState(() => ({
+    urlSchemaId: searchParams.get('schemaId'),
+    urlModelId: searchParams.get('modelId'),
+  }));
 
   /* --- /app/editor/new?schemaId=X&tab=data → создаём документ, сохраняем query --- */
   useEffect(() => {

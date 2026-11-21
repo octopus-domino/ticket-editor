@@ -129,6 +129,8 @@ export const GenerationPage: React.FC = () => {
     () => models.filter((m) => pickedIds.has(m.id)),
     [models, pickedIds],
   );
+  const bindings = useMemo(() => activeTemplate ? resolveBindings(activeTemplate.slides, activeTemplate.bindings) : [],
+    [activeTemplate]);
 
   const blockingReasons = useMemo(() => {
     if (!activeTemplate) return [__tr('Выберите шаблон')];
@@ -138,14 +140,12 @@ export const GenerationPage: React.FC = () => {
       ];
     return validateGeneration({
       schema: activeSchema,
-      bindings: activeTemplate.bindings.length
-        ? activeTemplate.bindings
-        : resolveBindings(activeTemplate.slides),
+      bindings,
       selectedModels: pickedModels,
       format,
       supportedFormats: [...SUPPORTED],
     }).map((issue) => issue.message);
-  }, [activeTemplate, activeSchema, pickedModels, format, schemasLoading]);
+  }, [activeTemplate, activeSchema, bindings, pickedModels, format, schemasLoading]);
   const canRun = blockingReasons.length === 0 && !busy && !phase.endsWith('running');
   const previewRequest = useMemo<GenerationRequest | null>(
     () =>
@@ -154,6 +154,7 @@ export const GenerationPage: React.FC = () => {
             templateId: activeTemplate.id,
             schemaId: activeTemplate.schemaId ?? undefined,
             inlineSlides: activeTemplate.slides,
+            bindings,
             items: withoutData
               ? [{ inlineValues: {} }]
               : pickedModels.slice(0, 1).map((model) => ({ inlineValues: model.values })),
@@ -162,7 +163,7 @@ export const GenerationPage: React.FC = () => {
             filenamePattern,
           }
         : null,
-    [activeTemplate, withoutData, pickedModels, format, packAs, filenamePattern],
+    [activeTemplate, bindings, withoutData, pickedModels, format, packAs, filenamePattern],
   );
 
   const run = useCallback(async (): Promise<void> => {
@@ -174,6 +175,7 @@ export const GenerationPage: React.FC = () => {
       templateId: activeTemplate.id,
       schemaId: activeTemplate.schemaId ?? undefined,
       inlineSlides: activeTemplate.slides,
+      bindings,
       items: withoutData
         ? [{ inlineValues: {} }]
         : pickedModels.map((m) => ({ inlineValues: m.values })),
@@ -191,7 +193,7 @@ export const GenerationPage: React.FC = () => {
     } finally {
       setBusy(false);
     }
-  }, [canRun, activeTemplate, pickedModels, format, packAs, filenamePattern, withoutData]);
+  }, [canRun, activeTemplate, bindings, pickedModels, format, packAs, filenamePattern, withoutData]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

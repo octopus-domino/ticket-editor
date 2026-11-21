@@ -139,8 +139,11 @@ export function LeafletTripMap({
       marker.toggleAttribute('data-focused', marker.dataset.stopId === focusStopId);
     });
     const point = latest.current.stops.find(stop => stop.id === focusStopId);
-    if (point) map.current?.panTo([point.latitude, point.longitude], { animate: false });
-  }, [focusStopId, markerKey, moving, selectable]);
+    const instance = map.current;
+    if (point && instance && hasSize) {
+      instance.setView([point.latitude, point.longitude], Math.max(13, instance.getZoom()), { animate: false });
+    }
+  }, [focusStopId, hasSize, markerKey, moving, selectable]);
 
   return <div ref={container} className="route-map trip-leaflet-map" data-picking={Boolean(onPick)}
     aria-label={cityMap ? t('Trip map') : t('Route map')} />;

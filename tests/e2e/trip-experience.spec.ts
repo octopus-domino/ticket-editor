@@ -93,22 +93,39 @@ test('planner opens a selected day beside the same map and supports mobile plann
   await expect(workspace.locator('.leaflet-tile-loaded').first()).toBeVisible({ timeout: 25_000 });
   await expect(workspace.locator('.leaflet-tile:not(.leaflet-tile-loaded)')).toHaveCount(0, { timeout: 25_000 });
   await page.screenshot({ path: testInfo.outputPath('planner-empty-desktop.png'), animations: 'disabled', fullPage: true });
-  await page.evaluate(source => localStorage.setItem('codoc/trip-planner/draft/v2', JSON.stringify(source)), draft);
+  const plannerDraft: LocalTripDraft = { ...draft, days: { ...draft.days, 2: { ...draft.days[2],
+    visits: [{ id: 'second-tver-stop', city: 'Volga embankment',
+      stops: [{ id: 'volga-start', label: 'Volga start', latitude: 56.86, longitude: 35.91, zone: 'Europe/Moscow', stayMinutes: 0 },
+        { id: 'volga-finish', label: 'Volga finish', latitude: 56.862, longitude: 35.912, zone: 'Europe/Moscow', stayMinutes: 0 }],
+      importedWalk: { title: 'Volga walking route', legs: [{
+        mode: 'foot', distanceMeters: 300, durationSeconds: 200, coordinates: [[35.91, 56.86], [35.912, 56.862]],
+      }] },
+    }],
+  } } };
+  await page.evaluate(source => localStorage.setItem('codoc/trip-planner/draft/v2', JSON.stringify(source)), plannerDraft);
   await page.reload({ waitUntil: 'domcontentloaded' });
   await expect(workspace.getByRole('heading', { name: draft.title })).toBeVisible();
+  await expect(workspace.getByRole('button', { name: /Plan walk in Journey/ })).toBeVisible();
+  await expect(workspace.locator('.trip-day-program')).toHaveCount(0);
   const map = workspace.locator('.route-map');
   await expect(map).toHaveCount(1);
   const element = await map.elementHandle();
   await workspace.getByRole('button', { name: 'City list', exact: true }).click();
   const cities = workspace.getByRole('table', { name: 'City list' });
-  await expect(cities.getByRole('row')).toHaveCount(6);
+  await expect(cities.getByRole('row')).toHaveCount(7);
   await cities.getByRole('button', { name: 'Tver', exact: true }).click();
   await expect(workspace.getByRole('heading', { name: 'Tver' })).toBeVisible();
   await workspace.locator('button[data-trip-day="overview"]').click();
   await expect(workspace.locator('.trip-summary[data-compact]')).toBeVisible();
   await expect(workspace.locator('.trip-planner-overview')).toBeHidden();
+  await workspace.locator('.trip-summary').getByRole('button', { name: 'Tver', exact: true }).click();
+  await expect(map.locator('[data-focused]')).toHaveCount(1);
   await workspace.locator('button[data-trip-day="2"]').click();
+  await expect(map.locator('.leaflet-marker-icon[title="Volga finish"]')).toHaveCount(1);
   await workspace.locator('button[data-trip-day="3"]').click();
+  await expect(map.locator('.leaflet-marker-icon[title="Volga finish"]')).toHaveCount(0);
+  await workspace.locator('button[data-trip-day="2"]').click();
+  await expect(map.locator('.leaflet-marker-icon[title="Volga finish"]')).toHaveCount(1);
   expect(await element?.evaluate(node => node.isConnected)).toBe(true);
   await workspace.locator('button[data-trip-day="1"]').click();
   await expect(map.locator('.leaflet-tile-loaded').first()).toBeVisible({ timeout: 25_000 });

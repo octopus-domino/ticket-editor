@@ -273,6 +273,8 @@ export default function TripPlannerDraft({ v2 = true, experience = false }: { v2
 
   function selectDay(next: number, visitId?: string) {
     mapCenter.current = undefined;
+    setFocusedDay(undefined);
+    setCityListOpen(false);
     setPendingMapPoint(undefined);
     setDayMap(undefined);
     setSelectedVisit(visitId);
@@ -440,6 +442,15 @@ export default function TripPlannerDraft({ v2 = true, experience = false }: { v2
         {accountSaved && <Link to={`/trip/${draft.id}`}>{t('Open account trip')}</Link>}
       </footer>
 </>;
+  const visitsOnMap = extra ? [extra] : [dayDraft, ...(dayDraft.visits ?? [])];
+  const walkStops = preview?.stops ?? visitsOnMap.flatMap(visit => visit.stops);
+  const walkLegs = preview?.legs ?? visitsOnMap.flatMap(visit => visit.importedWalk?.legs ?? visit.route ?? noLegs);
+  const cityFocus = focusedDay === dayNumber && day.cityPoint;
+  const walkMap = experience && (walkStops.length > 0 || walkLegs.length > 0) ? {
+    stops: cityFocus ? [...walkStops, { ...cityFocus, id: activeLocation,
+      label: day.city || t('City'), zone: 'UTC', stayMinutes: 0 }] : walkStops,
+    legs: walkLegs,
+  } : undefined;
   const content = (
     <section className="trip-planner" data-planner-v2={v2} aria-label={t('Travel planner')}>
       <header className="trip-planner-header">
@@ -511,15 +522,12 @@ export default function TripPlannerDraft({ v2 = true, experience = false }: { v2
                 stops: day.cityPoint ? [{ ...day.cityPoint, id: 'move-city', label: day.city || t('City'), zone: 'UTC', stayMinutes: 0 }] : [],
                 legs: noLegs,
                 onStopMove: day.cityPoint ? (_id, point) => void moveCity(point) : undefined,
-              } : dayMap ?? (experience && (preview || day.stops.length) ? {
-                stops: preview?.stops ?? day.stops,
-                legs: preview?.legs ?? day.importedWalk?.legs ?? day.route ?? noLegs,
-              } : undefined)}
+              } : dayMap ?? walkMap}
               onPick={experience && choosingCity ? point => { void moveCity(point); setChoosingCity(false); }
                 : placingCities ? setPendingMapPoint : undefined}
               pickedPoint={pendingMapPoint}
               focusStopId={placingCities || focusedDay !== dayNumber ? undefined
-                : cityMap?.cities.find(item => item.latitude === day.cityPoint?.latitude
+                : walkMap && !dayMap ? activeLocation : cityMap?.cities.find(item => item.latitude === day.cityPoint?.latitude
                   && item.longitude === day.cityPoint?.longitude)?.id ?? activeLocation}
               onMapCenter={center => { mapCenter.current = center; }}
               onSelectCity={cityId => {
@@ -572,7 +580,16 @@ export default function TripPlannerDraft({ v2 = true, experience = false }: { v2
                   onChooseTrain: train => chooseTrain(id, train),
                   onSelect: () => {
                     selectDay(number, visitId);
-                    if (visit.cityPoint) { setPlacingCities(false); setFocusedDay(number); }
+                    if (visit.cityPoint) {
+                      setPlacingCities(false);
+                      setFocusedDay(number);
+                      if (experience) {
+                        setDayMap(undefined);
+                        setCityListOpen(false);
+                        setShowingCities(true);
+                        setMobileTab('map');
+                      }
+                    }
                   },
                   onFindHotel: visit.city?.trim() && id !== activeLocation ? () => findHotels(number, visitId) : undefined,
                 };
@@ -628,7 +645,7 @@ export default function TripPlannerDraft({ v2 = true, experience = false }: { v2
           {day.city?.trim() && <button className={experience ? 'trip-exp-hotel-action' : 'journey-primary'} type="button" onClick={findHotelsFromMap}>
             {t('Find hotels')}
           </button>}
-          {v2 && <Suspense fallback={<p aria-busy="true">{t('Loading…')}</p>}><DayPlanningPanel key={`program-${activeLocation}`} stops={day.planningStops} preferences={day.dayPreferences} experience={experience}
+          {v2 && !experience && <Suspense fallback={<p aria-busy="true">{t('Loading…')}</p>}><DayPlanningPanel key={`program-${activeLocation}`} stops={day.planningStops} preferences={day.dayPreferences}
             targetDays={Array.from({ length: Math.min(lastDay, 366) }, (_, index) => index + 1)
               .filter(number => number !== dayNumber && (draft.days[number]?.planningStops?.length ?? 0) < 12)}
             onMoveToDay={moveProgramStop}
@@ -643,7 +660,8 @@ export default function TripPlannerDraft({ v2 = true, experience = false }: { v2
             {idea.label}{' '}<button type="button" onClick={() =>
               editDay({ ideas: day.ideas?.filter(item => item.id !== idea.id) }, true)}>{t('Remove')}</button>
           </li>)}</ul>}
-          <TripWalkImport key={activeLocation} point={day.cityPoint} address={day.city} onPreview={setPreview} />
+          <TripWalkImport key={activeLocation} point={day.cityPoint} address={day.city} onPreview={setPreview}
+            primary={experience} />
           {hasDayPlan && Number.isFinite(dayDate.getTime()) && (
             <details className="trip-exp-day-services" open={!experience}>
               <summary>{t('Transfer details')} · {t('Trip lodging')}</summary>
@@ -665,6 +683,10 @@ export default function TripPlannerDraft({ v2 = true, experience = false }: { v2
             </details>
           )}
           {!preview && day.importedWalk && <p>{day.importedWalk.title}</p>}
+          {experience && !extra && !preview && dayDraft.visits?.map(visit => visit.importedWalk && <button
+            key={visit.id} type="button" onClick={() => selectDay(dayNumber, visit.id)}>
+            {visit.importedWalk.title}
+          </button>)}
           {preview && <div>
             <strong>{preview.title}</strong>
             <button type="button" onClick={() => {
@@ -710,7 +732,7 @@ export default function TripPlannerDraft({ v2 = true, experience = false }: { v2
     navigation={<TripDayNavigator days={choices} selected={mobileTab === 'summary' ? 'overview' : String(dayNumber)}
       onSelect={id => {
         if (id === 'overview') { setMobileTab('summary'); setDayMap(undefined); }
-        else { selectDay(Number(id)); setMobileTab('plan'); setFocusedDay(Number(id)); }
+        else { selectDay(Number(id)); setMobileTab('plan'); }
       }} action={<button type="button" onClick={() => { nextDay(lastDay + 1); setMobileTab('plan'); }}>{t('Add day')}</button>} />}
     actions={<>
       <button type="button" disabled={sharing} onClick={() => void createShare()}>{t('Share')}</button>

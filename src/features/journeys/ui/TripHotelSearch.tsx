@@ -42,7 +42,10 @@ export function TripHotelSearch({ city, cityPoint, checkIn: initialCheckIn, chec
     request.current?.abort();
     request.current = undefined;
   }, []);
-  const distanceLimit = !wholeCity && radiusMeters !== undefined ? radiusMeters
+  const outsideRadius = !wholeCity && radiusMeters === 1000 && cityPoint && Boolean(result?.hotels.length)
+    && !result?.hotels.some(hotel => hotel.latitude != null && hotel.longitude != null
+      && geographicDistance(cityPoint, { latitude: hotel.latitude, longitude: hotel.longitude }) <= radiusMeters);
+  const distanceLimit = !wholeCity && !outsideRadius && radiusMeters !== undefined ? radiusMeters
     : maxKm === undefined ? undefined : maxKm * 1000;
   const visible = useMemo(() => result?.hotels.filter(hotel => (!starFilter || (hotel.stars ?? 0) >= starFilter)
     && (result.catalogOnly || !freeCancellation || hotel.freeCancellation)
@@ -134,7 +137,8 @@ export function TripHotelSearch({ city, cityPoint, checkIn: initialCheckIn, chec
     <button type="button" disabled={!validQuery || busy} onClick={() => void search()}>{t('Search')}</button>
     </div>
     {radiusMeters === 1000 && <div className="trip-hotel-scope">
-      {!wholeCity && <p>{t('Hotels within 1 km of this point')}</p>}
+      {!wholeCity && <p>{outsideRadius ? t('No hotels found within 1 km. Showing results for the city.')
+        : t('Hotels within 1 km of this point')}</p>}
       <button type="button" aria-pressed={wholeCity} onClick={() => { setWholeCity(!wholeCity); setActive(undefined); }}>
         {t('Search the whole city')}
       </button>

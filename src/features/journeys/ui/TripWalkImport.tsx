@@ -6,10 +6,11 @@ import './private-walk-picker.css';
 
 export type WalkCandidate = ReturnType<typeof readPrivateWalk>;
 
-export function TripWalkImport({ onPreview, point, address }: {
+export function TripWalkImport({ onPreview, point, address, primary }: {
   onPreview: (walk: WalkCandidate) => void;
   point?: CityPoint;
   address?: string;
+  primary?: boolean;
 }) {
   const [channel, setChannel] = useState('');
   const [error, setError] = useState(false);
@@ -56,7 +57,8 @@ export function TripWalkImport({ onPreview, point, address }: {
     }
   }
   return <>
-    <button type="button" onClick={() => { setError(false); setChannel(crypto.randomUUID()); }}>
+    <button className={primary ? 'journey-primary trip-exp-walk-action' : undefined}
+      type="button" onClick={() => { setError(false); setChannel(crypto.randomUUID()); }}>
       {t('Plan walk in Journey')} ↗
     </button>
     {sharedLink && <button type="button" onClick={() => previewLink(sharedLink)}>{t('Preview shared walk')}</button>}

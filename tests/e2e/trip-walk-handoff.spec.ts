@@ -21,9 +21,9 @@ test('round-trips a trip with two cities, train, hotel and a Journey walk after 
   }));
   const accountWrites: { id: string; endDate: string; days: { date: string; walkingSections: unknown[] }[];
     accommodations: { name: string; checkIn: string; checkOut: string }[] }[] = [];
-  await page.route('**/api/trips/*', route => {
+  await page.route('**/api/routing/v1/trips**', route => {
     if (route.request().method() === 'GET' && accountWrites.length) return route.fulfill({ json: accountWrites.at(-1) });
-    if (route.request().method() !== 'PUT') return route.fallback();
+    if (!['POST', 'PUT'].includes(route.request().method())) return route.fallback();
     const body = route.request().postDataJSON() as typeof accountWrites[number];
     accountWrites.push(body);
     return route.fulfill({ json: body });
@@ -38,7 +38,7 @@ test('round-trips a trip with two cities, train, hotel and a Journey walk after 
     json: new URL(route.request().url()).searchParams.get('q') === 'Petersburg'
       ? [{ code: 'c2', title: 'Petersburg', region: 'Russia' }] : [{ code: 'c213', title: 'Moscow', region: 'Russia' }],
   }));
-  await page.goto('/start/tours');
+  await page.goto('/trip/new');
   await expect(page.locator('.journey-form-panel')).toHaveCount(0);
   const planner = page.getByRole('region', { name: 'Travel planner' });
   await planner.getByLabel('Trip name').fill('Winter trip');
@@ -87,7 +87,7 @@ test('round-trips a trip with two cities, train, hotel and a Journey walk after 
   await expect(page.getByRole('heading', { name: 'Winter trip' })).toBeVisible();
   await expect(page.getByText('Station hotel', { exact: true })).toBeVisible();
   await expect(page.getByText('Pier', { exact: true })).toBeVisible();
-  await page.goto('/start/tours');
+  await page.goto('/trip/new?resume=1');
   await page.reload();
   await expect(planner.getByText('Pier', { exact: true })).toHaveCount(0);
   await planner.getByRole('button', { name: 'Next day' }).click();
@@ -137,7 +137,7 @@ test('receives the finished walk from the built Journey application', async ({ p
   await page.route('https://tiles.openfreemap.org/**', request => request.fulfill({
     json: { version: 8, sources: {}, layers: [{ id: 'base', type: 'background' }] },
   }));
-  await page.goto('/start/tours');
+  await page.goto('/trip/new');
   const planner = page.getByRole('region', { name: 'Travel planner' });
   await planner.getByLabel('Start date').fill('2026-12-31');
   await planner.getByLabel('End date').fill('2027-01-01');
@@ -153,7 +153,7 @@ test('receives the finished walk from the built Journey application', async ({ p
   await frame.getByRole('button', { name: 'Добавить в путешествие CoDoc' }).click();
   await planner.getByRole('button', { name: 'Use this walk' }).click();
   await expect(planner.getByText(first.name, { exact: true })).toBeVisible();
-  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('codoc/trip-planner/draft/v2')!).days['2']
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('codoc/trip-planner/draft/v3/local')!).days['2']
     .importedWalk.legs[0].coordinates)).toEqual([[first.lng, first.lat], [second.lng, second.lat]]);
 });
 
@@ -186,7 +186,7 @@ test('plans from address suggestions and selects transport between the chosen ci
       ] },
   }));
   await page.route('**/api/auth/refresh', route => route.fulfill({ status: 401, json: {} }));
-  await page.goto('/start/tours');
+  await page.goto('/trip/new');
   const planner = page.getByRole('region', { name: 'Travel planner' });
   await expect(planner).toBeVisible();
   await expect(page.locator('.journey-form-panel')).toHaveCount(0);

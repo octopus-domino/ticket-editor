@@ -2,7 +2,7 @@ import { useLanguageDraft } from './useLanguageDraft';
 import './travel.css';
 import { t, getLocale } from '@/shared/i18n';
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import type { CreatedJourney, JourneyDefinition } from '../domain/definitions';
 import { journeyApi, managementUrl, pdfUrl, publicUrl, rememberKey } from '../api/journeys';
 import { JourneyCard } from './JourneyCard';
@@ -27,7 +27,6 @@ const RouteEditor = lazy(() =>
 );
 const PoetryWizard = lazy(() => import('./PoetryWizard'));
 const AlbumWizard = lazy(() => import('./AlbumWizard'));
-const TripPlannerDraft = lazy(() => import('./TripPlannerDraft'));
 interface WizardProps { definition: JourneyDefinition; custom?: boolean; previewOnly?: boolean }
 export function JourneyWizard(props: WizardProps) {
   if(props.definition.kind === 'ALBUM') return <Suspense fallback={<p>{t('Loading…')}</p>}><AlbumWizard {...props}/></Suspense>;
@@ -154,7 +153,7 @@ function BasicJourneyWizard({
       data-step={step}
     >
       {canPlanTrip
-        ? <Suspense fallback={<p>{t('Loading…')}</p>}><TripPlannerDraft /></Suspense>
+        ? <Navigate to="/trip" replace />
         : <div>
       <div className="journey-intro">
         <span className="journey-eyebrow">

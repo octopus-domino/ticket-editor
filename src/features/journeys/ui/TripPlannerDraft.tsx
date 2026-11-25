@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Temporal } from '@js-temporal/polyfill';
 import { requestRoad, requestRoadVia } from '../api/routePlanner';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
+import { authStore } from '@/auth/store';
 import { getLocale, t } from '@/shared/i18n';
 import { downloadFile } from '@/shared/files/download';
+import { useStore } from '@/shared/store/store';
 import { TripTemplateAction } from './TripTemplateAction';
 import { geographicDistance, type PlannedLeg } from '../domain/route';
 import { sharedTripJson, shareTripUrl } from '../domain/sharedTrip';
@@ -19,9 +21,9 @@ import { TripDetailsEditor } from './TripDetailsEditor';
 import { TripTransferEditor } from './TripTransferEditor';
 import { TripCityMap } from './TripCityMap';
 import { RouteAddressInput } from './RouteAddressInput';
+import { legacyTripDraftKey, tripDraftStorageKey } from './tripDraftStorage';
 import './route.css';
 
-const storageKey = 'codoc/trip-planner/draft/v2';
 const noLegs: [] = [];
 const ignoreMapHandle = () => undefined;
 
@@ -91,7 +93,7 @@ function readDay(day: TripDay | null): TripDay | null {
   return { ...start, visits: visits?.length ? visits : undefined };
 }
 
-function readDraft(): Draft {
+function readDraft(storageKey: string): Draft | undefined {
   try {
     const stored = JSON.parse(localStorage.getItem(storageKey) ?? 'null') as (Partial<Draft> & Partial<TripDay>) | null;
     if (stored?.version === 2 && typeof stored.startDate === 'string' && typeof stored.endDate === 'string') {
@@ -112,12 +114,30 @@ function readDraft(): Draft {
   } catch {
     // A damaged or unavailable local store cannot prevent opening the planner.
   }
-  return { id: crypto.randomUUID(), version: 2, startDate: '', endDate: '', days: {} };
+}
+
+function resumeDraft(storageKey: string): Draft | undefined {
+  const current = readDraft(storageKey);
+  if (current) return current;
+  const legacy = readDraft(legacyTripDraftKey);
+  return legacy && { ...legacy, id: crypto.randomUUID() };
 }
 
 export default function TripPlannerDraft() {
+  const owner = useStore(authStore, state => state.user?.id);
+  const booting = useStore(authStore, state => state.booting);
+  const [query] = useSearchParams();
+  const resumable = query.get('resume') === '1';
+  if (booting) return <p role="status">{t('Loading…')}</p>;
+  const storageKey = tripDraftStorageKey(owner);
+  return <Planner key={`${storageKey}:${resumable}`} storageKey={storageKey} resume={resumable} />;
+}
+
+function Planner({ storageKey, resume }: { storageKey: string; resume: boolean }) {
   const [{ draft, past, future }, setHistory] = useState<DraftHistory>(() => ({
-    draft: readDraft(), past: [], future: [],
+    draft: (resume ? resumeDraft(storageKey) : undefined) ??
+      { id: crypto.randomUUID(), version: 2, startDate: '', endDate: '', days: {} },
+    past: [], future: [],
   }));
   const [status, setStatus] = useState('');
   const [saving, setSaving] = useState(false);
@@ -128,7 +148,7 @@ export default function TripPlannerDraft() {
   const [selectedDay, setSelectedDay] = useState(1);
   const [selectedVisit, setSelectedVisit] = useState<string>();
   const [choosingCity, setChoosingCity] = useState(false);
-  const [placingCities, setPlacingCities] = useState(true);
+  const [placingCities, setPlacingCities] = useState(false);
   const cityInput = useRef<HTMLInputElement>(null);
   const [focusedDay, setFocusedDay] = useState<number>();
   const [showingCities, setShowingCities] = useState(true);
@@ -237,6 +257,10 @@ export default function TripPlannerDraft() {
   }
 
   function addVisit(city?: string, cityPoint?: CityPoint) {
+    if (city && day.cityPoint && !day.city?.trim()) {
+      editDay({ city, cityPoint: cityPoint ?? day.cityPoint }, true);
+      return;
+    }
     if (!dayDraft.city && !dayDraft.cityPoint) {
       editDay({ city, cityPoint }, true);
       return;
@@ -251,6 +275,13 @@ export default function TripPlannerDraft() {
     edit({ days });
     persist({ ...draft, days });
     selectDay(dayNumber, id);
+  }
+
+  function placeCity(point: CityPoint) {
+    if (day.cityPoint && !day.city?.trim()) void moveCity(point);
+    else addVisit(undefined, point);
+    setPlacingCities(false);
+    cityInput.current?.focus();
   }
 
   function chooseTransport(id: string, incomingMode: PointTransport) {
@@ -325,7 +356,11 @@ export default function TripPlannerDraft() {
     setPlacingCities(false);
   }
 
-  function validDates() {
+  function validDates(requireNamedCities = false) {
+    if (requireNamedCities && locations.some(({ visit }) => visit.cityPoint && !visit.city?.trim())) {
+      setStatus(t('Name each city with a map pin.'));
+      return false;
+    }
     if (duration < 2) {
       setStatus(t('Choose at least two days for the trip.'));
       return false;
@@ -348,11 +383,11 @@ export default function TripPlannerDraft() {
   }
 
   async function saveAccount() {
-    if (!validDates() || saving) return;
+    if (!validDates(true) || saving) return;
     persist(draft);
     setSaving(true);
     try {
-      await saveTripToAccount(draft, title, connections);
+      await saveTripToAccount(draft, title, connections, accountSaved);
       setAccountSaved(true);
       setStatus(t('Trip saved to account.'));
     } catch {
@@ -363,7 +398,7 @@ export default function TripPlannerDraft() {
   }
 
   async function createShare() {
-    if (!validDates() || sharing) return;
+    if (!validDates(true) || sharing) return;
     setSharing(true);
     try {
       const url = await shareTripUrl(tripPayload(draft, title, connections), window.location.origin);
@@ -407,6 +442,7 @@ export default function TripPlannerDraft() {
   return (
     <section className="trip-planner" aria-label={t('Travel planner')}>
       <header className="trip-planner-header">
+        <Link to="/trip">{t('My routes')}</Link>
         <h2>{t('Travel planner')}</h2>
       </header>
       <div className="trip-planner-dates">
@@ -436,7 +472,7 @@ export default function TripPlannerDraft() {
               legs={cityMap?.legs ?? []} plannedLines={lines} accommodations={cityMap?.accommodations}
               hotelMap={hotelSearch ? hotelMap ?? { stops: hotelSearch.point ? [{ ...hotelSearch.point, id: '__day_point__',
                 label: hotelSearch.city, zone: 'UTC', stayMinutes: 0 }] : [] } : undefined}
-              onPick={placingCities ? point => addVisit(undefined, point) : undefined}
+              onPick={placingCities ? placeCity : undefined}
               focusStopId={placingCities || focusedDay !== dayNumber ? undefined
                 : cityMap?.cities.find(item => item.latitude === day.cityPoint?.latitude
                   && item.longitude === day.cityPoint?.longitude)?.id ?? activeLocation}

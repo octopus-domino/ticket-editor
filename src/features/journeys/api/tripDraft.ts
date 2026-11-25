@@ -178,9 +178,25 @@ export function tripPayload(draft: LocalTripDraft, title: string, connections: P
   };
 }
 
-export async function saveTripToAccount(draft: LocalTripDraft, title: string, connections?: PlannedConnection[]) {
-  const response = await authFetch(`/api/trips/${encodeURIComponent(draft.id)}`, {
-    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+const tripsPath = '/api/routing/v1/trips';
+
+export interface TripSummary {
+  id: string;
+  title: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  updatedAt: string | null;
+}
+
+export async function listAccountTrips(page: number, signal: AbortSignal): Promise<{ items: TripSummary[]; hasNext: boolean }> {
+  const response = await authFetch(`${tripsPath}?page=${page}`, { signal });
+  if (!response.ok) throw new Error(String(response.status));
+  return response.json();
+}
+
+export async function saveTripToAccount(draft: LocalTripDraft, title: string, connections: PlannedConnection[], saved: boolean) {
+  const response = await authFetch(saved ? `${tripsPath}/${encodeURIComponent(draft.id)}` : tripsPath, {
+    method: saved ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(tripPayload(draft, title, connections)),
   });
   if (!response.ok) throw new Error(String(response.status));
@@ -189,7 +205,7 @@ export async function saveTripToAccount(draft: LocalTripDraft, title: string, co
 export type AccountTrip = ReturnType<typeof tripPayload>;
 
 export async function openAccountTrip(id: string, signal: AbortSignal): Promise<AccountTrip> {
-  const response = await authFetch(`/api/trips/${encodeURIComponent(id)}`, { signal });
+  const response = await authFetch(`${tripsPath}/${encodeURIComponent(id)}`, { signal });
   if (!response.ok) throw new Error(String(response.status));
   return response.json() as Promise<AccountTrip>;
 }

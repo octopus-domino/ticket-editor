@@ -37,7 +37,7 @@ for (const mode of ['owner', 'shared'] as const) {
       const { tripPayload } = await import(modulePath);
       return tripPayload(source, source.title);
     }, draft);
-    await page.route('**/api/trips/**', route => {
+    await page.route('**/api/routing/v1/trips/visual-trip', route => {
       tripRequests.push(route.request().method());
       return route.fulfill({ json: trip });
     });

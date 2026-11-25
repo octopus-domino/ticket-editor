@@ -79,8 +79,12 @@ describe('account trip', () => {
     expect(payload.documents).toEqual(draft.documents);
     expect(authFetch).not.toHaveBeenCalled();
     vi.mocked(authFetch).mockResolvedValue(new Response(JSON.stringify(payload)));
-    await saveTripToAccount(draft, 'Winter trip');
-    expect(authFetch).toHaveBeenCalledWith('/api/trips/first-trip', expect.objectContaining({
+    await saveTripToAccount(draft, 'Winter trip', [], false);
+    expect(authFetch).toHaveBeenCalledWith('/api/routing/v1/trips', expect.objectContaining({
+      body: JSON.stringify(payload), method: 'POST',
+    }));
+    await saveTripToAccount(draft, 'Winter trip', [], true);
+    expect(authFetch).toHaveBeenCalledWith('/api/routing/v1/trips/first-trip', expect.objectContaining({
       body: JSON.stringify(payload), method: 'PUT',
     }));
   });

@@ -28,7 +28,7 @@ test('measures across the date line and discards a road request when points chan
   fireEvent.click(screen.getByRole('button', { name: 'B' }));
   fireEvent.click(screen.getByRole('button', { name: t('Road distance') }));
   await waitFor(() => expect(screen.getByText(text => text.includes(t('Road distance')) && text.includes('230'))).toBeVisible());
-  expect(localStorage.getItem('codoc/trip-planner/draft/v2')).toBeNull();
+  expect(Object.keys(localStorage).some(key => key.startsWith('codoc/trip-planner/draft/'))).toBe(false);
 });
 
 test('routes through the intermediate point and includes its geometry only once', async () => {

@@ -44,7 +44,7 @@ export function TripExperienceShell({ mode, title, dateSpan, subtitle, actions, 
   return <main className="trip-exp" data-mode={mode}>
     <header className="trip-exp-header">
       <div>
-        {mode !== 'shared' && <Link className="trip-exp-back" to="/start/tours">{t('Travel planner')}</Link>}
+        {mode !== 'shared' && <Link className="trip-exp-back" to="/trip">{t('My routes')}</Link>}
         {dateSpan && <div className="trip-exp-dates">{dateSpan}</div>}
         <h1>{title}</h1>
         {subtitle && <p>{subtitle}</p>}

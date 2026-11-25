@@ -17,6 +17,8 @@ import { JOURNEY_PAGES } from './marketing/journeyPages';
 import { JourneyMarketingPage } from './marketing/JourneyMarketingPage';
 const JourneyApp = lazy(() => import('./features/journeys/JourneyApp'));
 const AccountTripPage = lazy(() => import('./features/journeys/ui/AccountTripPage'));
+const TripListPage = lazy(() => import('./features/journeys/ui/TripListPage'));
+const TripPlannerDraft = lazy(() => import('./features/journeys/ui/TripPlannerDraft'));
 const SharedTripPage = lazy(() => import('./features/journeys/ui/AccountTripPage').then(module => ({ default: module.SharedTripPage })));
 const PublicationsPage = lazy(() => import('./features/journeys/ui/PublicationsPage'));
 const WorkflowBuilder = lazy(() => import('./features/workflows/WorkflowBuilder'));
@@ -86,6 +88,8 @@ const App: React.FC = () => {
             {/* Публичные страницы */}
             <Route path="/" element={window.location.hostname.endsWith('.codoc.site') && !['www','app','api','drawio','go'].includes(window.location.hostname.split('.')[0]) ? <JourneyApp mode={defaultJourney(window.location.hostname)?'wizard':'custom'} /> : <LandingPage />} />
             <Route path="/start/:kind" element={<JourneyApp />} />
+            {FLAGS.ENABLE_TRIP_PLANNER && <Route path="/trip" element={<TripListPage />} />}
+            {FLAGS.ENABLE_TRIP_PLANNER && <Route path="/trip/new" element={<main className="journey-main journey-main--travel"><TripPlannerDraft /></main>} />}
             {FLAGS.ENABLE_TRIP_PLANNER && <Route path="/trip/:id" element={<ProtectedRoute><AccountTripPage /></ProtectedRoute>} />}
             {FLAGS.ENABLE_TRIP_PLANNER && <Route path="/trip/view" element={<SharedTripPage />} />}
             {JOURNEY_PAGES.map(page => <Route key={page.path} path={page.path} element={<JourneyMarketingPage/>} />)}

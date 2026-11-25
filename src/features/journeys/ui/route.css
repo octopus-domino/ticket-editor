@@ -509,3 +509,14 @@
 .trip-hotel-list .trip-hotel-name { color: #235a45; font-weight: 700; text-align: start; }
 .trip-hotel-list > li { background: #fff; }
 .trip-hotel-list > li[data-active="true"] { background: #f1f7f2; }
+
+.trip-list-page { width: min(100% - 2rem, 52rem); margin-inline: auto; }
+.trip-list-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .75rem; }
+.trip-list-items { list-style: none; padding: 0; display: grid; gap: .65rem; }
+.trip-list-items a {
+  display: grid; gap: .2rem; padding: .85rem 1rem; min-height: 44px;
+  border: 1px solid #dbe7dd; border-radius: .65rem; background: #fff;
+  color: #235a45; text-decoration: none;
+}
+.trip-list-items a:is(:hover, :focus-visible) { border-color: #327556; }
+.trip-list-items span { color: #4d6659; }

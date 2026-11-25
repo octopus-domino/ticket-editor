@@ -53,7 +53,7 @@ export function RouteAddressInput({
       try {
         const search = () =>
           journeyRequest<RouteAddress[]>(
-            `/api/journeys/routes/addresses?q=${encodeURIComponent(query.trim())}&language=${getLocale().split('-')[0]}`,
+            `/api/walks/v1/addresses?q=${encodeURIComponent(query.trim())}&language=${getLocale().split('-')[0]}`,
             { signal: controller.signal },
           );
         let found: RouteAddress[];

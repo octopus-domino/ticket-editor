@@ -23,7 +23,7 @@ export function YandexPlaceMap({ center, points, focusedId, onSelect, stops=[], 
       setKey('');setEnabled(false);setReady(false);setLoaded(false);callbacks.current.onModeChange?.(false);return;
     }
     const abort=new AbortController();
-    void journeyRequest<{yandexEnabled:boolean;yandexBrowserKey:string}>('/api/journeys/maps/providers',{signal:abort.signal})
+    void journeyRequest<{yandexEnabled:boolean;yandexBrowserKey:string}>('/api/walks/v1/maps/providers',{signal:abort.signal})
       .then(value=>{if(!abort.signal.aborted&&value.yandexEnabled)setKey(value.yandexBrowserKey);}).catch(()=>{});
     return()=>abort.abort();
   },[locale]);

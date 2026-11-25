@@ -47,7 +47,7 @@ test('round-trips a trip with two cities, train, hotel and a Journey walk after 
   await planner.getByLabel('Start date').fill('2026-12-31');
   await planner.getByLabel('End date').fill('2027-01-01');
   const city = planner.getByRole('combobox', { name: 'City', exact: true });
-  await page.route('**/api/journeys/routes/addresses?*', route => route.fulfill({ json: [] }));
+  await page.route('**/api/walks/v1/addresses?*', route => route.fulfill({ json: [] }));
   await city.fill('Petersburg');
   await city.press('Enter');
   await planner.getByRole('button', { name: 'Next day' }).click();
@@ -161,7 +161,7 @@ test('plans from address suggestions and selects transport between the chosen ci
   test.setTimeout(90_000);
   test.skip(process.env.VITE_ENABLE_TRIP_PLANNER !== 'true', 'Requires the trip planner flag');
   await page.addInitScript(() => localStorage.setItem('codoc:language', 'en'));
-  await page.route('**/api/journeys/routes/addresses?**', request => {
+  await page.route('**/api/walks/v1/addresses?**', request => {
     const query = new URL(request.request().url()).searchParams.get('q');
     return request.fulfill({ json: query === 'Mos'
       ? [{ label: 'Moscow', latitude: 55.75, longitude: 37.62 }]

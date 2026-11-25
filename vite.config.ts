@@ -40,6 +40,14 @@ export default defineConfig({
       // Все API-запросы → Spring Boot.
       // Браузер видит один origin (localhost:5173) → cookie работают
       // без SameSite=None и Secure.
+      '/api/routing/': {
+        target: process.env.ROUTING_SERVICE_URL || 'http://127.0.0.1:8093',
+        changeOrigin: true,
+      },
+      '/api/walks/': {
+        target: process.env.ROUTING_SERVICE_URL || 'http://127.0.0.1:8093',
+        changeOrigin: true,
+      },
       '/api': {
         target: BACKEND_URL,
         changeOrigin: true,

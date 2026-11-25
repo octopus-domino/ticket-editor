@@ -13,11 +13,14 @@ import type {
   JourneyStatus,
 } from '../domain/definitions';
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const authenticated = path.startsWith('/api/publications') || !!getHttpSession().token();
+  // Both public services have their own reverse proxies in Vite and Nginx.
+  const publicService = path.startsWith('/api/routing/') || path.startsWith('/api/walks/');
+  const authenticated = !publicService && (path.startsWith('/api/publications') || !!getHttpSession().token());
   const response = await (authenticated ? authFetch : publicFetch)(
-    authenticated ? path : `${API_BASE}${path}`,
+    authenticated || publicService ? path : `${API_BASE}${path}`,
     {
       ...init,
+      ...(publicService ? { credentials: 'omit' } : {}),
       headers: { 'Content-Type': 'application/json', ...init.headers },
     },
   );

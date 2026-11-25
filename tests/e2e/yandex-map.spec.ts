@@ -6,7 +6,7 @@ for(const width of [390,1440])test(`Yandex alternative uses only the JavaScript 
   await page.route('**/api/**',route=>{
     const path=new URL(route.request().url()).pathname;
     if(!path.startsWith('/api/'))return route.continue();
-    if(path==='/api/journeys/maps/providers')return route.fulfill({json:{yandexEnabled:true,yandexBrowserKey:'public-fixture-map-key'}});
+    if(path==='/api/walks/v1/maps/providers')return route.fulfill({json:{yandexEnabled:true,yandexBrowserKey:'public-fixture-map-key'}});
     return route.fulfill({status:401,json:{error:'Unauthorized'}});
   });
   await page.route('https://tiles.openfreemap.org/**',route=>route.fulfill({json:{version:8,sources:{},layers:[]}}));

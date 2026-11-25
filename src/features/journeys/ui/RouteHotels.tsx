@@ -22,7 +22,7 @@ export function RouteHotels({ stop, onAdd }: { stop: RouteStop; onAdd: (address:
     setBusy(true); setError('');
     const query = new URLSearchParams({ longitude: String(stop.longitude), latitude: String(stop.latitude), kind: 'hotels', language: getLocale() });
     try {
-      const result = await journeyRequest<{ places: RecommendedPlace[] }>(`/api/journeys/routes/places?${query}`, { signal: request.signal });
+      const result = await journeyRequest<{ places: RecommendedPlace[] }>(`/api/walks/v1/places?${query}`, { signal: request.signal });
       if (!request.signal.aborted) setPlaces(result.places);
     } catch (reason) {
       if (!request.signal.aborted) setError(reason instanceof Error ? reason.message : t('Could not prepare the image.'));

@@ -7,7 +7,7 @@ type RoadPoint = Pick<RouteStop, 'latitude' | 'longitude'>;
 type RoadResult = Pick<PlannedLeg, 'coordinates' | 'durationSeconds'> & { distanceMeters: number };
 
 export function requestRoad(start: RoadPoint, end: RoadPoint, mode: 'car' | 'foot', signal?: AbortSignal) {
-  return journeyRequest<RoadResult>('/api/journeys/routes/road', {
+  return journeyRequest<RoadResult>('/api/routing/v1/road', {
     method: 'POST', signal, body: JSON.stringify({
       start: { longitude: start.longitude, latitude: start.latitude },
       end: { longitude: end.longitude, latitude: end.latitude }, mode,

@@ -37,7 +37,7 @@ async function mockApi(page: Page) {
         },
       });
     }
-    if (url.pathname === '/api/journeys/routes/addresses')
+    if (url.pathname === '/api/walks/v1/addresses')
       return route.fulfill({
         json: [
           {
@@ -49,8 +49,8 @@ async function mockApi(page: Page) {
           },
         ],
       });
-    if (url.pathname === '/api/journeys/routes/places') return route.fulfill({ json: { available: false, places: [] } });
-    if (url.pathname === '/api/journeys/routes/road') return route.fulfill({ json: {
+    if (url.pathname === '/api/walks/v1/places') return route.fulfill({ json: { available: false, places: [] } });
+    if (url.pathname === '/api/routing/v1/road') return route.fulfill({ json: {
       coordinates: [[13.4, 52.5], [13.41, 52.48], [13.4, 52.4]], durationSeconds: 600, distanceMeters: 12000,
     } });
     if (url.pathname === '/api/journeys/media' && method === 'POST') {
@@ -85,7 +85,7 @@ test('a phone chooses a route point on the map when address search is unavailabl
   await page.setViewportSize({ width: 390, height: 844 });
   await mockApi(page);
   let searches = 0;
-  await page.route('**/api/journeys/routes/addresses?*', route => { searches++; return route.fulfill({ status: 503, json: {} }); });
+  await page.route('**/api/walks/v1/addresses?*', route => { searches++; return route.fulfill({ status: 503, json: {} }); });
   await page.goto('/start/tours');
   const stops = page.locator('.route-stops > li');
   await stops.first().getByRole('button', { name: 'Choose on map', exact: true }).click();
@@ -117,7 +117,7 @@ test('a separate walking map keeps numbered photos and the city plan out of the 
     if (!image) return route.fulfill({ status: 404 });
     return route.fulfill({ contentType: 'image/jpeg', body: Buffer.from(image.split(',')[1], 'base64') });
   });
-  await page.route('**/api/journeys/routes/places?*', route => route.fulfill({ json: { available: true, source: 'OpenStreetMap', places: [
+  await page.route('**/api/walks/v1/places?*', route => route.fulfill({ json: { available: true, source: 'OpenStreetMap', places: [
     { id: 'museum', label: 'City Museum', longitude: 13.41, latitude: 52.501, url: 'https://www.openstreetmap.org/node/1', photoReference: 'File:Museum.jpg' },
     { id: 'tower', label: 'Town Tower', longitude: 13.412, latitude: 52.502, url: 'https://www.openstreetmap.org/node/2', photoReference: 'File:Tower.jpg' },
   ] } }));
@@ -282,7 +282,7 @@ test('solutions dropdown remains inside a narrow phone viewport', async ({ page 
 test('nearby visits create a daytime plan and enter the route only when requested', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('codoc:language', 'en'));
   await mockApi(page);
-  await page.route('**/api/journeys/routes/places?*', route => route.fulfill({ json: { available: true, places: [{
+  await page.route('**/api/walks/v1/places?*', route => route.fulfill({ json: { available: true, places: [{
     id: '12345', label: 'City Gallery', longitude: 13.41, latitude: 52.5, url: 'https://2gis.ru/firm/12345',
     schedule: { Thu: { working_hours: [{ from: '10:00', to: '18:00' }] } },
   }] } }));
@@ -310,9 +310,9 @@ for(const width of [390,1440])test(`a ready Petersburg walk preserves its order 
   test.setTimeout(90000);await page.setViewportSize({width,height:900});
   await page.addInitScript(()=>localStorage.setItem('codoc:language','en'));
   const state=await mockApi(page);
-  await page.route('**/api/journeys/routes/places/themed/enrich?*',route=>route.fulfill({json:[]}));
-  await page.route('**/api/journeys/routes/addresses?*',route=>route.fulfill({json:[{label:'Saint Petersburg',longitude:30.315,latitude:59.938}]}));
-  await page.route('**/api/journeys/routes/road',route=>{
+  await page.route('**/api/walks/v1/places/themed/enrich?*',route=>route.fulfill({json:[]}));
+  await page.route('**/api/walks/v1/addresses?*',route=>route.fulfill({json:[{label:'Saint Petersburg',longitude:30.315,latitude:59.938}]}));
+  await page.route('**/api/routing/v1/road',route=>{
     const {start,end}=route.request().postDataJSON();
     return route.fulfill({json:{mode:'foot',coordinates:[[start.longitude,start.latitude],[end.longitude,end.latitude]],durationSeconds:600,distanceMeters:800}});
   });
@@ -339,12 +339,12 @@ test('historic buildings can be searched and saved as a separate walk on a phone
   test.setTimeout(90000);await page.setViewportSize({width:390,height:844});
   await page.addInitScript(()=>localStorage.setItem('codoc:language','en'));
   const state=await mockApi(page);let query='',beforeYear='';
-  await page.route('**/api/journeys/buildings/nearby?*',route=>{
+  await page.route('**/api/walks/v1/buildings/nearby?*',route=>{
     query=new URL(route.request().url()).searchParams.get('q')??'';
     beforeYear=new URL(route.request().url()).searchParams.get('beforeYear')??'';
     return route.fulfill({json:[{id:101,address:'Historic house',longitude:13.4002,latitude:52.5002,constructionYear:1860,architect:'Fixture architect',style:'Classicism',sourceUrl:'https://example.org/house'}]});
   });
-  await page.route('**/api/journeys/routes/places/themed/enrich?*',route=>route.fulfill({json:[]}));
+  await page.route('**/api/walks/v1/places/themed/enrich?*',route=>route.fulfill({json:[]}));
   await page.goto('/start/tours');const stops=page.locator('.route-stops > li');
   await stops.nth(1).getByRole('combobox',{name:'Address',exact:true}).fill('Museum Berlin');
   await page.getByRole('option',{name:'Berlin Museum'}).getByRole('button').click();
@@ -366,7 +366,7 @@ test('themed walks preserve the trip and print seven numbered photographs on a p
   test.setTimeout(90000);await page.setViewportSize({width:390,height:844});
   await page.addInitScript(()=>localStorage.setItem('codoc:language','en'));
   const state=await mockApi(page);let searchTheme='',photoRequests=0;
-  await page.route('**/api/journeys/routes/places/themed?*',route=>{
+  await page.route('**/api/walks/v1/places/themed?*',route=>{
     searchTheme=new URL(route.request().url()).searchParams.get('theme')??'';
     const places=Array.from({length:7},(_,i)=>({id:i===0?'wikimapia-123':`node-${i}`,label:i===0?'Legend courtyard':`Quiet place ${i}`,
       longitude:13.4002+i*.0003,latitude:52.5002+i*.0003,url:i===0?'https://wikimapia.org/123':`https://www.openstreetmap.org/node/${i}`,
@@ -374,7 +374,7 @@ test('themed walks preserve the trip and print seven numbered photographs on a p
       meta:{source:i===0?'wikimapia':'osm',theme:'mystic',in_osm:String(i!==0),visit_status:i===1?'CLOSED':'UNKNOWN'}}));
     return route.fulfill({json:{available:true,source:'OpenStreetMap / Wikimapia',places}});
   });
-  await page.route('**/api/journeys/routes/places/themed/enrich?*',route=>{
+  await page.route('**/api/walks/v1/places/themed/enrich?*',route=>{
     photoRequests++;const points=route.request().postDataJSON() as {id:string}[];
     return route.fulfill({json:points.map(point=>({stopId:point.id,imageId:'c'.repeat(64),sourceUrl:'https://commons.wikimedia.org/wiki/File:Fixture.jpg',
       author:'Fixture photographer',license:'CC BY 4.0',licenseUrl:'https://creativecommons.org/licenses/by/4.0/'}))});
@@ -384,7 +384,7 @@ test('themed walks preserve the trip and print seven numbered photographs on a p
     if(!state.image)return route.fulfill({status:404});
     return route.fulfill({contentType:'image/jpeg',body:Buffer.from(state.image.split(',')[1],'base64')});
   });
-  await page.route('**/api/journeys/routes/road',route=>{
+  await page.route('**/api/routing/v1/road',route=>{
     const input=route.request().postDataJSON();return route.fulfill({json:{coordinates:[[input.start.longitude,input.start.latitude],[input.end.longitude,input.end.latitude]],durationSeconds:60,distanceMeters:100}});
   });
   await page.goto('/start/tours');const stops=page.locator('.route-stops > li');

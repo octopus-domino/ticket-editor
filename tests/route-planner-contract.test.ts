@@ -15,7 +15,8 @@ test('road requests send named coordinates and preserve returned longitude/latit
   vi.mocked(journeyRequest).mockResolvedValueOnce({ coordinates: geometry, durationSeconds: 600, distanceMeters: 800 });
   const plan = await planRoute(stops, [{ mode: 'foot', coordinates: [], durationSeconds: 0 }],
     '2026-12-01T10:00', false, () => {});
-  const [, request] = vi.mocked(journeyRequest).mock.calls[0];
+  const [path, request] = vi.mocked(journeyRequest).mock.calls[0];
+  expect(path).toBe('/api/routing/v1/road');
   expect(JSON.parse(String(request?.body))).toEqual({
     start: { longitude: 37.62, latitude: 55.75 }, end: { longitude: 37.64, latitude: 55.76 }, mode: 'foot',
   });

@@ -10,6 +10,7 @@ assert.match(appShell, /name="robots" content="noindex, follow"/);
 const sitemap = await readFile(new URL('sitemap.xml', root), 'utf8');
 const urls = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => new URL(match[1]));
 const registry = await createServer({ server: { middlewareMode: true }, appType: 'custom', mode: 'production' });
+const builderHref = `${registry.config.base}sites/new`;
 let expectedPaths;
 try {
   const { SEARCH_PAGES } = await registry.ssrLoadModule('/src/marketing/searchPages.ts');
@@ -47,7 +48,7 @@ for (const url of urls) {
   if (['/solutions/','/website-builder/','/invitations-online/','/certificates-with-qr/','/qr-menu/'].includes(url.pathname)) {
     assert.ok(structured['@graph'].some(item=>item['@type']==='WebApplication'),'Service application markup missing');
     assert.ok(structured['@graph'].some(item=>item['@type']==='FAQPage'),'Visible FAQ markup missing');
-    assert.ok(html.includes('href="/sites/new"'),'Constructor must be discoverable in static HTML');
+    assert.ok(html.includes(`href="${builderHref}"`),'Constructor must be discoverable in static HTML');
   }
   assert.ok(
     !/<link[^>]+(?:konva-vendor|tiptap-vendor|WorkspaceRuntime|Editor-)/.test(html),

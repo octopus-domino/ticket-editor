@@ -1,7 +1,8 @@
+import { legCalculationKey } from '../domain/planner/legCalculationKey';
 import { t } from '@/shared/i18n';
 import { journeyRequest } from './journeys';
 import { routeInstant, buildRouteTimeline, departureForFlight, type RouteStop } from '../domain/routeTimeline';
-import { flightCoordinates, type PlannedLeg } from '../domain/route';
+import { flightCoordinates, geographicDistance, type PlannedLeg } from '../domain/route';
 
 type RoadPoint = Pick<RouteStop, 'latitude' | 'longitude'>;
 type RoadResult = Pick<PlannedLeg, 'coordinates' | 'durationSeconds'> & { distanceMeters: number };
@@ -31,7 +32,7 @@ export async function requestRoadVia(start: RoadPoint, end: RoadPoint, via: Road
   return route;
 }
 
-export async function planRoute(stops: RouteStop[], legs: PlannedLeg[], start: string, anchor: boolean, progress: (message: string) => void) {
+export async function planRoute(stops: RouteStop[], legs: PlannedLeg[], start: string, anchor: boolean, progress: (message: string) => void, signal?: AbortSignal) {
   if (stops.some(stop => !stop.label || stop.confirmed === false)) throw new Error(t('Select an address for every stop.'));
   for (let index = 0; index < legs.length; index++) if (legs[index].mode === 'flight') {
     const departure = routeInstant(legs[index].departure ?? '', stops[index].zone);
@@ -42,12 +43,27 @@ export async function planRoute(stops: RouteStop[], legs: PlannedLeg[], start: s
   const planned: PlannedLeg[] = [];
   for (let index = 0; index < legs.length; index++) {
     progress(`${t('Calculating the route…')} ${index + 1}/${legs.length}`);
+    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
     const leg = legs[index];
-    if (leg.mode === 'flight') planned.push({ ...leg, coordinates: flightCoordinates(stops[index], stops[index + 1]) });
-    else if (leg.coordinates.length) planned.push(leg);
-    else {
-      const road = await requestRoad(stops[index], stops[index + 1], leg.mode);
-      planned.push({ ...leg, ...road });
+    const from = stops[index], to = stops[index + 1];
+    const key = legCalculationKey(from, to, leg.mode);
+    const calculation = { fromStopId: from.id, toStopId: to.id, key, routingProfile: leg.mode, status: 'fresh' as const };
+    if (leg.mode === 'flight') {
+      planned.push({ ...leg, coordinates: flightCoordinates(from, to),
+        calculation: { ...calculation, source: 'flight-estimate', computedAt: new Date().toISOString() } });
+    } else if (leg.calculation?.key === key && leg.calculation.status === 'fresh' && leg.coordinates.length >= 2) {
+      planned.push(leg);
+    } else {
+      const first = leg.coordinates[0], last = leg.coordinates.at(-1);
+      const legacyMatches = !leg.calculation && first && last && leg.coordinates.length >= 2 &&
+        geographicDistance(from, { longitude: first[0], latitude: first[1] }) < 3 &&
+        geographicDistance(to, { longitude: last[0], latitude: last[1] }) < 3;
+      if (legacyMatches) planned.push({ ...leg, calculation: { ...calculation, source: 'legacy' } });
+      else {
+        const road = await requestRoad(from, to, leg.mode, signal);
+        if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+        planned.push({ ...leg, ...road, calculation: { ...calculation, source: 'road-api', computedAt: new Date().toISOString() } });
+      }
     }
   }
   const departure = anchor ? departureForFlight(stops, planned) : start;

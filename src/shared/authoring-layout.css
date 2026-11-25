@@ -9,7 +9,6 @@
   }
   main.journey-main .journey-workspace { grid-template-columns: minmax(420px, 1fr) minmax(0, 1.25fr); gap: clamp(24px, 3vw, 56px); }
   main.journey-main .journey-workspace > * { min-width: 0; }
-  .journey-app .journey-header { max-width: none; }
   .schema-page .schema-form, .bm-page .dm-table { max-width: none; }
   .workflow-page .workflow-builder { grid-template-columns: minmax(240px, 18%) minmax(0, 1fr); }
   .poetry-wizard .poetry-preferences { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -17,3 +16,61 @@
   .journey-main > p, .workflow-page > p { max-width: 75ch; }
 }
 .journey-steps { flex-wrap: wrap; }
+
+.editor-document-heading {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  min-width: 0;
+  padding: 5px clamp(8px, 1.5vw, 20px);
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+  font-size: 13px;
+}
+.editor-document-back,
+.editor-document-heading .resource-history > summary {
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  min-height: 44px;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  font: inherit;
+  text-decoration: none;
+}
+.editor-document-back:hover,
+.editor-document-heading .resource-history > summary:hover { background: var(--panel-alt); }
+.editor-document-name {
+  display: flex;
+  flex: 1 1 7rem;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+.editor-document-name strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.editor-document-name small { color: var(--text-muted); }
+.editor-document-heading .resource-history { position: relative; }
+.editor-document-heading .resource-history > div {
+  position: absolute;
+  z-index: 80;
+  inset-block-start: 100%;
+  inset-inline-end: 0;
+  max-width: calc(100vw - 20px);
+  border-radius: 9px;
+  box-shadow: 0 10px 24px #0f172a20;
+}
+@media (max-width: 760px) {
+  .editor-document-name { flex-direction: column; gap: 0; font-size: 12px; }
+  .editor-document-name strong { max-width: 100%; }
+}

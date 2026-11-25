@@ -9,11 +9,10 @@ import { JourneyPublic } from './ui/JourneyPublic';
 import { JourneySiteBuilder } from './ui/JourneySiteBuilder';
 import { JourneyBatch } from './ui/JourneyBatch';
 import './journeys.css';
-import { LanguageSwitcher } from '@/shared/i18n/LanguageSwitcher';
 import WorkflowRunner from '../workflows/WorkflowRunner';
 import { localizeInvalidField, clearFieldValidation } from './ui/formValidation';
 import { BackgroundSurface } from '@/shared/backgrounds/BackgroundSurface';
-import { ReadySolutionsMenu } from '../../marketing/ReadySolutionsMenu';
+import { SolutionHeader } from '../../marketing/SolutionHeader';
 
 function ConfiguredJourney() {
   const params = useParams();
@@ -64,27 +63,11 @@ export default function JourneyApp({
       onInvalidCapture={localizeInvalidField}
       onInputCapture={clearFieldValidation}
     >
-      <header className="journey-header">
-        <LanguageSwitcher />
-        <Link to={workspaceUrl('/')} className="journey-logo">
-          CoDoc<span> {t('/ для вашего события')}</span>
-        </Link>
-        <nav>
-          <ReadySolutionsMenu />
-          <Link to={workspaceUrl('/app/publications')}>{t('My sites and documents')}</Link>
-          {mode === 'public' ? (
-            <Link to="/solutions/">{t('Создать свой документ ↗')}</Link>
-          ) : (
-            <>
-              <Link to="/solutions/">{t('Все сценарии')}</Link>
-              <Link to="/start/invite">{t('Приглашения')}</Link>
-              <Link to="/start/certificates">{t('Сертификаты')}</Link>
-              <Link to="/start/menu">{t('QR-меню')}</Link>
-              <Link to="/sites/new">{t('Конструктор ↗')}</Link>
-            </>
-          )}
-        </nav>
-      </header>
+      <SolutionHeader home={workspaceUrl('/')} workspace={workspaceUrl('/app/publications')} accountLabel={t('My sites and documents')}>
+        {mode === 'public'
+          ? <Link to="/solutions/">{t('Создать свой документ ↗')}</Link>
+          : <Link to="/sites/new" aria-current={mode === 'builder' ? 'page' : undefined}>{t('Website builder')}</Link>}
+      </SolutionHeader>
       {mode === 'batch' ? (
         <JourneyBatch />
       ) : mode === 'public' ? (

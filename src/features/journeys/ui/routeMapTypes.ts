@@ -14,6 +14,7 @@ export interface RouteMapProps {
   onUserMove?: (point: { longitude: number; latitude: number }) => void;
   pickedPoint?: { longitude: number; latitude: number } | null;
   focusStopId?: string;
+  keepRouteInView?: boolean;
   cityMap?: boolean;
   rasterBasemap?: boolean;
   fit?: boolean | 'initial';

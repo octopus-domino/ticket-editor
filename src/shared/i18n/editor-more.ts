@@ -155,6 +155,7 @@ Rounded rectangle|Округл.|圆角矩形|Zaokrąglony prostokąt|Rettangolo 
 Orientation|Ориентация|方向|Orientacja|Orientamento|Orientación|Oriëntatie|Orientation|Ausrichtung
 Orthogonal (routed)|Ортогональный (с обходами)|正交（自动绕行）|Ortogonalny (z omijaniem)|Ortogonale (con percorsi)|Ortogonal (con rutas)|Orthogonaal (met omleiding)|Orthogonal (avec contournement)|Orthogonal (mit Umgehung)
 Main navigation|Основная навигация|主导航|Nawigacja główna|Navigazione principale|Navegación principal|Hoofdnavigatie|Navigation principale|Hauptnavigation
+Workspace actions|Действия в рабочей области|工作区操作|Działania w obszarze roboczym|Azioni dell’area di lavoro|Acciones del espacio de trabajo|Werkruimteacties|Actions de l’espace de travail|Arbeitsbereichsaktionen
 From (optional)|От кого (необязательно)|发件人（可选）|Od (opcjonalnie)|Da (facoltativo)|De (opcional)|Van (optioneel)|De (facultatif)|Von (optional)
 Reject|Отклонить|拒绝|Odrzuć|Rifiuta|Rechazar|Afwijzen|Refuser|Ablehnen
 Open editor|Откройте редактор|打开编辑器|Otwórz edytor|Apri editor|Abrir editor|Editor openen|Ouvrir l’éditeur|Editor öffnen

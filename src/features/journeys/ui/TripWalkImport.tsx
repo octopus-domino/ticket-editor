@@ -6,17 +6,19 @@ import './private-walk-picker.css';
 
 export type WalkCandidate = ReturnType<typeof readPrivateWalk>;
 
-export function TripWalkImport({ onPreview, point, address }: {
+export function TripWalkImport({ onPreview, onComplete = onPreview, point, address, primary }: {
   onPreview: (walk: WalkCandidate) => void;
+  onComplete?: (walk: WalkCandidate) => void;
   point?: CityPoint;
   address?: string;
+  primary?: boolean;
 }) {
   const [channel, setChannel] = useState('');
   const [error, setError] = useState(false);
   const frame = useRef<HTMLIFrameElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
-  const callback = useRef(onPreview);
-  callback.current = onPreview;
+  const callback = useRef(onComplete);
+  callback.current = onComplete;
 
   useEffect(() => {
     if (!channel) return;
@@ -56,7 +58,8 @@ export function TripWalkImport({ onPreview, point, address }: {
     }
   }
   return <>
-    <button type="button" onClick={() => { setError(false); setChannel(crypto.randomUUID()); }}>
+    <button className={primary ? 'journey-primary trip-exp-walk-action' : undefined}
+      type="button" onClick={() => { setError(false); setChannel(crypto.randomUUID()); }}>
       {t('Plan walk in Journey')} ↗
     </button>
     {sharedLink && <button type="button" onClick={() => previewLink(sharedLink)}>{t('Preview shared walk')}</button>}
@@ -67,8 +70,8 @@ export function TripWalkImport({ onPreview, point, address }: {
         <button type="button" onClick={() => setChannel('')} aria-label={t('Close')}>×</button>
       </header>
       <iframe ref={frame} src={url} title={t('Private itineraries')} allow="geolocation; clipboard-write" />
-      {error && <p role="alert">{t('Could not build the walking route.')}</p>}
+      {error && <p role="alert">{t('Could not import the walking route.')}</p>}
     </dialog>}
-    {!channel && error && <p role="alert">{t('Could not build the walking route.')}</p>}
+    {!channel && error && <p role="alert">{t('Could not import the walking route.')}</p>}
   </>;
 }

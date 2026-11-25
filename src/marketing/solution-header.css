@@ -1,0 +1,98 @@
+.solution-header {
+  position: relative;
+  z-index: 20;
+  background: #fff;
+  color: #252335;
+  border-bottom: 1px solid #e7e4ed;
+}
+
+.solution-header-inner {
+  display: flex;
+  align-items: center;
+  gap: clamp(14px, 3vw, 36px);
+  width: min(1240px, calc(100% - 48px));
+  min-height: 66px;
+  margin-inline: auto;
+}
+
+.solution-header .solution-header-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 23px;
+  font-weight: 800;
+  letter-spacing: -.055em;
+  white-space: nowrap;
+  color: inherit;
+  text-decoration: none;
+}
+
+.solution-header-brand > span {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: #6047cf;
+  color: #fff;
+  font-size: 18px;
+}
+
+.solution-header-navigation,
+.solution-header-actions {
+  display: flex;
+  align-items: center;
+  gap: clamp(8px, 1.4vw, 18px);
+}
+
+.solution-header-navigation > a {
+  font-size: 14px;
+  font-weight: 600;
+  color: #4d465f;
+  text-decoration: none;
+}
+
+.solution-header-navigation > a:hover,
+.solution-header-navigation > a[aria-current="page"] {
+  color: #4f35ba;
+}
+
+.solution-header-actions { margin-inline-start: auto; }
+
+.solution-header .solution-header-account {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding-inline: 16px;
+  border-radius: 9px;
+  background: #f0ebff;
+  color: #482fa9;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.solution-header .solution-header-account:hover { background: #e8e0ff; }
+.solution-header :is(a, summary):focus-visible {
+  outline: 2px solid #6148cb;
+  outline-offset: 3px;
+}
+
+@media (max-width: 1040px) {
+  .solution-header-navigation > a[data-secondary] { display: none; }
+}
+
+@media (max-width: 740px) {
+  .solution-header-inner {
+    width: calc(100% - 28px);
+    min-height: 58px;
+    gap: 10px;
+  }
+  .solution-header .solution-header-brand { font-size: 20px; }
+  .solution-header-brand > span { width: 30px; height: 30px; font-size: 16px; }
+  .solution-header-navigation { margin-inline-start: auto; }
+  .solution-header-navigation > a,
+  .solution-header .solution-header-account { display: none; }
+  .solution-header-actions { margin-inline-start: 0; }
+}

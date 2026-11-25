@@ -1,6 +1,30 @@
 import { test, expect } from '@playwright/test';
 test.describe.configure({timeout:60000});
 
+test('an unavailable next collection leaves the previous preview usable', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('codoc:language', 'en'));
+  const id = 'a'.repeat(64);
+  const requests: Record<string, unknown>[] = [];
+  await page.route('**/api/journeys/poetry', route => {
+    requests.push(route.request().postDataJSON());
+    if (requests.length > 1) {
+      return route.fulfill({ status: 503, json: { error: 'journey.poetry.sources-unavailable' } });
+    }
+    return route.fulfill({ json: { id, bundle: { language: 'en', cards: [] }, weatherSource: '', weatherLicense: '' } });
+  });
+  await page.route('**/api/journeys/artwork', route => route.fulfill({ json: { pages: [] } }));
+  await page.route('**/api/auth/refresh', route => route.fulfill({ status: 401, json: {} }));
+  await page.goto('/start/poetry');
+  await page.getByRole('button', { name: 'Choose poems for seven days' }).click();
+  const preview = page.getByRole('heading', { name: 'Your seven cards' });
+  await expect(preview).toBeVisible();
+  await page.getByRole('button', { name: 'Choose another seven poems' }).click();
+  await expect(page.getByText('The poetry sources are unavailable. Try again a little later.')).toBeVisible();
+  expect(requests[1]).toMatchObject({ previousId: id });
+  await expect(preview).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Save cards and get PDF' })).toBeEnabled();
+});
+
 test('poetry can be selected on a phone without location or weather',async({browser})=>{
   const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
   let payload:Record<string,unknown>|undefined;

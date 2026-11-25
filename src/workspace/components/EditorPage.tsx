@@ -181,33 +181,14 @@ const DocumentEditorSession: React.FC<{ docId?: string }> = ({ docId }) => {
 
   return (
     <div className="document-editor-page" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-      <div
-        className="document-editor-header"
-        style={{
-          padding: 8,
-          borderBottom: '1px solid var(--border)',
-          display: 'flex',
-          gap: 8,
-          alignItems: 'center',
-          flexShrink: 0,
-        }}
-      >
-        <button
-          onClick={() => navigate('/app')}
-          style={{
-            border: '1px solid var(--border-strong)',
-            background: 'var(--panel)',
-            padding: '4px 10px',
-            borderRadius: 4,
-            cursor: 'pointer',
-            fontSize: 13,
-            color: 'var(--text)',
-          }}
-        >
-          {__tr("← К списку")}</button>
-        <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-          {doc.name} {isLocal && __tr("(Сохранено локально)")}
-        </span>
+      <div className="document-editor-header editor-document-heading">
+        <button type="button" className="editor-document-back" onClick={() => navigate('/app')}>
+          {__tr("← К списку")}
+        </button>
+        <div className="editor-document-name">
+          <strong title={doc.name}>{doc.name}</strong>
+          {isLocal && <small>{__tr("(Сохранено локально)")}</small>}
+        </div>
         {!isLocal && <ResourceHistoryPanel kind="document" id={docId} />}
       </div>
       <div className="document-editor-body" style={{ flex: 1, minHeight: 0 }}>

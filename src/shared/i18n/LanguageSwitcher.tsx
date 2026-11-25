@@ -1,13 +1,15 @@
 import { LANGUAGES, useLocale, changeLanguage, t, type Locale } from './index';
 import { useState } from 'react';
+import './compact-language-switcher.css';
 
-export function LanguageSwitcher() {
+export function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
   const locale = useLocale();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   return (
-    <label className="language-switcher">
-      <span aria-hidden="true">🌐</span>
+    <label className={`language-switcher${compact ? ' language-switcher--compact' : ''}`}>
+      {compact ? <span aria-hidden="true" className="language-switcher-code">{locale.toUpperCase()}</span>
+        : <span aria-hidden="true">🌐</span>}
       <select
         aria-label={t('Language')}
         disabled={busy}

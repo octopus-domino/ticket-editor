@@ -1,21 +1,19 @@
 import { Link, useLocation } from 'react-router-dom';
 import { t } from '@/shared/i18n';
-import { LanguageSwitcher } from '@/shared/i18n/LanguageSwitcher';
 import { JOURNEY_PAGES, JOURNEY_STEPS, JOURNEY_FAQ } from './journeyPages';
 import { JourneyDiscovery } from './JourneyDiscovery';
 import './landing.css';
 import { reachGoal } from '@/shared/analytics/metrika';
-import { ReadySolutionsMenu } from './ReadySolutionsMenu';
+import { SolutionHeader } from './SolutionHeader';
 import { solutionBenefit } from './solutionBenefits';
 
 export function JourneyMarketingPage() {
   const {pathname}=useLocation();
   const page=JOURNEY_PAGES.find(item=>item.path.replace(/\/$/,'')===pathname.replace(/\/$/,''))??JOURNEY_PAGES[0];
   return <div className="codoc-landing">
-    <header className="codoc-header codoc-container"><Link className="codoc-brand" to="/">CoDoc.</Link>
-      <ReadySolutionsMenu />
-      <LanguageSwitcher/>
-    </header>
+    <SolutionHeader>
+      <Link to="/sites/new">{t('Website builder')}</Link>
+    </SolutionHeader>
     <main>
       <section className="codoc-container discovery-hero"><nav className="search-breadcrumbs"><Link to="/">CoDoc</Link> / <Link to="/solutions/">{t('Ready-to-use services')}</Link></nav>
         <p className="codoc-eyebrow">{page.label}</p><h1>{page.heading}</h1><p className="codoc-lead">{page.description}</p>

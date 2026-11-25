@@ -11,7 +11,7 @@ const emptyLines: RouteMapLeg[] = [];
 
 const transportLabels = { PLANE: 'Flight', TRAIN: 'Train', BUS: 'Bus', CAR: 'Car', FERRY: 'Ferry' } as const;
 
-export function TripCityMap({ cities, legs, plannedLines = emptyLines, focusStopId, accommodations = emptyAccommodations, onChangeLodging, onPick, hotelMap, onSelectCity, onMapCenter, showTransferList = true, dayMap }: Pick<SharedTrip, 'cities'> & {
+export function TripCityMap({ cities, legs, plannedLines = emptyLines, focusStopId, accommodations = emptyAccommodations, onChangeLodging, onPick, hotelMap, onSelectCity, onMapCenter, pickedPoint, dayMap, showTransferList = true }: Pick<SharedTrip, 'cities'> & {
   legs: TripWireLeg[]; plannedLines?: RouteMapLeg[]; focusStopId?: string; accommodations?: SharedTrip['accommodations'];
   showTransferList?: boolean;
   onChangeLodging?: (id: string) => void;
@@ -19,7 +19,8 @@ export function TripCityMap({ cities, legs, plannedLines = emptyLines, focusStop
   hotelMap?: TripHotelMapState;
   onSelectCity?: (id: string) => void;
   onMapCenter?: (center: CityPoint) => void;
-  dayMap?: Pick<RouteMapProps, 'stops' | 'legs' | 'onStopSelect'>;
+  pickedPoint?: CityPoint;
+  dayMap?: Pick<RouteMapProps, 'stops' | 'legs' | 'onStopSelect' | 'onStopMove' | 'keepRouteInView'>;
 }) {
   const [selectedId, setSelectedId] = useState<string>();
   const [lodgingId, setLodgingId] = useState<string>();
@@ -47,13 +48,13 @@ export function TripCityMap({ cities, legs, plannedLines = emptyLines, focusStop
     });
   }, [destinations, legs]);
   const mapLegs = useMemo(() => [...plannedLines, ...transfers], [plannedLines, transfers]);
-  if (!destinations.length && !transfers.length && !hotels.length && !onPick && !hotelMap && !dayMap) return null;
+  if (!destinations.length && !transfers.length && !hotels.length && !onPick && !hotelMap && !dayMap && !onSelectCity) return null;
   return <figure>
     <RouteMap rasterBasemap cityMap onReady={ignoreMapHandle} {...(hotelMap ? {
       ...hotelMap, legs: emptyLines,
-    } : dayMap ? { ...dayMap, focusStopId } : {
+    } : dayMap ? { ...dayMap, focusStopId, onPick, pickedPoint, onUserMove: onMapCenter } : {
       stops: [...destinations, ...hotels], legs: mapLegs, focusStopId, fit: onPick ? 'initial' : true,
-      onPick, onUserMove: onMapCenter, onLegSelect: id => { setLodgingId(undefined); setSelectedId(id); },
+      onPick, pickedPoint, onUserMove: onMapCenter, onLegSelect: id => { setLodgingId(undefined); setSelectedId(id); },
       onStopSelect: hotels.length || onSelectCity ? id => {
         if (id.startsWith('hotel:')) { setSelectedId(undefined); setLodgingId(id.slice(6)); }
         else onSelectCity?.(id);

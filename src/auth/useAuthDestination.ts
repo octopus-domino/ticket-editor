@@ -7,6 +7,7 @@ const DESTINATIONS = new Set([
   '/app/publications',
   '/app/workflows',
   '/sites/new',
+  '/trip',
 ]);
 const safeDestination = (value: string | null) =>
   value && DESTINATIONS.has(value) ? value : '/app';

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { t } from '@/shared/i18n';
@@ -6,13 +6,14 @@ import { mapRouteLines, routePointMarker } from '../domain/route';
 import type { RouteMapProps } from './routeMapTypes';
 
 export function LeafletTripMap({
-  stops, legs, fit = true, cityMap, onPick, onUserMove, onStopSelect, onStopMove, onLegSelect, pickedPoint, focusStopId,
+  stops, legs, fit = true, cityMap, onPick, onUserMove, onStopSelect, onStopMove, onLegSelect, pickedPoint, focusStopId, keepRouteInView,
 }: RouteMapProps) {
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map>();
   const lineLayer = useRef<L.LayerGroup>();
   const pinLayer = useRef<L.LayerGroup>();
   const fitted = useRef<string>();
+  const [hasSize, setHasSize] = useState(false);
   const latest = useRef({ stops, onPick, onUserMove, onStopSelect, onStopMove, onLegSelect });
   latest.current = { stops, onPick, onUserMove, onStopSelect, onStopMove, onLegSelect };
   const moving = Boolean(onStopMove);
@@ -23,7 +24,9 @@ export function LeafletTripMap({
     if (!container.current) return;
     const element = container.current;
     const start = latest.current.stops[0];
-    const instance = L.map(element, { preferCanvas: true, scrollWheelZoom: true, maxZoom: 19 })
+    const animate = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const instance = L.map(element, { preferCanvas: true, scrollWheelZoom: true, maxZoom: 19,
+      zoomAnimation: animate, fadeAnimation: animate, markerZoomAnimation: animate })
       .setView(start ? [start.latitude, start.longitude] : [55.75, 37.62], start ? 15 : 6);
     instance.attributionControl.setPrefix(false);
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -42,7 +45,11 @@ export function LeafletTripMap({
     // Zoom can be initiated by fitting or by the user. Only input gestures refresh the hotel search.
     const wheel = notifyMove;
     element.addEventListener('wheel', wheel, { passive: true });
-    const resize = new ResizeObserver(() => instance.invalidateSize({ animate: false, debounceMoveend: true }));
+    const resize = new ResizeObserver(([entry]) => {
+      const visible = entry.contentRect.width > 0 && entry.contentRect.height > 0;
+      if (visible) instance.invalidateSize({ animate: false, debounceMoveend: true });
+      setHasSize(visible);
+    });
     resize.observe(element);
     return () => {
       element.removeEventListener('wheel', wheel);
@@ -117,23 +124,28 @@ export function LeafletTripMap({
 
   useEffect(() => {
     const instance = map.current;
-    if (!instance || fit === false || (fit === 'initial' && fitted.current)) return;
-    const points: L.LatLngTuple[] = stops.length ? stops.map(stop => [stop.latitude, stop.longitude])
-      : legs.flatMap(leg => leg.coordinates.map(([lng, lat]): L.LatLngTuple => [lat, lng]));
+    if (!instance || !hasSize || fit === false || (fit === 'initial' && fitted.current)) return;
+    const points: L.LatLngTuple[] = stops.map(stop => [stop.latitude, stop.longitude]);
+    if (keepRouteInView || !points.length) {
+      for (const leg of legs) for (const [lng, lat] of leg.coordinates) points.push([lat, lng]);
+    }
     if (!points.length) return;
     const key = JSON.stringify(points);
     if (key === fitted.current) return;
     fitted.current = key;
     instance.fitBounds(points, { padding: [38, 38], maxZoom: 15, animate: false });
-  }, [fit, legs, stops]);
+  }, [fit, hasSize, keepRouteInView, legs, stops]);
 
   useEffect(() => {
     container.current?.querySelectorAll<HTMLElement>('[data-stop-id]').forEach(marker => {
       marker.toggleAttribute('data-focused', marker.dataset.stopId === focusStopId);
     });
     const point = latest.current.stops.find(stop => stop.id === focusStopId);
-    if (point) map.current?.panTo([point.latitude, point.longitude], { animate: false });
-  }, [focusStopId, markerKey, moving, selectable]);
+    const instance = map.current;
+    if (point && instance && hasSize && !keepRouteInView) {
+      instance.setView([point.latitude, point.longitude], Math.max(13, instance.getZoom()), { animate: false });
+    }
+  }, [focusStopId, hasSize, keepRouteInView, markerKey, moving, selectable]);
 
   return <div ref={container} className="route-map trip-leaflet-map" data-picking={Boolean(onPick)}
     aria-label={cityMap ? t('Trip map') : t('Route map')} />;

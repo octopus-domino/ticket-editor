@@ -27,7 +27,8 @@ vi.mock('../src/features/journeys/ui/RouteMap', () => ({
 }));
 
 const storageKey = tripDraftStorageKey(undefined);
-const resumeRoute = ['/trip/new?resume=1'];
+const resumeRoute = ['/trip/new?resume=1&planner=v2'];
+const experienceRoute = ['/trip/new?resume=1'];
 
 beforeEach(() => {
   localStorage.clear();
@@ -37,11 +38,12 @@ beforeEach(() => {
 test('reuses the unnamed city pin until it has a name', () => {
   render(<MemoryRouter initialEntries={['/trip/new']}><TripPlannerDraft /></MemoryRouter>);
   expect(screen.queryByRole('button', { name: 'Pick map point' })).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: t('Choose on map') }));
   for (let attempt = 0; attempt < 2; attempt++) {
-    fireEvent.click(screen.getByRole('button', { name: t('Add cities on the map') }));
     fireEvent.click(screen.getByRole('button', { name: 'Pick map point' }));
-    expect(screen.queryByRole('button', { name: 'Pick map point' })).toBeNull();
   }
+  expect(localStorage.getItem(storageKey)).toBeNull();
+  fireEvent.click(within(screen.getByRole('figure').parentElement!).getByRole('button', { name: t('Add city') }));
   const input = screen.getByRole('combobox', { name: t('City') });
   fireEvent.change(input, { target: { value: 'Petersburg' } });
   fireEvent.keyDown(input, { key: 'Enter' });
@@ -234,7 +236,7 @@ test('opens the existing hotel search from the day summary', () => {
     id: 'trip-hotel', version: 2, startDate: '2026-12-31', endDate: '2027-01-01',
     days: { 2: { city: 'Tver', cityPoint: { latitude: 56.86, longitude: 35.91 }, stops: [] } },
   }));
-  render(<MemoryRouter initialEntries={resumeRoute}><TripPlannerDraft /></MemoryRouter>);
+  render(<MemoryRouter initialEntries={experienceRoute}><TripPlannerDraft /></MemoryRouter>);
   const overview = screen.getByRole('region', { name: t('Trip overview') });
   fireEvent.click(within(overview).getByRole('button', { name: t('Find hotels') }));
   expect(screen.getByRole('heading', {name:'Tver'})).toBeVisible();
@@ -315,4 +317,36 @@ test('keeps several cities in one day, repeats the city on another day and deriv
   expect(days[2].querySelector('time')).toHaveAttribute('datetime', '2027-01-07');
   fireEvent.click(within(days[0] as HTMLElement).getByRole('button', { name: t('Move day later') }));
   expect(within(days[1] as HTMLElement).getByRole('button', { name: 'Tver' })).toBeInTheDocument();
+});
+
+test('autosaves a typed title and flushes the last edit before closing the page', async () => {
+  vi.useFakeTimers();
+  try {
+    render(<MemoryRouter initialEntries={resumeRoute}><TripPlannerDraft /></MemoryRouter>);
+    fireEvent.change(screen.getByLabelText(t('Trip name')), { target: { value: 'Autosaved trip' } });
+    await act(async () => { vi.advanceTimersByTime(451); });
+    expect(JSON.parse(localStorage.getItem(storageKey)!).title).toBe('Autosaved trip');
+    fireEvent.change(screen.getByLabelText(t('Trip name')), { target: { value: 'Before leaving' } });
+    fireEvent(window, new Event('pagehide'));
+    expect(JSON.parse(localStorage.getItem(storageKey)!).title).toBe('Before leaving');
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+test('reviews a date change without shifting saved lodging or train times', () => {
+  const key = storageKey;
+  const lodging = { name: 'Station hotel', address: 'Main St', checkIn: '2027-01-01', checkOut: '2027-01-02' };
+  localStorage.setItem(key, JSON.stringify({
+    id: 'review-example', version: 2, startDate: '2026-12-31', endDate: '2027-01-01',
+    days: { 2: { city: 'Tver', stops: [], lodging } },
+  }));
+  render(<MemoryRouter initialEntries={resumeRoute}><TripPlannerDraft /></MemoryRouter>);
+  fireEvent.change(screen.getByLabelText(t('Start date')), { target: { value: '2027-01-02' } });
+  const review = screen.getByRole('alert');
+  expect(review).toHaveTextContent(lodging.name);
+  expect(screen.getByLabelText(t('Start date'))).toHaveValue('2026-12-31');
+  fireEvent.click(within(review).getByRole('button', { name: t('Apply') }));
+  expect(screen.getByLabelText(t('Start date'))).toHaveValue('2027-01-02');
+  expect(JSON.parse(localStorage.getItem(key)!).days[2].lodging).toEqual(lodging);
 });

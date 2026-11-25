@@ -40,11 +40,11 @@ export default function TripListPage() {
   return <main className="journey-main journey-main--travel trip-list-page">
     <header className="trip-list-heading">
       <h1>{t('My routes')}</h1>
-      <Link className="journey-primary" to="/trip/new">{t('Create route')}</Link>
+      <Link className="trip-list-create" to="/trip/new">{t('Create route')}</Link>
     </header>
     {hasTripDraft(user?.id) && <p><Link to="/trip/new?resume=1">{t('Continue device draft')}</Link></p>}
     {booting && <p role="status">{t('Loading…')}</p>}
-    {!booting && !owner && <p><Link to="/login">{t('Sign in to see saved routes')}</Link></p>}
+    {!booting && !owner && <p><Link to="/login?next=%2Ftrip">{t('Sign in to see saved routes')}</Link></p>}
     {owner && !current && <p role="status">{t('Loading…')}</p>}
     {owner && current && !current.trips && <div role="alert">
       <p>{t('Could not load routes.')}</p>

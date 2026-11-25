@@ -8,9 +8,8 @@ import './landing.css';
 import './landing-people.css';
 import { FeedbackWidget } from '@/features/feedback/ui/FeedbackWidget';
 import { SEARCH_PAGES } from './searchPages';
-import { LanguageSwitcher } from '@/shared/i18n/LanguageSwitcher';
 import { JourneyDiscovery } from './JourneyDiscovery';
-import { ReadySolutionsMenu } from './ReadySolutionsMenu';
+import { SolutionHeader } from './SolutionHeader';
 
 export function LandingPage() {
   const user = useStore(authStore, (s) => s.user);
@@ -27,23 +26,14 @@ export function LandingPage() {
       <a className="codoc-skip" href="#main-content">
         {__tr('К содержимому')}
       </a>
-      <header className="codoc-header codoc-container">
-        <Link className="codoc-brand" to="/" aria-label={__tr('CoDoc — главная')}>
-          <span aria-hidden="true">co</span>CoDoc.
-        </Link>
-        <nav aria-label={__tr('Основная навигация')}>
-          <a href="#possibilities">{__tr('Возможности')}</a>
-          <a href="#stamps">{__tr('Штампы и печати')}</a>
-          <a href="#workflow">{__tr('Как это работает')}</a>
-          <Link to="/learn">{__tr('Learning center')}</Link>
-          <a href="#questions">{__tr('Вопросы')}</a>
-        </nav>
-        <ReadySolutionsMenu />
-        <LanguageSwitcher />
-        <Link className="codoc-button codoc-button-small" to={user || offline ? '/app' : '/login'}>
-          {user || offline ? __tr('Мои документы') : __tr('Войти')} ↗
-        </Link>
-      </header>
+      <SolutionHeader workspace={user || offline ? '/app' : '/login'}
+        accountLabel={user || offline ? __tr('Мои документы') : __tr('Войти')}>
+        <a href="#possibilities">{__tr('Возможности')}</a>
+        <a href="#stamps" data-secondary>{__tr('Штампы и печати')}</a>
+        <a href="#workflow" data-secondary>{__tr('Как это работает')}</a>
+        <Link to="/learn" data-secondary>{__tr('Learning center')}</Link>
+        <a href="#questions" data-secondary>{__tr('Вопросы')}</a>
+      </SolutionHeader>
       <main id="main-content">
         <section className="codoc-hero codoc-container">
           <div className="codoc-hero-copy">

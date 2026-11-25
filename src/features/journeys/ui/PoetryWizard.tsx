@@ -16,6 +16,12 @@ const RouteMap = lazy(() => import('./RouteMap').then(module => ({ default: modu
 const AGES = [['child', 'Child'], ['teen', 'Teenager'], ['youth', 'Young adult'], ['middle', 'Middle age'], ['older', 'Older adult']] as const;
 interface Region { latitude: number; longitude: number; zone: string; label: string }
 interface Prepared { id: string; bundle: { language: string; cards: { date: string; author: string; sourceUrl: string }[] }; weatherSource: string; weatherLicense: string }
+const lastCollectionKey = 'codoc:poetry:last-collection';
+
+function lastCollection() {
+  try { return localStorage.getItem(lastCollectionKey) ?? undefined; }
+  catch { return undefined; }
+}
 
 export default function PoetryWizard({ definition, custom = false, previewOnly = false }: { definition: JourneyDefinition; custom?: boolean; previewOnly?: boolean }) {
   const [language, setLanguage] = useState<Locale>(getLocale), [mood, setMood] = useState('heartfelt'), [audience, setAudience] = useState('middle');
@@ -25,7 +31,9 @@ export default function PoetryWizard({ definition, custom = false, previewOnly =
   const [title, setTitle] = useState(t('Seven days of poetry')), [fields, setFields] = useState<Record<string,string>>({});
   const [prepared, setPrepared] = useState<Prepared | null>(null), [created, setCreated] = useState<CreatedJourney | null>(null);
   const [busy, setBusy] = useState(false), [locating, setLocating] = useState(false), [error, setError] = useState(''), [mapOpen, setMapOpen] = useState(false);
+  const [preparing, setPreparing] = useState(false);
   const running = useRef(false), map = useRef<RouteMapHandle | null>(null), abort = useRef<AbortController | null>(null);
+  const previousId = useRef(lastCollection());
   useEffect(() => () => abort.current?.abort(), []);
   const chooseRegion = (point: { latitude: number; longitude: number }, label: string) => {
     setRegion({ latitude: Math.round(point.latitude * 100) / 100, longitude: Math.round(point.longitude * 100) / 100,
@@ -42,14 +50,19 @@ export default function PoetryWizard({ definition, custom = false, previewOnly =
   };
   const prepare = async () => {
     if (running.current || regionEdited) return;
-    running.current = true; setBusy(true); setError(''); setPrepared(null); setCreated(null);
+    running.current = true; setPreparing(true); setError('');
     const controller = new AbortController(); abort.current = controller;
     try {
       const result = await journeyRequest<Prepared>('/api/journeys/poetry', { method: 'POST', signal: controller.signal,
-        body: JSON.stringify({ ...(region ? { latitude: region.latitude, longitude: region.longitude, zone: region.zone } : { zone: Intl.DateTimeFormat().resolvedOptions().timeZone }), language, mood, audience, moodText: moodText.trim() || undefined, seed: crypto.randomUUID() }) });
-      if (!controller.signal.aborted) setPrepared(result);
+        body: JSON.stringify({ ...(region ? { latitude: region.latitude, longitude: region.longitude, zone: region.zone } : { zone: Intl.DateTimeFormat().resolvedOptions().timeZone }),
+          language, mood, audience, moodText: moodText.trim() || undefined, seed: crypto.randomUUID(), previousId: previousId.current }) });
+      if (!controller.signal.aborted) {
+        previousId.current = result.id;
+        try { localStorage.setItem(lastCollectionKey, result.id); } catch { /* The current session still remembers the collection. */ }
+        setPrepared(result);
+      }
     } catch (reason) { if (!controller.signal.aborted) setError((reason as Error).message); }
-    finally { running.current = false; setBusy(false); }
+    finally { abort.current = null; running.current = false; setPreparing(false); }
   };
   const data = { ...fields, poetry: prepared?.id ?? '', locale: language, theme: definition.theme, ...(custom ? { site: definition.slug } : {}) };
   const publish = async () => {
@@ -67,7 +80,7 @@ export default function PoetryWizard({ definition, custom = false, previewOnly =
     <h1>{definition.title}</h1><p>{definition.description}</p>
     {!created && <JourneyBackgroundPicker value={fields} onBusyChange={setBusy} onChange={patch => setFields(value => ({...value,...patch}))} />}
     <form onSubmit={event => { event.preventDefault(); void prepare(); }}>
-      <fieldset disabled={busy || Boolean(created)} className="poetry-preferences">
+      <fieldset disabled={busy || preparing || Boolean(created)} className="poetry-preferences">
         <label>{t('Poem language')}<select aria-label={t('Poem language')} value={language} onChange={event => { setLanguage(event.target.value as Locale); setPrepared(null); }}>
           {LANGUAGES.map(([code, name]) => <option key={code} value={code}>{name}</option>)}
         </select></label>
@@ -101,13 +114,14 @@ export default function PoetryWizard({ definition, custom = false, previewOnly =
       </fieldset>
     </form>
     <details><summary>{t('How the poems are chosen')}</summary><p>{t('PoemShip helps find poems by mood and age. Other poetry libraries provide a fallback. Each card keeps its author and source. Preview before sharing.')}</p></details>
-    {busy && <div role="status"><p>{t(prepared ? 'Saving cards…' : 'Looking for poems that feel right…')}</p>{!prepared && <button type="button" onClick={() => abort.current?.abort()}>{t('Cancel')}</button>}</div>}
+    {(busy || preparing) && <div role="status"><p>{t(preparing ? 'Looking for poems that feel right…' : 'Saving cards…')}</p>{preparing && <button type="button" onClick={() => abort.current?.abort()}>{t('Cancel')}</button>}</div>}
     {error && <p role="alert">{error}</p>}
     {prepared && !created && <section>
       <h2>{t('Your seven cards')}</h2>
       <JourneyCard document={{ kind: 'POETRY', title, data }} />
       <label>{t('Collection title')}<input maxLength={120} value={title} onChange={event => setTitle(event.target.value)} /></label>
-      <button type="button" disabled={busy || previewOnly || !title.trim()} onClick={() => void publish()}>{t('Save cards and get PDF')}</button>
+      <button type="button" disabled={busy || preparing || previewOnly || !title.trim()} onClick={() => void publish()}>{t('Save cards and get PDF')}</button>
+      {region && !prepared.weatherSource && <p role="status">{t('Weather is unavailable. These poems were chosen without a forecast.')}</p>}
       {prepared.weatherSource && <small><a href={prepared.weatherSource} target="_blank" rel="noopener noreferrer">MET Norway</a> · <a href={prepared.weatherLicense} target="_blank" rel="noopener noreferrer">CC BY 4.0</a></small>}
     </section>}
     {created && <section className="journey-results"><h2>{t('Your seven cards')}</h2>

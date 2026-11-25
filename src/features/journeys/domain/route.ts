@@ -2,6 +2,15 @@ import type { RouteLeg, RouteStop, TimelineRow } from './routeTimeline';
 export interface PlannedLeg extends RouteLeg {
   coordinates: [number, number][];
   distanceMeters?: number;
+  calculation?: {
+    fromStopId: string;
+    toStopId: string;
+    key: string;
+    routingProfile: RouteLeg['mode'];
+    source: 'road-api' | 'legacy' | 'flight-estimate';
+    computedAt?: string;
+    status: 'fresh' | 'stale';
+  };
 }
 export interface RouteSnapshot {
   stops: RouteStop[];

@@ -8,7 +8,7 @@ import { RouteMap } from './RouteMap';
 type Hotel = Pick<TripLodging, 'name' | 'latitude' | 'longitude' | 'cost'> & {
   id: string; address?: string; stars?: number; rating?: number; photoUrl?: string; freeCancellation?: boolean; sourceUrl?: string;
 };
-type Result = { available: boolean; provider?: TripLodging['provider']; hotels: Hotel[]; catalogOnly?: boolean };
+type Result = { available: boolean; provider?: TripLodging['provider']; hotels: Hotel[]; catalogOnly?: boolean; hasMore?: boolean };
 const noLegs: [] = [];
 const ignoreMapHandle = () => undefined;
 
@@ -33,6 +33,8 @@ export function TripHotelSearch({ city, cityPoint, checkIn: initialCheckIn, chec
   const [maxKm, setMaxKm] = useState<number>();
   const [wholeCity, setWholeCity] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageFailed, setPageFailed] = useState(false);
   const request = useRef<AbortController>();
   const refreshTimer = useRef<ReturnType<typeof setTimeout>>();
   const lastRequest = useRef(0);
@@ -42,7 +44,10 @@ export function TripHotelSearch({ city, cityPoint, checkIn: initialCheckIn, chec
     request.current?.abort();
     request.current = undefined;
   }, []);
-  const distanceLimit = !wholeCity && radiusMeters !== undefined ? radiusMeters
+  const outsideRadius = !wholeCity && radiusMeters === 1000 && cityPoint && Boolean(result?.hotels.length)
+    && !result?.hotels.some(hotel => hotel.latitude != null && hotel.longitude != null
+      && geographicDistance(cityPoint, { latitude: hotel.latitude, longitude: hotel.longitude }) <= radiusMeters);
+  const distanceLimit = !wholeCity && !outsideRadius && radiusMeters !== undefined ? radiusMeters
     : maxKm === undefined ? undefined : maxKm * 1000;
   const visible = useMemo(() => result?.hotels.filter(hotel => (!starFilter || (hotel.stars ?? 0) >= starFilter)
     && (result.catalogOnly || !freeCancellation || hotel.freeCancellation)
@@ -61,24 +66,31 @@ export function TripHotelSearch({ city, cityPoint, checkIn: initialCheckIn, chec
 
   const validQuery = city.trim().length >= 2 && Boolean(checkIn && checkIn < checkOut) &&
     Number.isInteger(guests) && guests >= 1 && guests <= 12;
-  const search = useCallback(async (refresh = false) => {
+  const search = useCallback(async (requestedPage = 1) => {
     if (!validQuery || request.current) return;
+    const append = requestedPage > 1;
     const controller = new AbortController();
     request.current = controller;
     lastRequest.current = Date.now();
     setBusy(true);
-    if (!refresh) setResult(undefined);
+    setPageFailed(false);
+    if (!append) { setResult(undefined); setPage(1); }
     try {
       const data = await journeyRequest<Result>('/api/journeys/routes/places/hotels', {
-        method: 'POST', signal: controller.signal, body: JSON.stringify({ city, checkIn, checkOut, guests }),
+        method: 'POST', signal: controller.signal, body: JSON.stringify({ city, checkIn, checkOut, guests, page: append ? requestedPage : undefined }),
       });
-      if (!controller.signal.aborted) setResult(previous => {
-        if (!refresh || !previous?.available) return data;
-        if (!data.available) return previous;
+      if (controller.signal.aborted) return;
+      if (append && !data.available) { setPageFailed(true); return; }
+      setPage(requestedPage);
+      setResult(previous => {
+        if (!append || !previous?.available) return data;
         return { ...data, hotels: [...new Map([...previous.hotels, ...data.hotels].map(hotel => [hotel.id, hotel])).values()] };
       });
     } catch {
-      if (!controller.signal.aborted && !refresh) setResult({ available: false, hotels: [] });
+      if (!controller.signal.aborted) {
+        if (append) setPageFailed(true);
+        else setResult({ available: false, hotels: [] });
+      }
     } finally {
       if (request.current === controller && !controller.signal.aborted) {
         request.current = undefined;
@@ -101,15 +113,17 @@ export function TripHotelSearch({ city, cityPoint, checkIn: initialCheckIn, chec
     request.current?.abort();
     request.current = undefined;
     setBusy(false);
+    setPage(1);
+    setPageFailed(false);
     setResult(undefined);
   }
 
   const refreshAfterMove = useCallback(() => {
     setMapMoved(true);
-    if (!result) return;
+    if (!result?.hasMore || busy) return;
     clearTimeout(refreshTimer.current);
-    refreshTimer.current = setTimeout(() => void search(true), Math.max(450, 8000 - (Date.now() - lastRequest.current)));
-  }, [result, search]);
+    refreshTimer.current = setTimeout(() => void search(page + 1), Math.max(450, 8000 - (Date.now() - lastRequest.current)));
+  }, [busy, page, result?.hasMore, search]);
   const selectMarker = useCallback((id: string) => {
     if (id === '__day_point__') return;
     setActive(id);
@@ -134,7 +148,8 @@ export function TripHotelSearch({ city, cityPoint, checkIn: initialCheckIn, chec
     <button type="button" disabled={!validQuery || busy} onClick={() => void search()}>{t('Search')}</button>
     </div>
     {radiusMeters === 1000 && <div className="trip-hotel-scope">
-      {!wholeCity && <p>{t('Hotels within 1 km of this point')}</p>}
+      {!wholeCity && <p>{outsideRadius ? t('No hotels found within 1 km. Showing results for the city.')
+        : t('Hotels within 1 km of this point')}</p>}
       <button type="button" aria-pressed={wholeCity} onClick={() => { setWholeCity(!wholeCity); setActive(undefined); }}>
         {t('Search the whole city')}
       </button>
@@ -176,6 +191,11 @@ export function TripHotelSearch({ city, cityPoint, checkIn: initialCheckIn, chec
           latitude: hotel.latitude ?? undefined, longitude: hotel.longitude ?? undefined, checkIn, checkOut,
           cost: hotel.cost ?? undefined, provider: result.provider ?? undefined })}>{t('Add hotel to trip')}</button>
       </li>)}</ul>
+      {pageFailed && <p role="status">{t('Could not load more hotels.')}</p>}
+      {result.hasMore && <button type="button" disabled={busy} onClick={() => {
+        clearTimeout(refreshTimer.current);
+        void search(page + 1);
+      }}>{t('Load more hotels')}</button>}
     </div>}
     </div>
   </details>;

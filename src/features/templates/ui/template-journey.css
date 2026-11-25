@@ -106,26 +106,6 @@
   min-height: 0;
   height: 100%;
 }
-.template-editor-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--border);
-  background: var(--panel);
-  font-size: 12px;
-}
-.template-editor-toolbar a {
-  color: var(--accent);
-  text-decoration: none;
-}
-.template-editor-toolbar strong {
-  margin-right: auto;
-}
-.template-editor-toolbar span {
-  color: var(--text-muted);
-}
 .template-editor-canvas {
   flex: 1;
   min-height: 0;

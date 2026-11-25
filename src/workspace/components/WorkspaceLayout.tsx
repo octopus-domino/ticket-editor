@@ -1,6 +1,6 @@
 import { t as __tr } from '@/shared/i18n';
 // src/workspace/components/WorkspaceLayout.tsx
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Link, Outlet, useNavigate,useLocation } from 'react-router-dom';
 import { WorkspaceFlowBreadcrumbs } from './WorkspaceFlowBreadcrumbs';
 import { WorkspaceSidebar } from './WorkspaceSidebar';
@@ -20,7 +20,22 @@ export const WorkspaceLayout: React.FC = () => {
   const mobilePanel = useMobilePanel();
   const navigate = useNavigate();
   const location=useLocation();
-  useEffect(()=>closeMobilePanel(),[location.pathname]);
+  const profileMenu = useRef<HTMLDetailsElement>(null);
+  useEffect(() => {
+    closeMobilePanel();
+    if (profileMenu.current) profileMenu.current.open = false;
+  }, [location.pathname]);
+  useEffect(() => {
+    const closeOutside = (event: PointerEvent) => {
+      const menu = profileMenu.current;
+      const target = event.target;
+      if (menu?.open && target instanceof Element && !menu.contains(target) && !target.closest('.feedback-backdrop')) {
+        menu.open = false;
+      }
+    };
+    document.addEventListener('pointerdown', closeOutside);
+    return () => document.removeEventListener('pointerdown', closeOutside);
+  }, []);
   useEffect(() => {
     if (!mobilePanel) return;
     const close = (event: KeyboardEvent) => { if (event.key === 'Escape') closeMobilePanel(); };
@@ -52,31 +67,27 @@ export const WorkspaceLayout: React.FC = () => {
     <div className="workspace-layout" data-mobile-panel={mobilePanel || undefined}>
       {isGuest()&&<div className="guest-session-note" role="status">{t('Guest session: changes are not saved to the server.')}</div>}
       <header className="workspace-header">
-        <button type="button" className="mobile-menu-button" aria-label={t('Documents')} onClick={() => toggleMobilePanel('documents')}>☰</button>
-        <Link to="/" className="logo" style={{ color: 'inherit', textDecoration: 'none' }}>CoDoc</Link>
+        <div className="workspace-header-leading">
+          <button type="button" className="mobile-menu-button" aria-label={t('Documents')}
+            aria-expanded={mobilePanel === 'documents'} onClick={() => toggleMobilePanel('documents')}>
+            <span className="workspace-nav-icon" aria-hidden="true" />
+          </button>
+          <Link to="/" className="logo">CoDoc</Link>
+        </div>
 
         <WorkspaceFlowBreadcrumbs />
 
         <div className="workspace-profile">
-          <LanguageSwitcher />
-          <FeedbackWidget surface="workspace" />
+          <LanguageSwitcher compact />
           {user ? (
-            <>
-              <Link className="workspace-profile-link" to={isGuest()?'/login':'/app/profile'} aria-label={t('Client profile')}>
+            <Link className="workspace-profile-link" to={isGuest()?'/login':'/app/profile'} aria-label={t('Client profile')}>
               <span className="workspace-avatar" title={displayName}>
                 {displayName.charAt(0).toUpperCase()}
               </span>
               <span className="workspace-username" title={displayName}>
                 {displayName}
               </span>
-              </Link>
-              <button
-                type="button"
-                className="workspace-login-btn"
-                onClick={() => void handleLogout()}
-              >
-                {__tr("Выйти")}</button>
-            </>
+            </Link>
           ) : (
             <button
               type="button"
@@ -86,6 +97,17 @@ export const WorkspaceLayout: React.FC = () => {
             >
               {__tr("Войти")}</button>
           )}
+          <details ref={profileMenu} className="workspace-header-menu" onKeyDown={event => {
+            if (event.key !== 'Escape' || !event.currentTarget.open) return;
+            event.currentTarget.open = false;
+            event.currentTarget.querySelector('summary')?.focus();
+          }}>
+            <summary aria-label={t('Workspace actions')}><span aria-hidden="true">···</span></summary>
+            <div className="workspace-header-menu-panel">
+              <FeedbackWidget surface="workspace" />
+              {user && <button type="button" onClick={() => void handleLogout()}>{t('Выйти')}</button>}
+            </div>
+          </details>
         </div>
       </header>
 

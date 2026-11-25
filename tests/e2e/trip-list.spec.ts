@@ -30,6 +30,7 @@ test('Routes lists the saved trip and starts a clean new trip', async ({ page })
     return route.fulfill({ status: 201, json: saved });
   });
 
+  await page.route('**/api/walks/v1/addresses?*', route => route.fulfill({ json: [] }));
   await page.goto('/start/tours');
   await expect(page).toHaveURL(/\/trip$/);
   await expect(page.getByRole('heading', { name: 'My routes' })).toBeVisible();
@@ -38,13 +39,19 @@ test('Routes lists the saved trip and starts a clean new trip', async ({ page })
   await page.getByRole('link', { name: 'My routes' }).click();
   await page.getByRole('link', { name: 'Create route' }).click();
   const planner = page.getByRole('region', { name: 'Travel planner' });
+  await expect(planner.getByRole('heading', { name: 'Where does your trip start?' })).toBeVisible();
+  await expect(planner.getByRole('button', { name: 'Save trip to account' })).toHaveCount(0);
+  const city = planner.getByRole('combobox', { name: 'City' });
+  await city.fill('Tver');
+  await city.press('Enter');
+  await planner.getByText('Trip dates and name', { exact: true }).click();
   await expect(planner.getByLabel('Trip name')).toHaveValue('');
   await expect(planner.getByLabel('Start date')).toHaveValue('');
   await planner.getByLabel('Trip name').fill('New route');
   await planner.getByLabel('Start date').fill('2027-02-01');
   await planner.getByRole('button', { name: 'Save trip to account' }).click();
   await expect(planner.getByRole('link', { name: 'Open account trip' })).toBeVisible();
-  expect(saved).toMatchObject({ title: 'New route', cities: [], days: [] });
+  expect(saved).toMatchObject({ title: 'New route', cities: [{ name: 'Tver' }] });
   expect(saved?.id).not.toBe(oldTrip.id);
   await planner.getByRole('link', { name: 'My routes' }).click();
   await expect(page.getByRole('link', { name: /New route/ })).toBeVisible();

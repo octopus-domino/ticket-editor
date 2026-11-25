@@ -10,7 +10,7 @@ export const SOLUTION_GROUPS = [
   { label: () => t('Work and business'), kinds: ['business', 'proposals', 'cards', 'labels', 'price-tags', 'menu', 'passes', 'properties'] },
   { label: () => t('Everyday plans'), kinds: ['tours', 'schedule', 'resume', 'poetry'] },
 ];
-export function ReadySolutionsMenu() {
+export function ReadySolutionsMenu({ workspace, accountLabel }: { workspace: string; accountLabel: string }) {
   const root = useRef<HTMLDetailsElement>(null);
   const { pathname } = useLocation();
   const close = () => { if (root.current) root.current.open = false; };
@@ -20,14 +20,15 @@ export function ReadySolutionsMenu() {
     return () => document.removeEventListener('pointerdown', outside);
   }, []);
   return <details ref={root} className="solutions-menu" onKeyDown={event => { if (event.key === 'Escape') { close(); root.current?.querySelector('summary')?.focus(); } }}>
-    <summary>{t('Solutions')} <span aria-hidden="true">⌄</span></summary>
-    <nav className="solutions-menu-panel" aria-label={t('Ready-to-use services')}>
+    <summary>{t('Solutions')} <span className="solutions-menu-chevron" aria-hidden="true" /></summary>
+    <div className="solutions-menu-panel">
+      <Link className="solutions-menu-account" to={workspace} onClick={close}>{accountLabel}</Link>
       <Link className="solutions-menu-all" to="/solutions/" onClick={close}>{t('All solutions')}</Link>
       {SOLUTION_GROUPS.map(group => <section key={group.kinds[0]}><h3>{group.label()}</h3>
         {JOURNEY_PAGES.filter(page => group.kinds.includes(page.kind)).map(page =>
           <Link key={page.path} to={page.path} onClick={close} aria-current={pathname === page.path ? 'page' : undefined}>{page.label}</Link>)}
       </section>)}
       <Link className="solutions-menu-all" to="/sites/new" onClick={close}>{t('Create a website')} ↗</Link>
-    </nav>
+    </div>
   </details>;
 }

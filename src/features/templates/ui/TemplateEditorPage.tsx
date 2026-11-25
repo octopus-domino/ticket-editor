@@ -78,11 +78,10 @@ function TemplateEditorSession({ templateId }: { templateId: string }) {
   return (
     <div className="template-editor-frame">
       <TutorialCoach topic="document" />
-      <header className="template-editor-toolbar">
-        <Link to="/app/library">← {__tr('Document library')}</Link>
-        <strong>{template.name}</strong>
+      <header className="template-editor-toolbar editor-document-heading">
+        <Link className="editor-document-back" to="/app/library">← {__tr('Document library')}</Link>
+        <div className="editor-document-name"><strong title={template.name}>{template.name}</strong></div>
         <ResourceHistoryPanel kind="template" id={template.id} />
-        <span>{__tr("Макет → Данные → Документы")}</span>
       </header>
         <div className="template-next" role="status" style={{ visibility: saved ? 'visible' : 'hidden' }}>
           <strong>{__tr("Шаблон сохранён")}</strong>

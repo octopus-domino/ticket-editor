@@ -1,2 +1,93 @@
-.solutions-menu{position:relative;min-width:0;color:#213b31}.solutions-menu>summary{list-style:none;display:flex;gap:8px;align-items:center;cursor:pointer;min-height:44px;padding:8px 12px;border:1px solid #cdd9cd;border-radius:10px;white-space:nowrap;font:inherit;font-size:14px;font-weight:650;background:#fff}.solutions-menu>summary::-webkit-details-marker{display:none}.solutions-menu[open]>summary{background:#eef4ec}.solutions-menu .solutions-menu-panel{position:absolute;right:0;top:calc(100% + 8px);z-index:1000;display:block!important;width:min(340px,calc(100vw - 32px));max-height:min(70dvh,620px);overflow:auto;overscroll-behavior:contain;box-sizing:border-box;padding:12px;border:1px solid #d4ded1;border-radius:14px;background:#fff;box-shadow:0 16px 40px #163c2926;white-space:normal}.solutions-menu-panel section{display:block;border:0;padding:8px 0}.solutions-menu-panel h3{font-size:12px;font-weight:700;letter-spacing:.04em;color:#61705e;text-transform:uppercase;padding:8px 10px;margin:0}.solutions-menu .solutions-menu-panel a{display:block;padding:10px;border-radius:8px;font:inherit;font-size:14px;line-height:1.4;text-decoration:none;white-space:normal;overflow-wrap:anywhere;color:#213b31;min-height:40px;box-sizing:border-box}.solutions-menu-panel a:hover,.solutions-menu-panel a:focus-visible,.solutions-menu-panel a[aria-current=page]{background:#eaf2e7}.solutions-menu-panel .solutions-menu-all{font-weight:700;border-bottom:1px solid #e3e9df}.codoc-header>.solutions-menu{margin-left:auto}@media(max-width:420px){.codoc-header{gap:10px}.codoc-header>.solutions-menu>summary{padding:8px;font-size:13px}.codoc-header .language-switcher{margin-left:0}}
-@media(max-width:600px){.solutions-menu .solutions-menu-panel{position:fixed;top:76px;left:16px;right:16px;width:auto;max-height:calc(100dvh - 96px)}}
+.solutions-menu { position: relative; color: #252335; }
+.solutions-menu > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 8px 12px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.25;
+  white-space: nowrap;
+  list-style: none;
+  cursor: pointer;
+}
+.solutions-menu > summary::-webkit-details-marker { display: none; }
+.solutions-menu > summary:hover,
+.solutions-menu[open] > summary {
+  background: #f0ebff;
+  color: #482fa9;
+}
+.solutions-menu-chevron {
+  width: 7px;
+  height: 7px;
+  border: solid currentColor;
+  border-width: 0 1.5px 1.5px 0;
+  transform: translateY(-2px) rotate(45deg);
+}
+.solutions-menu[open] .solutions-menu-chevron { transform: translateY(2px) rotate(225deg); }
+.solutions-menu-panel {
+  position: absolute;
+  inset-block-start: calc(100% + 8px);
+  inset-inline-start: 0;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 16px;
+  width: min(520px, calc(100vw - 40px));
+  max-height: min(72dvh, 650px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  box-sizing: border-box;
+  padding: 12px;
+  border: 1px solid #e7e4ed;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 14px 40px #28204223;
+}
+.solutions-menu-panel h3 {
+  margin: 0;
+  padding: 6px 10px;
+  color: #605770;
+  font-size: 12px;
+  font-weight: 700;
+}
+.solutions-menu .solutions-menu-panel a {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  min-height: 36px;
+  padding: 6px 10px;
+  border-radius: 7px;
+  color: #302841;
+  font-size: 14px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  text-decoration: none;
+}
+.solutions-menu-panel a:hover,
+.solutions-menu-panel a:focus-visible,
+.solutions-menu-panel a[aria-current="page"] { background: #f0ebff; }
+.solutions-menu-panel .solutions-menu-all,
+.solutions-menu-panel .solutions-menu-account {
+  grid-column: 1 / -1;
+  font-weight: 700;
+}
+.solutions-menu-panel a.solutions-menu-account { display: none; }
+
+@media (max-width: 740px) {
+  .solutions-menu { position: static; }
+  .solutions-menu > summary { padding-inline: 9px; font-size: 13px; }
+  .solutions-menu-panel {
+    inset-block-start: calc(100% + 4px);
+    inset-inline: 10px;
+    width: auto;
+    max-height: calc(100dvh - 76px);
+    gap: 8px;
+  }
+  .solutions-menu .solutions-menu-panel a { min-height: 44px; }
+  .solutions-menu-panel a.solutions-menu-account { display: flex; background: #f0ebff; }
+}

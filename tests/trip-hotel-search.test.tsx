@@ -68,3 +68,30 @@ test('shows only hotel candidates within 1 km in both the list and the map', asy
   expect(screen.queryByText('Map: Far hotel')).not.toBeInTheDocument();
   expect(screen.queryByText('No position')).not.toBeInTheDocument();
 });
+
+test('shows city results and their markers when the provider has no hotels within 1 km', async () => {
+  vi.mocked(journeyRequest).mockResolvedValueOnce({
+    available: true, provider: 'OSTROVOK_MCP', catalogOnly: true,
+    hotels: [{ id: 'far', name: 'City hotel', latitude: 55.78303, longitude: 37.579353 }],
+  });
+  render(<TripHotelSearch city="Moscow" cityPoint={{ latitude: 55.754, longitude: 37.621 }}
+    radiusMeters={1000} initiallyOpen checkIn="2027-01-01" checkOut="2027-01-02" onSelect={vi.fn()} />);
+  expect(await screen.findByRole('button', { name: 'Map: City hotel' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'City hotel' })).toBeInTheDocument();
+  expect(screen.getByText(t('No hotels found within 1 km. Showing results for the city.'))).toBeInTheDocument();
+});
+
+test('adds the next hotel page to the list and the same map without duplicating a hotel', async () => {
+  const first = { id: 'first', name: 'First hotel', latitude: 59.94, longitude: 30.34 };
+  const next = { id: 'next', name: 'Next hotel', latitude: 59.93, longitude: 30.35 };
+  const request = vi.mocked(journeyRequest).mockClear()
+    .mockResolvedValueOnce({ available: true, catalogOnly: true, hotels: [first], hasMore: true })
+    .mockResolvedValueOnce({ available: true, catalogOnly: true, hotels: [first, next], hasMore: false });
+  render(<TripHotelSearch city="Saint Petersburg" initiallyOpen checkIn="2027-01-01" checkOut="2027-01-02" onSelect={vi.fn()} />);
+  fireEvent.click(await screen.findByRole('button', { name: t('Load more hotels') }));
+  expect(await screen.findByRole('button', { name: 'Map: Next hotel' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Next hotel' })).toBeInTheDocument();
+  expect(screen.getAllByRole('button', { name: /^First hotel$/ })).toHaveLength(1);
+  expect(JSON.parse(String(request.mock.calls[1][1]?.body))).toHaveProperty('page', 2);
+  expect(screen.queryByRole('button', { name: t('Load more hotels') })).not.toBeInTheDocument();
+});

@@ -5,8 +5,10 @@ import type {
   GenerationJobStatus,
   GenerationRequest,
 } from '@/features/generation/api/GenerationClient';
-import { newQr, newTable, newText } from '@/lib/factories';
+import { makeArrayTable, newQr, newTable, newText } from '@/lib/factories';
 import { resolveBindings } from '@/features/bindings/domain/BindingResolver';
+import { validateBindings } from '@/features/bindings/domain/BindingValidator';
+import type { DataSchema } from '@/features/schemas/domain/DataSchema';
 import { createSlide } from '@/domain/slide/operations';
 import { materializeSlide } from '@/lib/materialize';
 import { DocumentSchema } from '@/shared/schemas/document';
@@ -62,6 +64,47 @@ describe('generation contracts', () => {
     expect(materializeSlide(slide, {
       customer: 'Anna', 'invoice.lines': [{ count: 0, price: 42 }],
     }, bindings).elements[0]).toMatchObject({ data: [['Anna', '0', '42']] });
+  });
+  it('expands a saved array table and shrinks it again without editing the template', () => {
+    const slide = createSlide(1);
+    const legacy = {
+      ...newTable(), rows: 2, cols: 2, height: 80, rowHeights: [30, 50],
+      data: [['Code', 'Count'], ['{{pos[0].code}}', '{{pos[0].count}}']],
+    };
+    slide.elements = [legacy];
+    const values = { pos: [
+      { code: 'First', count: 0 }, { code: 'Second', count: 2 },
+      { code: 'Third', count: 3 }, { code: 'Fourth', count: 4 },
+    ] };
+    expect(materializeSlide(slide, values).elements[0]).toMatchObject({
+      rows: 5, height: 230, rowHeights: [30, 50, 50, 50, 50],
+      data: [['Code', 'Count'], ['First', '0'], ['Second', '2'], ['Third', '3'], ['Fourth', '4']],
+    });
+    expect(materializeSlide(slide, { pos: [values.pos[0]] }).elements[0]).toMatchObject({
+      rows: 2, data: [['Code', 'Count'], ['First', '0']],
+    });
+    expect(materializeSlide(slide, { pos: [] }).elements[0]).toMatchObject({
+      rows: 1, height: 30, data: [['Code', 'Count']],
+    });
+    expect(legacy.data[1]).toEqual(['{{pos[0].code}}', '{{pos[0].count}}']);
+  });
+  it('marks only rendered or explicitly linked array fields as used', () => {
+    const slide = createSlide(1);
+    const table = makeArrayTable(0, 0, { path: 'pos', arrayChildren: [{ name: 'code', type: 'string' }] });
+    slide.elements = [table];
+    const schema: DataSchema = { id: 'S', name: 'Items', createdAt: '', updatedAt: '', fields: [
+      { path: 'items', type: 'array', required: true },
+      { path: 'items.code', type: 'string', required: true },
+      { path: 'items.price', type: 'number', required: true },
+    ] };
+    const bindings = resolveBindings([slide]).map(binding => ({ ...binding, schemaPath: 'items' }));
+    expect(validateBindings(bindings, schema, [slide])).toMatchObject([
+      { path: 'items.price', kind: 'required-unbound' },
+    ]);
+    expect(materializeSlide(slide, { pos: [{ code: 'Stale' }], items: [{ code: 'A' }, { code: 'B' }] }, bindings)
+      .elements[0]).toMatchObject({ rows: 3, data: [['code'], ['A'], ['B']] });
+    expect(validateBindings(bindings, { ...schema, fields: schema.fields.filter(field => field.path !== 'items.code') }, [slide]))
+      .toMatchObject([{ path: 'items.code', kind: 'missing' }, { path: 'items.price', kind: 'required-unbound' }]);
   });
   it('uses async for 101 items and stops polling after completion', async () => {
     vi.useFakeTimers();

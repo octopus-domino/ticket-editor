@@ -2,15 +2,16 @@ import { t as __tr } from '@/shared/i18n';
 import React from 'react';
 import type { TableElement } from '@/shared/types';
 import { Group, L, inputStyle, normalizeColor } from './ui';
+import { arrayTablePath } from '@/lib/arrayTable';
 
 export const TableProps: React.FC<{ el: TableElement; update: (p: Partial<TableElement>) => void }> = ({ el, update }) => (
   <Group title={__tr("Таблица")}>
-    <L label={__tr("Строк")}><input style={inputStyle} type="number" min={1} value={el.rows} onChange={(e) => {
+    {!arrayTablePath(el) && <L label={__tr("Строк")}><input style={inputStyle} type="number" min={1} value={el.rows} onChange={(e) => {
       const rows = Math.max(1, +e.target.value);
       const data = el.data.slice(0, rows);
       while (data.length < rows) data.push(Array(el.cols).fill(''));
       update({ rows, data });
-    }} /></L>
+    }} /></L>}
     <L label={__tr("Колонок")}><input style={inputStyle} type="number" min={1} value={el.cols} onChange={(e) => {
       const cols = Math.max(1, +e.target.value);
       const data = el.data.map((r) => {
@@ -18,7 +19,7 @@ export const TableProps: React.FC<{ el: TableElement; update: (p: Partial<TableE
         while (nr.length < cols) nr.push('');
         return nr;
       });
-      update({ cols, data });
+      update({ cols, data, repeatPath: arrayTablePath(el) });
     }} /></L>
     <L label={__tr("Цвет границ")}><input style={inputStyle} type="color" value={normalizeColor(el.borderColor)} onChange={(e) => update({ borderColor: e.target.value })} /></L>
     <L label={__tr("Цвет шапки")}><input style={inputStyle} type="color" value={normalizeColor(el.headerBg)} onChange={(e) => update({ headerBg: e.target.value })} /></L>

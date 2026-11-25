@@ -1,6 +1,7 @@
 import type { TableElement } from '@/shared/types';
 import { tableAxis } from './tableGeometry';
 import { layoutRuns } from './richText/layout';
+import { arrayTablePath } from './arrayTable';
 
 /** Grows only the edited row; following rows retain their sizes and move down. */
 export function editTableCell(table: TableElement, row: number, col: number, value: string): Partial<TableElement> {
@@ -17,5 +18,5 @@ export function editTableCell(table: TableElement, row: number, col: number, val
     italic: style?.fontStyle.includes('italic') ?? false, underline: false, strike: false }],
   Math.max(1, xs[col + 1] - xs[col] - padding * 2), 1);
   rowHeights[row] = Math.max(rowHeights[row], Math.ceil(layout.totalHeight + padding * 2));
-  return { data, rowHeights, height: rowHeights.reduce((sum, size) => sum + size, 0) };
+  return { data, rowHeights, repeatPath: arrayTablePath(table), height: rowHeights.reduce((sum, size) => sum + size, 0) };
 }

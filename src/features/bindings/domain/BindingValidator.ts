@@ -2,6 +2,8 @@ import { t as __tr } from '@/shared/i18n';
 import type { DataSchema } from '@/features/schemas/domain/DataSchema';
 import { flattenFields } from '@/features/schemas/domain/SchemaInference';
 import type { Binding } from './Binding';
+import { tableArrayFields } from '@/lib/arrayTable';
+import type { Slide, TableElement } from '@/shared/types';
 
 export interface BindingIssue {
   readonly kind: 'missing' | 'unused' | 'required-unbound' | 'invalid-type';
@@ -9,9 +11,13 @@ export interface BindingIssue {
   readonly message: string;
 }
 
-export function validateBindings(bindings: readonly Binding[], schema: DataSchema): BindingIssue[] {
+export function validateBindings(bindings: readonly Binding[], schema: DataSchema, slides: readonly Slide[] = []): BindingIssue[] {
   const issues: BindingIssue[] = [];
-  const known = new Set(flattenFields(schema.fields).map((f) => f.path));
+  const known = new Map(flattenFields(schema.fields).map((f) => [f.path, f]));
+  const tables = new Map<string, TableElement>();
+  for (const slide of slides) for (const element of slide.elements) {
+    if (element.type === 'table') tables.set(element.id, element);
+  }
   const used = new Set<string>();
 
   for (const b of bindings) {
@@ -23,7 +29,7 @@ export function validateBindings(bindings: readonly Binding[], schema: DataSchem
         message: __tr("Несовместимый тип: {0}", b.schemaPath),
       });
     const path = b.schemaPath.replace(/\[\d+\]/g, '');
-    const field = schema.fields.find((item) => item.path === path);
+    const field = known.get(path);
     if (
       field &&
       b.expectedType &&
@@ -44,10 +50,22 @@ export function validateBindings(bindings: readonly Binding[], schema: DataSchem
         message: __tr("Поле \"{0}\" отсутствует в схеме", b.schemaPath),
       });
     }
-    used.add(b.schemaPath);
+    used.add(path);
+    const table = tables.get(b.elementId);
+    if (table && b.expectedType === 'array' && field?.type === 'array') {
+      for (const relative of tableArrayFields(table, b.placeholder)) {
+        const itemPath = `${path}.${relative}`;
+        if (known.has(itemPath)) used.add(itemPath);
+        else issues.push({
+          kind: 'missing',
+          path: itemPath,
+          message: __tr("Поле \"{0}\" отсутствует в схеме", itemPath),
+        });
+      }
+    }
   }
 
-  for (const f of flattenFields(schema.fields)) {
+  for (const f of known.values()) {
     if (f.type === 'object' || f.type === 'array') continue;
     if (!used.has(f.path)) {
       issues.push({

@@ -196,6 +196,7 @@ export interface TableCellStyle {
 
 export interface TableElement extends BaseElement {
   type: 'table';
+  repeatPath?: string;
   rows: number;
   cols: number;
   data: string[][];

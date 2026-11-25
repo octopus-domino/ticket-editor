@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { DOCUMENT_PRESETS } from '../../templates/catalog';
 import { t, useLocale, getLocale } from '@/shared/i18n';
@@ -9,6 +9,8 @@ import type { TreeNode } from '@/workspace/types';
 import './product-library.css';
 import { productGoal } from '@/shared/analytics/ProductMetrics';
 import { serializeSlideToSvg } from '@/lib/svg/serialize';
+import { authStore } from '@/auth/store';
+import { publicationsApi, restoreLocalPublications, type PublicationPage, type PublishedDocument } from '@/features/journeys/api/publications';
 
 export function DocumentPreview({ slide }: { slide: Slide }) {
   const preview = useMemo(
@@ -34,6 +36,35 @@ export function DocumentLibraryPage() {
   }, []);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
+  const owner = useStore(authStore, state => state.accessToken ? state.user?.id : undefined);
+  const [albumPage, setAlbumPage] = useState(0);
+  const albumSearch = search.trim().slice(0, 80);
+  const restored = useRef<{ owner: string; ready: Promise<void> }>();
+  const [albumResult, setAlbumResult] = useState<{
+    owner: string; page: number; search: string; data?: PublicationPage<PublishedDocument>; error?: string;
+  }>();
+  const albums = albumResult?.owner === owner && albumResult?.page === albumPage
+    && albumResult?.search === albumSearch ? albumResult : undefined;
+  useEffect(() => {
+    if (!mine || !owner) return;
+    if (restored.current?.owner !== owner) {
+      restored.current = { owner, ready: restoreLocalPublications('ALBUM').catch(() => undefined) };
+    }
+    const request = new AbortController();
+    const ready = restored.current.ready;
+    const identity = { owner, page: albumPage, search: albumSearch };
+    const timer = window.setTimeout(async () => {
+      await ready;
+      if (request.signal.aborted) return;
+      try {
+        const data = await publicationsApi.documents(albumPage, '', albumSearch, { kind: 'ALBUM', signal: request.signal });
+        if (!request.signal.aborted) setAlbumResult({ ...identity, data });
+      } catch (reason) {
+        if (!request.signal.aborted) setAlbumResult({ ...identity, error: (reason as Error).message });
+      }
+    }, 250);
+    return () => { window.clearTimeout(timer); request.abort(); };
+  }, [mine, owner, albumPage, albumSearch]);
   const presets = catalog.filter(
     (preset) =>
       (!category || category === preset.category) &&
@@ -68,7 +99,7 @@ export function DocumentLibraryPage() {
           aria-label={t('Search layouts')}
           placeholder={t('Search layouts')}
           value={search}
-          onChange={(event) => setSearch(event.target.value)}
+          onChange={(event) => { setSearch(event.target.value); setAlbumPage(0); }}
         />
         <select
           aria-label={t('Category')}
@@ -88,6 +119,7 @@ export function DocumentLibraryPage() {
           <p>{t('Documents and layouts are stored together in your folders.')}</p>
           {loading && <p>{t('Loading…')}</p>}
           {error && <p role="alert">{error}</p>}
+          {albums?.error && <p role="alert">{albums.error}</p>}
           <div className="library-grid">
             {documents.map((document) => (
               <article className="library-card" key={document.id}>
@@ -110,8 +142,25 @@ export function DocumentLibraryPage() {
                 </div>
               </article>
             ))}
+            {albums?.data?.items.map(({ document }) => (
+              <article className="library-card" key={`album-${document.id}`}>
+                <div>
+                  <h2>{document.title}</h2>
+                  <p>{t('Shared photo albums')} · {new Date(document.updatedAt).toLocaleDateString(getLocale())}</p>
+                  <Link to={`/manage/${encodeURIComponent(document.id)}`}>{t('Manage')} →</Link>
+                </div>
+              </article>
+            ))}
           </div>
-          {!documents.length && !loading && <p>{t('No results')}</p>}
+          {albums?.data && albums.data.pages > 1 && (
+            <nav className="library-tabs" aria-label={t('Shared photo albums')}>
+              <button type="button" disabled={albumPage === 0} onClick={() => setAlbumPage(page => page - 1)}>{t('Previous')}</button>
+              <span>{albumPage + 1} / {albums.data.pages}</span>
+              <button type="button" disabled={albumPage + 1 >= albums.data.pages} onClick={() => setAlbumPage(page => page + 1)}>{t('Next')}</button>
+            </nav>
+          )}
+          {owner && !albums && !loading && <p role="status">{t('Loading…')}</p>}
+          {!documents.length && !albums?.data?.items.length && !loading && (!owner || albums?.data) && <p>{t('No results')}</p>}
         </>
       ) : (
         <>

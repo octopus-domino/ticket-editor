@@ -160,56 +160,27 @@ export function makePlaceholder(
   };
 }
 
-/**
- * Массив → горизонтальная таблица:
- *   заголовок = имена полей из arrayChildren;
- *   каждая строка = один элемент массива.
- *
- * Пример:
- *   payload.path = "event.items"
- *   arrayChildren = [{ name: "code" }, { name: "name" }, { name: "value" }]
- *   sampleCount = 3
- *
- *   data = [
- *     ["code",                    "name",                    "value"],
- *     ["{{event.items[0].code}}", "{{event.items[0].name}}", "{{event.items[0].value}}"],
- *     ["{{event.items[1].code}}", "{{event.items[1].name}}", "{{event.items[1].value}}"],
- *     ["{{event.items[2].code}}", "{{event.items[2].name}}", "{{event.items[2].value}}"],
- *   ]
- *
- * Если arrayChildren пуст (массив скаляров) — одна колонка "значение":
- *   data = [
- *     ["значение"],
- *     ["{{event.tags[0]}}"],
- *     ["{{event.tags[1]}}"],
- *   ]
- */
+/** Stores a header and one editable row to repeat for the selected data set. */
 export function makeArrayTable(
   x: number,
   y: number,
   payload: {
     path: string;
-    arrayName: string;
-    sampleCount?: number;
     arrayChildren: { name: string; type: string }[];
   },
 ): TableElement {
   const children = payload.arrayChildren || [];
-  const count = Math.max(1, payload.sampleCount ?? 3);
 
   const header: string[] =
     children.length > 0
       ? children.map((c) => c.name)
       : [__tr("значение")];
 
-  const data: string[][] = [header];
-  for (let i = 0; i < count; i++) {
-    const row: string[] =
-      children.length > 0
-        ? children.map((c) => `{{${payload.path}[${i}].${c.name}}}`)
-        : [`{{${payload.path}[${i}]}}`];
-    data.push(row);
-  }
+  const item = `${payload.path}[0]`;
+  const row = children.length > 0
+    ? children.map((field) => `{{${item}.${field.name}}}`)
+    : [`{{${item}}}`];
+  const data = [header, row];
 
   const rows = data.length;
   const cols = Math.max(1, header.length);
@@ -217,6 +188,7 @@ export function makeArrayTable(
   return {
     id: uid(),
     type: 'table',
+    repeatPath: payload.path,
     x: Math.max(0, x - 100),
     y: Math.max(0, y - 20),
     width: Math.max(240, 40 + cols * 120),

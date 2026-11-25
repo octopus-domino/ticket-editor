@@ -166,19 +166,11 @@ export const DataPanel: React.FC = () => {
       })
       .filter((c): c is { name: string; type: string } => c !== null);
 
-    let sampleCount = 3;
-    if (activeModel) {
-      const arr = getPath(activeModel.values, path);
-      if (Array.isArray(arr) && arr.length > 0) sampleCount = arr.length;
-    }
-
     e.dataTransfer.setData(
       'application/json',
       JSON.stringify({
         kind: 'array',
         path,
-        arrayName: path.split('.').pop(),
-        sampleCount,
         arrayChildren,
       }),
     );

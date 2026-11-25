@@ -2,6 +2,33 @@ import { test, expect } from '@playwright/test';
 import { BACKGROUND_CATALOG } from '../../src/shared/backgrounds/catalog';
 import { readFile } from 'node:fs/promises';
 
+test('ready solution preview keeps a separately loaded background across edits', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('codoc:language', 'en'));
+  let linkedRequests = 0;
+  await page.route('**/api/journeys/artwork', route => {
+    const { title, data, externalBackground } = route.request().postDataJSON();
+    expect(externalBackground).toBe(true);
+    const background = data.background_preset ? { preset: data.background_preset, media: null } : null;
+    if (background) linkedRequests++;
+    return route.fulfill({ json: { background, pages: [{ width: 794, height: 1123,
+      svg: `<svg xmlns="http://www.w3.org/2000/svg" width="794" height="1123"><text>${title}</text></svg>`,
+    }] } });
+  });
+  await page.route('**/api/auth/refresh', route => route.fulfill({ status: 401, json: {} }));
+  await page.goto('/start/invite');
+  const library = page.locator('.background-library');
+  await library.locator('summary').click();
+  await library.getByRole('button', { name: 'Sage paper', exact: true }).click();
+  const image = page.locator('.journey-artwork-background');
+  await expect(image).toHaveAttribute('src', '/backgrounds/lossless/sage-paper.webp');
+  await expect.poll(() => image.evaluate((element: HTMLImageElement) => element.naturalWidth)).toBeGreaterThan(0);
+  const original = await image.elementHandle();
+  await page.locator('.journey-form-panel input').first().fill('New title');
+  await expect(page.locator('.journey-artwork-page svg text')).toHaveText('New title');
+  expect(await original?.evaluate(element => element.isConnected)).toBe(true);
+  expect(linkedRequests).toBe(2);
+});
+
 test('all 60 lightweight previews have real dimensions and nine localized names', async ({ page }) => {
   await page.goto('/solutions/');
   const images = await page.evaluate(async () => {

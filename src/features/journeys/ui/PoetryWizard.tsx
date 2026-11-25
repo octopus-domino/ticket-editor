@@ -17,10 +17,18 @@ const AGES = [['child', 'Child'], ['teen', 'Teenager'], ['youth', 'Young adult']
 interface Region { latitude: number; longitude: number; zone: string; label: string }
 interface Prepared { id: string; bundle: { language: string; cards: { date: string; author: string; sourceUrl: string }[] }; weatherSource: string; weatherLicense: string }
 const lastCollectionKey = 'codoc:poetry:last-collection';
+const collectionHistoryKey = 'codoc:poetry:collection-history';
 
-function lastCollection() {
-  try { return localStorage.getItem(lastCollectionKey) ?? undefined; }
-  catch { return undefined; }
+function readCollectionHistory(): Partial<Record<Locale, string[]>> {
+  try {
+    const stored = JSON.parse(localStorage.getItem(collectionHistoryKey) ?? '{}') as Partial<Record<Locale, unknown>>;
+    const history: Partial<Record<Locale, string[]>> = {};
+    for (const [language] of LANGUAGES) {
+      const ids = stored?.[language];
+      if (Array.isArray(ids)) history[language] = ids.filter(id => typeof id === 'string' && /^[a-f0-9]{64}$/.test(id)).slice(0, 4);
+    }
+    return history;
+  } catch { return {}; }
 }
 
 export default function PoetryWizard({ definition, custom = false, previewOnly = false }: { definition: JourneyDefinition; custom?: boolean; previewOnly?: boolean }) {
@@ -33,7 +41,7 @@ export default function PoetryWizard({ definition, custom = false, previewOnly =
   const [busy, setBusy] = useState(false), [locating, setLocating] = useState(false), [error, setError] = useState(''), [mapOpen, setMapOpen] = useState(false);
   const [preparing, setPreparing] = useState(false);
   const running = useRef(false), map = useRef<RouteMapHandle | null>(null), abort = useRef<AbortController | null>(null);
-  const previousId = useRef(lastCollection());
+  const [history, setHistory] = useState(readCollectionHistory);
   useEffect(() => () => abort.current?.abort(), []);
   const chooseRegion = (point: { latitude: number; longitude: number }, label: string) => {
     setRegion({ latitude: Math.round(point.latitude * 100) / 100, longitude: Math.round(point.longitude * 100) / 100,
@@ -53,12 +61,17 @@ export default function PoetryWizard({ definition, custom = false, previewOnly =
     running.current = true; setPreparing(true); setError('');
     const controller = new AbortController(); abort.current = controller;
     try {
+      const recent = history[language] ?? [];
+      let legacy: string | null = null;
+      if (!recent.length) try { legacy = localStorage.getItem(lastCollectionKey); } catch { /* Optional storage. */ }
       const result = await journeyRequest<Prepared>('/api/journeys/poetry', { method: 'POST', signal: controller.signal,
         body: JSON.stringify({ ...(region ? { latitude: region.latitude, longitude: region.longitude, zone: region.zone } : { zone: Intl.DateTimeFormat().resolvedOptions().timeZone }),
-          language, mood, audience, moodText: moodText.trim() || undefined, seed: crypto.randomUUID(), previousId: previousId.current }) });
+          language, mood, audience, moodText: moodText.trim() || undefined, seed: crypto.randomUUID(),
+          previousId: recent[0] ?? legacy ?? undefined, recentIds: recent.slice(1) }) });
       if (!controller.signal.aborted) {
-        previousId.current = result.id;
-        try { localStorage.setItem(lastCollectionKey, result.id); } catch { /* The current session still remembers the collection. */ }
+        const next = { ...history, [language]: [...new Set([result.id, ...recent, ...(legacy ? [legacy] : [])])].slice(0, 4) };
+        setHistory(next);
+        try { localStorage.setItem(collectionHistoryKey, JSON.stringify(next)); } catch { /* The current session still remembers its collections. */ }
         setPrepared(result);
       }
     } catch (reason) { if (!controller.signal.aborted) setError((reason as Error).message); }

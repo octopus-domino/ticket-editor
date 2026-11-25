@@ -176,10 +176,12 @@ test('planner opens a selected day beside the same map and supports mobile plann
   await expect(workspace.getByRole('button', { name: /Plan walk in Journey/ })).toBeVisible();
   await workspace.getByRole('button', { name: 'Add cities on the map' }).click();
   await workspace.locator('.route-map').click({ position: { x: 200, y: 150 } });
+  await workspace.locator('.trip-map-and-hotel').getByRole('textbox', { name: 'City' }).fill('Peterhof');
   await workspace.locator('.trip-map-and-hotel').getByRole('button', { name: 'Add city', exact: true }).click();
-  const points = await page.evaluate(() => JSON.parse(localStorage.getItem('codoc/trip-planner/draft/v3/local')!).days[1]);
-  expect(points.city).toBe('Saint Petersburg');
-  expect(points.visits).toHaveLength(1);
+  const days = await page.evaluate(() => JSON.parse(localStorage.getItem('codoc/trip-planner/draft/v3/local')!).days);
+  expect(days[1].city).toBe('Saint Petersburg');
+  expect(days[2].city).toBe('Peterhof');
+  expect(days[1].visits).toBeUndefined();
   const plannerDraft: LocalTripDraft = { ...draft, days: { ...draft.days, 2: { ...draft.days[2],
     visits: [{ id: 'second-tver-stop', city: 'Volga embankment',
       stops: [{ id: 'volga-start', label: 'Volga start', latitude: 56.86, longitude: 35.91, zone: 'Europe/Moscow', stayMinutes: 0 },
@@ -206,6 +208,8 @@ test('planner opens a selected day beside the same map and supports mobile plann
   await expect(cities.getByRole('row')).toHaveCount(7);
   await cities.getByRole('button', { name: 'Tver', exact: true }).click();
   await expect(workspace.getByRole('heading', { name: 'Tver' })).toBeVisible();
+  await expect(cities).toBeVisible();
+  await workspace.getByRole('button', { name: 'Trip map', exact: true }).click();
   await workspace.locator('button[data-trip-day="overview"]').click();
   await expect(workspace.locator('.trip-summary[data-compact]')).toBeVisible();
   const dayWidths = await workspace.locator('.trip-summary .trip-day-timeline-item').evaluateAll(

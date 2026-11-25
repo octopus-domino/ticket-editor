@@ -6,9 +6,12 @@ import type { JourneyDocument, JourneyDefinition } from '../domain/definitions';
 import { normalizedProposalData } from '../domain/proposal';
 import { JourneyButton } from './JourneyButton';
 import { lessons } from '../domain/schedule';
+import { mediaUrl } from '../api/media';
+import { backgroundUrl } from '@/shared/backgrounds/catalog';
 
 interface Artwork {
   pages: { width: number; height: number; svg: string }[];
+  background?: { preset: string | null; media: string | null } | null;
 }
 type Document = Pick<JourneyDocument, 'kind' | 'title' | 'data'> & { id?: string };
 
@@ -56,6 +59,7 @@ export function JourneyArtwork({
     kind: document.kind,
     title: document.title || (isProposal ? t('Коммерческое предложение') : t('Приглашение')),
     data,
+    externalBackground: true,
     ...(definition ? { definition } : {}),
   });
   useEffect(() => {
@@ -102,6 +106,7 @@ export function JourneyArtwork({
             );
             if (controller.signal.aborted) return;
             setArtwork({
+              background: value.background,
               pages: value.pages.map((page) => ({ ...page, svg: sanitizeSvg(page.svg) })),
             });
             setBusy(false);
@@ -124,6 +129,9 @@ export function JourneyArtwork({
   const visiblePages = isProposal
     ? artwork?.pages.slice(currentPage, currentPage + 1)
     : artwork?.pages;
+  const background = artwork?.background;
+  const image = background?.preset ? backgroundUrl(background.preset)
+    : background?.media && /^[a-f0-9]{64}$/.test(background.media) ? mediaUrl(background.media) : undefined;
   return (
     <article
       className={`journey-card journey-artwork ${isProposal ? 'journey-artwork-proposal' : ''}`}
@@ -200,8 +208,10 @@ export function JourneyArtwork({
               className="journey-artwork-page"
               aria-label={t('Страница {0}', index + 1)}
               style={{ maxWidth: page.width }}
-              dangerouslySetInnerHTML={{ __html: page.svg }}
-            />
+            >
+              {image && <img className="journey-artwork-background" src={image} alt="" decoding="async" />}
+              <div className="journey-artwork-foreground" dangerouslySetInnerHTML={{ __html: page.svg }} />
+            </div>
           ))}
           {busy && artwork && (
             <span className="journey-artwork-updating" role="status">

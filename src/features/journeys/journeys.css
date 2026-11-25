@@ -734,10 +734,20 @@
   display: none;
 }
 .journey-artwork-page {
+  position: relative;
   box-shadow: 0 16px 46px #233e3514;
   background: #fcf4ed;
   margin-bottom: 24px;
 }
+.journey-artwork-background {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+.journey-artwork-foreground { position: relative; }
 .journey-artwork-page svg {
   display: block;
   width: 100%;

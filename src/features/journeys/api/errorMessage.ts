@@ -13,6 +13,8 @@ export function journeyError(status: number, raw?: string): string {
         return t('The poetry sources are unavailable. Try again a little later.');
       case 'journey.poetry.not-enough':
         return t('We could not find seven verified poems for these preferences. Try another mood or audience.');
+      case 'journey.poetry.not-enough-new':
+        return t('We could not find seven different verified poems. Try a different mood.');
       case 'journey.poetry.busy':
         return t('Another poetry selection is being prepared. Please try again shortly.');
       case 'journey.route.invalid-time':

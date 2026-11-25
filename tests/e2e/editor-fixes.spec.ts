@@ -140,6 +140,50 @@ test('selected data set opens its values and a schema field can be dragged onto 
     .toContain('{{name}}');
 });
 
+test('a saved array table follows the active data set on canvas, in bindings and in PDF export', async ({ page }) => {
+  await page.setViewportSize({ width: 1728, height: 960 });
+  await account(page);
+  const rows = [{ code: 'First' }, { code: 'Second' }, { code: 'Third' }, { code: 'Fourth' }];
+  await page.route('**/api/schemas', route => route.fulfill({ json: [{
+    id: 'S', name: 'Orders', createdAt: '', updatedAt: '',
+    fields: [{ path: 'pos', type: 'array', required: true }, { path: 'pos.code', type: 'string', required: true }],
+  }] }));
+  await page.route('**/api/data-models?*', route => route.fulfill({ json: [
+    { id: 'L', schemaId: 'S', name: 'Four rows', values: { pos: rows } },
+    { id: 'S1', schemaId: 'S', name: 'One row', values: { pos: [rows[0]] } },
+  ] }));
+  await page.route('**/api/templates/T', route => route.fulfill({ json: {
+    id: 'T', name: 'Offer', schemaId: 'S', bindings: [], createdAt: '', updatedAt: '',
+    slides: [{ id: 'page', name: 'Page', width: 500, height: 400, format: 'custom',
+      orientation: 'landscape', background: '#fff', padding: { top: 0, bottom: 0, left: 0, right: 0 },
+      elements: [{ id: 'lines', type: 'table', x: 30, y: 30, width: 300, height: 80, rotation: 0,
+        rows: 2, cols: 1, data: [['Code'], ['{{pos[0].code}}']], fontSize: 16, headerBg: '#eee', borderColor: '#333' }],
+    }],
+  } }));
+  await page.route('**/api/export/pdf?mode=pdf', route =>
+    route.fulfill({ contentType: 'application/pdf', body: '%PDF-test' }));
+  await page.goto('/app/templates/T/edit?tab=data');
+  const paintedRows = () => page.evaluate(async () => {
+    const module = '/node_modules/.vite/deps/konva.js';
+    const { default: Konva } = await import(module);
+    const stage = Konva.stages.find((item: { container(): HTMLElement }) => item.container().isConnected);
+    return stage?.findOne('#lines')?.find('Text').map((node: { text(): string }) => node.text());
+  });
+  const dataPanel = page.locator('.right-panel');
+  await dataPanel.getByText('Four rows', { exact: true }).click();
+  await expect.poll(paintedRows).toEqual(['Code', ...rows.map(row => row.code)]);
+  const exportRequest = page.waitForRequest('**/api/export/pdf?mode=pdf');
+  await page.getByRole('button', { name: 'Download PDF', exact: true }).click();
+  expect((await exportRequest).postDataJSON().slides[0].elements[0]).toMatchObject({ rows: 5,
+    data: [['Code'], ...rows.map(row => [row.code])],
+  });
+  await dataPanel.getByText('One row', { exact: true }).click();
+  await expect.poll(paintedRows).toEqual(['Code', 'First']);
+  await dataPanel.getByRole('button', { name: /Links|Bindings/ }).click();
+  await expect(dataPanel.locator('.dm-table select')).toHaveValue('pos');
+  await expect(dataPanel.locator('.schema-error')).toHaveCount(0);
+});
+
 for (const count of [0, 1])
   test(`generation defaults to one PDF for ${count} data sets`, async ({ page }) => {
     await account(page);

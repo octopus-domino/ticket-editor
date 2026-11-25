@@ -125,7 +125,7 @@
   color: #fff;
 }
 .trip-exp .trip-planner button:not(.route-map button):disabled { opacity: .55; cursor: default; }
-.trip-exp :is(.trip-exp-action-menu, .trip-planner-day) :where(input:not([type="checkbox"], [type="radio"]), select, textarea) {
+.trip-exp :is(.trip-exp-action-menu, .trip-planner-day, .trip-map-actions, .trip-exp-city-table) :where(input:not([type="checkbox"], [type="radio"]), select, textarea) {
   box-sizing: border-box; max-width: 100%; min-height: 44px; padding: 8px 10px;
   border: 1px solid var(--trip-border); border-radius: 8px; font: inherit;
 }

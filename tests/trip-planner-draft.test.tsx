@@ -35,7 +35,7 @@ beforeEach(() => {
   authStore.setState(state => ({ ...state, user: null, booting: false }));
 });
 
-test('reuses the unnamed city pin until it has a name', () => {
+test('adds named map cities on successive days without leaving the map', () => {
   render(<MemoryRouter initialEntries={['/trip/new']}><TripPlannerDraft /></MemoryRouter>);
   expect(screen.queryByRole('button', { name: 'Pick map point' })).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: t('Choose on map') }));
@@ -43,15 +43,38 @@ test('reuses the unnamed city pin until it has a name', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Pick map point' }));
   }
   expect(localStorage.getItem(storageKey)).toBeNull();
-  fireEvent.click(within(screen.getByRole('figure').parentElement!).getByRole('button', { name: t('Add city') }));
-  const input = screen.getByRole('combobox', { name: t('City') });
+  const map = within(screen.getByRole('figure').parentElement!);
+  const input = map.getByRole('textbox', { name: t('City') });
   fireEvent.change(input, { target: { value: 'Petersburg' } });
-  fireEvent.keyDown(input, { key: 'Enter' });
+  fireEvent.click(map.getByRole('button', { name: t('Add city') }));
+  expect(screen.getByRole('button', { name: t('Map'), exact: true })).toHaveAttribute('aria-pressed', 'true');
+  fireEvent.click(screen.getByRole('button', { name: 'Pick map point' }));
+  fireEvent.change(map.getByRole('textbox', { name: t('City') }), { target: { value: 'Tver' } });
+  fireEvent.click(map.getByRole('button', { name: t('Add city') }));
   const stored = JSON.parse(localStorage.getItem(storageKey)!);
   expect(stored.days[1]).toMatchObject({
     city: 'Petersburg', cityPoint: { latitude: 59.9, longitude: 30.3 },
   });
   expect(stored.days[1].visits).toBeUndefined();
+  expect(stored.days[2].city).toBe('Tver');
+  expect(screen.getByRole('button', { name: t('Map'), exact: true })).toHaveAttribute('aria-pressed', 'true');
+});
+
+test('adds a city from the list as a new day and keeps the list open', () => {
+  render(<MemoryRouter initialEntries={['/trip/new']}><TripPlannerDraft /></MemoryRouter>);
+  const first = screen.getByRole('combobox', { name: t('City') });
+  fireEvent.change(first, { target: { value: 'Petersburg' } });
+  fireEvent.keyDown(first, { key: 'Enter' });
+  fireEvent.click(screen.getByRole('button', { name: t('City list'), exact: true }));
+  const list = within(screen.getByRole('table', { name: t('City list') }).parentElement!);
+  const city = list.getByRole('combobox', { name: t('City') });
+  fireEvent.change(city, { target: { value: 'Tver' } });
+  fireEvent.keyDown(city, { key: 'Enter' });
+  expect(list.getByRole('button', { name: 'Tver' })).toBeVisible();
+  expect(screen.getByRole('button', { name: t('City list'), exact: true })).toHaveAttribute('aria-pressed', 'true');
+  const stored = JSON.parse(localStorage.getItem(storageKey)!);
+  expect(stored.days[1].city).toBe('Petersburg');
+  expect(stored.days[2].city).toBe('Tver');
 });
 
 test('builds and saves an intercity road transfer from map markers', async () => {

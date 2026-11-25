@@ -80,13 +80,15 @@ export function resolveBindings(
       }
 
       if (el.type === 'table') {
+        if (el.repeatPath) add(el.id, __tr('Таблица ({0})', el.repeatPath), el.repeatPath, el.repeatPath, 'auto');
         // Одна связь на каждый уникальный базовый путь массива.
         // Пример ячейки: {{catalog.items[0].name}} → база "catalog.items".
         for (const row of el.data ?? []) {
           for (const cell of row ?? []) {
             if (typeof cell !== 'string') continue;
             for (const match of cell.matchAll(PH_RE)) {
-              const base = ARRAY_PATH_RE.exec(match[1])?.[1];
+              const base = el.repeatPath && match[1].startsWith(el.repeatPath + '[')
+                ? el.repeatPath : ARRAY_PATH_RE.exec(match[1])?.[1];
               const label = __tr('Таблица ({0})', base ?? match[1]);
               if (base) add(el.id, label, base, base, 'auto');
               else add(el.id, label, match[0], match[1], 'auto');

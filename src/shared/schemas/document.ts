@@ -219,6 +219,7 @@ export const TableElementSchema = z
   .object({
     ...BaseElementFields,
     type: z.literal('table'),
+    repeatPath: z.string().min(1).max(1000).optional(),
     rows: z.number().int().positive(),
     cols: z.number().int().positive(),
     data: z.array(z.array(z.string())),

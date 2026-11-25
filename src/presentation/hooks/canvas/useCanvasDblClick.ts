@@ -122,7 +122,7 @@ export function useCanvasDblClick(params: {
         { x: vp.clientX - vp.viewportLeft, y: vp.clientY - vp.viewportTop }, 'table-cell');
       const cell = painted ? { row: painted.getAttr('row') as number, col: painted.getAttr('col') as number }
         : findTableCellAt(el, worldX, worldY);
-      if (!cell) return;
+      if (!cell || cell.row >= el.rows || cell.col >= el.cols) return;
       const cellW = (el.width * zoom) / el.cols;
       const cellH = (el.height * zoom) / el.rows;
       modalsStore.openEditor({

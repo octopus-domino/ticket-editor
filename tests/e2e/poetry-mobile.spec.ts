@@ -8,7 +8,8 @@ test('an unavailable next collection leaves the previous preview usable', async 
   await page.route('**/api/journeys/poetry', route => {
     requests.push(route.request().postDataJSON());
     if (requests.length > 1) {
-      return route.fulfill({ status: 503, json: { error: 'journey.poetry.sources-unavailable' } });
+      const error = requests.length === 2 ? 'journey.poetry.sources-unavailable' : 'journey.poetry.not-enough-new';
+      return route.fulfill({ status: 503, json: { error } });
     }
     return route.fulfill({ json: { id, bundle: { language: 'en', cards: [] }, weatherSource: '', weatherLicense: '' } });
   });
@@ -23,6 +24,12 @@ test('an unavailable next collection leaves the previous preview usable', async 
   expect(requests[1]).toMatchObject({ previousId: id });
   await expect(preview).toBeVisible();
   await expect(page.getByRole('button', { name: 'Save cards and get PDF' })).toBeEnabled();
+
+  await page.getByLabel('Who are these cards for?', { exact: true }).selectOption('teen');
+  await page.getByRole('button', { name: 'Choose poems for seven days' }).click();
+  await expect.poll(() => requests.length).toBe(3);
+  expect(requests[2]).toMatchObject({ audience: 'teen', previousId: id, recentIds: [] });
+  await expect(page.getByRole('alert')).toHaveText('We could not find seven different verified poems. Try a different mood.');
 });
 
 test('poetry can be selected on a phone without location or weather',async({browser})=>{
@@ -47,7 +54,7 @@ test('poetry can be selected on a phone without location or weather',async({brow
   }finally{await context.close();}
 });
 
-test('poetry on a phone uses the selected local region and keeps age, mood and language explicit', async ({ browser }) => {
+test('poetry on a phone uses the selected local region and keeps age, mood and language explicit', async ({ browser }, testInfo) => {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true,
     geolocation: { latitude: 43.1155, longitude: 131.8855 }, permissions: ['geolocation'] });
   let request: Record<string, unknown> | undefined;
@@ -80,6 +87,6 @@ test('poetry on a phone uses the selected local region and keeps age, mood and l
     await expect(form.getByRole('alert')).toHaveText('The poetry sources are unavailable. Try again a little later.');
     await expect(form.getByRole('button', { name: 'Choose poems for seven days', exact: true })).toBeEnabled();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    await page.screenshot({ path: '../ticket-infra/reports/poetry-mobile-region.png', fullPage: true });
+    await page.screenshot({ path: testInfo.outputPath('poetry-mobile-region.png'), fullPage: true });
   } finally { await context.close(); }
 });

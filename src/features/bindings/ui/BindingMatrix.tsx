@@ -53,8 +53,8 @@ export const BindingMatrix: React.FC = () => {
   const bindings = useMemo(() => resolveBindings(slides, overrides), [slides, overrides]);
 
   const issues = useMemo(
-    () => (activeSchema ? validateBindings(bindings, activeSchema) : []),
-    [bindings, activeSchema],
+    () => (activeSchema ? validateBindings(bindings, activeSchema, slides) : []),
+    [bindings, activeSchema, slides],
   );
 
   const changeBinding = (binding: Binding, path: string): void => {

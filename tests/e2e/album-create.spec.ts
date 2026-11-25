@@ -15,7 +15,7 @@ test('phone creates an album and immediately adds a caption and photograph',asyn
     }
     if(path.endsWith('/album'))return route.fulfill({json:{revision:photos.length,canManage:true,photos}});
     if(path.endsWith('/album/invitation'))return route.fulfill({json:{key:'i'.repeat(64)}});
-    if(path.includes('/fonts/'))return route.fulfill({path:'../ticket-pdf/src/main/resources/fonts/MarckScript-Regular.ttf',contentType:'font/ttf'});
+    if(path.includes('/fonts/'))return route.fulfill({path:'../ticket-pdf/document-service/src/main/resources/fonts/MarckScript-Regular.ttf',contentType:'font/ttf'});
     return route.fulfill({status:401,json:{}});
   });
   await page.goto('/start/albums');
@@ -27,4 +27,44 @@ test('phone creates an album and immediately adds a caption and photograph',asyn
   await expect(page.locator('.album-photos > li')).toHaveCount(1);
   await expect(page.locator('.album-caption')).toHaveText('С любовью от друзей');
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+});
+
+test('a created shared album opens from My documents after account restoration', async ({ page }) => {
+  test.setTimeout(60000);
+  const document = { id: 'Album1234567', kind: 'ALBUM', title: 'Friends', data: {}, updatedAt: '2026-11-25T12:00:00Z' };
+  const key = 'o'.repeat(64);
+  let claimed = false;
+  await page.addInitScript(() => localStorage.setItem('codoc:language', 'en'));
+  await page.route('**/api/**', async route => {
+    const url = new URL(route.request().url());
+    if (!url.pathname.startsWith('/api/')) return route.continue();
+    if (url.pathname === '/api/auth/refresh') return route.fulfill({ json: {
+      accessToken: 'test', user: { id: 'owner', name: 'Owner', email: 'owner@example.test' },
+    } });
+    if (url.pathname === '/api/journeys' && route.request().method() === 'POST') {
+      expect(route.request().headers().authorization).toBe('Bearer test');
+      return route.fulfill({ json: [{ document, managementKey: key }] });
+    }
+    if (url.pathname === '/api/publications/claim') {
+      expect(url.searchParams.get('kind')).toBe('ALBUM');
+      expect(route.request().postDataJSON()).toEqual([{ type: 'document', id: document.id, key }]);
+      claimed = true;
+      return route.fulfill({ json: { accepted: 1 } });
+    }
+    if (url.pathname === '/api/publications') {
+      expect(url.searchParams.get('kind')).toBe('ALBUM');
+      return route.fulfill({ json: { items: claimed ? [{ document }] : [], page: 0, pages: 1, total: Number(claimed) } });
+    }
+    if (url.pathname.endsWith('/album')) return route.fulfill({ json: { revision: 0, canManage: true, photos: [] } });
+    return route.fulfill({ json: [] });
+  });
+  await page.goto('/start/albums');
+  const create = page.getByRole('button', { name: 'Create', exact: true });
+  await expect(create).toBeEnabled({ timeout: 30000 });
+  await page.getByRole('textbox', { name: /^title$/i }).fill('Friends');
+  await create.click();
+  await page.getByRole('link', { name: 'My documents', exact: true }).click();
+  await expect(page).toHaveURL(/\/app\/library\?view=mine$/);
+  const album = page.locator('.library-card').filter({ has: page.getByRole('heading', { name: 'Friends' }) });
+  await expect(album.getByRole('link', { name: /Manage/ })).toHaveAttribute('href', `/manage/${document.id}`);
 });

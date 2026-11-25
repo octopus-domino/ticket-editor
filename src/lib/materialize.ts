@@ -2,6 +2,7 @@ import type { CanvasElement, Slide } from '@/shared/types';
 import { getByPath } from './path';
 import { escapeXml } from './svg/escape';
 import type { DocumentBinding } from '@/shared/types/document';
+import { fillArrayTable } from './arrayTable';
 
 /** Resolve a rendering copy. Substitutions in HTML are escaped text, never markup. */
 export function materializeElement(
@@ -26,9 +27,9 @@ export function materializeElement(
     return getByPath(values, source);
   }
   const copy = structuredClone(element);
-  const replace = (text: string | undefined, html = false) =>
+  const replace = (text: string | undefined, html = false, lookup = read) =>
     (text ?? '').replace(/\{\{\s*([\w.[\]]+)\s*\}\}/g, (_token, path: string) => {
-      const value = read(path);
+      const value = lookup(path);
       const textValue = value == null ? '' : String(value);
       return html ? escapeXml(textValue) : textValue;
     });
@@ -47,7 +48,9 @@ export function materializeElement(
     const value = read(copy.fieldPath);
     copy.sample = value == null ? '' : String(value);
   }
-  if (copy.type === 'table') copy.data = copy.data.map((row) => row.map((cell) => replace(cell)));
+  if (copy.type === 'table' && !fillArrayTable(copy, read, (cell, lookup) => replace(cell, false, lookup))) {
+    copy.data = copy.data.map(row => row.map(cell => replace(cell)));
+  }
   if (copy.type === 'stamp') {
     copy.texts = copy.texts?.map((text) => ({
       ...text,

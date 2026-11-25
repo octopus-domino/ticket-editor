@@ -174,9 +174,10 @@ test('planner opens a selected day beside the same map and supports mobile plann
   await workspace.getByRole('button', { name: 'Saint Petersburg', exact: true }).click();
   await expect(workspace.getByRole('heading', { name: 'Saint Petersburg' })).toBeVisible();
   await expect(workspace.getByRole('button', { name: /Plan walk in Journey/ })).toBeVisible();
+  await page.route('**/api/walks/v1/addresses/city?**', route => route.fulfill({ json: { city: 'Peterhof' } }));
   await workspace.getByRole('button', { name: 'Add cities on the map' }).click();
   await workspace.locator('.route-map').click({ position: { x: 200, y: 150 } });
-  await workspace.locator('.trip-map-and-hotel').getByRole('textbox', { name: 'City' }).fill('Peterhof');
+  await expect(workspace.locator('.trip-map-and-hotel').getByRole('textbox', { name: 'City' })).toHaveValue('Peterhof');
   await workspace.locator('.trip-map-and-hotel').getByRole('button', { name: 'Add city', exact: true }).click();
   const days = await page.evaluate(() => JSON.parse(localStorage.getItem('codoc/trip-planner/draft/v3/local')!).days);
   expect(days[1].city).toBe('Saint Petersburg');

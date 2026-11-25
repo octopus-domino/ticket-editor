@@ -25,6 +25,7 @@ import { TripDetailsEditor } from './TripDetailsEditor';
 import { TripTransferEditor } from './TripTransferEditor';
 import { TripCityMap } from './TripCityMap';
 import { RouteAddressInput } from './RouteAddressInput';
+import { useMapCityPicker } from './useMapCityPicker';
 import { emptyDraft, readStoredDraft } from '../domain/planner/draftMigration';
 import { legacyTripDraftKey, tripDraftStorageKey } from './tripDraftStorage';
 import { plannerReducer } from '../domain/planner/plannerReducer';
@@ -98,8 +99,7 @@ function Planner({ v2, experience, resume, storageKey, onDraftChange }: {
   const [choosingCity, setChoosingCity] = useState(false);
   const [cityListOpen, setCityListOpen] = useState(false);
   const [placingCities, setPlacingCities] = useState(false);
-  const [pendingMapPoint, setPendingMapPoint] = useState<CityPoint>();
-  const [mapCityName, setMapCityName] = useState('');
+  const mapCity = useMapCityPicker(experience);
   const cityInput = useRef<HTMLInputElement>(null);
   const dateMenu = useRef<HTMLDetailsElement>(null);
   const [focusedDay, setFocusedDay] = useState<number | undefined>(() => {
@@ -360,8 +360,7 @@ function Planner({ v2, experience, resume, storageKey, onDraftChange }: {
       setPlacingCities(false);
       setCityListOpen(false);
     }
-    setPendingMapPoint(undefined);
-    setMapCityName('');
+    mapCity.clear();
     setDayMap(undefined);
     setSelectedVisit(visitId);
     setChoosingCity(false);
@@ -619,7 +618,7 @@ function Planner({ v2, experience, resume, storageKey, onDraftChange }: {
             <button type="button" aria-expanded={showingCities && !cityListOpen}
               onClick={() => { setCityListOpen(false); setDayMap(undefined); setFocusedDay(undefined); setShowingCities(true); }}>{t('Trip map')}</button>
             <button type="button" aria-pressed={experience ? cityListOpen : !showingCities} onClick={() => {
-              if (experience) { setCityListOpen(true); setPlacingCities(false); return; }
+              if (experience) { setCityListOpen(true); setPlacingCities(false); mapCity.clear(); return; }
               setShowingCities(false);
               setChoosingCity(false);
               cityInput.current?.focus();
@@ -630,6 +629,7 @@ function Planner({ v2, experience, resume, storageKey, onDraftChange }: {
               setShowingCities(true);
               setPlacingCities(!placingCities);
               setChoosingCity(false);
+              if (placingCities) mapCity.clear();
             }}>{t('Add cities on the map')}</button>}
           </div>}
           {experience && cityListOpen && !hotelSearch && <div className="trip-exp-city-table">
@@ -663,8 +663,8 @@ function Planner({ v2, experience, resume, storageKey, onDraftChange }: {
                 onStopMove: day.cityPoint ? (_id, point) => void moveCity(point) : undefined,
               } : dayMap ?? walkMap}
               onPick={experience && choosingCity ? point => { void moveCity(point); setChoosingCity(false); }
-                : placingCities ? setPendingMapPoint : undefined}
-              pickedPoint={pendingMapPoint}
+                : placingCities ? point => void mapCity.pick(point) : undefined}
+              pickedPoint={mapCity.point}
               focusStopId={placingCities || focusedDay !== dayNumber || preview ? undefined
                 : walkMap && !dayMap ? activeLocation : cityMap?.cities.find(item => item.latitude === day.cityPoint?.latitude
                   && item.longitude === day.cityPoint?.longitude)?.id ?? activeLocation}
@@ -683,27 +683,28 @@ function Planner({ v2, experience, resume, storageKey, onDraftChange }: {
                 const location = locations.find(item => id === `lodging-${item.id}`);
                 if (location) findHotels(location.number, location.id === String(location.number) ? undefined : location.id);
               }} />}
-            {placingCities && pendingMapPoint && !hotelSearch && (experience
+            {placingCities && mapCity.point && !hotelSearch && (experience
               ? <form className="trip-map-actions" onSubmit={event => {
                 event.preventDefault();
-                const name = mapCityName.trim();
+                const name = mapCity.name.trim();
                 if (!name) return;
-                addVisit(name, pendingMapPoint);
-                setMapCityName('');
-                setPendingMapPoint(undefined);
+                addVisit(name, mapCity.point);
+                mapCity.clear();
               }}>
-                <label>{t('City')} <input required maxLength={180} value={mapCityName}
-                  onChange={event => setMapCityName(event.target.value)} /></label>
-                <button type="submit" disabled={!mapCityName.trim()}>{t('Add city')}</button>
-                <button type="button" onClick={() => { setPendingMapPoint(undefined); setMapCityName(''); }}>{t('Cancel')}</button>
+                <label>{t('City')} <input required maxLength={180} value={mapCity.name}
+                  onChange={event => mapCity.changeName(event.target.value)} /></label>
+                <button type="submit" disabled={!mapCity.name.trim()}>{t('Add city')}</button>
+                <button type="button" onClick={mapCity.clear}>{t('Cancel')}</button>
+                {mapCity.status !== 'idle' && <span role="status">{mapCity.status === 'loading' ? t('Loading…')
+                  : t('Enter the city name for this point.')}</span>}
               </form>
               : <div className="trip-map-actions">
               <button type="button" onClick={() => {
-                addVisit(undefined, pendingMapPoint);
-                setPendingMapPoint(undefined);
+                addVisit(undefined, mapCity.point);
+                mapCity.clear();
                 if (firstStop) setPlacingCities(false);
               }}>{t('Add city')}</button>
-              <button type="button" onClick={() => setPendingMapPoint(undefined)}>{t('Cancel')}</button>
+              <button type="button" onClick={mapCity.clear}>{t('Cancel')}</button>
               </div>)}
             {hotelSearch && <section className="trip-inline-hotels" aria-label={t('Find hotels')}>
               <header>
@@ -766,7 +767,7 @@ function Planner({ v2, experience, resume, storageKey, onDraftChange }: {
             <details open className="trip-exp-city-entry" data-first-stop={firstStop || undefined}>
               <summary hidden={firstStop}>{t('Add city')}</summary>
             <RouteAddressInput key={experience ? `${activeLocation}:${day.city ?? ''}` : activeLocation}
-              inputRef={cityInput} label={t('City')} confirmLabel={t('Add city')} value={experience ? '' : day.city ?? ''}
+              inputRef={cityInput} label={t('City')} confirmLabel={t('Add city')} value={day.city ?? ''}
               onConfirmText={city => addVisit(city)}
               onSelect={({ label, latitude, longitude }) => {
                 if (!experience) setPlacingCities(false);
@@ -775,7 +776,7 @@ function Planner({ v2, experience, resume, storageKey, onDraftChange }: {
             <button type="button" aria-pressed={choosingCity} onClick={() => {
               if (experience) {
                 setPlacingCities(!placingCities);
-                setPendingMapPoint(undefined);
+                mapCity.clear();
                 setMobileTab('map');
               } else setChoosingCity(!choosingCity);
             }}>

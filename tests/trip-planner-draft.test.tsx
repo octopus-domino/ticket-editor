@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, expect, test, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { t } from '../src/shared/i18n';
@@ -35,29 +35,40 @@ beforeEach(() => {
   authStore.setState(state => ({ ...state, user: null, booting: false }));
 });
 
-test('adds named map cities on successive days without leaving the map', () => {
-  render(<MemoryRouter initialEntries={['/trip/new']}><TripPlannerDraft /></MemoryRouter>);
-  expect(screen.queryByRole('button', { name: 'Pick map point' })).toBeNull();
-  fireEvent.click(screen.getByRole('button', { name: t('Choose on map') }));
-  for (let attempt = 0; attempt < 2; attempt++) {
+test('fills the city from the latest map click and shows it in the day field after saving', async () => {
+  let resolveFirst: (value: { city: string }) => void = () => {};
+  const request = vi.spyOn(journeys, 'journeyRequest')
+    .mockImplementationOnce(() => new Promise(resolve => { resolveFirst = resolve; }))
+    .mockResolvedValueOnce({ city: 'Petersburg' })
+    .mockResolvedValueOnce({ city: 'Tver' });
+  try {
+    render(<MemoryRouter initialEntries={['/trip/new']}><TripPlannerDraft /></MemoryRouter>);
+    expect(screen.queryByRole('button', { name: 'Pick map point' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: t('Choose on map') }));
+    for (let attempt = 0; attempt < 2; attempt++) {
+      fireEvent.click(screen.getByRole('button', { name: 'Pick map point' }));
+    }
+    expect(localStorage.getItem(storageKey)).toBeNull();
+    const map = within(screen.getByRole('figure').parentElement!);
+    const input = map.getByRole('textbox', { name: t('City') });
+    await waitFor(() => expect(input).toHaveValue('Petersburg'));
+    await act(async () => { resolveFirst({ city: 'Old result' }); });
+    expect(input).toHaveValue('Petersburg');
+    fireEvent.click(map.getByRole('button', { name: t('Add city') }));
+    expect(screen.getByRole('button', { name: t('Map'), exact: true })).toHaveAttribute('aria-pressed', 'true');
     fireEvent.click(screen.getByRole('button', { name: 'Pick map point' }));
-  }
-  expect(localStorage.getItem(storageKey)).toBeNull();
-  const map = within(screen.getByRole('figure').parentElement!);
-  const input = map.getByRole('textbox', { name: t('City') });
-  fireEvent.change(input, { target: { value: 'Petersburg' } });
-  fireEvent.click(map.getByRole('button', { name: t('Add city') }));
-  expect(screen.getByRole('button', { name: t('Map'), exact: true })).toHaveAttribute('aria-pressed', 'true');
-  fireEvent.click(screen.getByRole('button', { name: 'Pick map point' }));
-  fireEvent.change(map.getByRole('textbox', { name: t('City') }), { target: { value: 'Tver' } });
-  fireEvent.click(map.getByRole('button', { name: t('Add city') }));
-  const stored = JSON.parse(localStorage.getItem(storageKey)!);
-  expect(stored.days[1]).toMatchObject({
-    city: 'Petersburg', cityPoint: { latitude: 59.9, longitude: 30.3 },
-  });
-  expect(stored.days[1].visits).toBeUndefined();
-  expect(stored.days[2].city).toBe('Tver');
-  expect(screen.getByRole('button', { name: t('Map'), exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await waitFor(() => expect(map.getByRole('textbox', { name: t('City') })).toHaveValue('Tver'));
+    fireEvent.click(map.getByRole('button', { name: t('Add city') }));
+    const stored = JSON.parse(localStorage.getItem(storageKey)!);
+    expect(stored.days[1]).toMatchObject({
+      city: 'Petersburg', cityPoint: { latitude: 59.9, longitude: 30.3 },
+    });
+    expect(stored.days[1].visits).toBeUndefined();
+    expect(stored.days[2].city).toBe('Tver');
+    expect(screen.getByRole('button', { name: t('Map'), exact: true })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(screen.getByRole('button', { name: t('Plan'), exact: true }));
+    expect(screen.getByRole('combobox', { name: t('City') })).toHaveValue('Tver');
+  } finally { request.mockRestore(); }
 });
 
 test('adds a city from the list as a new day and keeps the list open', () => {

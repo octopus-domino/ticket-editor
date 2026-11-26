@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { join } from 'node:path';
+import { photoFixtures } from './helpers/handoff-fixture';
 
 test('round-trips a trip with two cities, train, hotel and a Journey walk after a date review', async ({ page }) => {
   test.skip(process.env.VITE_ENABLE_TRIP_PLANNER_V2 !== 'true', 'Requires the date review in trip planner V2');
@@ -115,8 +116,8 @@ test('receives the finished walk from the built Journey application', async ({ p
   test.setTimeout(60_000);
   if (process.env.TRIP_MOBILE_VIEWPORT === 'true') await page.setViewportSize({ width: 390, height: 844 });
   const first = { id: 'first', name: 'Первый дом', lat: 59.94, lng: 30.27, source: 'manual',
-    categoryIds: ['historical-house'], facts: [], details: {} };
-  const second = { ...first, id: 'second', name: 'Второй дом', lng: 30.29 };
+    categoryIds: ['historical-house'], facts: [], details: { photos: ['File:Licensed.jpg'] } };
+  const second = { ...first, id: 'second', name: 'Второй дом', lng: 30.29, details: { photos: ['File:Unlicensed.jpg'] } };
   const geometry = [[first.lat, first.lng], [second.lat, second.lng]];
   const route = { geometry, legs: [{ fromIndex: 0, toIndex: 1, geometry, distanceMeters: 1200, durationSeconds: 900 }],
     totalDistanceMeters: 1200, totalDurationSeconds: 900 };
@@ -139,6 +140,15 @@ test('receives the finished walk from the built Journey application', async ({ p
     return match ? request.fulfill({ path: join(journey!, 'assets', match[1]) }) : request.fallback();
   });
   await page.route('**/api/journeys/**', request => request.fulfill({ json: { available: true, places: [] } }));
+  await photoFixtures(page);
+  await page.route('**/api/auth/refresh', route => route.fulfill({
+    json: { accessToken: 'test', user: { id: 'walk-owner', name: 'Walk owner', email: 'owner@example.invalid' } },
+  }));
+  let saved: unknown;
+  await page.route('**/api/routing/v1/trips**', route => {
+    if (route.request().method() === 'POST') saved = route.request().postDataJSON();
+    return saved ? route.fulfill({ json: saved }) : route.fulfill({ status: 404 });
+  });
   await page.route('**/*.tile.openstreetmap.org/**', request => request.abort());
   await page.route('https://tiles.openfreemap.org/**', request => request.fulfill({
     json: { version: 8, sources: {}, layers: [{ id: 'base', type: 'background' }] },
@@ -156,11 +166,28 @@ test('receives the finished walk from the built Journey application', async ({ p
   const routePanel = frame.getByRole('button', { name: /📍 Маршрут/ });
   if (await routePanel.isVisible()) await routePanel.click();
   await frame.getByRole('button', { name: 'Включить в общий маршрут' }).click();
+  await frame.getByText('Точки прогулки и заметки', { exact: true }).click();
+  await frame.getByRole('textbox', { name: first.name }).fill('Meet by the door');
   await frame.getByRole('button', { name: 'Добавить в путешествие CoDoc' }).click();
   await planner.getByRole('button', { name: 'Use this walk' }).click();
   await expect(planner.getByText(first.name, { exact: true })).toBeVisible();
-  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('codoc/trip-planner/draft/v3/local')!).days['2']
-    .importedWalk.legs[0].coordinates)).toEqual([[first.lng, first.lat], [second.lng, second.lat]]);
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('codoc/trip-planner/draft/v3/walk-owner') ?? 'null')
+    ?.days['2']?.importedWalk?.legs[0]?.coordinates)).toEqual([[first.lng, first.lat], [second.lng, second.lat]]);
+  await planner.getByRole('button', { name: 'Save trip to account' }).click();
+  await expect(planner.getByRole('link', { name: 'Open account trip' })).toBeVisible();
+  expect(saved).toMatchObject({ days: expect.arrayContaining([expect.objectContaining({
+    date: '2027-01-01',
+    segments: [expect.objectContaining({ title: first.name, walkId: draft.id, walkNote: 'Meet by the door',
+      photoCredits: [expect.objectContaining({ author: 'Fixture photographer', license: 'CC BY-SA 4.0' })] }),
+    expect.objectContaining({ title: second.name, photoRefs: [], photoCredits: [] })],
+  })]) });
+  await planner.getByRole('link', { name: 'Open account trip' }).click();
+  await page.locator('button[data-trip-day="2"]').click();
+  await page.getByRole('button', { name: first.name, exact: true }).click();
+  await expect(page.getByText('Meet by the door', { exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Fixture photographer' })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('button', { name: first.name, exact: true })).toBeVisible();
 });
 
 test('plans from address suggestions and selects transport between the chosen cities', async ({ page }) => {

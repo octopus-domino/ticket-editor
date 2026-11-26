@@ -1,3 +1,4 @@
+import { photoFixtures, point, selectWalk, walkFrame } from './helpers/handoff-fixture';
 import { test, expect, type Page } from '@playwright/test';
 import { JOURNEYS } from '../../src/features/journeys/domain/definitions';
 
@@ -101,56 +102,36 @@ test('a phone chooses a route point on the map when address search is unavailabl
 });
 
 test('a separate walking map keeps numbered photos and the city plan out of the main route', async ({ page }) => {
-  test.setTimeout(60000);
+  test.setTimeout(60_000);
   await page.addInitScript(() => localStorage.setItem('codoc:language', 'en'));
   await page.setViewportSize({ width: 390, height: 844 });
   const state = await mockApi(page);
-  const media = new Map<string, string>();
-  await page.route('**/api/journeys/media**', async route => {
-    const path = new URL(route.request().url()).pathname;
-    if (route.request().method() === 'POST') {
-      const id = (media.size + 1).toString(16).padStart(64, '0');
-      media.set(id, route.request().postDataJSON().image);
-      return route.fulfill({ json: { id } });
-    }
-    const image = media.get(path.split('/').at(-1)!);
-    if (!image) return route.fulfill({ status: 404 });
-    return route.fulfill({ contentType: 'image/jpeg', body: Buffer.from(image.split(',')[1], 'base64') });
-  });
-  await page.route('**/api/walks/v1/places?*', route => route.fulfill({ json: { available: true, source: 'OpenStreetMap', places: [
-    { id: 'museum', label: 'City Museum', longitude: 13.41, latitude: 52.501, url: 'https://www.openstreetmap.org/node/1', photoReference: 'File:Museum.jpg' },
-    { id: 'tower', label: 'Town Tower', longitude: 13.412, latitude: 52.502, url: 'https://www.openstreetmap.org/node/2', photoReference: 'File:Tower.jpg' },
-  ] } }));
-  await page.route('https://commons.wikimedia.org/w/api.php?*', route => route.fulfill({ json: { query: { pages: [{ imageinfo: [{
-    thumburl: 'https://upload.wikimedia.org/museum.jpg', mime: 'image/jpeg', extmetadata: {
-      Artist: { value: '<a>Photo Author</a>' }, LicenseShortName: { value: 'CC BY-SA 4.0' }, LicenseUrl: { value: 'https://creativecommons.org/licenses/by-sa/4.0/' },
-    },
-  }] }] } } }));
-  await page.route('https://upload.wikimedia.org/museum.jpg', route => route.fulfill({ path: 'public/backgrounds/thumbs/sage-paper.jpg', contentType: 'image/jpeg' }));
+  const media = await photoFixtures(page);
+  await walkFrame(page, 'Museum walk', [
+    point('Start', 0), point('City Museum', 1, { photoReference: 'File:Museum.jpg' }),
+    point('Town Tower', 2, { photoReference: 'File:Tower.jpg' }), point('Finish', 3),
+  ]);
   await page.goto('/start/tours');
-  const stops = page.locator('.route-stops > li');
-  await stops.nth(1).getByRole('combobox', { name: 'Address', exact: true }).fill('Museum Berlin');
-  await page.getByRole('option', { name: 'Berlin Museum' }).getByRole('button').click();
-  const panel = stops.nth(1).locator('.route-place-panel');
-  await panel.locator(':scope > summary').click();
-  await panel.getByRole('button', { name: 'Generate a walking map' }).click();
-  await expect(panel.locator('.route-walk-print')).toBeVisible({ timeout: 30000 });
+  const { panel, stops } = await selectWalk(page);
+  expect(state.snapshot).toBeNull();
+  await panel.getByRole('button', { name: 'Use this walk' }).click();
+  await expect(panel.locator('.route-walk-print')).toBeVisible({ timeout: 30_000 });
   expect(state.snapshot.photos).toHaveLength(2);
   expect(state.snapshot.pointNumbering).toBe('interior');
   expect(state.snapshot.stops).toHaveLength(4);
-  expect(state.snapshot.legs.every((leg: any) => leg.mode === 'foot')).toBe(true);
-  expect(state.snapshot.photos.map((photo: any) => state.snapshot.stops.findIndex((stop: any) => stop.id === photo.stopId))).toEqual([1, 2]);
+  expect(state.snapshot.legs.every((leg: { mode: string }) => leg.mode === 'foot')).toBe(true);
+  expect(state.snapshot.photos.map((photo: { stopId: string }) =>
+    state.snapshot.stops.findIndex((stop: { id: string }) => stop.id === photo.stopId))).toEqual([1, 2]);
   await expect(stops).toHaveCount(2);
-  const mapImage = media.get(state.snapshot.mapId)!;
   const size = await page.evaluate(async image => {
     const bitmap = await createImageBitmap(await (await fetch(image)).blob());
-    const size = [bitmap.width, bitmap.height]; bitmap.close(); return size;
-  }, mapImage);
+    const dimensions = [bitmap.width, bitmap.height]; bitmap.close(); return dimensions;
+  }, media.get(state.snapshot.mapId)!);
   expect(size).toEqual([2200, 1800]);
   await panel.getByText('Photo credits', { exact: true }).click();
-  await expect(panel.locator('.route-photo-credits')).toContainText('2. Photo Author');
-  await page.screenshot({ path: '../ticket-infra/reports/walking-map-collage-mobile.png', fullPage: true });
+  await expect(panel.locator('.route-photo-credits')).toContainText('2. Fixture photographer');
 });
+
 
 for (const slug of ['cards', 'labels', 'price-tags', 'properties'])
   test(`${slug}: a 320px phone completes the form and gets a publication`, async ({ page }) => {
@@ -287,127 +268,92 @@ test('solutions dropdown remains inside a narrow phone viewport', async ({ page 
 
 test('nearby visits create a daytime plan and enter the route only when requested', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('codoc:language', 'en'));
-  await mockApi(page);
-  await page.route('**/api/walks/v1/places?*', route => route.fulfill({ json: { available: true, places: [{
-    id: '12345', label: 'City Gallery', longitude: 13.41, latitude: 52.5, url: 'https://2gis.ru/firm/12345',
+  const state = await mockApi(page);
+  await walkFrame(page, 'Gallery walk', [point('Start', 0), point('City Gallery', 1, {
     schedule: { Thu: { working_hours: [{ from: '10:00', to: '18:00' }] } },
-  }] } }));
+  }), point('Finish', 2)]);
   await page.goto('/start/tours');
-  const stops = page.locator('.route-stops > li');
-  await stops.nth(1).getByRole('combobox', { name: 'Address', exact: true }).fill('Museum Berlin');
-  await page.getByRole('option', { name: 'Berlin Museum' }).getByRole('button').click();
-  const panel = stops.nth(1).locator('.route-place-panel');
-  await panel.locator(':scope > summary').click();
-  await panel.getByRole('button', { name: 'Generate a walking map' }).click();
-  await expect(panel.locator('.route-walk-print')).toBeVisible();
-  await panel.getByText('Plan this day', {exact:true}).first().click();
-  await panel.getByRole('checkbox', { name: 'City Gallery' }).check();
+  const { panel, stops } = await selectWalk(page);
+  await panel.getByText('Plan this day', { exact: true }).click();
   await panel.getByLabel('Visit date').fill('2026-11-12');
-  await panel.getByRole('button', { name: 'Plan this day' }).click();
   await expect(panel).toContainText('10:00–11:00 · City Gallery');
-  await expect(stops).toHaveCount(2);
+  expect(state.snapshot).toBeNull();
   await panel.getByRole('button', { name: 'Add day plan to notes' }).click();
-  await expect(stops.nth(1).getByLabel('Notes for this stop (optional)')).toHaveValue('2026-11-12\n10:00–11:00 City Gallery');
-  await expect(panel.getByRole('button', { name: 'Add stop', exact: true })).toHaveCount(0);
+  await expect(stops.nth(1).getByLabel('Notes for this stop (optional)'))
+    .toHaveValue('2026-11-12\n10:00–11:00 City Gallery');
   await expect(stops).toHaveCount(2);
 });
 
-for(const width of [390,1440])test(`a ready Petersburg walk preserves its order and the main trip at ${width}px`,async({page})=>{
-  test.setTimeout(90000);await page.setViewportSize({width,height:900});
-  await page.addInitScript(()=>localStorage.setItem('codoc:language','en'));
-  const state=await mockApi(page);
-  await page.route('**/api/walks/v1/places/themed/enrich?*',route=>route.fulfill({json:[]}));
-  await page.route('**/api/walks/v1/addresses?*',route=>route.fulfill({json:[{label:'Saint Petersburg',longitude:30.315,latitude:59.938}]}));
-  await page.route('**/api/routing/v1/road',route=>{
-    const {start,end}=route.request().postDataJSON();
-    return route.fulfill({json:{mode:'foot',coordinates:[[start.longitude,start.latitude],[end.longitude,end.latitude]],durationSeconds:600,distanceMeters:800}});
-  });
-  await page.route('**/api/journeys/routes/places/photos**',route=>route.fulfill({json:[]}));
-  await page.route('**/api/journeys/routes/places/*/photo**',route=>route.fulfill({status:404}));
-  await page.goto('/start/tours');const stops=page.locator('.route-stops > li');
-  await stops.nth(1).getByRole('combobox',{name:'Address',exact:true}).fill('Petersburg');
-  await page.getByRole('option',{name:'Saint Petersburg'}).getByRole('button').click();
-  const panel=stops.nth(1).locator('.route-place-panel');await panel.locator(':scope > summary').click();
-  await panel.getByText('Ready-made walks in Saint Petersburg',{exact:true}).click();
-  await expect(panel.locator('.route-ready-walks article')).toHaveCount(3);
-  await panel.getByRole('button',{name:'Use this walk · Imperial detective',exact:true}).click();
-  await expect(panel.locator('.route-walk-print')).toBeVisible({timeout:40000});
-  expect(state.snapshot.stops.map((stop:any)=>stop.label)).toEqual(['Mikhailovsky Castle','Summer Garden','Field of Mars','Church of the Savior on Spilled Blood']);
+for (const width of [390, 1440]) test('a ready Petersburg walk preserves its order and the main trip at ' + width + 'px', async ({ page }) => {
+  test.setTimeout(60_000);
+  await page.setViewportSize({ width, height: 900 });
+  await page.addInitScript(() => localStorage.setItem('codoc:language', 'en'));
+  const state = await mockApi(page);
+  const ordered = ['Mikhailovsky Castle', 'Summer Garden', 'Field of Mars', 'Church of the Savior on Spilled Blood'];
+  await walkFrame(page, 'Imperial detective', ordered.map((name, index) =>
+    point(name, index, { lat: 59.938 + index * 0.0005, lng: 30.315 + index * 0.0005 })));
+  await page.route('**/api/walks/v1/addresses?*', route =>
+    route.fulfill({ json: [{ label: 'Saint Petersburg', longitude: 30.315, latitude: 59.938 }] }));
+  await page.goto('/start/tours');
+  const { panel, stops } = await selectWalk(page, 'Saint Petersburg');
+  await panel.getByRole('button', { name: 'Use this walk' }).click();
+  await expect(panel.locator('.route-walk-print')).toBeVisible({ timeout: 30_000 });
+  expect(state.snapshot.stops.map((stop: { label: string }) => stop.label)).toEqual(ordered);
   expect(state.snapshot.stops[0].meta.walk_title).toBe('Imperial detective');
   expect(state.snapshot.legs).toHaveLength(3);
-  expect(state.snapshot.legs.every((leg:any)=>leg.mode==='foot')).toBe(true);
+  expect(state.snapshot.legs.every((leg: { mode: string }) => leg.mode === 'foot')).toBe(true);
   await expect(stops).toHaveCount(2);
-  await expect(stops.nth(1).getByRole('combobox',{name:'Address',exact:true})).toHaveValue('Saint Petersburg');
-  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await expect(stops.nth(1).getByRole('combobox', { name: 'Address', exact: true })).toHaveValue('Saint Petersburg');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
-test('historic buildings can be searched and saved as a separate walk on a phone',async({page})=>{
-  test.setTimeout(90000);await page.setViewportSize({width:390,height:844});
-  await page.addInitScript(()=>localStorage.setItem('codoc:language','en'));
-  const state=await mockApi(page);let query='',beforeYear='';
-  await page.route('**/api/walks/v1/buildings/nearby?*',route=>{
-    query=new URL(route.request().url()).searchParams.get('q')??'';
-    beforeYear=new URL(route.request().url()).searchParams.get('beforeYear')??'';
-    return route.fulfill({json:[{id:101,address:'Historic house',longitude:13.4002,latitude:52.5002,constructionYear:1860,architect:'Fixture architect',style:'Classicism',sourceUrl:'https://example.org/house'}]});
-  });
-  await page.route('**/api/walks/v1/places/themed/enrich?*',route=>route.fulfill({json:[]}));
-  await page.goto('/start/tours');const stops=page.locator('.route-stops > li');
-  await stops.nth(1).getByRole('combobox',{name:'Address',exact:true}).fill('Museum Berlin');
-  await page.getByRole('option',{name:'Berlin Museum'}).getByRole('button').click();
-  const panel=stops.nth(1).locator('.route-place-panel');await panel.locator(':scope > summary').click();
-  await panel.getByLabel('Walk theme',{exact:true}).selectOption('buildings');
-  await panel.getByLabel('Address, architect or style').fill('Fixture architect');
-  await panel.getByRole('button',{name:'Generate a walking map',exact:true}).click();
-  await expect(panel.locator('.route-walk-print')).toBeVisible({timeout:30000});
-  expect(query).toBe('Fixture architect');expect(state.snapshot.stops[1].description).toContain('1860');
-  expect(beforeYear).toBe('0');await expect(panel.getByLabel('Construction period')).toHaveValue('0');
-  expect(state.snapshot.stops[1].meta.source).toBe('HOITH');expect(state.snapshot.stops[1].meta.architect).toBe('Fixture architect');
-  await expect(panel.locator('.route-place-description')).toContainText('1860');
-  await expect(panel.locator('.route-place-description')).toBeVisible();
-  await expect(panel.getByText('About this place',{exact:true})).toHaveCount(0);
-  await expect(stops).toHaveCount(2);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+test('historical buildings remain separate and retain the year, architect and source on a phone', async ({ page }) => {
+  test.setTimeout(60_000);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(() => localStorage.setItem('codoc:language', 'en'));
+  const state = await mockApi(page);
+  await walkFrame(page, 'Historical walk', [point('Start', 0), point('Historic house', 1, {
+    source: 'HOITH', architect: 'Fixture architect', description: '1860 · Classicism',
+    sourceUrl: 'https://example.org/house',
+  }), point('Finish', 2)]);
+  await page.goto('/start/tours');
+  const { panel, stops } = await selectWalk(page);
+  await panel.getByRole('button', { name: 'Use this walk' }).click();
+  await expect(panel.locator('.route-walk-print')).toBeVisible({ timeout: 30_000 });
+  expect(state.snapshot.stops[1].meta).toMatchObject({ source: 'HOITH', architect: 'Fixture architect' });
+  await expect(panel).toContainText('1860 · Classicism');
+  await expect(stops).toHaveCount(2);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
-test('themed walks preserve the trip and print seven numbered photographs on a phone',async({page})=>{
-  test.setTimeout(90000);await page.setViewportSize({width:390,height:844});
-  await page.addInitScript(()=>localStorage.setItem('codoc:language','en'));
-  const state=await mockApi(page);let searchTheme='',photoRequests=0;
-  await page.route('**/api/walks/v1/places/themed?*',route=>{
-    searchTheme=new URL(route.request().url()).searchParams.get('theme')??'';
-    const places=Array.from({length:7},(_,i)=>({id:i===0?'wikimapia-123':`node-${i}`,label:i===0?'Legend courtyard':`Quiet place ${i}`,
-      longitude:13.4002+i*.0003,latitude:52.5002+i*.0003,url:i===0?'https://wikimapia.org/123':`https://www.openstreetmap.org/node/${i}`,
-      source:i===0?'wikimapia':'osm',inOsm:i!==0,description:'A local story about this place.',visitStatus:i===1?'CLOSED':'UNKNOWN',
-      meta:{source:i===0?'wikimapia':'osm',theme:'mystic',in_osm:String(i!==0),visit_status:i===1?'CLOSED':'UNKNOWN'}}));
-    return route.fulfill({json:{available:true,source:'OpenStreetMap / Wikimapia',places}});
-  });
-  await page.route('**/api/walks/v1/places/themed/enrich?*',route=>{
-    photoRequests++;const points=route.request().postDataJSON() as {id:string}[];
-    return route.fulfill({json:points.map(point=>({stopId:point.id,imageId:'c'.repeat(64),sourceUrl:'https://commons.wikimedia.org/wiki/File:Fixture.jpg',
-      author:'Fixture photographer',license:'CC BY 4.0',licenseUrl:'https://creativecommons.org/licenses/by/4.0/'}))});
-  });
-  await page.route('**/api/journeys/media/*',route=>{
-    if(new URL(route.request().url()).pathname.endsWith('c'.repeat(64)))return route.fulfill({path:'public/backgrounds/thumbs/sage-paper.jpg',contentType:'image/jpeg'});
-    if(!state.image)return route.fulfill({status:404});
-    return route.fulfill({contentType:'image/jpeg',body:Buffer.from(state.image.split(',')[1],'base64')});
-  });
-  await page.route('**/api/routing/v1/road',route=>{
-    const input=route.request().postDataJSON();return route.fulfill({json:{coordinates:[[input.start.longitude,input.start.latitude],[input.end.longitude,input.end.latitude]],durationSeconds:60,distanceMeters:100}});
-  });
-  await page.goto('/start/tours');const stops=page.locator('.route-stops > li');
-  await stops.nth(1).getByRole('combobox',{name:'Address',exact:true}).fill('Museum Berlin');
-  await page.getByRole('option',{name:'Berlin Museum'}).getByRole('button').click();
-  const panel=stops.nth(1).locator('.route-place-panel');await panel.locator(':scope > summary').click();
-  await panel.getByLabel('Walk theme',{exact:true}).selectOption('mystic');
-  await expect(stops.first().locator('.route-place-panel')).toHaveCount(0);
-  await expect(panel.getByRole('button',{name:'Create walk from selected places',exact:true})).toHaveCount(0);
-  await panel.getByRole('button',{name:'Generate a walking map',exact:true}).click();
-  await expect(panel).toContainText('Community place');await expect(panel).toContainText('Closed according to OSM');
-  await expect(panel.getByRole('checkbox',{name:'Quiet place 1',exact:true})).toBeChecked();
-  await expect(panel.locator('.route-walk-print')).toBeVisible({timeout:30000});
-  expect(searchTheme).toBe('mystic');expect(photoRequests).toBe(1);expect(state.snapshot.photos).toHaveLength(7);expect(state.snapshot.stops).toHaveLength(9);
-  expect(state.snapshot.stops[1].meta.theme).toBe('mystic');expect(state.snapshot.stops[1].meta.photo_image_id).toBe('c'.repeat(64));
-  await expect(stops).toHaveCount(2);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
-  await page.screenshot({path:'../ticket-infra/reports/themed-walk-mobile.png',fullPage:true});
+test('themed walks preserve the trip and print seven numbered photographs on a phone', async ({ page }) => {
+  test.setTimeout(60_000);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(() => localStorage.setItem('codoc:language', 'en'));
+  const state = await mockApi(page);
+  await photoFixtures(page);
+  await walkFrame(page, 'Themed walk', [
+    point('Start', 0),
+    ...Array.from({ length: 7 }, (_, index) => point('Themed place ' + (index + 1), index + 1, {
+      photoReference: 'File:Theme-' + index + '.jpg', theme: 'mystic', source: index ? 'osm' : 'wikimapia',
+      inOsm: index !== 0, visitStatus: index === 1 ? 'CLOSED' : 'UNKNOWN', description: 'A local story.',
+    })),
+    point('Finish', 8),
+  ]);
+  await page.goto('/start/tours');
+  const { panel, stops } = await selectWalk(page);
+  await panel.getByRole('button', { name: 'Use this walk' }).click();
+  await expect(panel.locator('.route-walk-print')).toBeVisible({ timeout: 30_000 });
+  expect(state.snapshot.stops).toHaveLength(9);
+  expect(state.snapshot.photos).toHaveLength(7);
+  expect(state.snapshot.photos.map((photo: { stopId: string }) =>
+    state.snapshot.stops.findIndex((stop: { id: string }) => stop.id === photo.stopId))).toEqual([1, 2, 3, 4, 5, 6, 7]);
+  expect(state.snapshot.stops[1].meta).toMatchObject({ theme: 'mystic', source: 'wikimapia', in_osm: 'false' });
+  expect(state.snapshot.stops[2].meta.visit_status).toBe('CLOSED');
+  await panel.getByText('Photo credits', { exact: true }).click();
+  await expect(panel.locator('.route-photo-credits')).toContainText('7. Fixture photographer');
+  await expect(stops).toHaveCount(2);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
 

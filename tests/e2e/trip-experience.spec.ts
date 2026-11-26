@@ -59,6 +59,7 @@ test('keeps a walk on the receiving city and retains the draft when starting a n
     } }, location.origin);
   });
   await expect(workspace.getByText('Tver riverside walk', { exact: true })).toBeVisible();
+  await workspace.getByRole('button', { name: 'Use this walk' }).click();
   await workspace.locator('button[data-trip-day="3"]').click();
   await expect(map.locator('[title="Yaroslavl"]')).toBeInViewport();
   await expect(map.locator('[title="Tver bridge"]')).toHaveCount(0);

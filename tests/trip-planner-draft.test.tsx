@@ -118,20 +118,23 @@ test('previews an authenticated iframe transfer and imports geometry only on con
   fireEvent.click(screen.getByRole('button', { name: /↗/ }));
   const frame = document.querySelector('iframe')!;
   const walk = {
-    version: 1, title: 'River walk',
-    points: [{ name: 'Pier', lat: 59, lng: 30 }, { name: 'Bridge', lat: 60, lng: 31 }],
+    version: 1, id: 'river-walk', title: 'River walk',
+    points: [{ name: 'Pier', poiId: 'pier', lat: 59, lng: 30 }, { name: 'Bridge', poiId: 'bridge', lat: 60, lng: 31 }],
     route: { legs: [{ fromIndex: 0, toIndex: 1, geometry: [[59, 30], [60, 31]],
       distanceMeters: 900, durationSeconds: 600 }] },
   };
   const data = { type: 'private-walk:complete', channel: new URL(frame.src).searchParams.get('channel'), walk };
   await act(async () => window.dispatchEvent(new MessageEvent('message', { source: window, origin: location.origin, data })));
   expect(screen.queryByText('River walk')).toBeNull();
-  await act(async () => window.dispatchEvent(new MessageEvent('message', { source: frame.contentWindow, origin: location.origin, data })));
+  await act(async () => {
+    window.dispatchEvent(new MessageEvent('message', { source: frame.contentWindow, origin: location.origin, data }));
+    window.dispatchEvent(new MessageEvent('message', { source: frame.contentWindow, origin: location.origin, data }));
+  });
   expect(screen.getByText('River walk')).toBeTruthy();
   expect(screen.getByText('Legs: 1')).toBeTruthy();
   expect(screen.queryByText('Pier')).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: t('Use this walk') }));
-  expect(screen.getByText('Pier')).toBeTruthy();
+  expect(screen.getAllByText('Pier')).toHaveLength(1);
   expect(screen.getByText('Legs: 1').getAttribute('data-editable')).toBe('false');
   fireEvent.click(screen.getByRole('button', { name: t('Undo') }));
   expect(screen.queryByText('Pier')).toBeNull();
@@ -144,6 +147,24 @@ test('previews an authenticated iframe transfer and imports geometry only on con
   expect(screen.getByText('Pier')).toBeTruthy();
   expect(screen.getByText('Legs: 1')).toBeTruthy();
   expect(screen.queryByRole('button', { name: t('Build walking route') })).toBeNull();
+
+  const first = screen.getByText('Pier').closest('li')!;
+  first.querySelector('details')!.open = true;
+  const noteName = t('Notes for this stop (optional)');
+  fireEvent.change(within(first).getByRole('textbox', { name: noteName }), { target: { value: 'Meet at noon' } });
+  fireEvent.click(screen.getByRole('button', { name: /↗/ }));
+  const nextFrame = document.querySelector('iframe')!;
+  await act(async () => window.dispatchEvent(new MessageEvent('message', {
+    source: nextFrame.contentWindow, origin: location.origin,
+    data: { ...data, channel: new URL(nextFrame.src).searchParams.get('channel') },
+  })));
+  fireEvent.click(screen.getByRole('button', { name: t('Use this walk') }));
+  expect(screen.getAllByText('Pier')).toHaveLength(1);
+  const reopened = screen.getByText('Pier').closest('li')!;
+  reopened.querySelector('details')!.open = true;
+  expect(within(reopened).getByRole('textbox', { name: noteName })).toHaveValue('Meet at noon');
+  fireEvent.click(screen.getByRole('button', { name: t('Remove walk from day') }));
+  expect(screen.queryByText('Pier')).toBeNull();
 });
 
 test('offers a preview for a valid shared walk URL without altering the URL', () => {

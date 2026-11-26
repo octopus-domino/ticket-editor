@@ -2,6 +2,7 @@ import { forwardRef, useImperativeHandle } from 'react';
 import { act, fireEvent, render, screen, cleanup } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { RoutePlacePanel } from '../src/features/journeys/ui/RoutePlacePanel';
+import { t } from '../src/shared/i18n';
 const save = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 vi.mock('../src/features/journeys/ui/RouteWalk', () => ({ RouteWalk: forwardRef(function Walk(_props, ref) {
   useImperativeHandle(ref, () => ({ save })); return null;
@@ -13,8 +14,9 @@ const walk = { version: 1, title: 'River walk', points: [{ name: 'Start', lat: 5
 beforeEach(() => { save.mockClear(); HTMLDialogElement.prototype.showModal = vi.fn(); });
 afterEach(cleanup);
 it('opens the sole walk editor and only accepts a transfer from its iframe and channel', async () => {
-  render(<RoutePlacePanel stop={stop} visitDate="2026-11-18" onAdd={vi.fn()} onNotes={vi.fn()} onWalkChange={vi.fn()} onWalkBusy={vi.fn()} />);
-  fireEvent.click(screen.getByRole('button', { hidden: true }));
+  const { container } = render(<RoutePlacePanel stop={stop} visitDate="2026-11-18" onAdd={vi.fn()} onNotes={vi.fn()} onWalkChange={vi.fn()} onWalkBusy={vi.fn()} />);
+  container.querySelector('details')!.open = true;
+  fireEvent.click(screen.getByRole('button', { name: /↗/ }));
   const frame = document.querySelector('iframe')!;
   const url = new URL(frame.src);
   expect(url.pathname).toBe('/private-journey/');
@@ -22,6 +24,8 @@ it('opens the sole walk editor and only accepts a transfer from its iframe and c
   await act(async () => window.dispatchEvent(new MessageEvent('message', { source: frame.contentWindow, origin: 'https://unrelated.example', data })));
   expect(save).not.toHaveBeenCalled();
   await act(async () => window.dispatchEvent(new MessageEvent('message', { source: frame.contentWindow, origin: location.origin, data })));
+  expect(save).not.toHaveBeenCalled();
+  await act(async () => fireEvent.click(screen.getByRole('button', { name: t('Use this walk') })));
   expect(save).toHaveBeenCalledOnce();
   expect(save.mock.calls[0][1][0].coordinates).toEqual([[30.3, 59.9], [30.31, 59.91]]);
   expect(document.querySelector('iframe')).toBeNull();

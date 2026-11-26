@@ -15,7 +15,7 @@ test('two phones contribute to one album; organiser reorders while contributors 
       if (!path.startsWith('/api/')) return route.continue();
       const state = () => ({ revision, canManage: manager, photos: photos.map(({ id, caption, contributor }) => ({ id, caption, contributor })) });
       if (path === '/api/auth/refresh') return route.fulfill(manager ? { json: { accessToken: 'test', user: { id: 'owner', name: 'Owner', email: 'owner@example.test' } } } : { status: 401, json: {} });
-      if (path.startsWith('/api/journeys/fonts/')) return route.fulfill({ path: `../ticket-pdf/src/main/resources/fonts/${path.endsWith('handwriting-zh') ? 'ZhiMangXing-Regular.ttf' : 'MarckScript-Regular.ttf'}`, contentType: 'font/ttf' });
+      if (path.startsWith('/api/journeys/fonts/')) return route.fulfill({ path: 'tests/fixtures/journeys/fonts/DejaVuSerif.ttf', contentType: 'font/ttf' });
       if (path === `/api/journeys/${id}` || path === `/api/journeys/${id}/manage`) return route.fulfill({ json: albumDocument });
       if (path.endsWith('/status')) return route.fulfill({ json: { state: 'ACTIVE', usedAt: null, validUntil: '', consumable: false } });
       if (path.endsWith('/responses')) return route.fulfill({ json: [] });

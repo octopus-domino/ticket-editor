@@ -99,6 +99,7 @@ test('stamp layers and properties stay within the modal beside the canvas', asyn
 test('selected data set opens its values and a schema field can be dragged onto the canvas', async ({
   page,
 }) => {
+  await page.setViewportSize({ width: 1728, height: 960 });
   await account(page);
   await page.addInitScript(() =>
     localStorage.setItem(

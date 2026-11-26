@@ -49,9 +49,7 @@ test('workspace navigation exposes the constructor and ready workflows', async (
   await expect(page.locator('.journey-form-panel')).toBeVisible();
 });
 
-test('service landing pages have metadata and stay usable on a phone', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  for (const path of [
+for (const path of [
     '/solutions/',
     '/website-builder/',
     '/invitations-online/',
@@ -62,7 +60,9 @@ test('service landing pages have metadata and stay usable on a phone', async ({ 
     '/price-tags-with-reviews/',
     '/property-cards/',
     '/travel-itineraries/',
-  ]) {
+]) {
+  test(`service landing ${path} has metadata and stays usable on a phone`, async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(path);
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     await expect(page.locator('link[rel=canonical]')).toHaveAttribute(
@@ -74,8 +74,14 @@ test('service landing pages have metadata and stay usable on a phone', async ({ 
       await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
       path,
     ).toBe(true);
-  }
-  await page.screenshot({ path: '../ticket-infra/reports/service-discovery-mobile.png', fullPage: true });
+    if (path === '/travel-itineraries/') {
+      await page.screenshot({ path: '../ticket-infra/reports/service-discovery-mobile.png', fullPage: true });
+    }
+  });
+}
+
+test('the site builder stays out of the search index on a phone', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/sites/new');
   await expect(page.locator('meta[name=robots]')).toHaveAttribute('content', 'noindex, nofollow');
 });

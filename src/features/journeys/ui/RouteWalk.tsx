@@ -73,9 +73,14 @@ export const RouteWalk = forwardRef<RouteWalkHandle, { value?: string; onChange:
       {!!snapshot.photos?.length && <details><summary>{t('Photo credits')}</summary><ol className="route-photo-credits">{snapshot.photos.map(photo => <li key={photo.stopId}>
         {snapshot.pointNumbering === 'interior' ? routePointMarker(snapshot.stops.findIndex(stop => stop.id === photo.stopId), snapshot.stops.length) : snapshot.stops.findIndex(stop => stop.id === photo.stopId) + 1}. <a href={photo.sourceUrl} target="_blank" rel="noopener noreferrer">{photo.author}</a> · <a href={photo.licenseUrl} target="_blank" rel="noopener noreferrer">{photo.license}</a>
       </li>)}</ol></details>}
-      <ol className="route-timeline">{snapshot.timeline.filter(row => row.kind === 'stop').map((row, index) => <li key={index}>
-        <strong>{routePointCaption(index, snapshot.stops.length)} · {row.label}</strong><time>{time(row.start, row.zone)}–{time(row.end, row.zone)}</time>{row.description && <small>{row.description}</small>}
-      </li>)}</ol>
+      <ol className="route-timeline">{snapshot.timeline.filter(row => row.kind === 'stop').map((row, index) => {
+        const meta = snapshot.stops[index]?.meta;
+        return <li key={index}>
+          <strong>{routePointCaption(index, snapshot.stops.length)} · {row.label}</strong><time>{time(row.start, row.zone)}–{time(row.end, row.zone)}</time>{row.description && <small>{row.description}</small>}
+          {meta?.in_osm === 'false' && <small>{t('Community place')}</small>}
+          {meta?.visit_status === 'CLOSED' && <small>{t('Closed according to OSM')}</small>}
+        </li>;
+      })}</ol>
       <div className="route-actions">
         <button type="button" className="journey-secondary" disabled={downloading || !snapshot.mapId} onClick={() => void download()}>{t('Download walking map (JPG)')}</button>
         <button type="button" className="journey-secondary" onClick={() => { setSnapshot(null); loaded.current = ''; callbacks.current.onChange(undefined); }}>{t('Remove walk')}</button>

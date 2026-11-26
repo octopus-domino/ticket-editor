@@ -146,7 +146,7 @@ test('receives the finished walk from the built Journey application', async ({ p
   }));
   let saved: unknown;
   await page.route('**/api/routing/v1/trips**', route => {
-    if (route.request().method() === 'POST') saved = route.request().postDataJSON();
+    if (['POST', 'PUT'].includes(route.request().method())) saved = route.request().postDataJSON();
     return saved ? route.fulfill({ json: saved }) : route.fulfill({ status: 404 });
   });
   await page.route('**/*.tile.openstreetmap.org/**', request => request.abort());
@@ -182,12 +182,20 @@ test('receives the finished walk from the built Journey application', async ({ p
     expect.objectContaining({ title: second.name, photoRefs: [], photoCredits: [] })],
   })]) });
   await planner.getByRole('link', { name: 'Open account trip' }).click();
-  await page.locator('button[data-trip-day="2"]').click();
-  await page.getByRole('button', { name: first.name, exact: true }).click();
+  const day = page.getByRole('navigation', { name: 'Trip overview' }).getByRole('button', { name: /Jan 1, 2027/ });
+  await day.click();
+  const firstStop = page.locator('.trip-exp-itinerary').getByRole('button', { name: first.name, exact: true });
+  await firstStop.click();
   await expect(page.getByText('Meet by the door', { exact: true })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Fixture photographer' })).toBeVisible();
+  await page.getByRole('button', { name: 'Rename places' }).click();
+  await page.getByLabel('Notes for this stop (optional)').fill('Meet by the courtyard');
+  await firstStop.locator('..').getByRole('button', { name: 'Apply' }).click();
+  await page.getByRole('button', { name: 'Save trip to account' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Trip saved to account.' })).toBeVisible();
   await page.reload();
-  await expect(page.getByRole('button', { name: first.name, exact: true })).toBeVisible();
+  await firstStop.click();
+  await expect(page.getByText('Meet by the courtyard', { exact: true })).toBeVisible();
 });
 
 test('plans from address suggestions and selects transport between the chosen cities', async ({ page }) => {

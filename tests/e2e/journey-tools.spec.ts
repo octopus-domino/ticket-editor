@@ -350,6 +350,8 @@ test('themed walks preserve the trip and print seven numbered photographs on a p
     state.snapshot.stops.findIndex((stop: { id: string }) => stop.id === photo.stopId))).toEqual([1, 2, 3, 4, 5, 6, 7]);
   expect(state.snapshot.stops[1].meta).toMatchObject({ theme: 'mystic', source: 'wikimapia', in_osm: 'false' });
   expect(state.snapshot.stops[2].meta.visit_status).toBe('CLOSED');
+  await expect(panel.locator('.route-timeline').getByText('Community place')).toBeVisible();
+  await expect(panel.locator('.route-timeline').getByText('Closed according to OSM')).toBeVisible();
   await panel.getByText('Photo credits', { exact: true }).click();
   await expect(panel.locator('.route-photo-credits')).toContainText('7. Fixture photographer');
   await expect(stops).toHaveCount(2);

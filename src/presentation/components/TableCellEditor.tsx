@@ -22,7 +22,12 @@ export function TableCellEditor({ table, row, col, stageRef, onUpdate, onMove, o
   const input = useRef<HTMLTextAreaElement>(null);
   const frame = useCanvasCellFrame(stageRef, table.id, { row, col }, table);
   const style = table.cellStyles?.[row]?.[col];
-  useLayoutEffect(() => { input.current?.focus(); input.current?.select(); }, [row, col, !!frame]);
+  const canFocus = Boolean(frame);
+  useLayoutEffect(() => {
+    if (!canFocus) return;
+    input.current?.focus();
+    input.current?.select();
+  }, [canFocus, row, col]);
 
   if (!frame) return null;
   return createPortal(<>

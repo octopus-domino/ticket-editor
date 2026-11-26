@@ -55,7 +55,7 @@ test('fills the city from the latest map click and shows it in the day field aft
     await act(async () => { resolveFirst({ city: 'Old result' }); });
     expect(input).toHaveValue('Petersburg');
     fireEvent.click(map.getByRole('button', { name: t('Add city') }));
-    expect(screen.getByRole('button', { name: t('Map'), exact: true })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: t('Map') })).toHaveAttribute('aria-pressed', 'true');
     fireEvent.click(screen.getByRole('button', { name: 'Pick map point' }));
     await waitFor(() => expect(map.getByRole('textbox', { name: t('City') })).toHaveValue('Tver'));
     fireEvent.click(map.getByRole('button', { name: t('Add city') }));
@@ -65,8 +65,8 @@ test('fills the city from the latest map click and shows it in the day field aft
     });
     expect(stored.days[1].visits).toBeUndefined();
     expect(stored.days[2].city).toBe('Tver');
-    expect(screen.getByRole('button', { name: t('Map'), exact: true })).toHaveAttribute('aria-pressed', 'true');
-    fireEvent.click(screen.getByRole('button', { name: t('Plan'), exact: true }));
+    expect(screen.getByRole('button', { name: t('Map') })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(screen.getByRole('button', { name: t('Plan') }));
     expect(screen.getByRole('combobox', { name: t('City') })).toHaveValue('Tver');
   } finally { request.mockRestore(); }
 });
@@ -76,13 +76,13 @@ test('adds a city from the list as a new day and keeps the list open', () => {
   const first = screen.getByRole('combobox', { name: t('City') });
   fireEvent.change(first, { target: { value: 'Petersburg' } });
   fireEvent.keyDown(first, { key: 'Enter' });
-  fireEvent.click(screen.getByRole('button', { name: t('City list'), exact: true }));
+  fireEvent.click(screen.getByRole('button', { name: t('City list') }));
   const list = within(screen.getByRole('table', { name: t('City list') }).parentElement!);
   const city = list.getByRole('combobox', { name: t('City') });
   fireEvent.change(city, { target: { value: 'Tver' } });
   fireEvent.keyDown(city, { key: 'Enter' });
   expect(list.getByRole('button', { name: 'Tver' })).toBeVisible();
-  expect(screen.getByRole('button', { name: t('City list'), exact: true })).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.getByRole('button', { name: t('City list') })).toHaveAttribute('aria-pressed', 'true');
   const stored = JSON.parse(localStorage.getItem(storageKey)!);
   expect(stored.days[1].city).toBe('Petersburg');
   expect(stored.days[2].city).toBe('Tver');

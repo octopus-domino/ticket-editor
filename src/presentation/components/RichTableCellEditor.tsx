@@ -46,7 +46,10 @@ export function RichTableCellEditor(props: Props) {
       current.onUpdate(patchRichCell(current.element.html ?? '', current.tableIndex, current.cellIndex, editor.getHTML()));
     },
   });
-  useLayoutEffect(() => { if (frame && editor) editor.commands.focus('end'); }, [editor, !!frame]);
+  const canFocus = Boolean(frame && source.cell);
+  useLayoutEffect(() => {
+    if (canFocus) editor?.commands.focus('end');
+  }, [canFocus, editor]);
   if (!editor || !frame || !source.cell) return null;
 
   return createPortal(<div className="canvas-cell-editor" style={{ ...frame, boxSizing: 'border-box',

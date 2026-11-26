@@ -1,7 +1,7 @@
 import type { DayPlanPreferences, PlanningStop } from '../domain/planner/plannerTypes';
 import { authFetch } from '@/shared/api/client';
 import { Temporal } from '@js-temporal/polyfill';
-import type { PlannedLeg } from '../domain/route';
+import type { PlannedLeg, RoutePhoto } from '../domain/route';
 import type { RouteStop } from '../domain/routeTimeline';
 import type { SharedTrip } from '../domain/sharedTrip';
 
@@ -17,12 +17,16 @@ export interface TripVisit {
   stops: RouteStop[];
   city?: string;
   cityPoint?: CityPoint;
-  importedWalk?: { title: string; legs: PlannedLeg[] };
+  importedWalk?: { id?: string; title: string; legs: PlannedLeg[]; stops?: RouteStop[]; photos?: RoutePhoto[] };
   route?: PlannedLeg[];
   lodging?: TripLodging;
   train?: TripTrain;
   transfer?: TripTransfer;
   ideas?: TripIdea[];
+}
+
+export function importedStops(visit: TripVisit) {
+  return visit.importedWalk?.stops ?? visit.stops;
 }
 
 export interface TripDayDraft extends TripVisit {
@@ -117,8 +121,11 @@ export function tripPayload(draft: LocalTripDraft, title: string, connections: P
     const visits = [{ id: number, visit: day }, ...(day.visits ?? []).map(visit => ({ id: visit.id, visit }))];
     const city = cityFor(day.city?.trim() || day.train?.fromCity || day.train?.from || day.transfer?.from || '', day.cityPoint, number);
     cityIds.set(number, city.id);
-    const walkSections = visits.flatMap(({ visit }) => (visit.importedWalk?.legs ?? visit.route ?? []).map((leg, index) => ({
-      fromSegmentId: visit.stops[index].id, toSegmentId: visit.stops[index + 1].id,
+    const walkSections = visits.flatMap(({ visit }) => [
+      ...(!visit.importedWalk || visit.importedWalk.stops ? (visit.route ?? []).map((leg, index) => ({ leg, stops: visit.stops, index })) : []),
+      ...(visit.importedWalk?.legs ?? []).map((leg, index) => ({ leg, stops: importedStops(visit), index })),
+    ].map(({ leg, stops, index }) => ({
+      fromSegmentId: stops[index].id, toSegmentId: stops[index + 1].id,
       geometry: leg.coordinates.map(([longitude, latitude]) => ({ longitude, latitude })),
       distanceMeters: leg.distanceMeters ?? 0, durationSeconds: leg.durationSeconds,
     })));
@@ -131,9 +138,15 @@ export function tripPayload(draft: LocalTripDraft, title: string, connections: P
           id: `visit-${id}`, title: visit.city, latitude: visit.cityPoint?.latitude, longitude: visit.cityPoint?.longitude,
           category: 'TRANSPORT', note: visit.importedWalk?.title, photoRefs: [], idea: false,
         }] : []),
-        ...visit.stops.map(stop => ({
+        ...[...visit.stops, ...(visit.importedWalk?.stops ?? [])].map(stop => ({
           id: stop.id, title: stop.label, latitude: stop.latitude, longitude: stop.longitude,
-          category: 'WALK', note: stop.description, photoRefs: [], idea: false,
+          category: 'WALK', note: stop.description,
+          walkNote: stop.meta?.user_note,
+          walkId: visit.importedWalk?.id && importedStops(visit).some(item => item.id === stop.id) ? visit.importedWalk.id : undefined,
+          sourceUrl: stop.meta?.source_url,
+          photoRefs: (visit.importedWalk?.photos ?? []).filter(photo => photo.stopId === stop.id).map(photo => photo.imageId),
+          photoCredits: visit.importedWalk?.photos?.filter(photo => photo.stopId === stop.id),
+          idea: false,
         })),
         ...(visit.planningStops ?? []).map(stop => ({
           id: stop.id, title: stop.title, latitude: stop.latitude, longitude: stop.longitude,

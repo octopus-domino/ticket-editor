@@ -11,7 +11,7 @@ import { useStore } from '@/shared/store/store';
 import { TripTemplateAction } from './TripTemplateAction';
 import { geographicDistance } from '../domain/route';
 import { sharedTripJson, shareTripUrl } from '../domain/sharedTrip';
-import { saveTripToAccount, TripAccountSaveError, tripLocations, tripPayload, type PointTransport, type CityPoint, type LocalTripDraft, type TripDayDraft, type TripVisit, type TripTrain } from '../api/tripDraft';
+import { importedStops, saveTripToAccount, TripAccountSaveError, tripLocations, tripPayload, type PointTransport, type CityPoint, type LocalTripDraft, type TripDayDraft, type TripVisit, type TripTrain } from '../api/tripDraft';
 import { RouteMap } from './RouteMap';
 import { TripWalkImport, type WalkCandidate } from './TripWalkImport';
 import { TripTrainSearch } from './TripTrainSearch';
@@ -131,8 +131,8 @@ function Planner({ v2, experience, resume, storageKey, onDraftChange }: {
   const cityMap = useMemo(() => showingCities && hasCityPins && duration >= 2 && lastPlannedDay <= duration
     ? tripPayload(draft, title) : undefined, [draft, duration, hasCityPins, lastPlannedDay, showingCities, title]);
   const connectionsByDay = new Map(connections.map(connection => [connection.to.id, connection]));
-  const hasDayPlan = Boolean(day.city || day.cityPoint || day.stops.length || day.train || day.transfer || day.lodging);
-  const hasTripPlan = locations.some(({ visit }) => Boolean(visit.city || visit.cityPoint || visit.stops.length
+  const hasDayPlan = Boolean(day.city || day.cityPoint || importedStops(day).length || day.train || day.transfer || day.lodging);
+  const hasTripPlan = locations.some(({ visit }) => Boolean(visit.city || visit.cityPoint || importedStops(visit).length
     || visit.train || visit.transfer || visit.lodging || visit.planningStops?.length || visit.ideas?.length));
   const firstStop = experience && !hasTripPlan;
   const dayDate = new Date(Date.parse(draft.startDate) + (dayNumber - 1) * dayMilliseconds);
@@ -242,7 +242,7 @@ function Planner({ v2, experience, resume, storageKey, onDraftChange }: {
     const days = { ...draft.days };
     if (extra) days[dayNumber] = { ...dayDraft, visits: dayDraft.visits?.map(visit =>
       visit.id === extra.id ? { ...visit, ...changes } : visit) };
-    else if (next.stops.length || next.ideas?.length || next.city?.trim() || next.cityPoint ||
+    else if (next.importedWalk || next.stops.length || next.ideas?.length || next.city?.trim() || next.cityPoint ||
       next.lodging || next.train || next.transfer || next.planningStops?.length || dayDraft.visits?.length) days[dayNumber] = { ...dayDraft, dayId: dayDraft.dayId ?? crypto.randomUUID(), ...changes };
     else delete days[dayNumber];
     edit({ days });
@@ -373,7 +373,24 @@ function Planner({ v2, experience, resume, storageKey, onDraftChange }: {
   }
 
   function attachWalk(walk: NonNullable<WalkCandidate>) {
-    editDay({ stops: walk.stops, importedWalk: { title: walk.title, legs: walk.legs }, route: undefined }, true);
+    const legacy = day.importedWalk && !day.importedWalk.stops;
+    const sameWalk = walk.id && day.importedWalk?.id === walk.id;
+    const previous = new Map(sameWalk ? importedStops(day).map((stop, index) =>
+      [stop.meta?.poi_id ?? index, stop]) : []);
+    const receivedIds = new Map<string, string>();
+    const stops = walk.stops.map((stop, index) => {
+      const existing = previous.get(stop.meta?.poi_id ?? index);
+      const id = existing?.id ?? crypto.randomUUID();
+      receivedIds.set(stop.id, id);
+      const note = existing?.meta?.user_note;
+      return { ...stop, id, meta: note === undefined ? stop.meta : { ...stop.meta, user_note: note } };
+    });
+    const photos = walk.photos?.flatMap(photo => {
+      const stopId = receivedIds.get(photo.stopId);
+      return stopId ? [{ ...photo, stopId }] : [];
+    });
+    editDay({ ...(legacy ? { stops: [], route: undefined } : {}),
+      importedWalk: { id: walk.id, title: walk.title, legs: walk.legs, stops, photos } }, true);
     setPreview(null);
     setFocusedDay(dayNumber);
     setDayMap(undefined);
@@ -572,8 +589,11 @@ function Planner({ v2, experience, resume, storageKey, onDraftChange }: {
   const { walkStops, walkLegs } = useMemo(() => {
     const visits = extra ? [extra] : [dayDraft, ...(dayDraft.visits ?? [])];
     return {
-      walkStops: preview?.stops ?? visits.flatMap(visit => visit.stops),
-      walkLegs: preview?.legs ?? visits.flatMap(visit => visit.importedWalk?.legs ?? visit.route ?? noLegs),
+      walkStops: preview?.stops ?? visits.flatMap(visit => [...visit.stops, ...(visit.importedWalk?.stops ?? [])]),
+      walkLegs: preview?.legs ?? visits.flatMap(visit => [
+        ...(!visit.importedWalk || visit.importedWalk.stops ? visit.route ?? noLegs : noLegs),
+        ...(visit.importedWalk?.legs ?? noLegs),
+      ]),
     };
   }, [dayDraft, extra, preview]);
   const cityFocus = focusedDay === dayNumber && day.cityPoint;
@@ -813,11 +833,6 @@ function Planner({ v2, experience, resume, storageKey, onDraftChange }: {
               editDay({ ideas: day.ideas?.filter(item => item.id !== idea.id) }, true)}>{t('Remove')}</button>
           </li>)}</ul>}
           {(!experience || hasDayPlan || new URLSearchParams(location.search).has('walk')) && <TripWalkImport key={activeLocation} point={day.cityPoint} address={day.city} onPreview={setPreview}
-            onComplete={experience ? walk => {
-              if (!walk) return;
-              if (day.stops.length) setPreview(walk);
-              else attachWalk(walk);
-            } : undefined}
             primary={experience} />}
           {hasDayPlan && Number.isFinite(dayDate.getTime()) && (
             <details className="trip-exp-day-services" open={!experience}>
@@ -846,22 +861,36 @@ function Planner({ v2, experience, resume, storageKey, onDraftChange }: {
           </button>)}
           {preview && <div>
             <strong>{preview.title}</strong>
-            <button type="button" onClick={() => attachWalk(preview)}>{day.stops.length ? t('Replace day stops') : t('Use this walk')}</button>
+            <button type="button" onClick={() => attachWalk(preview)}>{t('Use this walk')}</button>
             <button type="button" onClick={() => setPreview(null)}>{t('Cancel')}</button>
           </div>}
           {!experience && <>
             <button type="button" onClick={undo} disabled={!past.length}>{t('Undo')}</button>
             <button type="button" onClick={redo} disabled={!future.length}>{t('Redo')}</button>
           </>}
-          {!experience && (preview || day.stops.length > 0) && <RouteMap rasterBasemap
-            stops={preview?.stops ?? day.stops}
+          {!experience && (preview || importedStops(day).length > 0) && <RouteMap rasterBasemap
+            stops={preview?.stops ?? importedStops(day)}
             legs={preview?.legs ?? day.importedWalk?.legs ?? day.route ?? noLegs}
             onReady={ignoreMapHandle}
           />}
-          {!preview && day.stops.length > 0 && <>
-            <ol className={experience ? 'trip-exp-itinerary' : undefined}>{day.stops.map(stop => <li key={stop.id}>{stop.label}</li>)}</ol>
+          {!preview && importedStops(day).length > 0 && <>
+            <ol className={experience ? 'trip-exp-itinerary' : undefined}>{importedStops(day).map(stop => <li key={stop.id}><span>{stop.label}</span>
+              {day.importedWalk && <details>
+                <summary>{t('Details')}</summary>
+                <p>{stop.description}</p>
+                <label>{t('Notes for this stop (optional)')}
+                  <input maxLength={500} value={stop.meta?.user_note ?? ''} onChange={event => {
+                    if (!day.importedWalk) return;
+                    const user_note = event.target.value;
+                    editDay({ importedWalk: { ...day.importedWalk, stops: importedStops(day).map(point =>
+                      point.id === stop.id ? { ...point, meta: { ...point.meta, user_note } } : point) },
+                      ...(!day.importedWalk.stops ? { stops: [] } : {}) }, true);
+                  }} />
+                </label>
+              </details>}
+            </li>)}</ol>
             <button type="button" onClick={() => editDay({
-              stops: [], importedWalk: undefined, route: undefined,
+              ...(!day.importedWalk?.stops ? { stops: [], route: undefined } : {}), importedWalk: undefined,
             }, true)}>{t('Remove walk from day')}</button>
           </>}
         </div>}

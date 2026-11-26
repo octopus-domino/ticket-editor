@@ -4,6 +4,12 @@ const point = z.object({ latitude: z.number().min(-90).max(90), longitude: z.num
 const text = z.string().max(4096);
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const money = z.object({ amount: z.number().nonnegative(), currency: z.string().regex(/^[A-Z]{3}$/) });
+export const tripPhoto = z.object({
+  stopId: text, imageId: z.string().regex(/^[a-f0-9]{64}$/),
+  sourceUrl: z.string().regex(/^https:\/\/commons\.wikimedia\.org\/wiki\/File:[^\s<>"#]{1,1500}$/),
+  author: z.string().trim().min(1).max(500), license: z.string().trim().min(1).max(80),
+  licenseUrl: z.string().regex(/^https:\/\/creativecommons\.org\/(?:licenses\/(?:by|by-sa)\/\d\.\d|publicdomain\/(?:zero|mark)\/1\.0)\/(?:deed\.[a-z-]+)?$/),
+});
 const sharedTrip = z.object({
   title: text,
   startDate: date.optional(),
@@ -14,11 +20,15 @@ const sharedTrip = z.object({
     date, cityId: text, note: text.optional(), accommodationId: text.optional(),
     segments: z.array(z.object({
       id: text, title: text, latitude: point.shape.latitude.nullish(), longitude: point.shape.longitude.nullish(),
-      note: text.optional(), idea: z.boolean().optional(),
+      note: text.optional(), idea: z.boolean().optional(), walkId: text.nullish(), sourceUrl: text.nullish(),
+      walkNote: z.string().max(500).nullish(),
+      photoRefs: z.array(z.string().regex(/^[a-f0-9]{64}$/)).max(7).nullish().catch(undefined),
+      photoCredits: z.array(tripPhoto).max(7).nullish().catch(undefined),
     })).max(500),
     walkingSections: z.array(z.object({
       distanceMeters: z.number().nonnegative(), durationSeconds: z.number().nonnegative(),
-      geometry: z.array(point).max(10_000),
+      geometry: z.array(point).max(30_000),
+      fromSegmentId: text.optional(), toSegmentId: text.optional(),
     })).max(500),
   })).max(366),
   accommodations: z.array(z.object({ id: text, name: text, address: text, checkIn: date, checkOut: date,

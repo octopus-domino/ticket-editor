@@ -1,13 +1,14 @@
 import { test, expect, type Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
+import { openToolbarDetails } from './helpers/toolbar';
 
 async function exportDocument(page: Page) {
-  const downloaded = page.waitForEvent('download');
-  await page
-    .locator('.toolbar-actions')
-    .getByRole('button', { name: '📥 JSON', exact: true })
-    .click();
-  const file = await downloaded;
+  const menu = await openToolbarDetails(page);
+  const [file] = await Promise.all([
+    page.waitForEvent('download'),
+    menu.getByRole('button', { name: '📥 JSON', exact: true }).click(),
+  ]);
+  await menu.locator('summary').click();
   return JSON.parse(await readFile((await file.path())!, 'utf8')) as {
     slides: { name: string; elements: unknown[] }[];
   };
@@ -16,6 +17,8 @@ async function exportDocument(page: Page) {
 test('switching and creating documents never copies the previous canvas into another document', async ({
   page,
 }) => {
+  // This round trip hydrates three documents and checks their saved contents.
+  test.setTimeout(45_000);
   const slide = {
     id: 'slide',
     name: 'ALPHA_SLIDE',
@@ -101,15 +104,19 @@ test('switching and creating documents never copies the previous canvas into ano
     return json([]);
   });
   await page.goto('/app/editor/A');
+  const documentsDrawer = page.getByRole('button', { name: 'Документы', exact: true });
   await expect(page.locator('.slide-thumb')).toHaveCount(2);
   expect((await exportDocument(page)).slides[0].name).toBe('ALPHA_SLIDE');
+  await documentsDrawer.click();
   await page.getByText('Document B', { exact: true }).click();
   await expect(page).toHaveURL('/app/editor/B');
   await expect(page.locator('.slide-thumb')).toHaveCount(1);
   expect((await exportDocument(page)).slides[0].name).toBe('BETA_SLIDE');
+  await documentsDrawer.click();
   await page.getByText('Document A', { exact: true }).click();
   await expect(page.locator('.slide-thumb')).toHaveCount(2);
   expect((await exportDocument(page)).slides[0].name).toBe('ALPHA_SLIDE');
+  await documentsDrawer.click();
   await page.getByRole('button', { name: '+ Документ', exact: true }).click();
   await page.getByPlaceholder('Название документа…').fill('New document');
   await page.getByPlaceholder('Название документа…').press('Enter');

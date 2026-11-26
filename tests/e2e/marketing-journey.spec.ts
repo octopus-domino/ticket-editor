@@ -81,6 +81,8 @@ test('creates an actual reusable template directly and opens its editor', async 
   expect(created?.['slides']).toHaveLength(1);
   await expect(page.getByRole('application')).toBeVisible();
   const dataPanel = page.locator('.right-panel');
+  await page.locator('.canvas-dock-properties').click();
+  await dataPanel.getByRole('button', { name: '📊 Данные', exact: true }).click();
   await expect(dataPanel.getByLabel('Схема данных')).toBeVisible();
   await dataPanel.getByRole('button', { name: '+ Создать схему', exact: true }).click();
   await expect(dataPanel.getByLabel('Схема данных')).toHaveValue('new-schema');
@@ -88,6 +90,7 @@ test('creates an actual reusable template directly and opens its editor', async 
   await expect(page.locator('.template-next')).toContainText('Шаблон сохранён');
   await expect(page.getByRole('status').filter({ hasText: /^saved$/ })).toHaveCount(0);
   await page.reload();
+  await page.locator('.canvas-dock-properties').click();
   await dataPanel.getByRole('button', { name: '📊 Данные', exact: true }).click();
   await expect(dataPanel.getByLabel('Схема данных')).toHaveValue('new-schema');
 });

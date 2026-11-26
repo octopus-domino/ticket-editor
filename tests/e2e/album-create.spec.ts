@@ -15,7 +15,7 @@ test('phone creates an album and immediately adds a caption and photograph',asyn
     }
     if(path.endsWith('/album'))return route.fulfill({json:{revision:photos.length,canManage:true,photos}});
     if(path.endsWith('/album/invitation'))return route.fulfill({json:{key:'i'.repeat(64)}});
-    if(path.includes('/fonts/'))return route.fulfill({path:'../ticket-pdf/document-service/src/main/resources/fonts/MarckScript-Regular.ttf',contentType:'font/ttf'});
+    if(path.includes('/fonts/'))return route.fulfill({path:'tests/fixtures/journeys/fonts/DejaVuSerif.ttf',contentType:'font/ttf'});
     return route.fulfill({status:401,json:{}});
   });
   await page.goto('/start/albums');

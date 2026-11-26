@@ -22,6 +22,9 @@ test('invitation publishes, accepts RSVP and keeps guest replies private', async
       expect(route.request().headers()['x-management-key']).toBe('owner-secret');
       return route.fulfill({ json: replies });
     }
+    if (path === `/api/journeys/${id}/status`) {
+      return route.fulfill({ json: { state: 'ACTIVE', usedAt: null, validUntil: '', consumable: false } });
+    }
     if (path.startsWith(`/api/journeys/${id}`)) return route.fulfill({ json: document });
     return route.fulfill({ status: 401, json: { error: 'Unauthorized' } });
   });

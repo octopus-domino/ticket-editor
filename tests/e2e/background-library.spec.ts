@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { BACKGROUND_CATALOG } from '../../src/shared/backgrounds/catalog';
 import { readFile } from 'node:fs/promises';
+import { openToolbarDetails } from './helpers/toolbar';
 
 test('ready solution preview keeps a separately loaded background across edits', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('codoc:language', 'en'));
@@ -44,14 +45,14 @@ test('all 60 lightweight previews have real dimensions and nine localized names'
   for (const image of images) { expect(image.width).toBe(240); expect(image.height).toBe(240); expect(image.names).toHaveLength(9); }
 });
 
-test('a phone can select a business background in each application language', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.route('**/api/**', route => {
-    if (!new URL(route.request().url()).pathname.startsWith('/api/')) return route.continue();
-    return route.fulfill({ status: 401, json: { error: 'Unauthorized' } });
-  });
-  const background = BACKGROUND_CATALOG.find(item => item.id === 'corporate-blue')!;
-  for (const language of ['ru','en','zh','pl','it','es','nl','fr','de']) {
+for (const language of ['ru', 'en', 'zh', 'pl', 'it', 'es', 'nl', 'fr', 'de']) {
+  test(`a phone can select a business background in ${language}`, async ({ page }, info) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.route('**/api/**', route => {
+      if (!new URL(route.request().url()).pathname.startsWith('/api/')) return route.continue();
+      return route.fulfill({ status: 401, json: { error: 'Unauthorized' } });
+    });
+    const background = BACKGROUND_CATALOG.find(item => item.id === 'corporate-blue')!;
     await page.addInitScript(locale => localStorage.setItem('codoc:language', locale), language);
     await page.goto('/sites/new');
     const library = page.locator('.background-library');
@@ -60,9 +61,9 @@ test('a phone can select a business background in each application language', as
     const choice = library.getByRole('button', { name: background.names[language], exact: true });
     await choice.click(); await expect(choice).toHaveAttribute('aria-pressed', 'true');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  }
-  await page.screenshot({ path: '../reports/background-library-mobile.png' });
-});
+    await page.screenshot({ path: info.outputPath('background-library-mobile.png') });
+  });
+}
 
 test('selected lossless artwork survives the native document export at the original resolution', async ({ page }) => {
   await page.addInitScript(() => {
@@ -93,9 +94,13 @@ test('selected lossless artwork survives the native document export at the origi
   await library.getByRole('button',{name:'Sage paper',exact:true}).click();
   await expect(library.getByRole('button',{name:'Sage paper',exact:true})).toHaveAttribute('aria-pressed','true');
   await expect.poll(fingerprint).not.toBe(before);
-  const downloading = page.waitForEvent('download');
-  await page.locator('.toolbar').getByRole('button',{name:/JSON/}).click();
-  const path = await (await downloading).path();
+  await page.getByRole('button', { name: 'Close panel', exact: true }).click();
+  const menu = await openToolbarDetails(page);
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    menu.getByRole('button', { name: '📥 JSON', exact: true }).click(),
+  ]);
+  const path = await download.path();
   const exported = JSON.parse(await readFile(path!, 'utf8')) as { slides:{ backgroundImage:string }[] };
   expect(exported.slides[0].backgroundImage).toMatch(/^data:image\/png;base64,/);
   const identical = await page.evaluate(async (png) => {

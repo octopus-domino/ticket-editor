@@ -139,7 +139,7 @@ test('mobile editor keeps slides horizontal and opens shapes from Tools', async 
   expect(canvas!.height).toBeGreaterThan(844 * 0.55);
   const dock = await page.locator('.canvas-dock').boundingBox();
   expect(dock!.height).toBeLessThanOrEqual(46);
-  await page.getByRole('button', { name: /Tools/ }).click();
+  await page.getByRole('button', { name: 'Tool library', exact: true }).click();
   await expect(page.locator('.left-panel')).toBeVisible();
   await expect(page.locator('.left-panel').getByRole('button', { name: /Triangle/ })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -266,11 +266,11 @@ test('text formatting toolbar stays outside the edited text', async ({ page }) =
   await guest(page);
   const id = await seed(page);
   await page.goto(`/app/editor/${id}`);
-  const stage = page.locator('.stage-wrap');
+  const stage = page.locator('.konvajs-content');
   await expect(stage).toBeVisible();
   const box = (await stage.boundingBox())!,
     scale = box.width / 400;
-  await page.mouse.dblclick(box.x + 140 * scale, box.y + 258 * scale);
+  await stage.dblclick({ position: { x: 140 * scale, y: 258 * scale } });
   const editor = page.locator('.inline-editor-overlay');
   const toolbar = page.locator('.text-toolbar');
   await expect(editor).toBeVisible();

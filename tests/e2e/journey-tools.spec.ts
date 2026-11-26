@@ -20,7 +20,7 @@ async function mockApi(page: Page) {
     if (!url.pathname.startsWith('/api/')) return route.continue();
     if (url.pathname.startsWith('/api/journeys/fonts/'))
       return route.fulfill({
-        path: '../ticket-pdf/src/main/resources/fonts/DejaVuSans.ttf',
+        path: 'tests/fixtures/journeys/fonts/DejaVuSans.ttf',
         contentType: 'font/ttf',
       });
     if (url.pathname === '/api/journeys/artwork') {
@@ -252,14 +252,20 @@ test('route edits keep notes with their point and require selecting an edited ad
   const address = stops.nth(0).getByRole('combobox', { name: 'Address', exact: true });
   await address.fill('Unconfirmed location');
   await expect(address).toHaveAttribute('aria-invalid', 'true');
+  await expect(stops.nth(0).locator('.route-place-panel')).toHaveCount(0);
   await address.press('Escape');
   await expect(address).toHaveValue('Berlin Airport');
   await expect(address).toHaveAttribute('aria-invalid', 'false');
-  await expect(stops.nth(0).locator('.route-place-panel')).toHaveCount(0);
+  await expect(stops.nth(0).locator('.route-place-panel > summary')).toBeVisible();
   await stops.nth(1).locator('.route-place-panel > summary').click();
   await stops.nth(1).getByText('Hotels', {exact:true}).click();
+  await page.route('**/api/walks/v1/places?*', route => {
+    expect(new URL(route.request().url()).searchParams.get('kind')).toBe('hotels');
+    return route.fulfill({ status: 503, json: { details: 'journey.route.places-unavailable' } });
+  });
   await stops.nth(1).getByRole('button', { name: 'Find nearby places' }).click();
-  await expect(stops.nth(1)).toContainText('require the administrator to connect 2GIS');
+  await expect(stops.nth(1).getByRole('alert')).toHaveText('Address search is unavailable. Please try again shortly.');
+  await expect(stops.nth(1).getByRole('link', { name: 'Booking.com ↗' })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 

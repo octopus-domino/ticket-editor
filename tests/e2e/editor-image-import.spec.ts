@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
+import { openToolbarDetails } from './helpers/toolbar';
 
 const existing = {
   id: 'existing',
@@ -14,9 +15,12 @@ const existing = {
 };
 
 async function exportedSlides(page: Page) {
-  const downloading = page.waitForEvent('download');
-  await page.locator('.toolbar').getByRole('button', { name: /JSON/ }).click();
-  const file = await downloading;
+  const menu = await openToolbarDetails(page);
+  const [file] = await Promise.all([
+    page.waitForEvent('download'),
+    menu.getByRole('button', { name: '📥 JSON', exact: true }).click(),
+  ]);
+  await menu.locator('summary').click();
   return JSON.parse(await readFile((await file.path())!, 'utf8')).slides as {
     id: string;
     width: number;
@@ -39,10 +43,12 @@ for (const kind of ['document', 'template'] as const) {
   test(`imports ${sourceKind} into an existing ${kind} without losing pages and supports undo`, async ({
     page,
   }) => {
+    test.setTimeout(45_000);
     const errors: string[] = [];
     await page.setViewportSize({ width: 390, height: 844 });
     page.on('pageerror', (error) => errors.push(error.message));
     let recognitionRequests = 0;
+    const pdfPages: number[] = [];
     await page.addInitScript((slide) => {
       localStorage.setItem('codoc:language', 'en');
       localStorage.setItem(
@@ -74,7 +80,11 @@ for (const kind of ['document', 'template'] as const) {
         });
       if (path === '/api/recognition/capabilities')
         return route.fulfill({ json: { ocr: true, ollama: false } });
-      if (path === '/api/recognition/pdf-page') return route.fulfill({ json: { image: `data:image/png;base64,${png}`, pages: 2 } });
+      if (path === '/api/recognition/pdf-page') {
+        const request: { page: number } = route.request().postDataJSON();
+        pdfPages.push(request.page);
+        return route.fulfill({ json: { image: `data:image/png;base64,${png}`, pages: 2 } });
+      }
       if (path === '/api/recognition') {
         recognitionRequests++;
         return route.fulfill({
@@ -136,7 +146,7 @@ for (const kind of ['document', 'template'] as const) {
     const upload = async () => {
       await page.getByRole('button', { name: 'Import image or PDF', exact: true }).click();
       await page
-        .getByRole('region', { name: 'Import image or PDF' })
+        .getByRole('dialog', { name: 'Import image or PDF' })
         .locator('input[type=file]')
         .setInputFiles({
           name: sourceKind === 'pdf' ? 'styled-page.pdf' : 'styled-page.png',
@@ -145,15 +155,14 @@ for (const kind of ['document', 'template'] as const) {
         });
     };
     await upload();
+    const addedSlides = sourceKind === 'pdf' ? 2 : 1;
+    const dialog = page.getByRole('dialog', { name: 'Import image or PDF' });
     if (sourceKind === 'pdf') {
-      await expect(page.getByLabel('PDF page', { exact: false })).toHaveValue('1');
-      await page.getByLabel('PDF page', { exact: false }).fill('2');
-      await expect(page.getByRole('button', { name: 'Recognize locally', exact: true })).toBeDisabled();
-      await page.getByRole('button', { name: 'Load page', exact: true }).click();
-      await expect(page.getByLabel('PDF page', { exact: false })).toHaveValue('2');
+      await expect(dialog.getByText(/PDF page: 1–2/)).toBeVisible();
+      expect(pdfPages).toEqual([1]);
     }
     // Closing a pending import must not touch the current document.
-    await page.getByRole('region', { name: 'Import image or PDF' }).getByRole('button', { name: 'Close', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Import image or PDF' }).getByRole('button', { name: 'Close', exact: true }).click();
     await expect(page.locator('.slide-thumb')).toHaveCount(1);
     await upload();
     await page
@@ -162,14 +171,18 @@ for (const kind of ['document', 'template'] as const) {
         exact: true,
       })
       .click();
-    const apply = page.getByRole('button', { name: 'Add as a new slide', exact: true });
+    const apply = dialog.getByRole('button', { name: addedSlides === 1 ? 'Add as a new slide' : 'Add as a new slide (2)', exact: true });
     await expect(apply).toBeEnabled();
     await apply.click();
-    await expect(page.getByRole('region', { name: 'Import image or PDF' })).toHaveCount(0);
-    await expect(page.locator('.slide-thumb')).toHaveCount(2);
+    await expect(page.getByRole('dialog', { name: 'Import image or PDF' })).toHaveCount(0);
+    await expect(page.locator('.slide-thumb')).toHaveCount(1 + addedSlides);
+    expect(pdfPages).toEqual(sourceKind === 'pdf' ? [1, 1, 2] : []);
     const slides = await exportedSlides(page);
     expect(slides[0].id).toBe('existing');
-    expect([slides[1].width, slides[1].height]).toEqual([400, 300]);
+    expect(slides).toHaveLength(1 + addedSlides);
+    expect(slides.slice(1).map(slide => [slide.width, slide.height])).toEqual(
+      Array.from({ length: addedSlides }, () => [400, 300]),
+    );
     if (kind === 'document') {
       expect(recognitionRequests).toBe(0);
       expect(slides[1].elements[0].type).toBe('image');
@@ -186,7 +199,7 @@ for (const kind of ['document', 'template'] as const) {
       }, slides[1].elements[0].src);
       expect(pixel).toEqual([171, 18, 52, 255]);
     } else {
-      expect(recognitionRequests).toBe(1);
+      expect(recognitionRequests).toBe(addedSlides);
       expect(slides[1].elements[0]).toMatchObject({
         type: 'text',
         fill: '#ab1234',
@@ -201,7 +214,7 @@ for (const kind of ['document', 'template'] as const) {
     await page.locator('.toolbar').getByRole('button', { name: '↶', exact: true }).click();
     await expect(page.locator('.slide-thumb')).toHaveCount(1);
     await page.locator('.toolbar').getByRole('button', { name: '↷', exact: true }).click();
-    await expect(page.locator('.slide-thumb')).toHaveCount(2);
+    await expect(page.locator('.slide-thumb')).toHaveCount(1 + addedSlides);
     expect(errors).toEqual([]);
   });
  }

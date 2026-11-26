@@ -158,7 +158,12 @@ test('receives the finished walk from the built Journey application', async ({ p
   await planner.getByLabel('Start date').fill('2026-12-31');
   await planner.getByLabel('End date').fill('2027-01-01');
   await planner.getByRole('button', { name: 'Next day' }).click();
-  await planner.getByRole('button', { name: 'Plan walk in Journey' }).click();
+  const openJourney = planner.getByRole('button', { name: 'Plan walk in Journey' });
+  await openJourney.click();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('dialog.private-walk-overlay')).toHaveCount(0);
+  await expect(openJourney).toBeFocused();
+  await openJourney.press('Enter');
   await expect.poll(async () => (await page.locator('dialog.private-walk-overlay iframe').boundingBox())?.height ?? 0)
     .toBeGreaterThan((page.viewportSize()?.height ?? 600) * .65);
   const frame = page.frameLocator('iframe[src^="/private-journey/"]');

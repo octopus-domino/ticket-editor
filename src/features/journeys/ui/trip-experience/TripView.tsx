@@ -1,14 +1,14 @@
 import { useRef, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { t } from '@/shared/i18n';
-import type { SharedTrip } from '../../domain/sharedTrip';
+import { tripPhoto, type SharedTrip } from '../../domain/sharedTrip';
 import { travelDuration } from '../../domain/tripDocumentContent';
 import { TripCityMap } from '../TripCityMap';
 import { TripDayNavigator, TripExperienceShell, tripDateLabel } from './TripExperienceShell';
 
-export function TripView({ trip, mode, actions, source, details, onRenamePlace }: {
+export function TripView({ trip, mode, actions, source, details, onEditPlace }: {
   trip: SharedTrip; mode: 'owner' | 'shared'; actions?: ReactNode; source?: string; details?: ReactNode;
-  onRenamePlace?: (day: number, id: string, title: string) => void;
+  onEditPlace?: (day: number, id: string, title: string, walkNote?: string) => void;
 }) {
   const [params, setParams] = useSearchParams();
   const [focused, setFocused] = useState<{ dayKey: string; id: string }>();
@@ -81,15 +81,27 @@ export function TripView({ trip, mode, actions, source, details, onRenamePlace }
                 {place.title}
               </button>
               {focusId === place.id && place.note && <p>{place.note}</p>}
-              {mode === 'owner' && focusId === place.id && onRenamePlace && !place.id.startsWith('visit-') && <form
+              {focusId === place.id && place.walkNote && <p>{place.walkNote}</p>}
+              {focusId === place.id && place.photoCredits?.filter(photo => tripPhoto.safeParse(photo).success &&
+                photo.stopId === place.id && place.photoRefs?.includes(photo.imageId)).map(photo => <figure key={photo.imageId}>
+                  <img src={`/api/journeys/media/${photo.imageId}`} alt={place.title} width={160} loading="lazy" />
+                  <figcaption><a href={photo.sourceUrl}>{photo.author}</a> · <a href={photo.licenseUrl}>{photo.license}</a></figcaption>
+                </figure>)}
+              {mode === 'owner' && focusId === place.id && onEditPlace && !place.id.startsWith('visit-') && <form
                 className="trip-exp-place-edit"
                 onSubmit={event => {
                   event.preventDefault();
-                  const title = String(new FormData(event.currentTarget).get('title') ?? '').trim();
-                  if (title && title !== place.title) onRenamePlace(index, place.id, title);
+                  const fields = new FormData(event.currentTarget);
+                  const title = String(fields.get('title') ?? '').trim();
+                  const note = fields.get('walkNote');
+                  const walkNote = typeof note === 'string' ? note.trim() : undefined;
+                  if (title && (title !== place.title || walkNote !== undefined && walkNote !== (place.walkNote ?? '')))
+                    onEditPlace(index, place.id, title, walkNote);
                 }}>
                 <label>{t('Place name')} <input name="title" required maxLength={180} defaultValue={place.title}
                   key={place.title} /></label>
+                {place.walkId && <label>{t('Notes for this stop (optional)')}
+                  <textarea name="walkNote" maxLength={500} defaultValue={place.walkNote ?? ''} key={place.walkNote} /></label>}
                 <button type="submit">{t('Apply')}</button>
               </form>}
             </li>)}

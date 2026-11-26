@@ -38,13 +38,14 @@ export default function AccountTripPage() {
   </div>;
   const accountTrip = trip;
   const activeEdits = edits?.trip.id === trip.id ? edits : undefined;
-  function renamePlace(dayIndex: number, segmentId: string, title: string) {
+  function editPlace(dayIndex: number, segmentId: string, title: string, walkNote?: string) {
     setEdits(current => {
       if (!current || current.trip.id !== accountTrip.id) return current;
       const next = {
         ...current.trip,
         days: current.trip.days.map((day, index) => index !== dayIndex ? day : {
-          ...day, segments: day.segments.map(segment => segment.id !== segmentId ? segment : { ...segment, title }),
+          ...day, segments: day.segments.map(segment => segment.id !== segmentId ? segment :
+            { ...segment, title, ...(walkNote === undefined ? {} : { walkNote }) }),
         }),
       };
       return { trip: next, past: [...current.past, current.trip], future: [] };
@@ -103,7 +104,7 @@ export default function AccountTripPage() {
     }
   }
   return <TripView trip={activeEdits?.trip ?? trip} mode="owner"
-    onRenamePlace={activeEdits && !saving ? renamePlace : undefined} actions={<>
+    onEditPlace={activeEdits && !saving ? editPlace : undefined} actions={<>
     {activeEdits ? <>
       <button type="button" disabled={saving || !activeEdits.past.length} onClick={() => void savePlaces()}>
         {saving ? t('Saving…') : t('Save trip to account')}

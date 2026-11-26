@@ -1,20 +1,24 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { t } from '@/shared/i18n';
 import type { RouteStop } from '../domain/routeTimeline';
-import { decodePrivateWalkLink, importPrivateWalk } from '../domain/privateWalk';
+import { decodePrivateWalkLink, importPrivateWalk, isWalkMessage } from '../domain/privateWalk';
+import { placePhotos } from '../api/placePhotos';
+import { cityVisitPlan } from '../domain/cityVisitPlan';
 import { RouteWalk, type RouteWalkHandle } from './RouteWalk';
 import type { RouteAddress } from './RouteAddressInput';
 import { RouteHotels } from './RouteHotels';
 import './private-walk-picker.css';
 
 /** CoDoc owns the trip; the embedded private application owns all walk construction. */
-export function RoutePlacePanel({ stop, onAdd, onWalkChange, onWalkBusy, visitDate }: {
+export function RoutePlacePanel({ stop, onNotes, onAdd, onWalkChange, onWalkBusy, visitDate }: {
   stop: RouteStop; onNotes: (notes: string) => void; onAdd: (address: RouteAddress) => void;
   onWalkChange: (id?: string, minutes?: number) => void; onWalkBusy: (busy: boolean) => void; visitDate: string;
 }) {
   const [channel, setChannel] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [pending, setPending] = useState<{ value: unknown; walk: ReturnType<typeof importPrivateWalk> }>();
+  const [planDate, setPlanDate] = useState(visitDate);
   const frame = useRef<HTMLIFrameElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const walk = useRef<RouteWalkHandle>(null);
@@ -38,11 +42,13 @@ export function RoutePlacePanel({ stop, onAdd, onWalkChange, onWalkBusy, visitDa
       try {
         const imported = importPrivateWalk(value, stop, startLocal);
         if (!walk.current) throw new Error(t('Wait until the map has finished loading.'));
-        await walk.current.save(imported.stops, imported.legs, imported.startLocal, abort.current.signal, undefined, imported.timeline);
+        const photos = await placePhotos(imported.candidates, abort.current.signal);
+        await walk.current.save(imported.stops, imported.legs, imported.startLocal, abort.current.signal, photos, imported.timeline);
         const url = new URL(location.href);
         url.searchParams.delete('walk');
         history.replaceState(null, '', url);
         setChannel('');
+        setPending(undefined);
       } catch (reason) {
         if (!abort.current.signal.aborted) setError(reason instanceof Error ? reason.message : t('Could not prepare the image.'));
       } finally {
@@ -55,16 +61,26 @@ export function RoutePlacePanel({ stop, onAdd, onWalkChange, onWalkBusy, visitDa
     const previousFocus = document.activeElement as HTMLElement | null;
     dialog.current?.showModal();
     const listener = (event: MessageEvent) => {
-      if (event.origin !== location.origin || event.source !== frame.current?.contentWindow ||
-          event.data?.type !== 'private-walk:complete' || event.data.channel !== channel) return;
-      void saveTransfer(event.data.walk);
+      if (!isWalkMessage(event, location.origin, frame.current?.contentWindow, channel)) return;
+      try {
+        const imported = importPrivateWalk(event.data.walk, stop, startLocal);
+        setPending({ value: event.data.walk, walk: imported });
+        setPlanDate(startLocal.slice(0, 10));
+        setChannel('');
+      } catch {
+        setError(t('Could not import the walking route.'));
+      }
     };
     window.addEventListener('message', listener);
     return () => { window.removeEventListener('message', listener); previousFocus?.focus(); };
-  }, [channel, saveTransfer]);
+  }, [channel, stop, startLocal]);
 
   const url = new URL('/private-journey/', location.origin);
   url.search = new URLSearchParams({ embed: 'codoc', channel, points: `${stop.latitude},${stop.longitude}` }).toString();
+  const schedule = pending?.walk.places.some(place => place.schedule) && /^\d{4}-\d{2}-\d{2}$/.test(planDate)
+    && Number.isFinite(Date.parse(planDate))
+    ? cityVisitPlan(pending.walk.places, planDate,
+      pending.walk.places.map((_, index) => pending.walk.legs[index - 1]?.durationSeconds ?? 0)).visits : [];
   return <details className="route-place-panel">
     <summary>{t('Private itineraries')}</summary>
     <p>{t('This walk has a separate map and its own pages in the trip PDF.')}</p>
@@ -72,6 +88,22 @@ export function RoutePlacePanel({ stop, onAdd, onWalkChange, onWalkBusy, visitDa
       {t('Private itineraries')} ↗
     </button>
     <RouteWalk ref={walk} value={stop.walkId} onChange={onWalkChange} />
+    {pending && <div>
+      <strong>{pending.walk.stops[0].meta?.walk_title ?? stop.label}</strong>
+      <ol>{pending.walk.stops.map(point => <li key={point.id}>{point.label}</li>)}</ol>
+      {pending.walk.places.some(place => place.schedule) && <details>
+        <summary>{t('Plan this day')}</summary>
+        <label>{t('Visit date')} <input type="date" value={planDate} onChange={event => setPlanDate(event.target.value)} /></label>
+        <ol>{schedule.map(({ place, start, end }) => <li key={place.id}>{start.slice(11, 16)}–{end.slice(11, 16)} · {place.label}</li>)}</ol>
+        <button type="button" disabled={!schedule.length || busy} onClick={() => onNotes(
+          [stop.description, planDate, ...schedule.map(({ place, start, end }) => `${start.slice(11, 16)}–${end.slice(11, 16)} ${place.label}`)]
+            .filter(Boolean).join('\n').slice(0, 500),
+        )}>{t('Add day plan to notes')}</button>
+      </details>}
+      <button type="button" disabled={busy} onClick={() => void saveTransfer(pending.value)}>{t('Use this walk')}</button>{' '}
+      <button type="button" disabled={busy} onClick={() => setPending(undefined)}>{t('Cancel')}</button>
+      {busy && <p role="status">{t('Calculating the route…')}</p>}
+    </div>}
     {sharedLink && <button type="button" className="journey-secondary" disabled={busy} onClick={() => {
       try {
         void saveTransfer(decodePrivateWalkLink(sharedLink));

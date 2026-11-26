@@ -1,4 +1,4 @@
-import { pointTransportModes, transferModes, type CityPoint, type LocalTripDraft, type TripDayDraft, type TripVisit } from '../../api/tripDraft';
+import { importedStops, pointTransportModes, transferModes, type CityPoint, type LocalTripDraft, type TripDayDraft, type TripVisit } from '../../api/tripDraft';
 import type { PlannedLeg } from '../route';
 
 type Draft = LocalTripDraft;
@@ -34,7 +34,10 @@ function readVisit(day: TripVisit | null): TripVisit | null {
   return { ...day, stops: day.stops, ideas, city: typeof day.city === 'string' ? day.city : undefined,
     incomingMode: day.incomingMode && pointTransportModes.includes(day.incomingMode) ? day.incomingMode : undefined,
     cityPoint: point && Math.abs(point.latitude) <= 85 && Math.abs(point.longitude) <= 180 ? point : undefined,
-    importedWalk: walk && typeof walk.title === 'string' && validLegs(walk.legs, day.stops.length) ? walk : undefined,
+    importedWalk: walk && typeof walk.title === 'string' && Array.isArray(importedStops(day))
+      && importedStops(day).every(stop => stop && typeof stop.id === 'string' && typeof stop.label === 'string'
+        && Number.isFinite(stop.longitude) && Number.isFinite(stop.latitude))
+      && validLegs(walk.legs, importedStops(day).length) ? walk : undefined,
     route: validLegs(day.route, day.stops.length) ? day.route : undefined,
     lodging: lodging && typeof lodging.name === 'string' && typeof lodging.address === 'string'
       && typeof lodging.checkIn === 'string' && typeof lodging.checkOut === 'string'

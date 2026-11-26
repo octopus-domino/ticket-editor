@@ -6,18 +6,35 @@ const commons = 'https://commons.wikimedia.org/w/api.php';
 const text = (html: string) => new DOMParser().parseFromString(html, 'text/html').body.textContent?.replace(/\s+/g, ' ').trim() ?? '';
 const licensed = /^https:\/\/creativecommons\.org\/(?:licenses\/(?:by|by-sa)\/\d\.\d|publicdomain\/(?:zero|mark)\/1\.0)\/(?:deed\.[a-z-]+)?$/;
 
+async function boundedBody(response: Response, limit: number) {
+  if (!response.ok || !response.body || Number(response.headers.get('content-length')) > limit)
+    throw new Error('Photo source unavailable');
+  const reader = response.body.getReader();
+  const parts: Uint8Array[] = [];
+  let bytes = 0;
+  try {
+    for (;;) {
+      const chunk = await reader.read();
+      if (chunk.done) return new Blob(parts);
+      bytes += chunk.value.byteLength;
+      if (bytes > limit) throw new Error('Photo response is too large');
+      parts.push(new Uint8Array(chunk.value));
+    }
+  } finally {
+    await reader.cancel().catch(() => undefined);
+    reader.releaseLock();
+  }
+}
+
 /** Resolve only explicit OSM Commons/Wikidata references, never an unrelated image search. */
 export async function placePhotos(places: (RecommendedPlace & { stopId: string })[], signal?: AbortSignal): Promise<RoutePhoto[]> {
   const photos: RoutePhoto[] = [];
   const abort = AbortSignal.any([...(signal ? [signal] : []), AbortSignal.timeout(20000)]);
-  const json = async (url: string) => {
-    const response = await fetch(url, { signal: abort, credentials: 'omit', referrerPolicy: 'no-referrer' });
-    if (!response.ok) throw new Error('Photo source unavailable');
-    const body = await response.text();
-    if (body.length > 1_000_000) throw new Error('Photo metadata is too large');
-    return JSON.parse(body);
-  };
-  for (const place of places.slice(0, 4)) {
+  const request = (url: string | URL) => fetch(url, {
+    signal: abort, credentials: 'omit', referrerPolicy: 'no-referrer', redirect: 'error',
+  });
+  const json = async (url: string) => JSON.parse(await (await boundedBody(await request(url), 1_000_000)).text());
+  for (const place of places.slice(0, 7)) {
     signal?.throwIfAborted();
     let reference = place.photoReference ?? '';
     if (!reference) continue;
@@ -46,11 +63,11 @@ export async function placePhotos(places: (RecommendedPlace & { stopId: string }
       licenseUrl = licenseUrl.replace(/(\/\d\.\d)$/, '$1/');
       if (!author || author.length > 500 || !license || license.length > 80 || !licensed.test(licenseUrl)) continue;
       const url = new URL(info.thumburl ?? info.url);
-      if (url.protocol !== 'https:' || !['upload.wikimedia.org', 'thumb.wikimedia.org'].includes(url.hostname)) continue;
-      const response = await fetch(url, { signal: abort, credentials: 'omit', referrerPolicy: 'no-referrer' });
-      if (!response.ok || Number(response.headers.get('content-length')) > 2_000_000) continue;
-      const blob = await response.blob();
-      if (blob.size > 2_000_000) continue;
+      if (url.protocol !== 'https:' || url.username || url.password || url.port ||
+          !['upload.wikimedia.org', 'thumb.wikimedia.org'].includes(url.hostname)) continue;
+      const response = await request(url);
+      if (!/^image\/(?:jpeg|png|webp)(?:;|$)/i.test(response.headers.get('content-type') ?? '')) continue;
+      const blob = await boundedBody(response, 900_000);
       const bitmap = await createImageBitmap(blob);
       try {
         if (bitmap.width > 1200 || bitmap.height > 1200) continue;
@@ -63,6 +80,7 @@ export async function placePhotos(places: (RecommendedPlace & { stopId: string }
         const image = canvas.toDataURL('image/jpeg', .82);
         if (image.length > 180000) continue;
         const asset = await journeyRequest<{ id: string }>('/api/journeys/media', { method: 'POST', body: JSON.stringify({ image }), signal: abort });
+        if (!/^[a-f0-9]{64}$/.test(asset.id)) continue;
         photos.push({ stopId: place.stopId, imageId: asset.id, author, license, licenseUrl,
           sourceUrl: `https://commons.wikimedia.org/wiki/${encodeURIComponent(reference).replace('File%3A', 'File:')}` });
       } finally { bitmap.close(); }

@@ -23,6 +23,7 @@ const owner = { accessToken: 'test-token', user: { id: 'owner', name: 'Owner', e
 
 test('keeps a walk on the receiving city and retains the draft when starting a new trip', async ({ page }) => {
   test.skip(process.env.VITE_ENABLE_TRIP_PLANNER_V2 !== 'true', 'Requires the new planner');
+  test.setTimeout(45_000); // This scenario runs two planner sessions and an account save.
   await page.addInitScript(source => {
     if (window.top === window && !localStorage.getItem('codoc/trip-planner/draft/v2'))
       localStorage.setItem('codoc/trip-planner/draft/v2', JSON.stringify(source));
